@@ -1,0 +1,25 @@
+# Français.
+
+[meta]
+code   = "fr"
+name   = "French"
+native = "Français"
+plural = "zero-one-other"
+
+[strings]
+home.phone       = "Téléphone"
+home.text        = "Message"
+home.sos         = "SOS"
+home.inbox       = "Réception"
+home.radio       = "Radio"
+call.busy        = "{name} : occupé"
+call.no-answer   = "{name} : pas de réponse"
+call.failed      = "L'appel à {name} a échoué"
+messages.unread  = ["{n} nouveau message", "{n} nouveaux messages"]
+messages.none    = "Aucun message"
+school.until     = "Heures de classe jusqu'à {time}"
+sos.emergency    = "Urgence ! Je suis ici"
+sos.pickup       = "Viens me chercher"
+sos.cancel       = "Annuler"
+sos.countdown    = "Urgence dans {seconds} s"
+language.title   = "Langue"

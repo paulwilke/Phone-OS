@@ -1,0 +1,25 @@
+# Deutsch.
+
+[meta]
+code   = "de"
+name   = "German"
+native = "Deutsch"
+plural = "one-other"
+
+[strings]
+home.phone       = "Telefon"
+home.text        = "Text"
+home.sos         = "SOS"
+home.inbox       = "Eingang"
+home.radio       = "Notfunk"
+call.busy        = "{name}: besetzt"
+call.no-answer   = "{name}: keine Antwort"
+call.failed      = "Anruf an {name} fehlgeschlagen"
+messages.unread  = ["{n} neue Nachricht", "{n} neue Nachrichten"]
+messages.none    = "Keine Nachrichten"
+school.until     = "Schulzeit bis {time}"
+sos.emergency    = "Notfall! Hier bin ich"
+sos.pickup       = "Hol mich hier ab"
+sos.cancel       = "Abbrechen"
+sos.countdown    = "Notfall in {seconds} s"
+language.title   = "Sprache"
