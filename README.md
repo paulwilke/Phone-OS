@@ -18,6 +18,9 @@ language by writing one text file.
 | Phone numbers, contact book | normalisation and comparison of numbers, the whitelist with parent rights | `src/app/`, [docs/contacts.md](docs/contacts.md) |
 | Quiet hours | school-time windows per weekday | `src/app/`, [docs/quiet-hours.md](docs/quiet-hours.md) |
 | Time zones | named zones with EU and US summer-time rules, calendar arithmetic | `src/app/`, [docs/time-zones.md](docs/time-zones.md) |
+| Log level | which log lines are written, and which are never dropped | `src/app/`, [docs/log-level.md](docs/log-level.md) |
+| Map link | map address from a template, five decimals, no float printf | `src/app/`, [docs/map-link.md](docs/map-link.md) |
+| Shake detector | counts shakes from acceleration samples | `src/app/`, [docs/shake-detector.md](docs/shake-detector.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 
