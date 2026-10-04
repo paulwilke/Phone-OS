@@ -15,6 +15,7 @@ language by writing one text file.
 | Module | What it is | Where |
 |---|---|---|
 | Translation library | catalog parser, language selection with fallback, `{placeholder}` formatting, plural rules | `src/i18n/`, [docs/i18n.md](docs/i18n.md) |
+| Phone numbers, contact book | normalisation and comparison of numbers, the whitelist with parent rights | `src/app/`, [docs/contacts.md](docs/contacts.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 
