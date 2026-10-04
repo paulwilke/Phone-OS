@@ -12,16 +12,21 @@
 //                         kAutoSeconds. Choosing starts the ping; cancelling stops the
 //                         search and sends nothing.
 //   in school time        a warning opens instead, with a button that needs
-//                         kOverrideTaps taps. The last tap sends the emergency **and
-//                         lifts the school-time lock until the end of that school
-//                         time**: if the phone were locked afterwards, the child could
-//                         not call back, or be called. Fewer taps do nothing, and
-//                         there is no automatic emergency here: in school time the
-//                         press must be deliberate.
+//                         kOverrideTaps taps, each within kTapWindowMs of the one
+//                         before. The last tap sends the emergency **and lifts the
+//                         school-time lock until the end of that school time**: if the
+//                         phone were locked afterwards, the child could not call back,
+//                         or be called. Fewer taps do nothing, and there is no
+//                         automatic emergency here: in school time the press must be
+//                         deliberate. A deliberate emergency is tapped quickly; a
+//                         pocket taps now and then, and must not add up to an alarm
+//                         over an afternoon, so after ten seconds without a tap the
+//                         count starts again at five.
 //
 // The search is held for as long as the flow is open (startSearch/stopSearch are
 // balanced), and handed on to the ping when one starts, which holds the receiver
-// itself.
+// itself. **The host must call leave() when the screen closes**: the flow has no
+// timeout of its own in school time, and the receiver stays powered until it ends.
 
 #include <cstdint>
 #include <string>
@@ -34,12 +39,15 @@ public:
   static constexpr uint32_t kAutoSeconds = 40;
   // Taps needed in school time.
   static constexpr int kOverrideTaps = 5;
+  // Longest pause between two taps; a pause of this length or more starts the count
+  // again.
+  static constexpr uint32_t kTapWindowMs = 10000;
 
   enum class Phase : uint8_t { Idle, Choosing, QuietConfirm };
 
   struct Host {
     virtual ~Host() = default;
-    virtual uint32_t uptimeSeconds() = 0;  // monotonic
+    virtual uint64_t uptimeMillis() = 0;  // monotonic
     // True while a ping is searching; a new press then changes nothing.
     virtual bool pingActive() = 0;
     // Power the receiver / release it again. Calls are balanced.
@@ -60,15 +68,17 @@ public:
   // the open choice must keep its countdown and the taps they have made.
   bool begin(const std::string& target, bool quietHours);
 
-  // Call regularly. Sends the emergency when the countdown has run out.
+  // Call regularly. Sends the emergency when the countdown has run out, and shows
+  // the full number of taps again once the tap window has passed.
   void tick();
 
   // The choice: Emergency or Pickup. Only while choosing. Returns whether a ping
   // started; the flow closes either way.
   bool choose(SosPing::Kind kind);
 
-  // One tap on the school-time button. Returns true when this tap was the last one
-  // and the emergency ping started.
+  // One tap on the school-time button. A tap after a pause of kTapWindowMs or more
+  // is the first of a new series. Returns true when this tap was the last one and
+  // the emergency ping started.
   bool tap();
 
   // Leaves the choice or the warning (the back key, the cancel button). Nothing is sent.
@@ -77,16 +87,18 @@ public:
   Phase phase() const { return phase_; }
   // Seconds until the automatic emergency; 0 outside the choice.
   uint32_t autoLeft();
-  // Taps still needed; 0 outside the warning.
+  // Taps still needed; 0 outside the warning. Counted as of the last tick() or tap().
   int tapsLeft() const { return phase_ == Phase::QuietConfirm ? tapsLeft_ : 0; }
   const std::string& target() const { return target_; }
 
 private:
   void close();
+  bool tapWindowPassed();
 
   Host& host_;
   Phase phase_ = Phase::Idle;
-  uint32_t choiceStart_ = 0;
+  uint64_t choiceStart_ = 0;
+  uint64_t lastTap_ = 0;
   int tapsLeft_ = 0;
   std::string target_;
 };
