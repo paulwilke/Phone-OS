@@ -25,6 +25,9 @@ language by writing one text file.
 | TOML subset | parser and writer for the configuration files, as a plain document tree | `src/app/`, [docs/toml.md](docs/toml.md) |
 | Safe paths | validation of file paths from outside | `src/app/`, [docs/safe-path.md](docs/safe-path.md) |
 | Operator label | short operator name for the status line, UTF-8 helper | `src/app/`, [docs/operator-label.md](docs/operator-label.md) |
+| SOS ping | position-sending state machine; its message wording comes from the catalogs | `src/app/`, [docs/sos-ping.md](docs/sos-ping.md) |
+| SOS flow | choice, countdown and five-tap override in front of the ping | `src/app/`, [docs/sos-flow.md](docs/sos-flow.md) |
+| SMS command | the remote location query, trigger words per language | `src/app/`, [docs/sms-command.md](docs/sms-command.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 
