@@ -8,6 +8,7 @@ Checks every Markdown file and every source file:
   * `paths/in/backticks` that look like repository files exist;
   * no placeholder markers (TODO, FIXME, XXX, TBD, "for now", "legacy", "deprecated",
     "temporary") — open work belongs in the issue tracker, not in the files;
+  * VERSION holds one `major.minor.patch` line;
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
     `docs/<language-code>/` (translated documentation) and files that carry the marker
     `allow-non-english` in their first lines (test data, examples of other languages) are exempt.
@@ -40,8 +41,20 @@ def files():
                 yield os.path.join(base, n)
 
 
+def version_problem():
+    try:
+        text = open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read()
+    except OSError:
+        return "VERSION: file is missing"
+    if not re.fullmatch(r"\d+\.\d+\.\d+\n?", text):
+        return f"VERSION: expected `major.minor.patch`, found {text.strip()!r}"
+    return None
+
+
 def main():
     problems = []
+    if version_problem():
+        problems.append(version_problem())
     for path in files():
         rel = os.path.relpath(path, ROOT)
         try:
