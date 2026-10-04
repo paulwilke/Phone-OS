@@ -29,7 +29,7 @@
 #include <cstdint>
 #include <string>
 
-#include "GnssFix.h"
+#include "../hal/GnssFix.h"
 
 class SosPing {
 public:

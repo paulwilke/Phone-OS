@@ -1,6 +1,6 @@
 # SOS ping
 
-Code: `src/app/SosPing.{h,cpp}` and `src/app/GnssFix.h`, tests in `test/test_sos_ping/`. Pure C++17: the receiver and the modem are reached through `SosPing::Host`.
+Code: `src/app/SosPing.{h,cpp}` and `src/hal/GnssFix.h`, tests in `test/test_sos_ping/`. Pure C++17: the receiver and the modem are reached through `SosPing::Host`.
 
 The SOS ping sends the child's position to the emergency contact. Its whole subtlety is the waiting. A receiver delivers a first position within seconds, but it is off by hundreds of metres; it becomes useful only when several satellites are in view.
 
