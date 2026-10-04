@@ -21,6 +21,10 @@ language by writing one text file.
 | Log level | which log lines are written, and which are never dropped | `src/app/`, [docs/log-level.md](docs/log-level.md) |
 | Map link | map address from a template, five decimals, no float printf | `src/app/`, [docs/map-link.md](docs/map-link.md) |
 | Shake detector | counts shakes from acceleration samples | `src/app/`, [docs/shake-detector.md](docs/shake-detector.md) |
+| Message store | message history with an append-only log, read/sent/delivered/deleted marks | `src/app/`, [docs/message-store.md](docs/message-store.md) |
+| TOML subset | parser and writer for the configuration files, as a plain document tree | `src/app/`, [docs/toml.md](docs/toml.md) |
+| Safe paths | validation of file paths from outside | `src/app/`, [docs/safe-path.md](docs/safe-path.md) |
+| Operator label | short operator name for the status line, UTF-8 helper | `src/app/`, [docs/operator-label.md](docs/operator-label.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 
