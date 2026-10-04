@@ -10,7 +10,9 @@ Rules for everything under src/:
 Rules for the layers:
   * src/hal/ (the capability interfaces) includes only standard headers and its own
     siblings, never src/app/ or src/i18n/: an interface does not know its users;
-  * src/i18n/ includes nothing from the other layers.
+  * src/i18n/ includes nothing from the other layers;
+  * src/ui/ (the user-interface framework) includes only src/ui/ and src/i18n/: it knows no
+    application logic and no hardware interface, so a widget can be drawn on any Display.
 src/app/ may include src/hal/ and src/i18n/.
 
 Exits with 1 on any finding.
@@ -54,6 +56,8 @@ def main():
                         problems.append(f"{rel}:{n}: an interface includes the layer {inside}/: {target}")
                     if where == "i18n" and inside != "i18n":
                         problems.append(f"{rel}:{n}: i18n includes the layer {inside}/: {target}")
+                    if where == "ui" and inside not in ("ui", "i18n"):
+                        problems.append(f"{rel}:{n}: ui includes the layer {inside}/: {target}")
             elif PLATFORM.search(line) and not line.lstrip().startswith(("//", "*")):
                 problems.append(f"{rel}:{n}: platform dependency: {PLATFORM.search(line).group(0)}")
     for p in problems:
