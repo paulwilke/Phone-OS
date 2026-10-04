@@ -49,9 +49,10 @@ States: `Off`, `PoweringOn`, `Initializing`, `Registering` (searching a network)
 
 - an incoming call produces `Incoming`, then `Connected` and `Ended`, or `Missed`;
 - an outgoing call produces `Connected` and `Ended`, or one of `Busy`, `NoAnswer`, `DialFailed`;
-- `Ended`, `Missed`, `Busy`, `NoAnswer` and `DialFailed` are final, and `Ended` is delivered once whoever hangs up.
+- `Ended`, `Missed`, `Busy`, `NoAnswer` and `DialFailed` are final, and `Ended` is delivered once whoever hangs up;
+- a dial we cancel ourselves ends with `Ended` and duration 0 (no `Connected` before it); a ringing call we refuse is `Missed`.
 
-`voiceAvailable()` is false when the network registered the SIM for SMS only: writing works, calls do not, and the user must see that this is not "no network". `SimStatus` tells a SIM that wants its PIN apart from "no network". Call volume is 0–7 (the modem's codec sets it; -1 when it cannot). `query()` is for the diagnosis over USB and accepts only read forms (`AT+…?`).
+`voiceAvailable()` is false when the network registered the SIM for SMS only: writing works, calls do not, and the user must see that this is not "no network". `SimStatus` tells a SIM that wants its PIN apart from "no network". Call volume is 0–7, clamped (the modem's codec sets it; -1 when it cannot). `query()` is for the diagnosis over USB and accepts only read forms (`AT+…?`).
 
 ### Log
 

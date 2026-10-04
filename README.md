@@ -30,6 +30,7 @@ language by writing one text file.
 | SMS command | the remote location query, trigger words per language | `src/app/`, [docs/sms-command.md](docs/sms-command.md) |
 | Power policy | the decision what may sleep when | `src/app/`, [docs/power-policy.md](docs/power-policy.md) |
 | Hardware capabilities | the interfaces between the software and the hardware: clock, power, positioning, modem, log, vibration, files, WLAN, TCP, motion, radio | `src/hal/`, [docs/hardware-capabilities.md](docs/hardware-capabilities.md) |
+| Test doubles | a scriptable fake for every hardware capability | `testing/fakes/`, [docs/test-doubles.md](docs/test-doubles.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 

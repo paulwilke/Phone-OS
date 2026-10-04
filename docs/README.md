@@ -20,5 +20,6 @@ The documents describe what exists in this repository — each one is written fr
 | [sms-command.md](sms-command.md) | the remote location query by SMS: trigger words, admin check, outcomes |
 | [power-policy.md](power-policy.md) | what may sleep when: the eight rules and their order |
 | [hardware-capabilities.md](hardware-capabilities.md) | the interfaces to the hardware (capabilities), their contracts, vibration patterns |
+| [test-doubles.md](test-doubles.md) | the scriptable fake of every capability and what each can be made to do |
 
 The rules for contributing are in [CONTRIBUTING.md](../CONTRIBUTING.md); third-party material is listed in [THIRD_PARTY.md](../THIRD_PARTY.md).
