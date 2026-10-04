@@ -28,6 +28,7 @@ language by writing one text file.
 | SOS ping | position-sending state machine; its message wording comes from the catalogs | `src/app/`, [docs/sos-ping.md](docs/sos-ping.md) |
 | SOS flow | choice, countdown and five-tap override in front of the ping | `src/app/`, [docs/sos-flow.md](docs/sos-flow.md) |
 | SMS command | the remote location query, trigger words per language | `src/app/`, [docs/sms-command.md](docs/sms-command.md) |
+| Power policy | the decision what may sleep when | `src/app/`, [docs/power-policy.md](docs/power-policy.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 

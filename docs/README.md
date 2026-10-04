@@ -18,5 +18,6 @@ The documents describe what exists in this repository — each one is written fr
 | [sos-ping.md](sos-ping.md) | the position-sending state machine: best fix, waiting, timeout, message wording as input |
 | [sos-flow.md](sos-flow.md) | the escalation in front of the ping: choice, 40-second countdown, five taps in school time |
 | [sms-command.md](sms-command.md) | the remote location query by SMS: trigger words, admin check, outcomes |
+| [power-policy.md](power-policy.md) | what may sleep when: the eight rules and their order |
 
 The rules for contributing are in [CONTRIBUTING.md](../CONTRIBUTING.md); third-party material is listed in [THIRD_PARTY.md](../THIRD_PARTY.md).
