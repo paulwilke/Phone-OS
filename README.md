@@ -32,6 +32,7 @@ language by writing one text file.
 | Hardware capabilities | the interfaces between the software and the hardware: clock, power, positioning, modem, log, vibration, files, WLAN, TCP, motion, radio | `src/hal/`, [docs/hardware-capabilities.md](docs/hardware-capabilities.md) |
 | Test doubles | a scriptable fake for every hardware capability | `testing/fakes/`, [docs/test-doubles.md](docs/test-doubles.md) |
 | Contract tests | one suite per capability, run against every implementation | `testing/contracts/`, [docs/hardware-capabilities.md](docs/hardware-capabilities.md) |
+| Display and frame buffer | the 240 × 320 1-bit display interface; an in-memory buffer with clip detection and golden files for tests | `src/ui/`, `testing/`, [docs/ui-display.md](docs/ui-display.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 
