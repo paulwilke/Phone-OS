@@ -22,6 +22,8 @@ languages::forEach([](const std::string& language, i18n::Translator& t) {
 });
 ```
 
+`languages::expectPicture(fb, "name", language, region)` compares a picture with the golden file named after the picture and the language (`_en` or `_pseudo`, in `test/golden/`) and does nothing in German and French.
+
 The body runs once for every catalog in `lang/` — read from disk, as the device reads them, in the order of their file names, so a language added there is tested without touching a test — and then for the pseudo-language. The translator has all of them loaded and the current one selected; `language` is its code, for failure messages. A catalog that does not load fails the test with its file name. Tests run from the repository root, as `pio test -e native` does.
 
 ### What a layout test asserts

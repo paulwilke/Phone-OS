@@ -23,6 +23,8 @@
 #include <string>
 #include <vector>
 
+#include <FrameBuffer.h>
+#include <Golden.h>
 #include <i18n/Pseudo.h>
 #include <i18n/Translator.h>
 
@@ -66,6 +68,21 @@ void forEach(Body&& body, const std::string& dir = "lang") {
     TEST_ASSERT_TRUE_MESSAGE(translator.select(code), code.c_str());
     body(code, translator);
   }
+}
+
+// The pictures of a layout are kept in English and in the pseudo-language only; the other
+// languages are asserted not to clip (see docs/ui-layout-testing.md). Empty for those.
+inline std::string pictureTag(const std::string& code) {
+  if (code == "en") return "en";
+  if (code == i18n::kPseudoCode) return "pseudo";
+  return "";
+}
+
+// Compares the picture with test/golden/<name>_<en|pseudo>.txt; does nothing in other languages.
+inline void expectPicture(const FrameBuffer& fb, const std::string& name, const std::string& code,
+                          const ui::Rect& region) {
+  const std::string tag = pictureTag(code);
+  if (!tag.empty()) golden::expect(fb, name + "_" + tag, region);
 }
 
 }  // namespace languages

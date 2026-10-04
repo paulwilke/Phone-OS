@@ -2,6 +2,7 @@
 """Checks the language catalogs in lang/ against the English reference. (allow-non-english: holds the GSM alphabet, which has umlauts.)
 
     scripts/check_i18n.py            # from the repository root
+    scripts/check_i18n.py --usage    # the keys of en.toml against the code that uses them
 
 For every lang/*.toml:
   * the [meta] header is complete and the plural rule is known;
@@ -15,6 +16,13 @@ For every lang/*.toml:
 The runtime parser (src/i18n/Catalog.cpp) enforces the same format rules on catalogs
 users put on the SD card; this script adds the cross-language checks for the catalogs
 that ship with the firmware. Exits with 1 on any problem.
+
+`--usage` checks the other direction: every key of en.toml appears as a string literal in the
+code or in a test (a key nothing asks for is dead weight, or the screen that should use it
+has lost it), and every string literal that looks like a key of a catalog section ("status.gps")
+is a key of en.toml (a misspelled key shows the key itself on the child's screen). The code is
+src/, testing/ and test/; a key used only by a test is used, because the tests are where a
+screen's texts are laid out in every language before the screen exists.
 """
 import glob
 import os
@@ -58,7 +66,42 @@ def load(path):
     return data.get("meta", {}), flatten(data.get("strings", {}))
 
 
+KEY_LITERAL = re.compile(r'"([a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)"')
+CODE_DIRS = ("src", "testing", "test")
+CODE_SUFFIXES = (".h", ".cpp")
+
+
+def usage():
+    """Compares the keys of en.toml with the key-like string literals of the code."""
+    _, ref = load(os.path.join(ROOT, "lang", "en.toml"))
+    sections = {key.split(".")[0] for key in ref}
+    literals = {}
+    for top in CODE_DIRS:
+        for folder, _, names in os.walk(os.path.join(ROOT, top)):
+            for name in names:
+                if not name.endswith(CODE_SUFFIXES):
+                    continue
+                path = os.path.join(folder, name)
+                with open(path, encoding="utf-8") as f:
+                    for number, line in enumerate(f, 1):
+                        for literal in KEY_LITERAL.findall(line):
+                            literals.setdefault(literal, f"{os.path.relpath(path, ROOT)}:{number}")
+    problems = [f"`{key}` is in en.toml but no code or test mentions it" for key in sorted(ref) if key not in literals]
+    problems += [f"{where}: \"{literal}\" looks like a catalog key but is not in en.toml"
+                 for literal, where in sorted(literals.items())
+                 if literal.split(".")[0] in sections and literal not in ref]
+    for p in problems:
+        print(p)
+    if problems:
+        print(f"\n{len(problems)} problems with the use of the keys.")
+        return 1
+    print(f"check_i18n --usage: {len(ref)} keys, all used, no unknown keys in the code")
+    return 0
+
+
 def main():
+    if "--usage" in sys.argv[1:]:
+        return usage()
     problems = []
     files = sorted(glob.glob(os.path.join(ROOT, "lang", "*.toml")))
     if not files:

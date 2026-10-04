@@ -35,6 +35,7 @@ language by writing one text file.
 | Display and frame buffer | the 240 × 320 1-bit display interface; an in-memory buffer with clip detection and golden files for tests | `src/ui/`, `testing/`, [docs/ui-display.md](docs/ui-display.md) |
 | Fonts and text engine | four Lucida bitmap fonts with our own interface symbols, the character set, UTF-8 text measuring, fitting, wrapping and drawing | `src/ui/`, `assets/fonts/`, [docs/ui-text.md](docs/ui-text.md) |
 | Layout testing in every language | a pseudo-language (accented, 40 % longer, bracketed) and a helper that runs a test in every shipped language and in it | `src/i18n/`, `testing/`, [docs/ui-layout-testing.md](docs/ui-layout-testing.md) |
+| UI framework | input model, screen stack with `onEnter`/`onLeave`, soft keys, status bar, tile grid, list, text block, button | `src/ui/`, [docs/ui-framework.md](docs/ui-framework.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 
@@ -45,6 +46,7 @@ Requires [PlatformIO Core](https://docs.platformio.org/page/core/installation.ht
 ```bash
 pio test -e native              # host tests of the C++ code
 python3 scripts/check_i18n.py   # the language catalogs against the English reference
+python3 scripts/check_i18n.py --usage # every catalog key is used, no unknown key in the code
 python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeholder markers, non-English text
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
 python3 scripts/make_font.py --check # the generated fonts match their sources
