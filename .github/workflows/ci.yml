@@ -1,0 +1,32 @@
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # tomllib, which the catalog check needs, arrived in Python 3.11.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Host tests
+        run: pio test -e native
+
+      - name: Language catalogs
+        run: python3 scripts/check_i18n.py
+
+      - name: Documentation and code hygiene
+        run: python3 scripts/check_docs.py
+
+      - name: Privacy
+        run: python3 scripts/privacy_check.py
