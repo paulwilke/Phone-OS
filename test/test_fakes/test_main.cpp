@@ -102,7 +102,7 @@ void test_power_counts_switch_ons() {
 
 void test_gnss_finds_a_fix_after_its_delay_and_degrades_on_script() {
   FakeClock clock;
-  FakePower power;
+  FakePower power(&clock);
   FakeGnss gnss(power, clock);
   gnss.fixAfter(15, 48.13745, 11.57550, 1.5f);
   gnss.degradeAfter(60, 6.0f);
@@ -126,7 +126,7 @@ void test_gnss_finds_a_fix_after_its_delay_and_degrades_on_script() {
 
 void test_gnss_never_finds_a_fix_when_told() {
   FakeClock clock;
-  FakePower power;
+  FakePower power(&clock);
   FakeGnss gnss(power, clock);
   gnss.never();
   power.setEnabled(PowerDomain::Positioning, true);
@@ -139,7 +139,7 @@ void test_gnss_never_finds_a_fix_when_told() {
 // Switching off and on again starts the scenario over, even when nobody read in between.
 void test_gnss_restarts_its_scenario_on_every_switch_on() {
   FakeClock clock;
-  FakePower power;
+  FakePower power(&clock);
   FakeGnss gnss(power, clock);
   gnss.fixAfter(10, 48.1, 11.5, 1.0f);
   power.setEnabled(PowerDomain::Positioning, true);

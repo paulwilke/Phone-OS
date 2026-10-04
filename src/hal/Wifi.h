@@ -25,11 +25,13 @@ public:
   virtual ~Wifi() = default;
 
   // Signs in to the home network. An empty password means an open network; an empty
-  // name is refused. Starting a mode while the other runs stops the other first. True
-  // when the attempt was started (not that it succeeded: state() tells).
+  // name is refused, and a refused start changes nothing: what ran keeps running.
+  // Starting a mode while the other runs stops the other first. True when the attempt
+  // was started (not that it succeeded: state() tells).
   virtual bool startStation(const std::string& ssid, const std::string& password) = 0;
-  // Opens an access point. The password must have 8 to 63 characters; anything else is
-  // refused (false, and nothing runs). Start-up that fails leaves the state Off.
+  // Opens an access point. The name must not be empty and the password must have 8 to
+  // 63 characters; anything else is refused (false, nothing changes). An access point
+  // that is valid but fails to start leaves the state Off.
   virtual bool startAccessPoint(const std::string& ssid, const std::string& password) = 0;
   // Stops either mode; the chip is without power afterwards. Stopping when Off is fine.
   virtual void stop() = 0;

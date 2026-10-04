@@ -12,7 +12,8 @@
 //                                       accuracy changes to `hdop` (larger = worse);
 //                                       may be called several times
 //   setSatellites(n)
-// Time comes from the FakeClock the test advances.
+// Time comes from the clock the test advances; the FakePower must be given the same
+// clock, because it stamps the switch-on.
 
 #include <vector>
 
@@ -26,20 +27,10 @@ public:
   FakeGnss(FakePower& power, Clock& clock) : power_(power), clock_(clock) {}
 
   bool readFix(GnssFix& out) override {
-    const bool on = power_.isEnabled(PowerDomain::Positioning);
-    const int restarts = power_.switchOnCount(PowerDomain::Positioning);
-    if (!on) {
-      wasOn_ = false;
-      return false;
-    }
-    // A new run starts when the domain went from off to on; a switch-off and
-    // switch-on between two reads is seen through the switch-on count.
-    if (!wasOn_ || restarts != seenSwitchOns_) {
-      onSince_ = clock_.uptimeMillis();
-      seenSwitchOns_ = restarts;
-      wasOn_ = true;
-    }
-    const double elapsed = (double)(clock_.uptimeMillis() - onSince_) / 1000.0;
+    if (!power_.isEnabled(PowerDomain::Positioning)) return false;
+    // Counted from the last switch-on, whether or not anybody read in between: a
+    // restart always starts the scenario again.
+    const double elapsed = (double)(clock_.uptimeMillis() - power_.switchedOnAtMs(PowerDomain::Positioning)) / 1000.0;
     GnssFix fix;
     if (hasFix_ && elapsed >= fixDelay_) {
       fix.valid = true;
@@ -81,7 +72,4 @@ private:
   float hdop_ = 99.0f;
   uint8_t sats_ = 7;
   std::vector<Change> changes_;
-  bool wasOn_ = false;
-  int seenSwitchOns_ = 0;
-  uint64_t onSince_ = 0;
 };
