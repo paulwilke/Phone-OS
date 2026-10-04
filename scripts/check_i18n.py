@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the language catalogs in lang/ against the English reference.
+"""Checks the language catalogs in lang/ against the English reference. (allow-non-english: holds the GSM alphabet, which has umlauts.)
 
     scripts/check_i18n.py            # from the repository root
 
@@ -8,7 +8,9 @@ For every lang/*.toml:
   * every message has the number of plural forms the rule needs (or one form);
   * the keys are exactly the keys of en.toml (nothing missing, no leftovers);
   * every message uses the same {placeholders} as the English one;
-  * only characters the display fonts can draw are used (Latin-1).
+  * only characters the display fonts can draw are used (Latin-1);
+  * messages whose key starts with `sms.` use only the GSM 7-bit alphabet, so that an SMS stays
+    one part.
 
 The runtime parser (src/i18n/Catalog.cpp) enforces the same format rules on catalogs
 users put on the SD card; this script adds the cross-language checks for the catalogs
@@ -22,6 +24,12 @@ import tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLURAL_FORMS = {"single": 1, "one-other": 2, "zero-one-other": 2}
+# Characters of the GSM 7-bit alphabet (basic table and extension table). A text sent
+# by SMS that contains anything else is sent as UCS-2, which fits 70 characters per
+# part instead of 160 and splits an emergency message into several parts.
+GSM7 = set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡"
+           "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
+           "^{}\\[~]|€")
 PLACEHOLDER = re.compile(r"(?<!\{)\{([a-z0-9_-]+)\}(?!\})")
 
 
@@ -72,6 +80,10 @@ def main():
             if len(f) not in (1, want):
                 problems.append(f"{name}: `{key}` has {len(f)} forms, the rule needs {want}")
             for form in f:
+                if key.startswith("sms."):
+                    outside = sorted({c for c in PLACEHOLDER.sub("", form) if c not in GSM7})
+                    if outside:
+                        problems.append(f"{name}: `{key}` is sent by SMS but uses characters outside the GSM alphabet: {''.join(outside)}")
                 bad = sorted({c for c in form if ord(c) > 0xFF})
                 if bad:
                     problems.append(f"{name}: `{key}` uses characters the fonts cannot draw: {''.join(bad)}")
