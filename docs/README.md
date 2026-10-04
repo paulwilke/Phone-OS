@@ -22,6 +22,7 @@ The documents describe what exists in this repository — each one is written fr
 | [hardware-capabilities.md](hardware-capabilities.md) | the interfaces to the hardware (capabilities), their contracts, vibration patterns |
 | [test-doubles.md](test-doubles.md) | the scriptable fake of every capability and what each can be made to do |
 | [ui-display.md](ui-display.md) | the 1-bit display interface, the frame buffer with clip detection, golden files |
+| [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |
 | [ui-text.md](ui-text.md) | the four fonts, the character set and the symbols, the text engine: UTF-8, width, fit, ellipsize, wrap, draw |
 
 The rules for contributing are in [CONTRIBUTING.md](../CONTRIBUTING.md); third-party material is listed in [THIRD_PARTY.md](../THIRD_PARTY.md).

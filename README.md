@@ -34,6 +34,7 @@ language by writing one text file.
 | Contract tests | one suite per capability, run against every implementation | `testing/contracts/`, [docs/hardware-capabilities.md](docs/hardware-capabilities.md) |
 | Display and frame buffer | the 240 × 320 1-bit display interface; an in-memory buffer with clip detection and golden files for tests | `src/ui/`, `testing/`, [docs/ui-display.md](docs/ui-display.md) |
 | Fonts and text engine | four Lucida bitmap fonts with our own interface symbols, the character set, UTF-8 text measuring, fitting, wrapping and drawing | `src/ui/`, `assets/fonts/`, [docs/ui-text.md](docs/ui-text.md) |
+| Layout testing in every language | a pseudo-language (accented, 40 % longer, bracketed) and a helper that runs a test in every shipped language and in it | `src/i18n/`, `testing/`, [docs/ui-layout-testing.md](docs/ui-layout-testing.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 

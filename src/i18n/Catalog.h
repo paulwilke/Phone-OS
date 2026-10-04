@@ -81,6 +81,7 @@ public:
 
 private:
   friend class Translator;
+  friend Catalog pseudoCatalog(const Catalog& reference);
   std::string code_, name_, native_;
   PluralRule plural_ = PluralRule::OneOther;
   std::map<std::string, Entry> entries_;
