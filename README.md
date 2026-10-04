@@ -29,6 +29,7 @@ language by writing one text file.
 | SOS flow | choice, countdown and five-tap override in front of the ping | `src/app/`, [docs/sos-flow.md](docs/sos-flow.md) |
 | SMS command | the remote location query, trigger words per language | `src/app/`, [docs/sms-command.md](docs/sms-command.md) |
 | Power policy | the decision what may sleep when | `src/app/`, [docs/power-policy.md](docs/power-policy.md) |
+| Hardware capabilities | the interfaces between the software and the hardware: clock, power, positioning, modem, log, vibration, files, WLAN, TCP, motion, radio | `src/hal/`, [docs/hardware-capabilities.md](docs/hardware-capabilities.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
 
@@ -40,6 +41,7 @@ Requires [PlatformIO Core](https://docs.platformio.org/page/core/installation.ht
 pio test -e native              # host tests of the C++ code
 python3 scripts/check_i18n.py   # the language catalogs against the English reference
 python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeholder markers, non-English text
+python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
 python3 scripts/privacy_check.py
 ```
 

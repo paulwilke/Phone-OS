@@ -28,5 +28,8 @@ jobs:
       - name: Documentation and code hygiene
         run: python3 scripts/check_docs.py
 
+      - name: Layers
+        run: python3 scripts/check_layers.py
+
       - name: Privacy
         run: python3 scripts/privacy_check.py
