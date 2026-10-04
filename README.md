@@ -33,8 +33,9 @@ language by writing one text file.
 | Test doubles | a scriptable fake for every hardware capability | `testing/fakes/`, [docs/test-doubles.md](docs/test-doubles.md) |
 | Contract tests | one suite per capability, run against every implementation | `testing/contracts/`, [docs/hardware-capabilities.md](docs/hardware-capabilities.md) |
 | Display and frame buffer | the 240 × 320 1-bit display interface; an in-memory buffer with clip detection and golden files for tests | `src/ui/`, `testing/`, [docs/ui-display.md](docs/ui-display.md) |
+| Fonts and text engine | four Lucida bitmap fonts with our own interface symbols, the character set, UTF-8 text measuring, fitting, wrapping and drawing | `src/ui/`, `assets/fonts/`, [docs/ui-text.md](docs/ui-text.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
-| Checks | catalog parity, documentation and code hygiene, privacy | `scripts/` |
+| Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 
 ## Build and test
 
@@ -45,6 +46,7 @@ pio test -e native              # host tests of the C++ code
 python3 scripts/check_i18n.py   # the language catalogs against the English reference
 python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeholder markers, non-English text
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
+python3 scripts/make_font.py --check # the generated fonts match their sources
 python3 scripts/privacy_check.py
 ```
 
@@ -61,4 +63,8 @@ python3 scripts/privacy_check.py
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). The display fonts are the exception: the letters are Lucida Sans bitmap fonts under their own licence ([assets/fonts/LICENSE-Lucida-BH.txt](assets/fonts/LICENSE-Lucida-BH.txt), listed in [THIRD_PARTY.md](THIRD_PARTY.md)), and the licence requires these notices:
+
+(c) Copyright 1989 Sun Microsystems, Inc. Sun design patents pending in the U.S. and foreign countries. OPEN LOOK is a trademark of AT&T. Used by written permission of the owners.
+
+(c) Copyright Bigelow & Holmes 1986, 1985. Lucida is a registered trademark of Bigelow & Holmes. Permission to use the Lucida trademark is hereby granted only in association with the images and fonts described in this file.

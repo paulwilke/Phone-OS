@@ -8,7 +8,7 @@ For every lang/*.toml:
   * every message has the number of plural forms the rule needs (or one form);
   * the keys are exactly the keys of en.toml (nothing missing, no leftovers);
   * every message uses the same {placeholders} as the English one;
-  * only characters the display fonts can draw are used (Latin-1);
+  * only characters the display fonts can draw are used (assets/fonts/charset.txt);
   * messages whose key starts with `sms.` use only the GSM 7-bit alphabet, so that an SMS stays
     one part.
 
@@ -22,7 +22,11 @@ import re
 import sys
 import tomllib
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import charset  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CODEPOINTS = charset.load()[0]
 PLURAL_FORMS = {"single": 1, "one-other": 2, "zero-one-other": 2}
 # Characters of the GSM 7-bit alphabet (basic table and extension table). A text sent
 # by SMS that contains anything else is sent as UCS-2, which fits 70 characters per
@@ -84,9 +88,9 @@ def main():
                     outside = sorted({c for c in PLACEHOLDER.sub("", form) if c not in GSM7})
                     if outside:
                         problems.append(f"{name}: `{key}` is sent by SMS but uses characters outside the GSM alphabet: {''.join(outside)}")
-                bad = sorted({c for c in form if ord(c) > 0xFF})
+                bad = charset.allowed_text(form, CODEPOINTS)
                 if bad:
-                    problems.append(f"{name}: `{key}` uses characters the fonts cannot draw: {''.join(bad)}")
+                    problems.append(f"{name}: `{key}` uses characters outside assets/fonts/charset.txt: {''.join(bad)}")
         if name == "en.toml":
             continue
         for key in sorted(set(ref) - set(strings)):

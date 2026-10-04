@@ -31,5 +31,8 @@ jobs:
       - name: Layers
         run: python3 scripts/check_layers.py
 
+      - name: Generated fonts
+        run: python3 scripts/make_font.py --check
+
       - name: Privacy
         run: python3 scripts/privacy_check.py

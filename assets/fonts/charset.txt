@@ -1,0 +1,37 @@
+# The characters the interface can draw: the one definition of the character set.
+#
+# Read by scripts/make_font.py (which draws every one of them in every font size), by
+# scripts/check_i18n.py (catalogs may use nothing else) and by the host tests (every
+# character has a glyph in every font). A character is added here, drawn in the fonts
+# (the glyph exists in the Lucida files, or the symbol is drawn in symbols.txt) and
+# only then used in a catalog.
+#
+# Lines:
+#   range <first> <last>      code points in hexadecimal, both included
+#   char  <code point>        one code point
+#   symbol <code point> <name>  an interface symbol; its pixel art is in symbols.txt under <name>
+# Everything after "#" on a line is a comment.
+
+# Basic Latin, printable: space to tilde.
+range 0020 007E
+
+# Latin-1 supplement, printable: no-break space to y with diaeresis.
+range 00A0 00FF
+
+# œ Œ Ÿ and the euro sign: French needs the first three, prices need the last.
+char 0152   # Œ
+char 0153   # œ
+char 0178   # Ÿ
+char 20AC   # €
+
+# The symbols of the controls and tiles, as they are written in the catalogs.
+symbol 21B5 enter       # ↵
+symbol 232B backspace   # ⌫
+symbol 25B2 up          # ▲
+symbol 25BC down        # ▼
+symbol 260E telephone   # ☎
+symbol 2709 envelope    # ✉
+symbol 2708 aeroplane   # ✈
+symbol 1F4AC bubble     # 💬 speech bubble
+symbol 1F4E1 radio      # 📡
+symbol 1F4CD pin        # 📍
