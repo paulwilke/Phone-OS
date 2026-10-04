@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "PhoneNumber.h"
+#include "Utf8.h"
 
 namespace phone {
 namespace {
@@ -48,18 +49,6 @@ const char* numberEnd(const char* p, const char* end) {
   return last;
 }
 
-// Copies at most size - 1 bytes without cutting a UTF-8 character in half: a
-// broken character would be drawn as garbage on the display.
-void copyText(char* dst, size_t size, const char* begin, const char* end) {
-  size_t len = (size_t)(end - begin);
-  if (len > size - 1) {
-    len = size - 1;
-    while (len > 0 && ((unsigned char)begin[len] & 0xC0) == 0x80) --len;
-  }
-  memcpy(dst, begin, len);
-  dst[len] = '\0';
-}
-
 }  // namespace
 
 bool ContactBook::setCountryCode(const char* cc) {
@@ -99,7 +88,7 @@ size_t ContactBook::load(const char* text, size_t len) {
       char raw[96];
       // Input that does not fit is unreadable; cutting it could hide extra digits.
       const bool fits = (size_t)(numEnd - cursor) < sizeof(raw);
-      if (fits) copyText(raw, sizeof(raw), cursor, numEnd);
+      if (fits) utf8::copy(raw, sizeof(raw), cursor, numEnd);
 
       Contact c;
       if (!fits || !normalize(raw, country_, c.phone, sizeof(c.phone))) {
@@ -120,8 +109,8 @@ size_t ContactBook::load(const char* text, size_t len) {
         }
         const char* nameEnd = lineEnd;
         while (nameEnd > cursor && isBlank(nameEnd[-1])) --nameEnd;
-        copyText(c.name, sizeof(c.name), cursor, nameEnd);
-        if (c.name[0] == '\0') copyText(c.name, sizeof(c.name), c.phone, c.phone + strlen(c.phone));
+        utf8::copy(c.name, sizeof(c.name), cursor, nameEnd);
+        if (c.name[0] == '\0') utf8::copy(c.name, sizeof(c.name), c.phone, c.phone + strlen(c.phone));
         contacts_[count_++] = c;
       }
     }
