@@ -36,6 +36,7 @@ language by writing one text file.
 | Fonts and text engine | four Lucida bitmap fonts with our own interface symbols, the character set, UTF-8 text measuring, fitting, wrapping and drawing | `src/ui/`, `assets/fonts/`, [docs/ui-text.md](docs/ui-text.md) |
 | Layout testing in every language | a pseudo-language (accented, 40 % longer, bracketed) and a helper that runs a test in every shipped language and in it | `src/i18n/`, `testing/`, [docs/ui-layout-testing.md](docs/ui-layout-testing.md) |
 | UI framework | input model, screen stack with `onEnter`/`onLeave`, soft keys, status bar, tile grid, list, text block, button | `src/ui/`, [docs/ui-framework.md](docs/ui-framework.md) |
+| E-ink refresh policy and frame budgets | when to refresh the panel in part, in full or not at all; tests that fail when the interface makes the panel work more than a scenario allows | `src/ui/`, `testing/`, [docs/ui-refresh.md](docs/ui-refresh.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 
