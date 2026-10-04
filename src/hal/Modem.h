@@ -51,7 +51,10 @@ enum class ModemState { Off, PoweringOn, Initializing, Registering, Ready, Error
 //
 // Ended, Missed, Busy, NoAnswer and DialFailed are final: nothing follows for that
 // call. Ended is delivered once, whichever side hung up; its `duration` is the length of
-// the connected call in seconds (0 for all other events).
+// the connected call in seconds (0 for all other events). A call we cancel with
+// hangup() while it is still dialling ends with Ended and duration 0, without a
+// Connected before it; one we refuse while it rings is Missed. Switching the modem off
+// during a call ends it the same way.
 enum class CallEventType { Incoming, Connected, Ended, Missed, Busy, NoAnswer, DialFailed };
 
 // `reason` is the modem's own line when it names one (for example "+CME ERROR: ..."):
@@ -107,8 +110,9 @@ public:
   // The next call event, in the order the network delivered them (see CallEventType).
   virtual bool pollCallEvent(CallEvent& out) = 0;
 
-  // Call volume 0 … 7. Sound runs through the modem's codec, so it sets the volume
-  // as well. False when the modem cannot; callVolume() is -1 then.
+  // Call volume 0 … 7; a level outside is clamped to it. Sound runs through the
+  // modem's codec, so it sets the volume as well. False when the modem cannot;
+  // callVolume() is -1 then.
   virtual bool setCallVolume(int level) = 0;
   virtual int callVolume() const = 0;
 
