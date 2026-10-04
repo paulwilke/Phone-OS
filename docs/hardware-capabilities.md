@@ -77,3 +77,41 @@ The sensor is a small computer with its own firmware and supply rail, so it runs
 ### Radio
 
 Optional. `send()` with an empty contact means the default contact. Each sent message gets exactly one `RadioDelivery` report, in the order of sending, so the application can match it to the oldest open message; `confirmed = false` means "we do not know", not "lost".
+
+## Contract tests
+
+Code: `testing/contracts/` (the suites), `test/test_hardware_contracts/` (the rigs of the test doubles and the one `main()` that runs everything). The contract in the headers is not left to goodwill: for each interface there is a suite written **against the interface**, and any implementation, present or future, must pass it. The test doubles of [test-doubles.md](test-doubles.md) are only the first implementations; when the device or the simulator gets its own, it runs the same suites.
+
+What the suites pin, among others:
+
+- **Clock**: uptime never goes back and advances by at least the time advanced; the epoch is unknown (0) or plausible; a date before 2020 is refused and changes nothing; setting the epoch does not move the uptime; the offset limits.
+- **Power**: switching shows in `isEnabled`; a domain that cannot be switched reports failure and keeps its state; charging needs a supply and the remaining time is unknown while charging; a refused power-off changes nothing.
+- **Positioning**: off gives false and leaves the fix alone; no position before the receiver has found one; after a restart, including one between two readings, the old position is not returned.
+- **Modem**: starts off; a SIM that wants its PIN is an error, not "no network"; a failed sending is reported exactly once with the modem's reason, and a refused one not at all; messages arrive oldest first, each once; call events are legal in every case (incoming → connected → ended, or missed; outgoing → connected → ended, or busy, no answer, dial failed; `Ended` once whoever hangs up), and a seeded random sequence of 150 × 40 operations is checked against a sequence checker and against the state; only read forms are accepted as queries; the volume is clamped.
+- **Log**: a thousand lines arrive in order, a call is one record whatever line breaks it holds.
+- **Vibration**: nothing is fired without a pattern; the pulse counts and the pauses of each pattern; a pattern started while another plays replaces it; busy until the last pulse.
+- **Files**: a write that fails halfway leaves the old content intact, hides the scratch file and leaves nothing of a new file; unsafe paths are refused by every operation; names are compared without regard to case; one directory level is created, two are not; scratch files are never listed; an empty file is not a missing one.
+- **WLAN**: the access point password has 8 to 63 characters; a refused start leaves a running mode running; starting one mode stops the other.
+- **TCP**: nothing is accepted before listening; the data a client sent before leaving is read before the end is reported; no write to a client that left; clients are accepted one after the other.
+- **Motion**: no value while stopped; starting twice is harmless; a start that fails leaves it not running.
+- **Radio**: one delivery report per sent message, in the order of sending; a refused message leaves nothing open for a report; a known contact seen again is not listed twice.
+
+### How a suite is run against a new implementation
+
+A suite is a class template over a **rig**: a small default-constructible class that owns one implementation and offers the hooks the suite needs from outside. The suite never names the implementation. For the clock, for example:
+
+```cpp
+struct DeviceClockRig {
+  DeviceClock impl;                         // the implementation under test
+  Clock& clock() { return impl; }
+  void advance(uint32_t ms) { /* sleep ms */ }
+};
+```
+
+and in a test's `main()`, one line:
+
+```cpp
+RUN_CLOCK_CONTRACT(DeviceClockRig);
+```
+
+Each suite's header (`testing/contracts/<Name>Contract.h`) lists the hooks its rig must offer. Hooks that **create a situation** (make the network refuse a call, make the next write fail, make a domain unswitchable) return `bool`: a rig that cannot create the situation returns false, and the test that needs it is reported as *ignored* instead of passing without testing anything. A real modem cannot be told to refuse a call; its rig leaves those hooks false and the pure-interface tests still run. Rigs for the test doubles are in `test/test_hardware_contracts/Rigs.h`.
