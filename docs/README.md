@@ -19,5 +19,6 @@ The documents describe what exists in this repository — each one is written fr
 | [sos-flow.md](sos-flow.md) | the escalation in front of the ping: choice, 40-second countdown, five taps in school time |
 | [sms-command.md](sms-command.md) | the remote location query by SMS: trigger words, admin check, outcomes |
 | [power-policy.md](power-policy.md) | what may sleep when: the eight rules and their order |
+| [hardware-capabilities.md](hardware-capabilities.md) | the interfaces to the hardware (capabilities), their contracts, vibration patterns |
 
 The rules for contributing are in [CONTRIBUTING.md](../CONTRIBUTING.md); third-party material is listed in [THIRD_PARTY.md](../THIRD_PARTY.md).
