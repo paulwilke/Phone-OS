@@ -296,6 +296,29 @@ void test_the_soft_keys_stay_inside_their_buttons_in_every_language() {
   });
 }
 
+void test_every_standard_soft_key_word_fits_either_button_with_and_without_the_arrows() {
+  const char* words[] = {"key.back", "key.open", "key.send", "key.choose", "key.next", "key.delete"};
+  languages::forEach([&](const std::string& language, Translator& t) {
+    for (const char* key : words) {
+      for (bool scroll : {false, true}) {
+        // The word as the back button and as the main action, next to the other button.
+        for (bool asAction : {false, true}) {
+          SoftKeys keys;
+          keys.scroll = scroll;
+          (asAction ? keys.action : keys.back) = t.get(key);
+          (asAction ? keys.back : keys.action) = t.get("key.open");
+          const Rect bar = ScreenLayout::standard().softKeys;
+          FrameBuffer fb;
+          fb.beginRegion(bar);
+          drawSoftKeys(fb, bar, keys);
+          fb.endRegion();
+          TEST_ASSERT_FALSE_MESSAGE(fb.clipped(), clips(language + " " + key, fb).c_str());
+        }
+      }
+    }
+  });
+}
+
 // ---- status bar -----------------------------------------------------------------------------
 
 void test_the_battery_is_five_bars_rounded_up() {
@@ -1117,6 +1140,7 @@ int main() {
   RUN_TEST(test_a_tap_acts_like_the_key_of_its_button);
   RUN_TEST(test_a_button_label_gives_up_the_space_and_then_the_symbol_when_it_does_not_fit);
   RUN_TEST(test_the_soft_keys_stay_inside_their_buttons_in_every_language);
+  RUN_TEST(test_every_standard_soft_key_word_fits_either_button_with_and_without_the_arrows);
   RUN_TEST(test_the_battery_is_five_bars_rounded_up);
   RUN_TEST(test_the_left_side_names_the_most_important_thing);
   RUN_TEST(test_the_left_side_without_an_operator);
