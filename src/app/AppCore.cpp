@@ -1,5 +1,7 @@
 #include "AppCore.h"
 
+#include "Calendar.h"
+
 AppCore::AppCore(Clock& clock, Power& power, Modem& modem, GnssReceiver& gnss, Haptic& haptic, EventLog& eventLog,
                  i18n::Translator& translator, Profile profile)
     : clock_(clock),
@@ -84,6 +86,16 @@ bool AppCore::radioPeer(size_t index, RadioPeer& out) { return radio_ && radio_-
 
 AppCore::State AppCore::state() {
   State s;
+  const uint32_t epoch = clock_.epochUtc();
+  if (epoch != 0) {
+    const calendar::LocalTime local = calendar::toLocal(epoch, clock_.tzOffsetMinutes());
+    const calendar::Civil date = calendar::civilFromDays(local.days);
+    s.wall.known = true;
+    s.wall.month = date.month;
+    s.wall.day = date.day;
+    s.wall.weekday = (local.weekday + 1) % 7;  // the calendar counts from Monday, the weekday words from Sunday
+    s.wall.minuteOfDay = local.minuteOfDay;
+  }
   s.network = connectivity_.networkLabel();
   s.registered = connectivity_.registered();
   s.signalBars = modem_.signalBars();

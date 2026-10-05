@@ -326,6 +326,7 @@ Tests in `test/test_app_core/`.
 | APP-16 | Wi-Fi stays on while it is used, switches itself off afterwards, and keeps the processor awake meanwhile | `test_wifi_stays_on_while_it_is_used` | — | done |
 | APP-17 | The position page and the test page each hold the receiver; one closing does not take it from the other | `test_the_position_page_and_the_test_page_hold_the_receiver` | — | done |
 | APP-18 | The radio's contacts are listed; without a radio there are none | `test_radio_contacts_are_listed` | — | done |
+| APP-19 | The state has the wall clock as numbers (month, day, weekday from Sunday, minute of the day) in the clock's zone, and nothing when the time is unknown | `test_the_state_has_the_wall_clock_as_numbers` | — | done |
 
 ## Not ported
 

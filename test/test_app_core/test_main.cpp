@@ -442,6 +442,28 @@ void test_without_a_known_time_the_zone_is_left_alone() {
   TEST_ASSERT_EQUAL(0, d.clock.tzOffsetMinutes());
 }
 
+void test_the_state_has_the_wall_clock_as_numbers() {
+  Device d;
+  AppCore::State::WallClock w = d.core.state().wall;
+  TEST_ASSERT_TRUE(w.known);
+  TEST_ASSERT_EQUAL(9, w.month);
+  TEST_ASSERT_EQUAL(15, w.day);
+  TEST_ASSERT_EQUAL(2, w.weekday);                                   // a Tuesday; Sunday is 0
+  TEST_ASSERT_EQUAL(14 * 60 + 32, w.minuteOfDay);
+  // Ten hours later it is the next day on the wall clock, in the zone and not in UTC.
+  d.clock.setEpochUtc(coretest::kTuesdayAfternoon + 10 * 3600);
+  w = d.core.state().wall;
+  TEST_ASSERT_EQUAL(16, w.day);
+  TEST_ASSERT_EQUAL(3, w.weekday);
+  TEST_ASSERT_EQUAL(32, w.minuteOfDay);
+  // A Sunday is 0, not 7.
+  d.clock.setEpochUtc(coretest::kTuesdayAfternoon + 5 * 86400);
+  TEST_ASSERT_EQUAL(0, d.core.state().wall.weekday);
+  // Without a known time there are no numbers to draw.
+  d.clock.setEpochUtc(0);
+  TEST_ASSERT_FALSE(d.core.state().wall.known);
+}
+
 void test_the_core_produces_only_codes() {
   Device d(inSchool(), true);
   d.core.markAllRead();
@@ -619,6 +641,7 @@ int main() {
   RUN_TEST(test_run_time_settings_change_the_profile);
   RUN_TEST(test_the_trigger_words_come_from_every_language);
   RUN_TEST(test_the_clock_follows_the_time_zone);
+  RUN_TEST(test_the_state_has_the_wall_clock_as_numbers);
   RUN_TEST(test_without_a_known_time_the_zone_is_left_alone);
   RUN_TEST(test_the_core_produces_only_codes);
   RUN_TEST(test_a_test_pattern_can_be_played);

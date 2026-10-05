@@ -12,6 +12,14 @@ namespace calendar {
 // Days since 1970-01-01 for a date (month 1-12, day 1-31).
 int64_t daysFromCivil(int year, unsigned month, unsigned day);
 
+// The date of a day count, the inverse of daysFromCivil (month 1-12, day 1-31).
+struct Civil {
+  int year;
+  int month;
+  int day;
+};
+Civil civilFromDays(int64_t days);
+
 // The year that contains the given Unix time (UTC), also before 1970.
 int yearOf(int64_t epochSeconds);
 

@@ -22,6 +22,18 @@ int64_t daysFromCivil(int year, unsigned month, unsigned day) {
   return (int64_t)era * 146097 + (int64_t)dayOfEra - 719468;
 }
 
+Civil civilFromDays(int64_t days) {
+  const int64_t z = days + 719468;
+  const int64_t era = floorDiv(z, 146097);
+  const unsigned dayOfEra = (unsigned)(z - era * 146097);
+  const unsigned yearOfEra = (dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096) / 365;
+  const unsigned dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100);
+  const unsigned shiftedMonth = (5 * dayOfYear + 2) / 153;  // 0 = March
+  const unsigned day = dayOfYear - (153 * shiftedMonth + 2) / 5 + 1;
+  const unsigned month = shiftedMonth < 10 ? shiftedMonth + 3 : shiftedMonth - 9;
+  return Civil{(int)(yearOfEra + era * 400) + (month <= 2 ? 1 : 0), (int)month, (int)day};
+}
+
 int yearOf(int64_t epochSeconds) {
   const int64_t z = floorDiv(epochSeconds, 86400) + 719468;
   const int64_t era = floorDiv(z, 146097);

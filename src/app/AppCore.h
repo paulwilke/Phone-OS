@@ -53,6 +53,15 @@ class AppCore : private Messaging::Hooks {
 public:
   // Everything the interface draws that comes from the core.
   struct State {
+    // The wall clock as plain numbers: the interface draws a date and a time of day and has no
+    // calendar of its own. Unknown until the network or the receiver has told the time.
+    struct WallClock {
+      bool known = false;
+      int month = 0, day = 0;  // 1..12, 1..31
+      int weekday = 0;         // 0 = Sunday .. 6 = Saturday
+      int minuteOfDay = 0;     // 0 .. 1439
+    };
+    WallClock wall;
     // network
     Connectivity::NetworkLabel network;
     bool registered = false;
