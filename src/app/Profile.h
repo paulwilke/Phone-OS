@@ -18,6 +18,7 @@
 #include "QuietHours.h"
 #include "SmsCommand.h"
 #include "TimeZone.h"
+#include "WifiSettings.h"
 
 struct Profile {
   // --- people and time ---
@@ -40,8 +41,9 @@ struct Profile {
   bool callVibration = true;
   bool quietCallVibration = false;  // a call in school time is rejected silently unless this is on
 
-  // --- power ---
+  // --- power and connectivity ---
   bool modemSleep = true;
+  WifiSettings wifi;
 
   // --- what the device says ---
   std::string childName;                               // in the SOS texts; empty = anonymous texts

@@ -20,7 +20,8 @@
 // kAwaitingSize are awaited; the oldest is forgotten when a fifth is sent). An SMS gets no report
 // and no state is claimed for it. A message the modem accepted and the network then refused is
 // reported once by the modem: it is logged with the modem's reason, written to the history,
-// shown as a notice and vibrated, and the SOS ping is told.
+// shown as a notice and vibrated, and the SOS ping is told — except the reply to a parent's query,
+// which stays out of the child's sight and is only logged.
 
 #include <deque>
 #include <string>
@@ -51,8 +52,10 @@ public:
     // A parent's query asks for the position: start the search and the reply. False when one is
     // running already.
     virtual bool startLocationReply(const std::string& phone) = 0;
-    // The network refused a message the modem had accepted.
-    virtual void smsSendFailed(const std::string& phone) = 0;
+    // The network refused a message the modem had accepted. True when the message was the
+    // silent reply to a parent's query: the child is then told nothing (no history entry, notice
+    // or vibration).
+    virtual bool smsSendFailed(const std::string& phone) = 0;
   };
 
   Messaging(Clock& clock, Modem& modem, Power& power, MessageStore& store, const Profile& profile, SchoolTime& school,

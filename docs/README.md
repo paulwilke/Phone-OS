@@ -28,6 +28,10 @@ The documents describe what exists in this repository — each one is written fr
 | [messaging.md](messaging.md) | messages in and out: remote queries first, cellular else radio else the queue, delivery reports, send failures |
 | [school-time.md](school-time.md) | school time on the clock and the emergency lift |
 | [calls.md](calls.md) | dialling rules, every call rejected in school time, ringing, why a call failed, volume |
+| [emergency.md](emergency.md) | the SOS button and the reply to a location query as one search at a time; the receiver, school time, the outcome, the wording |
+| [connectivity.md](connectivity.md) | cellular, save mode and the cell probe, the radio request, Wi-Fi with its rules, the network label as data |
+| [wifi-controller.md](wifi-controller.md) | Wi-Fi settings and modes, the access point password, the idle switch-off |
+| [power-coordination.md](power-coordination.md) | the power policy applied to modem, radio chip and processor; the front light |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |

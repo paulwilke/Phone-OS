@@ -23,7 +23,11 @@ struct Hooks : Messaging::Hooks {
     queries.push_back(phone);
     return accept;
   }
-  void smsSendFailed(const std::string& phone) override { failures.push_back(phone); }
+  bool smsSendFailed(const std::string& phone) override {
+    failures.push_back(phone);
+    return silent;
+  }
+  bool silent = false;
 };
 
 struct Rig : CoreFakes {
@@ -464,6 +468,19 @@ void test_a_modem_send_failure_is_recorded_noticed_and_reported() {
   TEST_ASSERT_EQUAL(1, r.hooks.failures.size());
 }
 
+void test_the_failure_of_a_silent_reply_stays_out_of_the_childs_sight() {
+  Rig r;
+  r.hooks.silent = true;
+  r.modem.failNextSms("+CMS ERROR: 304");
+  r.messaging.sendText(kParentOne, "Location");
+  TEST_ASSERT_TRUE(r.messaging.poll());
+  TEST_ASSERT_TRUE(r.log.contains("SMS to Parent One rejected"));  // the log keeps it
+  TEST_ASSERT_EQUAL(1, r.store.count());                           // the sent text only: no system entry
+  TEST_ASSERT_TRUE(r.notices.current().none());
+  TEST_ASSERT_EQUAL(0, r.played(HapticPattern::Failed));
+  TEST_ASSERT_EQUAL(1, r.hooks.failures.size());                   // and it was asked about
+}
+
 void test_sending_is_logged() {
   Rig r;
   r.messaging.sendText(kParentOne, "On my way");
@@ -629,6 +646,7 @@ int main() {
   RUN_TEST(test_the_oldest_awaited_report_is_forgotten);
   RUN_TEST(test_an_sms_has_no_delivery_state);
   RUN_TEST(test_a_modem_send_failure_is_recorded_noticed_and_reported);
+  RUN_TEST(test_the_failure_of_a_silent_reply_stays_out_of_the_childs_sight);
   RUN_TEST(test_sending_is_logged);
   RUN_TEST(test_empty_recipient_or_text_is_refused);
   RUN_TEST(test_a_message_can_be_deleted);

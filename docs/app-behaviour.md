@@ -141,6 +141,7 @@ Tests in `test/test_messaging/`.
 | MSG-42 | An empty radio text is refused without a notice | `test_an_empty_radio_text_is_refused_quietly` | — | done |
 | MSG-43 | A queued message keeps its full text although the history keeps 160 bytes | `test_a_long_queued_message_keeps_its_full_text` | — | done |
 | MSG-44 | The history text is cut on a character boundary | `test_the_history_text_is_cut_on_a_character_boundary` | — | done |
+| MSG-45 | The failure of a reply the Emergency hook calls silent stays out of the child's sight: logged only | `test_the_failure_of_a_silent_reply_stays_out_of_the_childs_sight` | — | done |
 
 ## Calls
 
@@ -193,27 +194,38 @@ Tests in `test/test_emergency/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| EME-01 | The SOS recipient is the target or the first call contact; without one SOS cannot begin | `test_without_a_recipient_sos_cannot_begin` | SC:test_without_a_contact_there_is_no_sos_tile | open |
-| EME-02 | SOS works in school time | `test_sos_works_in_school_time` | EA:test_sos_works_during_school_time | open |
-| EME-03 | Pressing SOS starts the receiver at once, before any choice | `test_pressing_sos_starts_the_receiver_at_once` | SC:test_sos_tile_starts_the_ping_and_shows_progress | open |
-| EME-04 | Choosing emergency or pickup starts the ping to the recipient; the ping holds the receiver | `test_choosing_starts_the_ping` | SC:test_sos_tile_starts_the_ping_and_shows_progress | open |
-| EME-05 | The ping sends the position after the minimum time, to the first contact, with the coordinates | `test_the_ping_sends_the_position` | SC:test_sos_ping_sends_the_position_after_waiting | open |
-| EME-06 | The receiver is off again after the ping ends | `test_the_receiver_is_off_after_the_ping` | SC:test_sos_ping_sends_the_position_after_waiting | open |
-| EME-07 | Leaving the choice sends nothing and releases the receiver | `test_leaving_the_choice_sends_nothing` | SC:test_sos_can_be_cancelled | open |
-| EME-08 | Without a choice the emergency goes out after 40 seconds | `test_the_emergency_goes_out_by_itself_after_40_seconds` | SC:test_sos_goes_out_by_itself_after_the_countdown | open |
-| EME-09 | Pickup sends the other text | `test_pickup_sends_the_other_text` | SC:test_sos_pickup_sends_the_other_text | open |
-| EME-10 | In school time five taps send the emergency and lift the school-time lock to the end of the current window; fewer do nothing | `test_five_taps_in_school_time_lift_the_lock` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | open |
-| EME-11 | The lift is logged and ends with the school time | `test_the_lift_is_logged_and_ends_with_the_school_time` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | open |
-| EME-12 | Leaving the school-time warning has no effect, the lock stays | `test_leaving_the_school_time_warning_has_no_effect` | SC:test_sos_warning_in_school_time_can_be_left_without_effect | open |
-| EME-13 | The outcome of a ping is told once by haptic: sent three short, failed short-long | `test_the_outcome_is_vibrated_once` | EA:test_sos_done_vibrates_three_short_once | open |
-| EME-14 | A remote query is answered like an SOS ping: receiver on, wait for a good fix, one SMS to the asker with coordinates and no alarm word, receiver off, the child notices nothing, the log says sent | `test_a_remote_query_is_answered_like_an_sos_ping` | EA:test_where_are_you_is_answered_like_an_sos_ping_without_a_link_and_silently | open |
-| EME-15 | A remote query never vibrates, also at its end | `test_a_remote_query_never_vibrates` | EA:test_where_are_you_is_answered_like_an_sos_ping_without_a_link_and_silently | open |
-| EME-16 | One search at a time: a second query while one runs is answered busy | `test_a_second_query_is_busy` | — | open |
-| EME-17 | An emergency replaces a running query reply | `test_an_emergency_replaces_a_query_reply` | — | open |
-| EME-18 | A remote query while an SOS runs is answered busy | `test_a_query_during_an_sos_is_busy` | — | open |
-| EME-19 | The SMS wording is in the SMS language of the profile, whatever the interface language | `test_the_sms_is_worded_in_the_sms_language` | — | open |
-| EME-20 | The child's name and the map template of the profile go into the text | `test_the_name_and_the_map_template_go_into_the_text` | — | open |
-| EME-21 | The host's leave() releases the receiver when the screen closes | `test_leave_releases_the_receiver` | — | open |
+| EME-01 | The SOS recipient is the target or the first call contact; without one SOS cannot begin | `test_without_a_recipient_sos_cannot_begin` | SC:test_without_a_contact_there_is_no_sos_tile | done |
+| EME-02 | SOS works in school time | `test_sos_works_in_school_time` | EA:test_sos_works_during_school_time | done |
+| EME-03 | Pressing SOS starts the receiver at once, before any choice | `test_pressing_sos_starts_the_receiver_at_once` | SC:test_sos_tile_starts_the_ping_and_shows_progress | done |
+| EME-04 | Choosing emergency or pickup starts the ping to the recipient; the ping holds the receiver | `test_choosing_starts_the_ping` | SC:test_sos_tile_starts_the_ping_and_shows_progress | done |
+| EME-05 | The ping sends the position after the minimum time, to the first contact, with the coordinates | `test_the_ping_sends_the_position` | SC:test_sos_ping_sends_the_position_after_waiting | done |
+| EME-06 | The receiver is off again after the ping ends | `test_the_receiver_is_off_after_the_ping` | SC:test_sos_ping_sends_the_position_after_waiting | done |
+| EME-07 | Leaving the choice sends nothing and releases the receiver | `test_leaving_the_choice_sends_nothing` | SC:test_sos_can_be_cancelled | done |
+| EME-08 | Without a choice the emergency goes out after 40 seconds | `test_the_emergency_goes_out_by_itself_after_40_seconds` | SC:test_sos_goes_out_by_itself_after_the_countdown | done |
+| EME-09 | Pickup sends the other text | `test_pickup_sends_the_other_text` | SC:test_sos_pickup_sends_the_other_text | done |
+| EME-10 | In school time five taps send the emergency and lift the school-time lock to the end of the current window; fewer do nothing | `test_five_taps_in_school_time_lift_the_lock` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | done |
+| EME-11 | The lift is logged and ends with the school time | `test_the_lift_is_logged_and_ends_with_the_school_time` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | done |
+| EME-12 | Leaving the school-time warning has no effect, the lock stays | `test_leaving_the_school_time_warning_has_no_effect` | SC:test_sos_warning_in_school_time_can_be_left_without_effect | done |
+| EME-13 | The outcome of a ping is told once by haptic: sent three short, failed short-long | `test_the_outcome_is_vibrated_once` | EA:test_sos_done_vibrates_three_short_once | done |
+| EME-14 | A remote query is answered like an SOS ping: receiver on, wait for a good fix, one SMS to the asker with coordinates and no alarm word, receiver off, the child notices nothing, the log says sent | `test_a_remote_query_is_answered_like_an_sos_ping` | EA:test_where_are_you_is_answered_like_an_sos_ping_without_a_link_and_silently | done |
+| EME-15 | A remote query never vibrates, also at its end | `test_a_remote_query_never_vibrates` | EA:test_where_are_you_is_answered_like_an_sos_ping_without_a_link_and_silently | done |
+| EME-16 | One search at a time: a second query while one runs is answered busy | `test_a_second_query_is_busy` | — | done |
+| EME-17 | An emergency replaces a running query reply | `test_an_emergency_replaces_a_query_reply` | — | done |
+| EME-18 | A remote query while an SOS runs is answered busy | `test_a_query_during_an_sos_is_busy` | — | done |
+| EME-19 | The SMS wording is in the SMS language of the profile, whatever the interface language | `test_the_sms_is_worded_in_the_sms_language` | — | done |
+| EME-20 | The child's name and the map template of the profile go into the text | `test_the_name_and_the_map_template_go_into_the_text` | — | done |
+| EME-21 | The host's leave() releases the receiver when the screen closes | `test_leave_releases_the_receiver` | — | done |
+| EME-22 | Without an explicit target the first call target is the recipient | `test_the_first_call_target_is_the_default_recipient` | — | done |
+| EME-23 | A second press keeps the countdown, and a press while a ping runs changes nothing | `test_pressing_sos_again_keeps_the_countdown_and_a_running_ping` | — | done |
+| EME-24 | A text the network refuses after the modem took it is vibrated as failed once, not twice | `test_a_text_the_network_refuses_is_vibrated_as_failed_once` | — | done |
+| EME-25 | A text that cannot even be queued fails the ping, vibrates once and releases the receiver | `test_a_text_that_cannot_even_be_queued_is_vibrated_as_failed` | — | done |
+| EME-26 | Without any position a text with the waiting time goes out after the timeout | `test_without_a_position_a_text_goes_out_anyway` | — | done |
+| EME-27 | The failure of a query reply is only logged: no history entry, notice or vibration | `test_the_failure_of_a_query_reply_is_only_logged` | — | done |
+| EME-28 | A query while the SOS choice is open is answered and the choice keeps its receiver | `test_a_query_while_the_choice_is_open_is_answered_and_the_choice_stays` | — | done |
+| EME-29 | An unknown SMS language falls back to English | `test_an_unknown_sms_language_falls_back_to_english` | — | done |
+| EME-30 | A name changed in the profile is used at the next press | `test_a_changed_name_is_used_at_the_next_press` | — | done |
+| EME-31 | Only the reply to a query is silent when the network refuses it: not a message to the same number during the search, not another number | `test_only_the_reply_to_a_query_is_silent_when_the_network_refuses_it` | — | done |
+| EME-32 | Leaving after the choice does not stop a running ping | `test_leave_does_not_stop_a_running_ping` | — | done |
 
 ## Connectivity
 
@@ -221,21 +233,25 @@ Tests in `test/test_connectivity/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| CON-01 | Cellular can be switched off and on; each is logged and noticed; a switch that fails is logged and returns false | `test_cellular_can_be_switched` | EA:test_cellular_off_uses_mesh_and_blocks_calls | open |
-| CON-02 | A switched-off or just restarted modem is not asleep | `test_a_switched_modem_is_not_asleep` | — | open |
-| CON-03 | Registered means powered on, in a state that is registered and with an operator | `test_registered_needs_power_state_and_operator` | EA:test_cellular_off_uses_mesh_and_blocks_calls | open |
-| CON-04 | The network label is data: the operator name shortened, radio, radio only, or none | `test_the_network_label_is_data` | EA:test_network_label_names_the_provider_or_the_radio | open |
-| CON-05 | The radio starts only on request, and only if the profile allows it | `test_the_radio_starts_only_on_request_and_if_permitted` | EA:test_mesh_starts_only_on_request_and_only_if_permitted | open |
-| CON-06 | A restart can be requested | `test_a_restart_can_be_requested` | — | open |
-| CON-07 | Save mode needs the radio; without it it is refused with a notice | `test_save_mode_needs_the_radio` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | open |
-| CON-08 | Save mode switches cellular and Wi-Fi off; leaving it switches cellular back on | `test_save_mode_switches_cellular_and_wifi_off` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | open |
-| CON-09 | The cell probe switches cellular on for 180 seconds and off again by itself; save mode stays | `test_the_cell_probe_ends_by_itself` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | open |
-| CON-10 | The probe only works in save mode and its seconds left are readable | `test_the_probe_works_only_in_save_mode` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | open |
-| CON-11 | Wi-Fi is refused in save mode | `test_wifi_is_refused_in_save_mode` | — | open |
-| CON-12 | Wi-Fi is refused on a nearly empty battery unless on the cable; switching it off always works | `test_wifi_is_refused_on_a_nearly_empty_battery` | EA:test_wifi_is_refused_with_a_nearly_empty_battery, EA:test_wifi_on_cable_ignores_the_battery_limit | open |
-| CON-13 | Without a Wi-Fi capability nothing happens | `test_without_wifi_nothing_happens` | EA:test_wifi_without_a_web_service_does_nothing | open |
-| CON-14 | Wi-Fi requests are logged | `test_wifi_requests_are_logged` | — | open |
-| CON-15 | Wi-Fi is off until asked | `test_wifi_is_off_until_someone_asks` | WF:test_wifi_is_off_until_someone_asks | open |
+| CON-01 | Cellular can be switched off and on; each is logged and noticed; a switch that fails is logged and returns false | `test_cellular_can_be_switched` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
+| CON-02 | A switched-off or just restarted modem is not asleep | `test_a_switched_modem_is_not_asleep` | — | done |
+| CON-03 | Registered means powered on, in a state that is registered and with an operator | `test_registered_needs_power_state_and_operator` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
+| CON-04 | The network label is data: the operator name shortened, radio, radio only, or none | `test_the_network_label_is_data` | EA:test_network_label_names_the_provider_or_the_radio | done |
+| CON-05 | The radio starts only on request, and only if the profile allows it | `test_the_radio_starts_only_on_request_and_if_permitted` | EA:test_mesh_starts_only_on_request_and_only_if_permitted | done |
+| CON-06 | A restart can be requested | `test_a_restart_can_be_requested` | — | done |
+| CON-07 | Save mode needs the radio; without it it is refused with a notice | `test_save_mode_needs_the_radio` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
+| CON-08 | Save mode switches cellular and Wi-Fi off; leaving it switches cellular back on | `test_save_mode_switches_cellular_and_wifi_off` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
+| CON-09 | The cell probe switches cellular on for 180 seconds and off again by itself; save mode stays | `test_the_cell_probe_ends_by_itself` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
+| CON-10 | The probe only works in save mode and its seconds left are readable | `test_the_probe_works_only_in_save_mode` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
+| CON-11 | Wi-Fi is refused in save mode | `test_wifi_is_refused_in_save_mode` | — | done |
+| CON-12 | Wi-Fi is refused on a nearly empty battery unless on the cable; switching it off always works | `test_wifi_is_refused_on_a_nearly_empty_battery` | EA:test_wifi_is_refused_with_a_nearly_empty_battery, EA:test_wifi_on_cable_ignores_the_battery_limit | done |
+| CON-13 | Without a Wi-Fi capability nothing happens | `test_without_wifi_nothing_happens` | EA:test_wifi_without_a_web_service_does_nothing | done |
+| CON-14 | Wi-Fi requests are logged | `test_wifi_requests_are_logged` | — | done |
+| CON-15 | Wi-Fi is off until asked | `test_wifi_is_off_until_someone_asks` | WF:test_wifi_is_off_until_someone_asks | done |
+| CON-16 | A switch-on that fails is logged | `test_a_failed_switch_on_is_logged` | — | done |
+| CON-17 | A new probe starts the 180 seconds anew, and leaving save mode ends it | `test_a_probe_can_be_started_again_and_leaving_save_mode_ends_it` | — | done |
+| CON-18 | An unknown battery level does not refuse Wi-Fi | `test_an_unknown_battery_does_not_refuse_wifi` | — | done |
+| CON-19 | poll() keeps the Wi-Fi controller going | `test_poll_keeps_wifi_going` | — | done |
 
 ## WifiController
 
@@ -243,19 +259,22 @@ Tests in `test/test_wifi_controller/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| WIF-01 | Station mode connects | `test_station_connects` | WF:test_station_connects | open |
-| WIF-02 | Station mode tries the next network after a failure or a timeout, then gives up and powers the chip off | `test_station_tries_the_next_network` | WF:test_station_tries_the_next_network_after_a_failure_or_timeout | open |
-| WIF-03 | Station mode without networks says so | `test_station_without_networks_says_so` | WF:test_station_without_networks_says_so | open |
-| WIF-04 | An access point without a configured password gets a random eight-digit one | `test_access_point_gets_a_random_password` | WF:test_access_point_without_password_gets_a_random_one | open |
-| WIF-05 | The random password is padded to eight digits | `test_the_password_is_padded` | WF:test_access_point_password_is_padded_to_eight_digits | open |
-| WIF-06 | A configured password is used | `test_a_configured_password_is_used` | WF:test_configured_ap_password_is_used | open |
-| WIF-07 | The access point password is forgotten when off | `test_the_password_is_forgotten_when_off` | WF:test_ap_password_is_forgotten_when_off | open |
-| WIF-08 | Wi-Fi switches itself off after the idle time | `test_it_switches_itself_off_after_the_idle_time` | WF:test_wifi_switches_itself_off_after_the_idle_time | open |
-| WIF-09 | Activity postpones the shutdown | `test_activity_postpones_the_shutdown` | WF:test_activity_postpones_the_shutdown | open |
-| WIF-10 | A lost connection is retried | `test_a_lost_connection_is_retried` | WF:test_lost_connection_is_retried | open |
-| WIF-11 | An access point that fails to start is reported | `test_an_access_point_failure_is_reported` | WF:test_ap_start_failure_is_reported | open |
-| WIF-12 | Requesting off stops | `test_requesting_off_stops` | WF:test_request_off_stops | open |
-| WIF-13 | Wi-Fi settings: networks, access point, idle minutes with their limits (the file format is a later package) | `test_the_settings_are_validated` | WF:test_config_reads_networks_and_ap, WF:test_config_rejects_short_passwords_and_reports_them, WF:test_config_caps_networks_and_clamps_timeout | open |
+| WIF-01 | Station mode connects | `test_station_connects` | WF:test_station_connects | done |
+| WIF-02 | Station mode tries the next network after a failure or a timeout, then gives up and powers the chip off | `test_station_tries_the_next_network` | WF:test_station_tries_the_next_network_after_a_failure_or_timeout | done |
+| WIF-03 | Station mode without networks says so | `test_station_without_networks_says_so` | WF:test_station_without_networks_says_so | done |
+| WIF-04 | An access point without a configured password gets a random eight-digit one | `test_access_point_gets_a_random_password` | WF:test_access_point_without_password_gets_a_random_one | done |
+| WIF-05 | The random password is padded to eight digits | `test_the_password_is_padded` | WF:test_access_point_password_is_padded_to_eight_digits | done |
+| WIF-06 | A configured password is used | `test_a_configured_password_is_used` | WF:test_configured_ap_password_is_used | done |
+| WIF-07 | The access point password is forgotten when off | `test_the_password_is_forgotten_when_off` | WF:test_ap_password_is_forgotten_when_off | done |
+| WIF-08 | Wi-Fi switches itself off after the idle time | `test_it_switches_itself_off_after_the_idle_time` | WF:test_wifi_switches_itself_off_after_the_idle_time | done |
+| WIF-09 | Activity postpones the shutdown | `test_activity_postpones_the_shutdown` | WF:test_activity_postpones_the_shutdown | done |
+| WIF-10 | A lost connection is retried | `test_a_lost_connection_is_retried` | WF:test_lost_connection_is_retried | done |
+| WIF-11 | An access point that fails to start is reported | `test_an_access_point_failure_is_reported` | WF:test_ap_start_failure_is_reported | done |
+| WIF-12 | Requesting off stops | `test_requesting_off_stops` | WF:test_request_off_stops | done |
+| WIF-13 | Wi-Fi settings: networks, access point, idle minutes with their limits (the file format is a later package) | `test_the_settings_are_validated` | WF:test_config_reads_networks_and_ap, WF:test_config_rejects_short_passwords_and_reports_them, WF:test_config_caps_networks_and_clamps_timeout | done |
+| WIF-14 | An access point that stops while it runs is reported as lost | `test_a_lost_access_point_is_reported` | — | done |
+| WIF-15 | A lost connection starts again from the first network | `test_a_lost_connection_starts_again_from_the_first_network` | — | done |
+| WIF-16 | The idle time starts when the station has connected | `test_the_idle_time_starts_when_the_station_has_connected` | — | done |
 
 ## PowerCoordination
 
@@ -263,18 +282,22 @@ Tests in `test/test_power_coordination/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| POW-01 | The modem sleeps after a quiet minute, once | `test_the_modem_sleeps_after_a_quiet_minute` | EA:test_modem_sleeps_after_a_quiet_minute | open |
-| POW-02 | A key press wakes the modem | `test_a_key_press_wakes_the_modem` | EA:test_keypress_wakes_the_modem | open |
-| POW-03 | A profile without modem sleep keeps modem and processor awake | `test_no_modem_sleep_keeps_everything_awake` | EA:test_persona_without_modem_sleep_keeps_it_awake | open |
-| POW-04 | On external power nothing sleeps, also with a full battery that no longer charges | `test_external_power_keeps_everything_awake` | EA:test_full_battery_on_cable_still_counts_as_external_power | open |
-| POW-05 | Running Wi-Fi keeps the processor awake; a failed Wi-Fi does not | `test_running_wifi_keeps_the_processor_awake` | EA:test_running_wifi_keeps_the_cpu_awake | open |
-| POW-06 | With cellular off the modem is neither put to sleep nor woken | `test_a_switched_off_modem_is_left_alone` | EA:test_cellular_off_uses_mesh_and_blocks_calls | open |
-| POW-07 | The radio chip gets power only while the radio is usable, and the change is logged | `test_the_radio_chip_follows_the_need` | — | open |
-| POW-08 | Pending work is a queue with a path or a running search | `test_pending_work` | EA:test_pending_message_wakes_the_modem | open |
-| POW-09 | A battery-powered idle device may sleep the processor with the modem asleep | `test_the_processor_may_sleep_when_everything_is_idle` | EA:test_modem_sleeps_after_a_quiet_minute | open |
-| POW-10 | The front light toggles with a notice, and can be switched off | `test_the_front_light_toggles` | SC:test_light_tile_switches_the_frontlight, SC:test_locking_switches_the_light_off | open |
-| POW-11 | A refused power-off clears the request and says so | `test_a_refused_power_off_is_noticed` | — | open |
-| POW-12 | A test pattern can be played on the vibration motor | `test_a_test_pattern_can_be_played` | SC:test_selftest_screen_triggers_vibration_and_light | open |
+| POW-01 | The modem sleeps after a quiet minute, once | `test_the_modem_sleeps_after_a_quiet_minute` | EA:test_modem_sleeps_after_a_quiet_minute | done |
+| POW-02 | A key press wakes the modem | `test_a_key_press_wakes_the_modem` | EA:test_keypress_wakes_the_modem | done |
+| POW-03 | A profile without modem sleep keeps modem and processor awake | `test_no_modem_sleep_keeps_everything_awake` | EA:test_persona_without_modem_sleep_keeps_it_awake | done |
+| POW-04 | On external power nothing sleeps, also with a full battery that no longer charges | `test_external_power_keeps_everything_awake` | EA:test_full_battery_on_cable_still_counts_as_external_power | done |
+| POW-05 | Running Wi-Fi keeps the processor awake; a failed Wi-Fi does not | `test_running_wifi_keeps_the_processor_awake` | EA:test_running_wifi_keeps_the_cpu_awake | done |
+| POW-06 | With cellular off the modem is neither put to sleep nor woken | `test_a_switched_off_modem_is_left_alone` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
+| POW-07 | The radio chip gets power only while the radio is usable, and the change is logged | `test_the_radio_chip_follows_the_need` | — | done |
+| POW-08 | Pending work is a queue with a path or a running search | `test_pending_work` | EA:test_pending_message_wakes_the_modem | done |
+| POW-09 | A battery-powered idle device may sleep the processor with the modem asleep | `test_the_processor_may_sleep_when_everything_is_idle` | EA:test_modem_sleeps_after_a_quiet_minute | done |
+| POW-10 | The front light toggles with a notice, and can be switched off | `test_the_front_light_toggles` | SC:test_light_tile_switches_the_frontlight, SC:test_locking_switches_the_light_off | done |
+| POW-11 | A refused power-off clears the request and says so | `test_a_refused_power_off_is_noticed` | — | done |
+| POW-12 | A radio chip that will not switch is not claimed in the log and is tried again | `test_a_radio_chip_that_will_not_switch_is_tried_again` | — | done |
+| POW-13 | A call keeps the modem awake | `test_a_call_keeps_the_modem_awake` | — | done |
+| POW-14 | A modem without a network does not sleep | `test_a_modem_without_a_network_does_not_sleep` | — | done |
+| POW-15 | A front light that will not switch says nothing | `test_a_light_that_will_not_switch_says_nothing` | — | done |
+| POW-16 | Battery level, charge state and minutes remaining are read through | `test_the_battery_is_read_through` | — | done |
 
 ## AppCore
 
@@ -292,6 +315,7 @@ Tests in `test/test_app_core/`.
 | APP-08 | Settings the child may change at run time (message vibration, how visible a remote query is) change the profile until restart | `test_run_time_settings_change_the_profile` | SC:test_options_toggle_message_vibration_and_volume, SC:test_status_screen_cycles_command_notice | open |
 | APP-09 | The time zone of the profile sets the clock's offset from the epoch, so school time stays on the wall clock across the change of the clocks | `test_the_clock_follows_the_time_zone` | — | open |
 | APP-10 | The core contains no sentence: every notice and system entry is a code | `test_the_core_produces_only_codes` | — | open |
+| APP-11 | A test pattern can be played on the vibration motor | `test_a_test_pattern_can_be_played` | SC:test_selftest_screen_triggers_vibration_and_light | open |
 
 ## Not ported
 

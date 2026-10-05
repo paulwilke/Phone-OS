@@ -87,10 +87,11 @@ void Messaging::handleSendFailures(bool& activity) {
   while (modem_.pollSendFailure(failure)) {
     activity = true;
     log_.log("SMS to " + nameOf(failure.phone) + " rejected: " + failure.reason);
+    // The reply to a parent's query is invisible to the child, its failure too.
+    if (hooks_ && hooks_->smsSendFailed(failure.phone)) continue;
     sysentry::record(store_, clock_.epochUtc(), sysentry::kSmsRejected, failure.phone);
     notices_.set(NoticeKind::SmsRejected);
     haptic_.play(HapticPattern::Failed);
-    if (hooks_) hooks_->smsSendFailed(failure.phone);
   }
 }
 

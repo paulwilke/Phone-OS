@@ -32,7 +32,7 @@ The queue holds `kOutboxSize` (8) messages; one more is refused with a notice an
 
 A message sent by radio is later confirmed or not by the radio. The reports come in the order of sending, so the oldest awaited message gets the first report; the history entry becomes *confirmed* or *unconfirmed* (the latter with a notice and a log line). At most `kAwaitingSize` (4) messages are awaited; when a fifth is sent the oldest is forgotten and stays *unknown*. A report nobody waits for is ignored. An SMS gets no report from the network and no state is claimed for it.
 
-A message the modem accepted and the network then refused is reported once by the modem. It is logged with the modem's reason (`SMS to Parent One rejected: …`), written to the history (`sms-rejected`), shown as a notice, vibrated with the *failed* pattern, and the SOS ping is told through the `Hooks`.
+A message the modem accepted and the network then refused is reported once by the modem. It is logged with the modem's reason (`SMS to Parent One rejected: …`), written to the history (`sms-rejected`), shown as a notice, vibrated with the *failed* pattern, and the SOS ping is told through the `Hooks`. The hook answers whether the refused text was the silent reply to a parent's query ([emergency.md](emergency.md)); then it stays out of the child's sight (no history entry, notice or vibration) and only the log keeps it.
 
 ## Hooks
 
