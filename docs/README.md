@@ -27,6 +27,7 @@ The documents describe what exists in this repository — each one is written fr
 | [positioning.md](positioning.md) | the reasons the satellite receiver is on, the start-up fix, the last known fix |
 | [messaging.md](messaging.md) | messages in and out: remote queries first, cellular else radio else the queue, delivery reports, send failures |
 | [school-time.md](school-time.md) | school time on the clock and the emergency lift |
+| [calls.md](calls.md) | dialling rules, every call rejected in school time, ringing, why a call failed, volume |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |

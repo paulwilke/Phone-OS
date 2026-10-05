@@ -9,7 +9,7 @@ Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one
 | `FakeClock` | `advance(ms)`, `advanceSeconds(s)`; the software sets the epoch and offset through the real setters | the interface |
 | `FakePower` | `setBattery`, `setMinutesRemaining`, `plugIn(Charging\|Full)`, `unplug`, `setChargerAnswers(false)`, `failDomain(domain, true)`, `allowPowerOff(bool)` | `powerOffCalls()`, `switchOnCount(domain)` |
 | `FakeGnss` | scenarios on the power domain and the clock: `fixAfter(seconds, lat, lon, hdop)`, `never()`, `degradeAfter(seconds, hdop)`, `setSatellites` | the interface |
-| `FakeModem` | `setNetwork(operator, bars, voice)`, `setSimStatus`, `injectSms`, `injectIncomingCall`, `remoteAnswer`, `remoteBusy`, `remoteNoAnswer`, `failDial(reason)`, `remoteHangup`, `failNextSms(reason, count)`, `setQueryAnswer`, `setVolumeSupported` | `sent()`, `asleep()`, `callPhone()` |
+| `FakeModem` | `setNetwork(operator, bars, voice)`, `setSimStatus`, `injectSms`, `injectIncomingCall`, `announceCaller` (the number arrives after the ring), `remoteAnswer`, `remoteBusy`, `remoteNoAnswer`, `failDial(reason)`, `remoteHangup`, `failNextSms(reason, count)`, `setQueryAnswer`, `setVolumeSupported` | `sent()`, `asleep()`, `callPhone()` |
 | `FakeEventLog` | none | `entries()` (with the epoch the clock knew), `lines()`, `contains()` |
 | `FakeHaptic` | none; it runs the real pattern player on the fake clock | `played()`, `fired()` with times |
 | `FakeConfigStore` | `put`, `failNextWrite()` (half of the data reaches the scratch file, the old file stays), `failAllWrites(bool)` | `scratchFileCount()` |
@@ -28,4 +28,4 @@ A fake that cheats would let a test pass that the device then fails. They theref
 - **`FakeClock`** refuses dates before 2020 and offsets outside −12:00 … +14:00, like the interface says.
 - **`FakeRadioLink`** reports one delivery per sent message, in the order of sending.
 
-The scripting surface of each is tested in `test/test_fakes/` (23 tests); that every implementation, the fakes included, honours the interface contracts is the business of the contract suites.
+The scripting surface of each is tested in `test/test_fakes/` (24 tests); that every implementation, the fakes included, honours the interface contracts is the business of the contract suites.

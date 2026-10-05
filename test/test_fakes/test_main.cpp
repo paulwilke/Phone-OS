@@ -212,6 +212,25 @@ void test_modem_incoming_call_events() {
   TEST_ASSERT_TRUE(m.state() == ModemState::Ready);
 }
 
+void test_modem_reports_a_late_caller_number_as_a_second_incoming_event() {
+  FakeClock clock;
+  FakeModem m(clock);
+  m.begin();
+  TEST_ASSERT_FALSE(m.announceCaller("+491701111111"));            // nothing rings yet
+  m.injectIncomingCall("");
+  TEST_ASSERT_TRUE(m.announceCaller("+491701111111"));
+  CallEvent e;
+  TEST_ASSERT_TRUE(m.pollCallEvent(e));
+  TEST_ASSERT_EQUAL_STRING("", e.phone.c_str());
+  TEST_ASSERT_TRUE(m.pollCallEvent(e));
+  TEST_ASSERT_TRUE(e.type == CallEventType::Incoming);
+  TEST_ASSERT_EQUAL_STRING("+491701111111", e.phone.c_str());
+  m.remoteHangup();
+  TEST_ASSERT_TRUE(m.pollCallEvent(e));
+  TEST_ASSERT_TRUE(e.type == CallEventType::Missed);
+  TEST_ASSERT_EQUAL_STRING("+491701111111", e.phone.c_str());      // the number found stays with the call
+}
+
 void test_modem_refused_and_unanswered_incoming_calls_are_missed() {
   FakeClock clock;
   FakeModem m(clock);
@@ -447,6 +466,7 @@ int main(int, char**) {
   RUN_TEST(test_modem_settles_by_network_and_sim);
   RUN_TEST(test_modem_reports_a_scripted_send_failure_once);
   RUN_TEST(test_modem_incoming_call_events);
+  RUN_TEST(test_modem_reports_a_late_caller_number_as_a_second_incoming_event);
   RUN_TEST(test_modem_refused_and_unanswered_incoming_calls_are_missed);
   RUN_TEST(test_modem_outgoing_call_outcomes);
   RUN_TEST(test_modem_dial_failure_carries_the_reason);

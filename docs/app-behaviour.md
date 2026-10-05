@@ -148,35 +148,44 @@ Tests in `test/test_calls/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| CAL-01 | A child may only call allowed numbers; others get a 'not allowed' notice and nothing is dialled | `test_only_allowed_numbers_are_dialled` | EA:test_calls_only_to_known_numbers | open |
-| CAL-02 | Dialling is refused in school time with 'school time until HH:MM' | `test_dialling_is_refused_in_school_time` | EA:test_child_cannot_call_during_school_time, SC:test_tapping_call_tile_in_school_time_stays_home_and_says_why | open |
-| CAL-03 | Dialling works outside school time | `test_dialling_works_outside_school_time` | EA:test_calling_works_outside_school_time | open |
-| CAL-04 | Dialling is refused with cellular switched off | `test_dialling_is_refused_with_cellular_off` | EA:test_cellular_off_uses_mesh_and_blocks_calls | open |
-| CAL-05 | Dialling is refused without a network | `test_dialling_is_refused_without_a_network` | EA:test_call_without_network_fails_with_alert | open |
-| CAL-06 | A dial the modem refuses leaves no call behind | `test_a_refused_dial_leaves_no_call` | — | open |
-| CAL-07 | An incoming call names the caller as the current peer | `test_an_incoming_call_names_the_peer` | EA:test_incoming_call_and_missed_call_note | open |
-| CAL-08 | A missed call is a history entry (kind missed-call, peer the caller) and clears the peer, so a callback is possible | `test_a_missed_call_is_recorded` | EA:test_incoming_call_and_missed_call_note, SC:test_missed_call_offers_callback | open |
-| CAL-09 | Answering and hanging up go to the modem; hanging up clears the peer | `test_answer_and_hang_up` | SC:test_incoming_call_wakes_and_shows_caller | open |
-| CAL-10 | A ringing call vibrates the ring pattern every two seconds until it stops, and not at all while nothing rings | `test_ringing_vibrates_until_it_stops` | EA:test_ringing_vibrates_until_it_stops, EA:test_no_vibration_while_nothing_happens, EA:test_ring_uses_the_ring_pattern | open |
-| CAL-11 | Call vibration can be switched off | `test_call_vibration_can_be_switched_off` | EA:test_call_vibration_settings_and_the_priority_of_school_time | open |
-| CAL-12 | Every incoming call in school time, parents included, is rejected without ringing; the notice names a known caller | `test_every_call_in_school_time_is_rejected_silently_and_named` | EA:test_every_call_in_school_time_is_rejected_silently_and_named | open |
-| CAL-13 | An unknown caller in school time gets a notice without a name | `test_an_unknown_caller_gets_a_notice_without_a_name` | — | open |
-| CAL-14 | Vibration for calls in school time is a setting that defaults to off; switched on it vibrates and still rejects | `test_call_vibration_in_school_time_is_a_setting` | EA:test_call_vibration_settings_and_the_priority_of_school_time | open |
-| CAL-15 | A call without a number is neither rung nor rejected until the number arrives | `test_a_call_without_a_number_yet_is_neither_rung_nor_rejected` | EA:test_call_without_number_yet_is_neither_rung_nor_rejected | open |
-| CAL-16 | A call that never shows a number is rejected after three seconds in school time | `test_a_call_without_a_number_is_rejected_after_three_seconds` | EA:test_call_without_a_number_is_rejected_after_a_short_wait_in_school_time | open |
-| CAL-17 | The modem reports an incoming call twice; it is rejected once | `test_an_incoming_call_is_rejected_once` | — | open |
-| CAL-18 | A busy line is reported with the callee's name, vibrates the failure pattern and is recorded (call-failed busy) | `test_a_busy_line_is_reported` | EA:test_failed_call_says_why_busy, EA:test_failed_call_vibrates_the_failure_pattern | open |
-| CAL-19 | No answer is reported | `test_no_answer_is_reported` | EA:test_failed_call_says_no_answer | open |
-| CAL-20 | A dial failure on an SMS-only network says so | `test_a_dial_failure_on_an_sms_only_network_says_so` | EA:test_dial_failure_on_sms_only_network_names_it | open |
-| CAL-21 | A dial failure without a network says so | `test_a_dial_failure_without_a_network_says_so` | EA:test_dial_failure_without_network_says_no_network | open |
-| CAL-22 | A dial failure otherwise is still reported | `test_a_dial_failure_is_still_reported` | EA:test_dial_failure_otherwise_is_still_reported | open |
-| CAL-23 | A call that never connected and ended is a failure, a connected one is not, one the child hung up is not | `test_an_unconnected_end_is_a_failure` | EA:test_unconnected_end_counts_as_failure_but_normal_end_does_not | open |
-| CAL-24 | The modem's own reason goes to the log with the failure | `test_the_modems_reason_is_logged` | — | open |
-| CAL-25 | Calls are logged: incoming, connected, ended | `test_calls_are_logged` | — | open |
-| CAL-26 | Volume changes only during a call and stops at 0 and 7 | `test_volume_only_during_a_call_and_within_range` | EA:test_volume_only_during_a_call, EA:test_volume_stops_at_the_ends, SC:test_call_screen_changes_volume_with_w_and_s, SC:test_no_volume_outside_a_call | open |
-| CAL-27 | A modem that cannot set the volume reports so | `test_a_modem_without_volume_support` | — | open |
-| CAL-28 | The default volume is set through the modem | `test_the_default_volume_is_set` | SC:test_options_toggle_message_vibration_and_volume | open |
-| CAL-29 | A call counts as active while dialling, ringing or connected | `test_a_call_is_active_while_dialling_ringing_or_connected` | SC:test_no_autolock_during_call | open |
+| CAL-01 | A child may only call allowed numbers; others get a 'not allowed' notice and nothing is dialled | `test_only_allowed_numbers_are_dialled` | EA:test_calls_only_to_known_numbers | done |
+| CAL-02 | A number in another spelling, and a listed contact who is not a parent, may be called | `test_a_number_in_another_spelling_and_a_listed_non_parent_may_be_called` | EA:test_calls_only_to_known_numbers | done |
+| CAL-03 | The rules apply in a fixed order: school time, the number, cellular power, the network | `test_the_rules_are_applied_in_this_order` | — | done |
+| CAL-04 | Dialling is refused in school time with 'school time until HH:MM' | `test_dialling_is_refused_in_school_time` | EA:test_child_cannot_call_during_school_time, SC:test_tapping_call_tile_in_school_time_stays_home_and_says_why | done |
+| CAL-05 | Dialling works outside school time | `test_dialling_works_outside_school_time` | EA:test_calling_works_outside_school_time | done |
+| CAL-06 | Dialling is refused with cellular switched off | `test_dialling_is_refused_with_cellular_off` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
+| CAL-07 | Dialling is refused without a network | `test_dialling_is_refused_without_a_network` | EA:test_call_without_network_fails_with_alert | done |
+| CAL-08 | A dial the modem refuses leaves no call behind | `test_a_refused_dial_leaves_no_call` | — | done |
+| CAL-09 | An incoming call names the caller as the current peer | `test_an_incoming_call_names_the_peer` | EA:test_incoming_call_and_missed_call_note | done |
+| CAL-10 | A missed call is a history entry (kind missed-call, peer the caller) and clears the peer, so a callback is possible | `test_a_missed_call_is_recorded` | EA:test_incoming_call_and_missed_call_note, SC:test_missed_call_offers_callback | done |
+| CAL-11 | Answering and hanging up go to the modem; hanging up clears the peer | `test_answer_and_hang_up` | SC:test_incoming_call_wakes_and_shows_caller | done |
+| CAL-12 | A ringing call vibrates the ring pattern every two seconds until it stops, and not at all while nothing rings | `test_ringing_vibrates_until_it_stops` | EA:test_ringing_vibrates_until_it_stops, EA:test_no_vibration_while_nothing_happens, EA:test_ring_uses_the_ring_pattern | done |
+| CAL-13 | Call vibration can be switched off | `test_call_vibration_can_be_switched_off` | EA:test_call_vibration_settings_and_the_priority_of_school_time | done |
+| CAL-14 | Every incoming call in school time, parents included, is rejected without ringing; the notice names a known caller | `test_every_call_in_school_time_is_rejected_silently_and_named` | EA:test_every_call_in_school_time_is_rejected_silently_and_named | done |
+| CAL-15 | A call rejected in school time is in the history as a missed call, so the parents see who tried | `test_a_rejected_call_is_in_the_history_as_missed` | — | done |
+| CAL-16 | After school time a call rings and is not rejected | `test_a_call_after_school_time_rings_and_is_not_rejected` | — | done |
+| CAL-17 | An unknown caller in school time gets a notice without a name | `test_an_unknown_caller_gets_a_notice_without_a_name` | — | done |
+| CAL-18 | Vibration for calls in school time is a setting that defaults to off; switched on it vibrates and still rejects | `test_call_vibration_in_school_time_is_a_setting` | EA:test_call_vibration_settings_and_the_priority_of_school_time | done |
+| CAL-19 | A call without a number is neither rung nor rejected until the number arrives | `test_a_call_without_a_number_yet_is_neither_rung_nor_rejected` | EA:test_call_without_number_yet_is_neither_rung_nor_rejected | done |
+| CAL-20 | A call that never shows a number is rejected after three seconds in school time | `test_a_call_without_a_number_is_rejected_after_three_seconds` | EA:test_call_without_a_number_is_rejected_after_a_short_wait_in_school_time | done |
+| CAL-21 | The modem reports an incoming call twice; it is rejected once | `test_an_incoming_call_is_rejected_once` | — | done |
+| CAL-22 | A busy line is reported with the callee's name, vibrates the failure pattern and is recorded (call-failed busy) | `test_a_busy_line_is_reported` | EA:test_failed_call_says_why_busy, EA:test_failed_call_vibrates_the_failure_pattern | done |
+| CAL-23 | No answer is reported | `test_no_answer_is_reported` | EA:test_failed_call_says_no_answer | done |
+| CAL-24 | A dial failure on an SMS-only network says so | `test_a_dial_failure_on_an_sms_only_network_says_so` | EA:test_dial_failure_on_sms_only_network_names_it | done |
+| CAL-25 | A dial failure without a network says so | `test_a_dial_failure_without_a_network_says_so` | EA:test_dial_failure_without_network_says_no_network | done |
+| CAL-26 | A dial failure otherwise is still reported | `test_a_dial_failure_is_still_reported` | EA:test_dial_failure_otherwise_is_still_reported | done |
+| CAL-27 | A call that never connected and ended is a failure, a connected one is not, one the child hung up is not | `test_an_unconnected_end_is_a_failure` | EA:test_unconnected_end_counts_as_failure_but_normal_end_does_not | done |
+| CAL-28 | A failure event without a number names the number that was dialled | `test_a_failure_without_a_number_in_the_event_names_the_number_dialled` | — | done |
+| CAL-29 | A ring that begins at uptime zero is timed from zero | `test_a_ring_at_uptime_zero_is_timed_from_zero` | — | done |
+| CAL-30 | The school-time vibration setting also applies to a ringing call that has no number yet | `test_school_time_vibration_applies_to_a_ringing_call_without_a_number_too` | — | done |
+| CAL-31 | Two calls in a row in school time are both rejected | `test_two_calls_in_a_row_in_school_time_are_both_rejected` | — | done |
+| CAL-32 | After a failed call the state is clean: a second call works and its normal end reports nothing | `test_the_state_after_a_failed_call_is_clean` | — | done |
+| CAL-33 | The modem's own reason goes to the log with the failure | `test_the_modems_reason_is_logged` | — | done |
+| CAL-34 | Calls are logged: incoming, connected, ended | `test_calls_are_logged` | — | done |
+| CAL-35 | Volume changes only during a call and stops at 0 and 7 | `test_volume_only_during_a_call_and_within_range` | EA:test_volume_only_during_a_call, EA:test_volume_stops_at_the_ends, SC:test_call_screen_changes_volume_with_w_and_s, SC:test_no_volume_outside_a_call | done |
+| CAL-36 | A modem that cannot set the volume reports so | `test_a_modem_without_volume_support` | — | done |
+| CAL-37 | The default volume is set through the modem | `test_the_default_volume_is_set` | SC:test_options_toggle_message_vibration_and_volume | done |
+| CAL-38 | A call counts as active while dialling, ringing or connected | `test_a_call_is_active_while_dialling_ringing_or_connected` | SC:test_no_autolock_during_call | done |
 
 ## Emergency
 

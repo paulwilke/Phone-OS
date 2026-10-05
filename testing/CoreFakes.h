@@ -2,7 +2,7 @@
 
 // The fakes every test of the application core needs, wired as on a device that has just
 // started: the modem is powered and registered ("Example Mobile"), the clock knows the time (a
-// Tuesday afternoon, 14:32 local, in a zone two hours east of UTC) and has run for 100 seconds,
+// Tuesday afternoon, 14:32 local, in a zone two hours east of UTC) and has run for 100 seconds (or the start time a test gives),
 // the radio exists but is down. A test adds the component it tests and changes what differs.
 
 #include <ProfileBuilder.h>
@@ -37,9 +37,9 @@ struct CoreFakes {
   SchoolTime school{clock, profile, logger};
   Notices notices{clock};
 
-  explicit CoreFakes(Profile p = ProfileBuilder().build()) : profile(std::move(p)) {
+  explicit CoreFakes(Profile p = ProfileBuilder().build(), uint32_t startSeconds = 100) : profile(std::move(p)) {
     clock.setTzOffsetMinutes(coretest::kZoneMinutes);
-    clock.advanceSeconds(100);
+    clock.advanceSeconds(startSeconds);
     clock.setEpochUtc(coretest::kTuesdayAfternoon);
     power.setEnabled(PowerDomain::Cellular, true);
     modem.begin();

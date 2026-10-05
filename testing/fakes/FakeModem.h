@@ -156,6 +156,15 @@ public:
     push(CallEventType::Incoming, 0, "");
     return true;
   }
+  // The caller's number becomes known after the ring has begun (caller identification arrives
+  // late, as on the real modem): the call is reported again with the number. Only while a call
+  // rings.
+  bool announceCaller(const std::string& phone) {
+    if (state_ != ModemState::RingingIn) return false;
+    callPhone_ = phone;
+    push(CallEventType::Incoming, 0, "");
+    return true;
+  }
   void remoteAnswer() {
     if (state_ == ModemState::Dialing) connect();
   }

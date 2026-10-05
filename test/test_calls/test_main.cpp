@@ -1,0 +1,555 @@
+// Host tests for calls: the dialling rules, school time, ringing, the report of a call that did
+// not happen, and the volume.
+
+#include <unity.h>
+
+#include <deque>
+
+#include <CoreFakes.h>
+#include <app/Calls.h>
+#include <app/SystemEntry.h>
+
+using namespace people;
+
+void setUp() {}
+void tearDown() {}
+
+namespace {
+
+struct Rig : CoreFakes {
+  Calls calls;
+
+  explicit Rig(Profile p = ProfileBuilder().build(), uint32_t startSeconds = 100)
+      : CoreFakes(std::move(p), startSeconds), calls(clock, modem, power, store, profile, school, notices, haptic, logger) {}
+
+  bool noticeIs(NoticeKind kind) { return notices.current().kind == kind; }
+  // The events the modem has produced so far reach the core at the next poll.
+  bool poll() { return calls.poll(); }
+  sysentry::Entry entry(size_t i) {
+    sysentry::Entry e;
+    sysentry::parse(store.at(i), e);
+    return e;
+  }
+};
+
+Profile inSchool() { return ProfileBuilder().schoolTime("tue", "14:00", "15:00").build(); }
+
+}  // namespace
+
+// ---- dialling -----------------------------------------------------------------------------------
+
+void test_only_allowed_numbers_are_dialled() {
+  Rig r;
+  TEST_ASSERT_FALSE(r.calls.call(kStranger));
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallNotAllowed));
+  TEST_ASSERT_EQUAL_STRING("", r.modem.callPhone().c_str());       // nothing was dialled
+  TEST_ASSERT_TRUE(r.calls.call(kParentOne));
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.modem.callPhone().c_str());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.calls.peer().c_str());
+  TEST_ASSERT_TRUE(r.calls.active());
+}
+
+void test_a_number_in_another_spelling_and_a_listed_non_parent_may_be_called() {
+  Rig r;
+  TEST_ASSERT_TRUE(r.calls.call("0170 1111111"));
+  r.calls.hangup();
+  TEST_ASSERT_TRUE(r.calls.call(kGrandma));
+}
+
+void test_dialling_is_refused_in_school_time() {
+  Rig r(inSchool());
+  TEST_ASSERT_FALSE(r.calls.call(kParentOne));
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::SchoolTimeUntil));
+  TEST_ASSERT_EQUAL(15 * 60, r.notices.current().minute);
+  TEST_ASSERT_EQUAL_STRING("", r.modem.callPhone().c_str());
+  TEST_ASSERT_TRUE(r.calls.refuseInSchoolTime());                  // the same question for anything else the child starts
+}
+
+void test_dialling_works_outside_school_time() {
+  Rig r(inSchool());
+  r.advance(3600);                                                 // 15:32
+  TEST_ASSERT_FALSE(r.calls.refuseInSchoolTime());
+  TEST_ASSERT_TRUE(r.calls.call(kParentOne));
+  Rig q(inSchool());
+  q.clock.setEpochUtc(0);                                          // no known time: no lock
+  TEST_ASSERT_TRUE(q.calls.call(kParentOne));
+}
+
+void test_dialling_is_refused_with_cellular_off() {
+  Rig r;
+  r.power.setEnabled(PowerDomain::Cellular, false);
+  TEST_ASSERT_FALSE(r.calls.call(kParentOne));
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CellularIsOff));
+  TEST_ASSERT_EQUAL_STRING("", r.modem.callPhone().c_str());
+}
+
+void test_dialling_is_refused_without_a_network() {
+  Rig r;
+  r.networkLost();
+  TEST_ASSERT_FALSE(r.calls.call(kParentOne));
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::NoNetwork));
+}
+
+void test_the_rules_are_applied_in_this_order() {
+  Rig r(inSchool());
+  r.networkLost();
+  r.calls.call(kStranger);
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::SchoolTimeUntil));       // school time first
+  Rig q;
+  q.networkLost();
+  q.power.setEnabled(PowerDomain::Cellular, false);
+  q.calls.call(kStranger);
+  TEST_ASSERT_TRUE(q.noticeIs(NoticeKind::CallNotAllowed));        // then the number
+  q.calls.call(kParentOne);
+  TEST_ASSERT_TRUE(q.noticeIs(NoticeKind::CellularIsOff));         // then power, then the network
+}
+
+void test_a_refused_dial_leaves_no_call() {
+  Rig r;
+  r.modem.setNetwork("Example Mobile", 4, false);                  // registered for SMS only: the modem will not dial
+  TEST_ASSERT_FALSE(r.calls.call(kParentOne));
+  TEST_ASSERT_EQUAL_STRING("", r.calls.peer().c_str());
+  TEST_ASSERT_FALSE(r.calls.active());
+  TEST_ASSERT_TRUE(r.log.contains("refused by the modem"));
+  r.modem.remoteHangup();
+  r.poll();
+  TEST_ASSERT_EQUAL(0, r.store.count());                           // and nothing is reported as failed
+}
+
+// ---- incoming ---------------------------------------------------------------------------------------
+
+void test_an_incoming_call_names_the_peer() {
+  Rig r;
+  r.modem.injectIncomingCall(kGrandma);
+  TEST_ASSERT_TRUE(r.poll());
+  TEST_ASSERT_EQUAL_STRING(kGrandma, r.calls.peer().c_str());
+  TEST_ASSERT_TRUE(r.log.contains("Call from Grandma"));
+  TEST_ASSERT_FALSE(r.poll());                                      // events are reported once
+}
+
+void test_a_missed_call_is_recorded() {
+  Rig r;
+  r.modem.injectIncomingCall(kGrandma);
+  r.poll();
+  r.modem.remoteHangup();                                           // she gives up
+  r.poll();
+  TEST_ASSERT_EQUAL_STRING("", r.calls.peer().c_str());
+  TEST_ASSERT_EQUAL(1, r.store.count());
+  TEST_ASSERT_EQUAL_STRING(sysentry::kMissedCall, r.entry(0).kind.c_str());
+  TEST_ASSERT_EQUAL_STRING(kGrandma, r.store.at(0).peer);           // the number, so that a callback is possible
+  TEST_ASSERT_EQUAL(coretest::kTuesdayAfternoon, r.store.at(0).time);
+}
+
+void test_answer_and_hang_up() {
+  Rig r;
+  r.modem.injectIncomingCall(kParentOne);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.answer());
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::InCall);
+  r.poll();
+  TEST_ASSERT_TRUE(r.log.contains("Call connected"));
+  TEST_ASSERT_TRUE(r.calls.hangup());
+  TEST_ASSERT_EQUAL_STRING("", r.calls.peer().c_str());
+  r.poll();
+  TEST_ASSERT_TRUE(r.log.contains("Call ended: Parent One"));
+  TEST_ASSERT_TRUE(r.notices.current().none());                     // a normal call is no failure
+  TEST_ASSERT_FALSE(r.calls.hangup());                              // nothing to end now
+  TEST_ASSERT_FALSE(r.calls.answer());
+}
+
+void test_ringing_vibrates_until_it_stops() {
+  Rig r;
+  r.poll();
+  r.advance(60);
+  r.poll();
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());                   // nothing happens: no vibration
+  r.modem.injectIncomingCall(kParentOne);
+  r.poll();
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Ring));
+  r.poll();
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Ring));              // not again at once
+  r.advance(Calls::kRingIntervalSeconds - 1);
+  r.poll();
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Ring));
+  r.advance(1);
+  r.poll();
+  TEST_ASSERT_EQUAL(2, r.played(HapticPattern::Ring));              // every two seconds
+  r.calls.answer();
+  r.advance(10);
+  r.poll();
+  TEST_ASSERT_EQUAL(2, r.played(HapticPattern::Ring));              // answered: quiet
+  TEST_ASSERT_EQUAL(2, r.haptic.played().size());
+}
+
+void test_call_vibration_can_be_switched_off() {
+  Rig r(ProfileBuilder().callVibration(false).build());
+  r.modem.injectIncomingCall(kParentOne);
+  r.poll();
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+}
+
+// ---- school time ---------------------------------------------------------------------------------------
+
+void test_every_call_in_school_time_is_rejected_silently_and_named() {
+  for (const char* who : {kParentOne, kGrandma}) {
+    Rig r(inSchool());
+    r.modem.injectIncomingCall(who);
+    r.poll();
+    TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);         // hung up
+    TEST_ASSERT_EQUAL(0, r.haptic.played().size());                 // neither ringing nor vibrating
+    TEST_ASSERT_TRUE(r.log.contains("rejected in quiet hours"));
+    TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallerInSchoolTime));
+    TEST_ASSERT_EQUAL_STRING(who, r.notices.current().peer.c_str());
+  }
+}
+
+void test_a_rejected_call_is_in_the_history_as_missed() {
+  Rig r(inSchool());
+  r.modem.injectIncomingCall(kParentOne);
+  r.poll();
+  r.poll();                                                          // the modem's "missed" arrives with the next events
+  TEST_ASSERT_EQUAL(1, r.store.count());
+  TEST_ASSERT_EQUAL_STRING(sysentry::kMissedCall, r.entry(0).kind.c_str());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.store.at(0).peer);
+}
+
+void test_an_unknown_caller_gets_a_notice_without_a_name() {
+  Rig r(inSchool());
+  r.modem.injectIncomingCall(kStranger);
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallInSchoolTime));
+  TEST_ASSERT_EQUAL_STRING("", r.notices.current().peer.c_str());
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);
+}
+
+void test_call_vibration_in_school_time_is_a_setting() {
+  Rig r(ProfileBuilder().schoolTime("tue", "14:00", "15:00").quietCallVibration(true).build());
+  r.modem.injectIncomingCall(kParentOne);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);           // still rejected
+  TEST_ASSERT_TRUE(r.played(HapticPattern::Ring) >= 1);
+  Rig q(ProfileBuilder().schoolTime("tue", "14:00", "15:00").callVibration(true).quietCallVibration(false).build());
+  q.modem.injectIncomingCall(kParentOne);
+  q.poll();
+  TEST_ASSERT_EQUAL(0, q.haptic.played().size());                   // the school-time switch rules, not the everyday one
+}
+
+void test_a_call_without_a_number_yet_is_neither_rung_nor_rejected() {
+  Rig r(inSchool());
+  r.modem.injectIncomingCall("");
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::RingingIn);        // not hung up
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+  TEST_ASSERT_TRUE(r.notices.current().none());
+  r.advance(1);
+  r.modem.announceCaller(kParentOne);                                // the number arrives
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);           // now it is rejected, and named
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallerInSchoolTime));
+}
+
+void test_a_call_without_a_number_is_rejected_after_three_seconds() {
+  Rig r(inSchool());
+  r.modem.injectIncomingCall("");
+  r.poll();
+  r.advance(Calls::kQuietRejectSeconds - 1);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::RingingIn);
+  r.advance(1);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallInSchoolTime));
+  TEST_ASSERT_TRUE(r.log.contains("no number"));
+}
+
+void test_an_incoming_call_is_rejected_once() {
+  Rig r(inSchool());
+  r.modem.injectIncomingCall("");
+  r.poll();
+  r.modem.announceCaller(kParentOne);
+  r.modem.announceCaller(kParentOne);                                // reported twice with the number
+  r.poll();
+  size_t rejections = 0;
+  for (const auto& line : r.log.lines()) rejections += line.find("rejected in quiet hours: ") != std::string::npos ? 1 : 0;
+  TEST_ASSERT_EQUAL(1, rejections);
+}
+
+void test_a_call_after_school_time_rings_and_is_not_rejected() {
+  Rig r(inSchool());
+  r.advance(3600);
+  r.modem.injectIncomingCall(kParentOne);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::RingingIn);
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Ring));
+}
+
+// ---- a call that did not happen --------------------------------------------------------------------------
+
+void test_a_busy_line_is_reported() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.remoteBusy();
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallBusy));
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.notices.current().peer.c_str());
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Failed));
+  TEST_ASSERT_EQUAL(1, r.store.count());                              // the notice goes, the history stays
+  TEST_ASSERT_EQUAL_STRING(sysentry::kCallFailed, r.entry(0).kind.c_str());
+  TEST_ASSERT_EQUAL_STRING(sysentry::kBusy, r.entry(0).argument.c_str());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.store.at(0).peer);
+  TEST_ASSERT_EQUAL_STRING("", r.calls.peer().c_str());
+  TEST_ASSERT_TRUE(r.log.contains("failed: busy"));
+}
+
+void test_no_answer_is_reported() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.remoteNoAnswer();
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallNoAnswer));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kNoAnswer, r.entry(0).argument.c_str());
+}
+
+void test_a_dial_failure_on_an_sms_only_network_says_so() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("NO CARRIER");
+  r.modem.setNetwork("Example Mobile", 4, false);                      // the network allows SMS only
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallSmsOnly));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kSmsOnly, r.entry(0).argument.c_str());
+}
+
+void test_a_dial_failure_without_a_network_says_so() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("NO CARRIER");
+  r.networkLost();
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallNoNetwork));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kNoNetwork, r.entry(0).argument.c_str());
+}
+
+void test_a_dial_failure_is_still_reported() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("");
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallFailed));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kNotConnected, r.entry(0).argument.c_str());
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Failed));
+}
+
+void test_an_unconnected_end_is_a_failure() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.hangup();                                                    // ended without ever connecting, not by the child
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallFailed));
+
+  Rig connected;                                                       // a conversation that took place and ended
+  connected.calls.call(kParentOne);
+  connected.modem.remoteAnswer();
+  connected.modem.remoteHangup();
+  connected.poll();
+  TEST_ASSERT_TRUE(connected.notices.current().none());
+  TEST_ASSERT_EQUAL(0, connected.store.count());
+
+  Rig own;                                                             // the child ends it before anybody answers
+  own.calls.call(kParentOne);
+  own.calls.hangup();
+  own.poll();
+  TEST_ASSERT_TRUE(own.notices.current().none());
+  TEST_ASSERT_EQUAL(0, own.store.count());
+  TEST_ASSERT_EQUAL(0, own.haptic.played().size());
+}
+
+void test_the_modems_reason_is_logged() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("+CME ERROR: 30");
+  r.poll();
+  TEST_ASSERT_TRUE(r.log.contains("| modem: +CME ERROR: 30"));
+}
+
+void test_calls_are_logged() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.remoteAnswer();
+  r.modem.remoteHangup();
+  r.poll();
+  TEST_ASSERT_TRUE(r.log.contains("Call connected: Parent One"));
+  TEST_ASSERT_TRUE(r.log.contains("Call ended: Parent One"));
+}
+
+void test_the_state_after_a_failed_call_is_clean() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.remoteBusy();
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.call(kParentOne));                           // a second try works
+  r.modem.remoteAnswer();
+  r.modem.remoteHangup();
+  r.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());                                // and the normal end of it reports nothing more
+}
+
+// ---- volume ----------------------------------------------------------------------------------------------------
+
+void test_volume_only_during_a_call_and_within_range() {
+  Rig r;
+  TEST_ASSERT_EQUAL(4, r.calls.volume());
+  TEST_ASSERT_FALSE(r.calls.changeVolume(+1));                           // no call
+  TEST_ASSERT_EQUAL(4, r.calls.volume());
+  r.modem.injectIncomingCall(kParentOne);
+  TEST_ASSERT_FALSE(r.calls.changeVolume(+1));                           // it rings: nothing to adjust yet
+  r.calls.answer();
+  TEST_ASSERT_TRUE(r.calls.changeVolume(+1));
+  TEST_ASSERT_EQUAL(5, r.calls.volume());
+  TEST_ASSERT_TRUE(r.calls.changeVolume(-2));
+  TEST_ASSERT_EQUAL(3, r.calls.volume());
+  for (int i = 0; i < 10; ++i) r.calls.changeVolume(+1);
+  TEST_ASSERT_EQUAL(Calls::kMaxVolume, r.calls.volume());
+  TEST_ASSERT_FALSE(r.calls.changeVolume(+1));                           // at the stop: nothing to do
+  for (int i = 0; i < 10; ++i) r.calls.changeVolume(-1);
+  TEST_ASSERT_EQUAL(0, r.calls.volume());
+  TEST_ASSERT_FALSE(r.calls.changeVolume(-1));
+  TEST_ASSERT_TRUE(r.calls.changeVolume(+100));                          // a big step is clamped, not refused
+  TEST_ASSERT_EQUAL(Calls::kMaxVolume, r.calls.volume());
+}
+
+void test_a_modem_without_volume_support() {
+  Rig r;
+  r.modem.setVolumeSupported(false);
+  r.modem.injectIncomingCall(kParentOne);
+  r.calls.answer();
+  TEST_ASSERT_EQUAL(-1, r.calls.volume());
+  TEST_ASSERT_FALSE(r.calls.volumeAdjustable());
+  TEST_ASSERT_FALSE(r.calls.changeVolume(+1));
+  TEST_ASSERT_FALSE(r.calls.setDefaultVolume(5));
+}
+
+void test_the_default_volume_is_set() {
+  Rig r;
+  TEST_ASSERT_TRUE(r.calls.setDefaultVolume(5));
+  TEST_ASSERT_EQUAL(5, r.calls.volume());
+  TEST_ASSERT_TRUE(r.calls.volumeAdjustable());
+}
+
+void test_a_call_is_active_while_dialling_ringing_or_connected() {
+  Rig r;
+  TEST_ASSERT_FALSE(r.calls.active());
+  r.calls.call(kParentOne);
+  TEST_ASSERT_TRUE(r.calls.active());                                    // dialling
+  r.modem.remoteAnswer();
+  TEST_ASSERT_TRUE(r.calls.active());                                    // connected
+  r.modem.remoteHangup();
+  TEST_ASSERT_FALSE(r.calls.active());
+  r.modem.injectIncomingCall(kParentTwo);
+  TEST_ASSERT_TRUE(r.calls.active());                                    // ringing
+}
+
+// A modem whose call events say nothing about the other party, as some real ones do.
+struct AnonymousModem : FakeModem {
+  using FakeModem::FakeModem;
+  std::deque<CallEvent> scripted;
+  bool pollCallEvent(CallEvent& out) override {
+    if (scripted.empty()) return false;
+    out = scripted.front();
+    scripted.pop_front();
+    return true;
+  }
+};
+
+void test_a_failure_without_a_number_in_the_event_names_the_number_dialled() {
+  CoreFakes f;
+  AnonymousModem anonymous(f.clock);
+  anonymous.begin();
+  anonymous.setNetwork("Example Mobile", 4);
+  Calls calls(f.clock, anonymous, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger);
+  TEST_ASSERT_TRUE(calls.call(kParentOne));
+  CallEvent busy;
+  busy.type = CallEventType::Busy;
+  anonymous.scripted.push_back(busy);                                   // no phone in the event
+  calls.poll();
+  TEST_ASSERT_TRUE(f.notices.current().kind == NoticeKind::CallBusy);
+  TEST_ASSERT_EQUAL_STRING(kParentOne, f.notices.current().peer.c_str());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, f.store.at(0).peer);
+}
+
+void test_a_ring_at_uptime_zero_is_timed_from_zero() {
+  Rig r(inSchool(), 0);                                                 // the device has just started
+  r.modem.injectIncomingCall("");
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::RingingIn);           // not rejected at once
+  r.advance(Calls::kQuietRejectSeconds - 1);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::RingingIn);
+  r.advance(1);
+  r.poll();
+  TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);               // rejected exactly after three seconds
+}
+
+void test_school_time_vibration_applies_to_a_ringing_call_without_a_number_too() {
+  Rig r(ProfileBuilder().schoolTime("tue", "14:00", "15:00").quietCallVibration(true).build());
+  r.modem.injectIncomingCall("");
+  r.poll();
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Ring));                  // it is not rejected yet, and the setting says vibrate
+}
+
+void test_two_calls_in_a_row_in_school_time_are_both_rejected() {
+  Rig r(inSchool());
+  for (const char* who : {kParentOne, kParentTwo}) {
+    r.modem.injectIncomingCall(who);
+    r.poll();
+    TEST_ASSERT_TRUE(r.calls.state() == ModemState::Ready);
+    TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallerInSchoolTime));
+    TEST_ASSERT_EQUAL_STRING(who, r.notices.current().peer.c_str());
+    r.notices.clear();
+    r.poll();
+  }
+}
+
+int main() {
+  UNITY_BEGIN();
+  RUN_TEST(test_only_allowed_numbers_are_dialled);
+  RUN_TEST(test_a_number_in_another_spelling_and_a_listed_non_parent_may_be_called);
+  RUN_TEST(test_dialling_is_refused_in_school_time);
+  RUN_TEST(test_dialling_works_outside_school_time);
+  RUN_TEST(test_dialling_is_refused_with_cellular_off);
+  RUN_TEST(test_dialling_is_refused_without_a_network);
+  RUN_TEST(test_the_rules_are_applied_in_this_order);
+  RUN_TEST(test_a_refused_dial_leaves_no_call);
+  RUN_TEST(test_an_incoming_call_names_the_peer);
+  RUN_TEST(test_a_missed_call_is_recorded);
+  RUN_TEST(test_answer_and_hang_up);
+  RUN_TEST(test_ringing_vibrates_until_it_stops);
+  RUN_TEST(test_call_vibration_can_be_switched_off);
+  RUN_TEST(test_every_call_in_school_time_is_rejected_silently_and_named);
+  RUN_TEST(test_a_rejected_call_is_in_the_history_as_missed);
+  RUN_TEST(test_an_unknown_caller_gets_a_notice_without_a_name);
+  RUN_TEST(test_call_vibration_in_school_time_is_a_setting);
+  RUN_TEST(test_a_call_without_a_number_yet_is_neither_rung_nor_rejected);
+  RUN_TEST(test_a_call_without_a_number_is_rejected_after_three_seconds);
+  RUN_TEST(test_an_incoming_call_is_rejected_once);
+  RUN_TEST(test_a_call_after_school_time_rings_and_is_not_rejected);
+  RUN_TEST(test_a_busy_line_is_reported);
+  RUN_TEST(test_no_answer_is_reported);
+  RUN_TEST(test_a_dial_failure_on_an_sms_only_network_says_so);
+  RUN_TEST(test_a_dial_failure_without_a_network_says_so);
+  RUN_TEST(test_a_dial_failure_is_still_reported);
+  RUN_TEST(test_an_unconnected_end_is_a_failure);
+  RUN_TEST(test_the_modems_reason_is_logged);
+  RUN_TEST(test_calls_are_logged);
+  RUN_TEST(test_the_state_after_a_failed_call_is_clean);
+  RUN_TEST(test_a_failure_without_a_number_in_the_event_names_the_number_dialled);
+  RUN_TEST(test_a_ring_at_uptime_zero_is_timed_from_zero);
+  RUN_TEST(test_school_time_vibration_applies_to_a_ringing_call_without_a_number_too);
+  RUN_TEST(test_two_calls_in_a_row_in_school_time_are_both_rejected);
+  RUN_TEST(test_volume_only_during_a_call_and_within_range);
+  RUN_TEST(test_a_modem_without_volume_support);
+  RUN_TEST(test_the_default_volume_is_set);
+  RUN_TEST(test_a_call_is_active_while_dialling_ringing_or_connected);
+  return UNITY_END();
+}
