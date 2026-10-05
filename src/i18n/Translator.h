@@ -82,6 +82,12 @@ public:
   // from here: a parent may write the word in any language the device speaks.
   std::vector<std::string> textsInAllLanguages(const char* key) const;
 
+  // All key-value pairs whose key starts with `prefix` in language `code`, falling back to
+  // English for any key the language lacks. Used by the web API to serve the catalog for
+  // the browser page.
+  std::map<std::string, std::string> textsByPrefix(const std::string& code,
+                                                    const std::string& prefix) const;
+
   // Keys that were asked for and found in no language, and how often a lookup had to
   // fall back from the selected language to English.
   const std::set<std::string>& missingKeys() const { return missing_; }

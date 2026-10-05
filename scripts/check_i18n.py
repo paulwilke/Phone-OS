@@ -67,8 +67,9 @@ def load(path):
 
 
 KEY_LITERAL = re.compile(r'"([a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)"')
-CODE_DIRS = ("src", "testing", "test")
-CODE_SUFFIXES = (".h", ".cpp")
+# scripts/ is also searched so that gen_web.py's WEB_KEYS list covers the web.* catalog keys.
+CODE_DIRS = ("src", "testing", "test", "scripts")
+CODE_SUFFIXES = (".h", ".cpp", ".py")
 
 
 def _schema_catalog_keys():
@@ -115,9 +116,9 @@ def usage():
                 # include Profile field paths that look like catalog keys but are not.
                 if GENERATED_MARKER in text[:200]:
                     continue
-                # Skip src/config/ — it uses config key-path strings (e.g. "sms.language")
-                # as diagnostic identifiers, not catalog keys. These share namespace prefixes
-                # with the catalogs ("sms.*", "wifi.*") but are not catalog keys.
+                # Skip src/config/ — it uses config key-path strings as diagnostic identifiers,
+                # not catalog keys. These share namespace prefixes with the catalogs but are not
+                # catalog keys.
                 rel_path = os.path.relpath(path, ROOT)
                 if rel_path.startswith(os.path.join("src", "config") + os.sep):
                     continue
@@ -174,9 +175,10 @@ def main():
                     outside = sorted({c for c in PLACEHOLDER.sub("", form) if c not in GSM7})
                     if outside:
                         problems.append(f"{name}: `{key}` is sent by SMS but uses characters outside the GSM alphabet: {''.join(outside)}")
-                bad = charset.allowed_text(form, CODEPOINTS)
-                if bad:
-                    problems.append(f"{name}: `{key}` uses characters outside assets/fonts/charset.txt: {''.join(bad)}")
+                if not key.startswith("web."):  # web.* strings go to the browser, not the device font
+                    bad = charset.allowed_text(form, CODEPOINTS)
+                    if bad:
+                        problems.append(f"{name}: `{key}` uses characters outside assets/fonts/charset.txt: {''.join(bad)}")
         if name == "en.toml":
             continue
         for key in sorted(set(ref) - set(strings)):

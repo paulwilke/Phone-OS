@@ -648,7 +648,6 @@ void WebApi::languages(http::Response& res) {
 void WebApi::langCatalog(const char* code, http::Response& res) {
   if (*code == '\0') return jsonError(res, 400, "Language code missing");
 
-  // Collect all web.* keys from the requested language catalog.
   const auto langs = translator_.languages();
   bool found = false;
   for (const auto& lang : langs) {
@@ -656,7 +655,33 @@ void WebApi::langCatalog(const char* code, http::Response& res) {
   }
   if (!found) return jsonError(res, 404, "Language not found");
 
-  // Emit all web.* keys from the catalog. The page uses these to label itself
-  // in the chosen language; PR 4 will add the actual keys.
-  jsonResp(res, 200, "{}");
+  // Emit web.* keys (prefix stripped) and config.*.label keys (full name).
+  // The browser uses web.* keys for UI chrome and config.*.label for form fields.
+  const std::string codeStr(code);
+  const auto webKeys    = translator_.textsByPrefix(codeStr, "web.");
+  const auto cfgKeys    = translator_.textsByPrefix(codeStr, "config.");
+
+  size_t n = 0;
+  auto puts = [&](const char* s) { while (*s && n + 1 < sizeof(resp_)) resp_[n++] = *s++; };
+  puts("{");
+  bool first = true;
+  auto emit = [&](const std::string& k, const std::string& v) {
+    if (!first) puts(",");
+    first = false;
+    appendJsonStr(resp_, sizeof(resp_), n, k);
+    puts(":");
+    appendJsonStr(resp_, sizeof(resp_), n, v);
+  };
+  for (const auto& kv : webKeys) {
+    emit(kv.first, kv.second);
+  }
+  for (const auto& kv : cfgKeys) {
+    // Only label keys (not help) to keep the response small.
+    if (kv.first.size() < 6 || kv.first.substr(kv.first.size() - 6) != ".label") continue;
+    emit(kv.first, kv.second);
+  }
+  if (n + 1 >= sizeof(resp_)) return jsonError(res, 500, "Response too large");
+  puts("}");
+  resp_[n] = '\0';
+  jsonResp(res, 200, resp_);
 }

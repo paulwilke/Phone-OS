@@ -125,4 +125,25 @@ std::vector<std::string> Translator::textsInAllLanguages(const char* key) const 
   return out;
 }
 
+std::map<std::string, std::string> Translator::textsByPrefix(const std::string& code,
+                                                              const std::string& prefix) const {
+  std::map<std::string, std::string> out;
+  auto ref = languages_.find(kReference);
+  if (ref == languages_.end()) return out;
+  for (const auto& kv : ref->second.entries()) {
+    if (kv.first.substr(0, prefix.size()) != prefix) continue;
+    // Find the entry in the requested language, falling back to English.
+    auto cur = languages_.find(code);
+    if (cur == languages_.end()) {
+      const size_t dash = code.find('-');
+      if (dash != std::string::npos) cur = languages_.find(code.substr(0, dash));
+    }
+    const Entry* e = nullptr;
+    if (cur != languages_.end()) e = cur->second.find(kv.first);
+    if (!e) e = &kv.second;  // fall back to reference
+    if (e && !e->forms.empty()) out[kv.first] = e->forms[0];
+  }
+  return out;
+}
+
 }  // namespace i18n
