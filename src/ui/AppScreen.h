@@ -60,6 +60,7 @@ protected:
   // A key, or a touch on the content (`area` is where the content was drawn last).
   virtual bool onInput(const Input& input, const Rect& area) = 0;
 
+  const ScreenContext& context() const { return context_; }
   AppCore& app() { return context_.app; }
   i18n::Translator& t() { return context_.translator; }
   Navigation& nav() { return context_.navigation; }
