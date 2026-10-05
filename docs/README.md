@@ -39,6 +39,9 @@ The documents describe what exists in this repository — each one is written fr
 | [screen-home.md](screen-home.md) | the home screen: which tiles exist for which profile, their order, what each does, the badge, school time |
 | [screen-lock.md](screen-lock.md) | the lock: two presses of Enter, no clock, what it says instead |
 | [screen-clock.md](screen-clock.md) | the clock page: time, weekday and date from the wall clock, no time |
+| [screen-phone.md](screen-phone.md) | the phone page: who is on it, what choosing does, the core's refusals |
+| [screen-call.md](screen-call.md) | the call page: dialling, ringing, connected, volume, why a call failed |
+| [screen-number.md](screen-number.md) | the typed number for a message: limits, canonical form, the profile switch |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |
 | [ui-refresh.md](ui-refresh.md) | refresh policy, frame tracker, refresh controller and the frame-budget tests |
 | [ui-text.md](ui-text.md) | the four fonts, the character set and the symbols, the text engine: UTF-8, width, fit, ellipsize, wrap, draw |

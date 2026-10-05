@@ -47,6 +47,10 @@ std::string systemEntry(const Message& message, const phone::ContactBook& contac
 // code the core stores (`sysentry::kBusy`, ...); one this version does not know is shown as given.
 std::string callReason(const std::string& reason, i18n::Translator& t);
 
+// The reason code of a notice about a call that did not happen (`sysentry::kBusy`, ...), empty for
+// any other notice.
+std::string failedCallReason(const Notice& notice);
+
 // Why Wi-Fi is off or failed; empty for `None`.
 std::string wifiReason(WifiReason reason, i18n::Translator& t);
 

@@ -39,6 +39,7 @@ language by writing one text file.
 | E-ink refresh policy and frame budgets | when to refresh the panel in part, in full or not at all; tests that fail when the interface makes the panel work more than a scenario allows | `src/ui/`, `testing/`, [docs/ui-refresh.md](docs/ui-refresh.md) |
 | Screen frame and wording | the base of every screen: status bar from the core's state, notice line, soft keys, touch translation; every code of the core worded from the catalogs | `src/ui/`, `testing/`, [docs/ui-screens.md](docs/ui-screens.md) |
 | Home, lock and clock screens | the tiles of the home screen (three columns, two pages), the lock without a PIN, the clock page | `src/ui/screens/`, [docs/screen-home.md](docs/screen-home.md), [docs/screen-lock.md](docs/screen-lock.md), [docs/screen-clock.md](docs/screen-clock.md) |
+| Phone, call and number screens | whom to call, the call in each phase with its volume and failure reasons, a typed number for a message | `src/ui/screens/`, [docs/screen-phone.md](docs/screen-phone.md), [docs/screen-call.md](docs/screen-call.md), [docs/screen-number.md](docs/screen-number.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 
