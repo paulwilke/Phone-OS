@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include "Utf8.h"
+
 namespace sysentry {
 
 namespace {
@@ -36,6 +38,15 @@ bool parse(const Message& msg, Entry& out) {
   out.kind = kind;
   out.argument = argument;
   return true;
+}
+
+uint32_t record(MessageStore& store, uint32_t time, const std::string& kind, const std::string& peer,
+                const std::string& argument) {
+  Message m;  // incoming and unread by default
+  m.time = time;
+  if (!make(m, kind, argument)) return 0;
+  utf8::copy(m.peer, sizeof m.peer, peer.data(), peer.data() + peer.size());
+  return store.add(m);
 }
 
 }  // namespace sysentry

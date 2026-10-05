@@ -74,45 +74,73 @@ Tests in `test/test_positioning/`.
 | POS-17 | Other reasons never end or log a start-up fix that was not requested | `test_the_end_of_a_startup_fix_is_not_claimed_by_other_reasons` | — | done |
 | POS-18 | The start-up fix is logged when it starts and when it ends | `test_the_startup_fix_is_logged` | — | done |
 
+## SchoolTime
+
+Tests in `test/test_school_time/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-01 | School time is the profile's windows on the clock; the end minute itself is free | `test_school_time_follows_the_profile_and_the_clock` | — | done |
+| SCH-02 | Without a known time there is no school time and nothing to lift | `test_no_school_time_without_a_known_time` | EA:test_no_lockout_without_known_time | done |
+| SCH-03 | An emergency lifts the lock until exactly the end of the running window | `test_lifting_ends_exactly_at_the_end_of_the_window` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | done |
+| SCH-04 | The end is counted from the second, not the minute | `test_the_end_is_counted_from_the_second_not_the_minute` | — | done |
+| SCH-05 | A lift does not reach a window that begins where it ends | `test_a_lift_does_not_reach_a_window_that_begins_where_it_ends` | — | done |
+| SCH-06 | A lift does not reach the next window | `test_a_lift_does_not_reach_the_next_window` | — | done |
+| SCH-07 | A window across midnight is lifted until its end | `test_a_window_across_midnight_is_lifted_until_its_end` | — | done |
+| SCH-08 | Lifting when no school time runs changes nothing | `test_lifting_when_no_school_time_runs_changes_nothing` | — | done |
+| SCH-09 | The lift is logged on every log level | `test_lifting_is_logged_and_never_dropped_from_the_log` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | done |
+| SCH-10 | The windows may change while the device runs | `test_the_profile_may_change_while_the_device_runs` | — | done |
+
 ## Messaging
 
 Tests in `test/test_messaging/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| MSG-01 | An incoming SMS is stored unread with the sender, and counts as unread | `test_an_incoming_sms_is_stored` | EA:test_incoming_sms_is_stored | open |
-| MSG-02 | A remote query is recognised before storing: it is never stored as a message | `test_a_remote_query_is_not_stored_as_a_message` | EA:test_command_sms_is_not_stored_but_logged_and_noticed | open |
-| MSG-03 | A remote query from a parent is logged, written as a history entry (kind location-queried) and, when the profile says notify, shown as a notice | `test_a_remote_query_is_logged_recorded_and_noticed_as_the_profile_says` | EA:test_command_sms_is_not_stored_but_logged_and_noticed, SC:test_status_screen_cycles_command_notice | open |
-| MSG-04 | A remote query from a number that is not a parent is refused, logged and recorded (kind query-refused); no reply, no receiver | `test_a_refused_remote_query_is_recorded` | EA:test_unauthorized_command_is_logged_and_rejected | open |
-| MSG-05 | A remote query never vibrates | `test_a_remote_query_does_not_vibrate` | EA:test_remote_command_does_not_vibrate | open |
-| MSG-06 | An incoming SMS vibrates with the message pattern | `test_an_incoming_sms_vibrates_the_message_pattern` | EA:test_incoming_message_vibrates_twice_short | open |
-| MSG-07 | Message vibration can be switched off | `test_message_vibration_can_be_switched_off` | EA:test_message_vibration_can_be_switched_off | open |
-| MSG-08 | In school time only a parent's message vibrates; the message is stored either way | `test_in_school_time_only_parents_vibrate` | EA:test_message_vibration_in_school_time_only_for_parents | open |
-| MSG-09 | An incoming SMS counts as the modem being awake | `test_an_incoming_sms_means_the_modem_is_awake` | EA:test_incoming_sms_counts_as_awake | open |
-| MSG-10 | A message is sent by cellular when registered | `test_a_message_goes_by_cellular` | EA:test_send_text_over_network | open |
-| MSG-11 | Cellular has priority over the radio | `test_cellular_has_priority_over_the_radio` | EA:test_cellular_has_priority_over_mesh | open |
-| MSG-12 | Without cellular the radio carries it, with no phone number, to the radio's own contact, and nothing waits; the entry says radio | `test_the_radio_takes_over_when_cellular_is_gone` | EA:test_mesh_takes_over_when_cellular_is_gone | open |
-| MSG-13 | With cellular switched off the radio carries messages and calls are refused | `test_cellular_off_uses_the_radio` | EA:test_cellular_off_uses_mesh_and_blocks_calls | open |
-| MSG-14 | Without a path the message is queued, shown as waiting, and a notice says so | `test_without_a_path_a_message_is_queued` | EA:test_send_without_network_is_queued_and_sent_later | open |
-| MSG-15 | A queued message goes out when the network returns; the waiting notice is replaced by 'message is out' | `test_a_queued_message_goes_out_when_the_network_returns` | EA:test_send_without_network_is_queued_and_sent_later | open |
-| MSG-16 | A queued message goes out by radio when the radio comes up, without cellular, and the entry becomes a radio entry | `test_a_queued_message_goes_out_by_radio` | EA:test_without_cellular_and_without_mesh_it_waits | open |
-| MSG-17 | The queue holds kOutboxSize (8); one more is refused with a notice | `test_the_queue_is_bounded` | EA:test_queue_is_bounded | open |
-| MSG-18 | A message waiting without any path does not keep the modem awake | `test_a_message_without_any_path_does_not_keep_the_modem_awake` | EA:test_waiting_message_without_any_path_does_not_block_sleep | open |
-| MSG-19 | A waiting message with a path counts as pending work | `test_a_message_with_a_path_is_pending_work` | EA:test_pending_message_wakes_the_modem | open |
-| MSG-20 | Without radio attached everything works as before | `test_without_a_radio_everything_works_as_before` | EA:test_without_mesh_attached_everything_works_as_before | open |
-| MSG-21 | A profile without the radio never sends by radio | `test_a_profile_without_the_radio_never_sends_by_radio` | EA:test_persona_without_mesh_never_uses_it | open |
-| MSG-22 | A profile without the radio ignores incoming radio messages | `test_a_profile_without_the_radio_ignores_incoming_radio_messages` | EA:test_persona_without_mesh_ignores_incoming_mesh | open |
-| MSG-23 | An incoming radio message is stored with the radio contact's name | `test_an_incoming_radio_message_is_stored` | EA:test_incoming_mesh_message_lands_in_the_history | open |
-| MSG-24 | An explicit radio send goes to the named radio contact and is not routed through cellular; refused with a notice when the radio is not usable | `test_an_explicit_radio_send` | — | open |
-| MSG-25 | A radio message is marked confirmed when the radio says it arrived, and logged | `test_a_radio_message_is_marked_confirmed` | EA:test_mesh_message_is_marked_confirmed | open |
-| MSG-26 | A radio message without confirmation is marked so and a notice says so | `test_a_radio_message_without_confirmation_says_so` | EA:test_mesh_message_without_confirmation_says_so | open |
-| MSG-27 | Delivery reports are matched to messages in the order of sending | `test_two_radio_messages_keep_their_order` | EA:test_two_mesh_messages_keep_their_order | open |
-| MSG-28 | Only a few reports are awaited: the oldest is forgotten and stays unconfirmed | `test_the_oldest_awaited_report_is_forgotten` | — | open |
-| MSG-29 | An SMS has no delivery state | `test_an_sms_has_no_delivery_state` | EA:test_sms_has_no_delivery_state | open |
-| MSG-30 | A message the modem refuses after accepting it is logged with the modem's reason, written as a history entry (kind sms-rejected), noticed, vibrates the failure pattern and is reported to a running SOS ping | `test_a_modem_send_failure_is_recorded_noticed_and_reported` | — | open |
-| MSG-31 | A message is deleted from the history by its number | `test_a_message_can_be_deleted` | — | open |
-| MSG-32 | Empty recipient or empty text is refused | `test_empty_recipient_or_text_is_refused` | — | open |
-| MSG-33 | Sending writes a log line with the path | `test_sending_is_logged` | — | open |
+| MSG-01 | An incoming SMS is stored unread with the sender, and counts as unread | `test_an_incoming_sms_is_stored` | EA:test_incoming_sms_is_stored | done |
+| MSG-02 | A remote query is recognised before storing: it is never stored as a message | `test_a_remote_query_is_not_stored_as_a_message` | EA:test_command_sms_is_not_stored_but_logged_and_noticed | done |
+| MSG-03 | A remote query from a parent is logged, written as a history entry (kind location-queried) and, when the profile says notify, shown as a notice | `test_a_remote_query_is_logged_recorded_and_noticed_as_the_profile_says` | EA:test_command_sms_is_not_stored_but_logged_and_noticed, SC:test_status_screen_cycles_command_notice | done |
+| MSG-04 | A remote query from a number that is not a parent is refused, logged and recorded (kind query-refused); no reply, no receiver | `test_a_refused_remote_query_is_recorded` | EA:test_unauthorized_command_is_logged_and_rejected | done |
+| MSG-05 | A remote query never vibrates | `test_a_remote_query_does_not_vibrate` | EA:test_remote_command_does_not_vibrate | done |
+| MSG-06 | An incoming SMS vibrates with the message pattern | `test_an_incoming_sms_vibrates_the_message_pattern` | EA:test_incoming_message_vibrates_twice_short | done |
+| MSG-07 | Message vibration can be switched off | `test_message_vibration_can_be_switched_off` | EA:test_message_vibration_can_be_switched_off | done |
+| MSG-08 | In school time only a parent's message vibrates; the message is stored either way | `test_in_school_time_only_parents_vibrate` | EA:test_message_vibration_in_school_time_only_for_parents | done |
+| MSG-09 | An incoming SMS counts as the modem being awake | `test_an_incoming_sms_means_the_modem_is_awake` | EA:test_incoming_sms_counts_as_awake | done |
+| MSG-10 | A message is sent by cellular when registered | `test_a_message_goes_by_cellular` | EA:test_send_text_over_network | done |
+| MSG-11 | Cellular has priority over the radio | `test_cellular_has_priority_over_the_radio` | EA:test_cellular_has_priority_over_mesh | done |
+| MSG-12 | Without cellular the radio carries it, with no phone number, to the radio's own contact, and nothing waits; the entry says radio | `test_the_radio_takes_over_when_cellular_is_gone` | EA:test_mesh_takes_over_when_cellular_is_gone | done |
+| MSG-13 | With cellular switched off the radio carries messages and calls are refused | `test_cellular_off_uses_the_radio` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
+| MSG-14 | Without a path the message is queued, shown as waiting, and a notice says so | `test_without_a_path_a_message_is_queued` | EA:test_send_without_network_is_queued_and_sent_later | done |
+| MSG-15 | A queued message goes out when the network returns; the waiting notice is replaced by 'message is out' | `test_a_queued_message_goes_out_when_the_network_returns` | EA:test_send_without_network_is_queued_and_sent_later | done |
+| MSG-16 | A queued message goes out by radio when the radio comes up, without cellular, and the entry becomes a radio entry | `test_a_queued_message_goes_out_by_radio` | EA:test_without_cellular_and_without_mesh_it_waits | done |
+| MSG-17 | The queue holds kOutboxSize (8); one more is refused with a notice | `test_the_queue_is_bounded` | EA:test_queue_is_bounded | done |
+| MSG-18 | A message waiting without any path does not keep the modem awake | `test_a_message_without_any_path_does_not_keep_the_modem_awake` | EA:test_waiting_message_without_any_path_does_not_block_sleep | done |
+| MSG-19 | A waiting message with a path counts as pending work | `test_a_message_with_a_path_is_pending_work` | EA:test_pending_message_wakes_the_modem | done |
+| MSG-20 | Without radio attached everything works as before | `test_without_a_radio_everything_works_as_before` | EA:test_without_mesh_attached_everything_works_as_before | done |
+| MSG-21 | A profile without the radio never sends by radio | `test_a_profile_without_the_radio_never_sends_by_radio` | EA:test_persona_without_mesh_never_uses_it | done |
+| MSG-22 | A profile without the radio ignores incoming radio messages | `test_a_profile_without_the_radio_ignores_incoming_radio_messages` | EA:test_persona_without_mesh_ignores_incoming_mesh | done |
+| MSG-23 | An incoming radio message is stored with the radio contact's name | `test_an_incoming_radio_message_is_stored` | EA:test_incoming_mesh_message_lands_in_the_history | done |
+| MSG-24 | An explicit radio send goes to the named radio contact and is not routed through cellular; refused with a notice when the radio is not usable | `test_an_explicit_radio_send` | — | done |
+| MSG-25 | A radio message is marked confirmed when the radio says it arrived, and logged | `test_a_radio_message_is_marked_confirmed` | EA:test_mesh_message_is_marked_confirmed | done |
+| MSG-26 | A radio message without confirmation is marked so and a notice says so | `test_a_radio_message_without_confirmation_says_so` | EA:test_mesh_message_without_confirmation_says_so | done |
+| MSG-27 | Delivery reports are matched to messages in the order of sending | `test_two_radio_messages_keep_their_order` | EA:test_two_mesh_messages_keep_their_order | done |
+| MSG-28 | Only a few reports are awaited: the oldest is forgotten and stays unconfirmed | `test_the_oldest_awaited_report_is_forgotten` | — | done |
+| MSG-29 | An SMS has no delivery state | `test_an_sms_has_no_delivery_state` | EA:test_sms_has_no_delivery_state | done |
+| MSG-30 | A message the modem refuses after accepting it is logged with the modem's reason, written as a history entry (kind sms-rejected), noticed, vibrates the failure pattern and is reported to a running SOS ping | `test_a_modem_send_failure_is_recorded_noticed_and_reported` | — | done |
+| MSG-31 | A message is deleted from the history by its number | `test_a_message_can_be_deleted` | — | done |
+| MSG-32 | Empty recipient or empty text is refused | `test_empty_recipient_or_text_is_refused` | — | done |
+| MSG-33 | Sending writes a log line with the path | `test_sending_is_logged` | — | done |
+| MSG-34 | After school time everybody's message vibrates again | `test_after_school_time_everybody_vibrates_again` | — | done |
+| MSG-35 | A remote query that finds a search running is logged as busy and still recorded | `test_a_remote_query_while_a_search_runs_is_logged_as_busy` | — | done |
+| MSG-36 | The queue goes out in the order it was filled | `test_the_queue_goes_out_in_order_and_keeps_what_cannot_leave_yet` | — | done |
+| MSG-37 | A delivery report nobody waits for is ignored | `test_a_report_nobody_waits_for_is_ignored` | — | done |
+| MSG-38 | Deleting a waiting message does not cancel its sending | `test_deleting_a_waiting_message_does_not_cancel_it` | — | done |
+| MSG-39 | A waiting message pushed out of the history by newer ones is still sent | `test_a_message_that_left_the_history_while_waiting_is_still_sent` | — | done |
+| MSG-40 | A message the modem refuses stays in the queue while the others go, and goes at the next poll | `test_a_message_the_modem_refuses_stays_in_the_queue_while_the_others_go` | — | done |
+| MSG-41 | A text longer than the modem takes is refused instead of waiting for ever | `test_a_text_longer_than_the_modem_takes_is_refused_instead_of_waiting_for_ever` | — | done |
+| MSG-42 | An empty radio text is refused without a notice | `test_an_empty_radio_text_is_refused_quietly` | — | done |
+| MSG-43 | A queued message keeps its full text although the history keeps 160 bytes | `test_a_long_queued_message_keeps_its_full_text` | — | done |
+| MSG-44 | The history text is cut on a character boundary | `test_the_history_text_is_cut_on_a_character_boundary` | — | done |
 
 ## Calls
 

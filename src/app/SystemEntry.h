@@ -54,4 +54,10 @@ bool make(Message& msg, const std::string& kind, const std::string& argument = s
 // an older system entry that holds a sentence.
 bool parse(const Message& msg, Entry& out);
 
+// Writes a system entry into the history: an incoming, unread message of source System with the
+// given time, the other party in `peer` and the encoded kind. Returns the number the store gave
+// it, 0 when the kind or argument is not a catalog word.
+uint32_t record(MessageStore& store, uint32_t time, const std::string& kind, const std::string& peer = std::string(),
+                const std::string& argument = std::string());
+
 }  // namespace sysentry

@@ -492,6 +492,23 @@ void test_only_a_system_message_in_the_encoding_is_parsed_as_an_entry() {
   }
 }
 
+void test_recording_a_system_entry_writes_an_unread_incoming_row_with_the_time() {
+  MessageStore s;
+  const uint32_t seq = sysentry::record(s, 1789475520, sysentry::kMissedCall, "+493012345678");
+  TEST_ASSERT_EQUAL(1, seq);
+  TEST_ASSERT_EQUAL(1, s.count());
+  TEST_ASSERT_TRUE(s.at(0).source == MsgSource::System);
+  TEST_ASSERT_TRUE(s.at(0).dir == MsgDir::In);
+  TEST_ASSERT_EQUAL(1789475520, s.at(0).time);
+  TEST_ASSERT_EQUAL_STRING("+493012345678", s.at(0).peer);
+  TEST_ASSERT_EQUAL_STRING("@missed-call", s.at(0).text);
+  TEST_ASSERT_EQUAL(1, s.unread());
+  TEST_ASSERT_EQUAL(0, sysentry::record(s, 1, "Not A Word"));        // refused: nothing is stored
+  TEST_ASSERT_EQUAL(1, s.count());
+  sysentry::record(s, 2, sysentry::kCallFailed, std::string(40, '1'), sysentry::kBusy);   // a peer too long is cut, not overrun
+  TEST_ASSERT_EQUAL(31, strlen(s.at(1).peer));
+}
+
 void test_a_system_entry_goes_through_the_file_unchanged_and_old_entries_still_load() {
   FakeLog log;
   MessageStore s;
@@ -640,6 +657,7 @@ int main(int, char**) {
   RUN_TEST(test_a_system_entry_is_a_kind_with_an_optional_argument);
   RUN_TEST(test_a_system_entry_refuses_anything_that_is_not_a_catalog_word);
   RUN_TEST(test_only_a_system_message_in_the_encoding_is_parsed_as_an_entry);
+  RUN_TEST(test_recording_a_system_entry_writes_an_unread_incoming_row_with_the_time);
   RUN_TEST(test_a_system_entry_goes_through_the_file_unchanged_and_old_entries_still_load);
   RUN_TEST(test_a_broken_line_is_reported_but_the_rest_survives);
   RUN_TEST(test_every_kind_of_damage_is_counted);
