@@ -22,6 +22,12 @@ With a window (SDL2: `brew install sdl2`): `pio run -e sim-sdl && .pio/build/sim
 
 The card is a directory: by default a fresh copy of `--data` in `out/sim-card/` (emptied at every start, and only if the simulator made it), so what the page saves never reaches the repository. `--in-place` uses the data directory itself, for the owner who wants it. Bound to the loopback address only; port 80 is replaced by the port above because a user may not open it.
 
+## Scenarios
+
+`sim/scripts/*.txt` are stories, each run headless by CI and by `test_simulator`: a normal day, school time, a remote query during an SOS, the network dropping, save mode and the cell probe, a language switch during an emergency, a missed call in three languages, a user catalog, a bad user catalog. A line `# data: <dir>` at the top names the card the story needs (`sim/data-school`, `test/data/usercatalog`, `test/data/badcatalog`). They assert with `see <catalog key> [name=value]` (the screen says that text, in the language of the moment, so the story works in every language), `say <text>`, `check <what> <value>` and `fails <command>`; a failing assertion is an error and the exit status is 1. `python3 scripts/counter_check_scenarios.py` breaks the behaviour each story is about and expects the story to fail; run it when a story is written or changed.
+
+The SOS page, the settings and the Wi-Fi page do not exist yet, so a story presses the core's entry points with `sos`, `cellular`, `savemode` and `probe`, as those pages will.
+
 ## Pictures
 
 `golden <name>` compares the panel with `sim/golden/<name>.txt` (`#` black, `.` white, the format of `test/golden/`); `UPDATE_GOLDEN=1` writes the file, to be reviewed like code. `screenshot <file.png>` writes the panel as a picture.

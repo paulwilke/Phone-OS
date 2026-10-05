@@ -29,7 +29,7 @@ void usage() {
                "  --lang <dir>      the shipped catalogs; default lang\n"
                "  --web <file>      the web page; default web/index.html\n"
                "  --golden <dir>    where `golden` looks for pictures; default sim/golden\n"
-               "  --script <file>   run the commands of a file first; the program exits after it unless\n"
+               "  --script <file>   run the commands of a file first (a line `# data: <dir>` at its top names its card); the program exits after it unless\n"
                "                    --interactive is given. The exit status is 1 when a command failed\n"
                "  --interactive     read commands from the terminal (the default without --script)\n"
                "  --headless        no window (the only choice in a build without SDL)\n"
@@ -74,7 +74,7 @@ private:
 int main(int argc, char** argv) {
   sim::Options options;
   std::string script;
-  bool interactive = false, headless = false;
+  bool interactive = false, headless = false, dataGiven = false;
   int scale = 2;
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     };
     std::string v;
     if (a == "--help" || a == "-h") { usage(); return 0; }
-    else if (a == "--data") { if (!value(options.dataDir)) return 2; }
+    else if (a == "--data") { if (!value(options.dataDir)) return 2; dataGiven = true; }
     else if (a == "--lang") { if (!value(options.langDir)) return 2; }
     else if (a == "--web") { if (!value(options.webPage)) return 2; }
     else if (a == "--work") { if (!value(options.workDir)) return 2; }
@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
     else { std::cerr << "error: unknown option " << a << "\n"; usage(); return 2; }
   }
 
+  if (!dataGiven && !script.empty() && !sim::scriptData(script).empty()) options.dataDir = sim::scriptData(script);
   sim::Simulator simulator(options, std::cout);
   if (!simulator.ok()) {
     std::cerr << "error: " << simulator.error() << "\n";

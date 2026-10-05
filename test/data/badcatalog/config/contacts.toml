@@ -1,0 +1,14 @@
+[[contact]]
+number = "+491701111111"
+name = "Parent One"
+role = "parent"
+
+[[contact]]
+number = "+491702222222"
+name = "Parent Two"
+role = "parent"
+
+[[contact]]
+number = "+493012345678"
+name = "Grandma"
+role = "family"

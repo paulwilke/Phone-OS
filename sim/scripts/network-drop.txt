@@ -1,0 +1,25 @@
+# The network drops and returns: the bar says so, a message written meanwhile waits, and goes out
+# when the network is back.
+advance 5s
+check registered yes
+say Example
+network none
+advance 2s
+check registered no
+see status.no-network
+say-not Example
+
+# The child writes to Parent One: the message is accepted and queued.
+key compose
+key select
+key select
+advance 1s
+see notice.message-waiting
+check sms-sent 0
+
+network Example Mobile
+advance 10s
+check registered yes
+say Example
+check sms-sent 1
+check last-sms-to +491701111111

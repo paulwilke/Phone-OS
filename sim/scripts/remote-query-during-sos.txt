@@ -1,0 +1,20 @@
+# A remote query during an SOS: the other parent asks where the child is while the child asks for
+# help. The emergency is not disturbed, one text goes out (the emergency, to the first person), and
+# the query is in the history as an entry, not as a message.
+advance 5s
+sos begin
+sos choose emergency
+advance 5s
+sms +491702222222 #WhereAreYou
+advance 2s
+check log-has busy
+advance 40s
+check sms-sent 1
+check last-sms-to +491701111111
+check last-sms-has Alex sends SOS
+check haptic-sent 1
+check unread 1
+key inbox
+# The list shortens a long line; reading the entry shows it whole.
+key select
+see system.location-queried name=Parent Two

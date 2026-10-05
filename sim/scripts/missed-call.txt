@@ -1,0 +1,21 @@
+# A missed call is an entry in the history, worded from the catalog when it is read: the same entry
+# in three languages, and the entry that was there before the switch changes with it.
+advance 5s
+call +491701111111
+advance 3s
+check call ringing
+remote hangup
+advance 2s
+check call idle
+check unread 1
+key inbox
+key select
+see system.missed-call name=Parent One
+language de
+see system.missed-call name=Parent One
+say-not Missed call from
+language fr
+see system.missed-call name=Parent One
+say-not Anruf
+language en
+see system.missed-call name=Parent One

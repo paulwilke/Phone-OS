@@ -1,0 +1,57 @@
+# A normal day: the start-up fix, a text in, a reply, a call in and a call out.
+advance 5s
+check screen home
+check registered yes
+check unread 0
+see home.phone
+see home.inbox
+
+# A text arrives from a parent: the inbox tile shows it and the device vibrates.
+sms +491701111111 Hi Alex, call me
+advance 2s
+check unread 1
+key inbox
+check screen messages
+say Parent One
+say Hi Alex, call me
+# Reading it marks it read; replying writes to the same person.
+key select
+check unread 0
+key select
+check screen compose
+key select
+advance 2s
+check sms-sent 1
+check last-sms-to +491701111111
+key home
+check screen home
+
+# A call comes in; the child answers and the parent hangs up.
+call +491702222222
+advance 1s
+check screen call
+check call ringing
+see call.title-ringing
+say Parent Two
+key select
+advance 1s
+check call incall
+see call.title-incall
+remote hangup
+advance 2s
+check call idle
+check screen home
+
+# The child calls Parent One from the phone page; the parent answers, the child hangs up.
+key select
+check screen phone
+key select
+advance 1s
+check call dialing
+see call.title-dialing
+remote answer
+advance 2s
+check call incall
+key back
+advance 2s
+check call idle

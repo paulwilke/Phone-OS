@@ -1,0 +1,21 @@
+# A language switch while an emergency is open: the child's screen changes at once, and the text
+# to the parent stays in the language of the SMS settings, which is not the child's.
+advance 5s
+language de
+sos begin
+sos choose emergency
+advance 3s
+see home.phone
+language fr
+advance 1s
+see home.phone
+language en
+advance 1s
+see home.phone
+check sos running
+advance 60s
+check sms-sent 1
+check last-sms-has Alex sends SOS
+check language en
+language de
+see home.phone

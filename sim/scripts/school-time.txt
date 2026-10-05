@@ -1,0 +1,39 @@
+# data: sim/data-school
+# School time: a call in is rejected without ringing, and the SOS needs five taps and lifts the lock.
+advance 5s
+check school yes
+see status.quiet
+
+# Parent One calls: no ring, no call page; the child is told who tried, and it is in the history.
+call +491701111111
+advance 2s
+check call idle
+check screen home
+check haptic-ring 0
+see notice.caller-in-school-time name=Parent One
+check unread 1
+
+# The phone tile does not open the phone page in school time.
+key select
+check screen home
+
+# The SOS: four taps are not enough, the fifth lifts school time until it ends.
+sos begin
+check sos quiet-confirm
+sos tap
+sos tap
+sos tap
+sos tap
+check school yes
+sos tap
+check school no
+# The search runs, the text goes to the first person to reach, and the child is called back.
+advance 40s
+check sms-sent 1
+check last-sms-to +491701111111
+check last-sms-has Alex sends SOS
+check haptic-sent 1
+call +491701111111
+advance 1s
+check call ringing
+check haptic-ring 1

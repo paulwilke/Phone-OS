@@ -10,7 +10,7 @@ Code: `src/ui/screens/MessageListScreen.{h,cpp}`; tests in `test/test_screen_mes
 
 **Marks.** `✉` unread, `~` radio, `!` an entry of the device. For an outgoing message: "(waiting)" while it sits in the queue; over the radio "arrived" or "unconfirmed" when the network said so. An SMS gets no answer from the network, and nothing is written.
 
-**Entries of the device are worded from codes** (`wording::systemEntry`): a missed call from yesterday reads in today's language, a contact renamed since is renamed in it, a failed location reply to a parent is there too.
+**Entries of the device are worded from codes** (`wording::systemEntry`): a missed call from yesterday reads in today's language, a contact renamed since is renamed in it (also while the entry is open: the view asks for its words again at every frame), a failed location reply to a parent is there too.
 
 **Time** is that of the clock's zone (`AppCore::wallClockOf`): `14:32` for today, the date in front for an earlier day (`09/14 14:32`, `14.09. 14:32`), `--:--` for a message that arrived before the time was known.
 
@@ -28,4 +28,4 @@ The text of a message is kept to 160 bytes by the history.
 
 ## Tests
 
-`test_screen_messages`: the empty lists; order and unread marks; reading marks read; the window in a long list; waiting and delivery marks (queue, radio arrived and unconfirmed, an SMS without a mark); radio in; missed call worded in three languages; a failed location reply; dates and unknown time; the message view and its hint; scrolling to the end; long names and a number; reply (contact, stranger with and without free text, radio); call back (allowed, not allowed); outgoing; delete (keep, selection, from the message, a waiting message still goes); touch; the character set of what arrives; layout in four languages (the pseudo-language is exempt from the width of the action word beside the arrows only); pictures in English and German.
+`test_screen_messages`: the empty lists; order and unread marks; reading marks read; the window in a long list; waiting and delivery marks (queue, radio arrived and unconfirmed, an SMS without a mark); radio in; missed call worded in three languages, also in an open entry; a failed location reply; dates and unknown time; the message view and its hint; scrolling to the end; long names and a number; reply (contact, stranger with and without free text, radio); call back (allowed, not allowed); outgoing; delete (keep, selection, from the message, a waiting message still goes); touch; the character set of what arrives; layout in four languages (the pseudo-language is exempt from the width of the action word beside the arrows only); pictures in English and German.

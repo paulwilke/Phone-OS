@@ -164,6 +164,11 @@ void MessageListScreen::draw(Display& display, const Rect& area) {
       y += small.lineHeight();
     }
     const Rect textRect = textArea(area, m);
+    const std::string words = body(m);
+    if (words != worded_) {
+      text_.setText(words);
+      worded_ = words;
+    }
     text_.draw(display, textRect);
     const std::string hint = t().get("messages.delete-hint");
     int hy = textRect.bottom() + 2;
@@ -232,8 +237,8 @@ void MessageListScreen::open() {
   if (!m) return;
   mode_ = Mode::Message;
   app().markAllRead();
-  const std::string words = body(*m);
-  text_.setText(words);
+  worded_ = body(*m);
+  text_.setText(worded_);
 }
 
 void MessageListScreen::remove() {

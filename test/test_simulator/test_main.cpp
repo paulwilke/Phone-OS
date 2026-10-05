@@ -5,6 +5,7 @@
 
 #include <unity.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
@@ -566,6 +567,55 @@ void test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures
   TEST_ASSERT_TRUE_MESSAGE(s.sim.runScript("sim/scripts/smoke.txt"), s.output().c_str());
 }
 
+void test_see_finds_a_word_by_its_catalog_key_in_every_language_and_says_what_is_missing() {
+  Sim s;
+  s.sim.advance(3000);
+  for (const char* language : {"en", "de", "fr"}) {
+    TEST_ASSERT_TRUE(s.run(std::string("language ") + language));
+    TEST_ASSERT_TRUE_MESSAGE(s.run("see home.phone"), language);
+    TEST_ASSERT_TRUE_MESSAGE(s.run("see home.sos"), language);
+  }
+  s.run("language en");
+  TEST_ASSERT_FALSE(s.run("see home.light"));                       // a tile of the second page: not on the screen
+  TEST_ASSERT_TRUE(contains(s.output(), "does not say \"Light\""));
+  TEST_ASSERT_TRUE(s.run("see-not home.motion"));
+  TEST_ASSERT_FALSE(s.run("see-not home.phone"));
+  TEST_ASSERT_FALSE(s.run("see no.such.key"));
+  TEST_ASSERT_FALSE(s.run("see call.busy name"));                   // an argument without a name
+  TEST_ASSERT_TRUE(s.run("say Phone"));
+  TEST_ASSERT_FALSE(s.run("say Phon"));                             // part of a word is not the word
+  TEST_ASSERT_TRUE(s.run("say-not Phon"));
+  TEST_ASSERT_FALSE(s.run("say"));
+}
+
+void test_check_and_fails_report_what_differs() {
+  Sim s;
+  TEST_ASSERT_TRUE(s.run("check unread 0"));
+  TEST_ASSERT_FALSE(s.run("check unread 1"));
+  TEST_ASSERT_TRUE(contains(s.output(), "unread is 0, expected 1"));
+  TEST_ASSERT_FALSE(s.run("check nothing 1"));
+  TEST_ASSERT_FALSE(s.run("check unread"));
+  TEST_ASSERT_FALSE(s.run("check haptic-buzz 0"));
+  TEST_ASSERT_TRUE(s.run("fails check unread 1"));
+  TEST_ASSERT_FALSE(s.run("fails check unread 0"));                 // it worked, and was expected not to
+  TEST_ASSERT_FALSE(s.run("fails"));
+}
+
+// ---- the scenarios ------------------------------------------------------------------------------------------------------
+
+void test_every_scenario_runs_to_its_end_on_its_own_card() {
+  std::vector<std::string> scripts;
+  for (const auto& entry : std::filesystem::directory_iterator("sim/scripts"))
+    if (entry.path().extension() == ".txt") scripts.push_back(entry.path().string());
+  std::sort(scripts.begin(), scripts.end());
+  TEST_ASSERT_TRUE_MESSAGE(scripts.size() >= 10, "the scenarios are missing: run from the repository root");
+  for (const std::string& script : scripts) {
+    const std::string data = sim::scriptData(script);
+    Sim s(data.empty() ? "sim/data" : data);
+    TEST_ASSERT_TRUE_MESSAGE(s.sim.runScript(script), (script + "\n" + s.output()).c_str());
+  }
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_every_demo_card_loads_without_a_diagnostic_or_a_warning);
@@ -612,5 +662,8 @@ int main() {
   RUN_TEST(test_a_work_directory_that_is_or_holds_the_data_is_refused);
   RUN_TEST(test_in_place_needs_a_data_directory);
   RUN_TEST(test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures);
+  RUN_TEST(test_every_scenario_runs_to_its_end_on_its_own_card);
+  RUN_TEST(test_see_finds_a_word_by_its_catalog_key_in_every_language_and_says_what_is_missing);
+  RUN_TEST(test_check_and_fails_report_what_differs);
   return UNITY_END();
 }

@@ -1,0 +1,8 @@
+[meta]
+code = "bd"
+name = "Broken"
+native = "Broken"
+plural = "one-other"
+
+[strings]
+home.phone = "Only one string, and a {placeholder} the reference does not have"

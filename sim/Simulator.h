@@ -23,6 +23,8 @@
 #include <fstream>
 #include <functional>
 #include <iomanip>
+#include <map>
+#include <set>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -44,6 +46,7 @@
 #include <fakes/FakePower.h>
 #include <fakes/FakeRadioLink.h>
 #include <fakes/FakeWifi.h>
+#include <Shows.h>
 #include <i18n/Pseudo.h>
 
 namespace sim {
@@ -219,6 +222,17 @@ private:
   bool screenshotTo(const std::string& path);
   bool setDate(const std::string& date, const std::string& time);
   bool pressKey(const std::string& name);
+  // The picture as the panel shows it after the device has caught up with what the console changed.
+  const FrameBuffer& pictureNow() {
+    settle();
+    rig_->runtime->render();
+    return rig_->panel.shown();
+  }
+  // Runs a line with its output kept apart (see `fails`); true when it worked.
+  bool executeQuietly(const std::string& line, std::ostream& into);
+  bool screenSays(const std::string& words);
+  bool see(const std::vector<std::string>& w, bool expected);
+  bool check(const std::vector<std::string>& w, const std::string& line);
   void setSignal(int bars) {
     bars_ = bars;
     rig_->modem.setNetwork(operator_, bars_);
@@ -498,12 +512,23 @@ inline void Simulator::printHelp() {
           "    type <text>                  typed characters\n"
           "    tap <x> <y>                  a touch at a pixel (240 x 320)\n"
           "    language <code>              the interface language (en de fr qps-ploc, or a user catalog)\n"
+          "    sos begin [number]|choose emergency|pickup|tap|leave   the SOS button's entry points (there is no SOS page yet)\n"
+          "    cellular on|off | savemode on|off | probe              what the network page and its options do\n"
+          "    radio start                  the child asks for the radio; the simulator starts it\n"
           "  Looking\n"
           "    state                        a summary of the device\n"
           "    log [n]                      the last n lines of the device's log (default 20)\n"
           "    screenshot <file.png>        the panel as a picture\n"
           "    ascii [file]                 the panel as # and . (or into a file)\n"
           "    golden <name>                compare the panel with " << options_.goldenDir << "/<name>.txt (UPDATE_GOLDEN=1 writes it)\n"
+          "  Asserting (a failed one is an error, so a script fails)\n"
+          "    see <catalog key> [name=value...]   (a value may have spaces) the screen says that text, in the language of the moment\n"
+          "    see-not <catalog key> [name=value...]\n"
+          "    say <text> | say-not <text>         the screen says this literal text (a name, an operator)\n"
+          "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular, savemode,\n"
+          "                                 battery, sms-sent, last-sms-to, last-sms-has, language, boots, log-has,\n"
+          "                                 haptic-click|ring|message|sent|failed (how often played)\n"
+          "    fails <command>              the command is refused (an error is what the scenario expects)\n"
           "  Control\n"
           "    run <script>                 run the commands of a file\n"
           "    echo <text>                  print the text (a marker in a script)\n"
@@ -563,8 +588,9 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     return true;
   }
   if (name == "radio") {
-    if (!need(2)) return fail("radio needs up, down, peer, msg or confirm");
-    if (w[1] == "up") r.radio.setUp(true);
+    if (!need(2)) return fail("radio needs start, up, down, peer, msg or confirm");
+    if (w[1] == "start") r.runtime->core().requestRadioStart();
+    else if (w[1] == "up") r.radio.setUp(true);
     else if (w[1] == "down") r.radio.setUp(false);
     else if (w[1] == "peer" && need(3)) r.radio.addPeer(detail::rest(line, 2), true, r.clock.epochUtc());
     else if (w[1] == "msg" && need(4)) r.radio.deliver(w[2], detail::rest(line, 3), r.clock.epochUtc());
@@ -724,6 +750,52 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     return true;
   }
 
+  if (name == "sos") {
+    AppCore& core = r.runtime->core();
+    bool done = false;
+    if (need(2) && w[1] == "begin") done = need(3) ? core.beginSos(w[2]) : core.beginSos();
+    else if (need(3) && w[1] == "choose" && w[2] == "emergency") done = core.chooseSos(SosPing::Kind::Emergency);
+    else if (need(3) && w[1] == "choose" && w[2] == "pickup") done = core.chooseSos(SosPing::Kind::Pickup);
+    else if (need(2) && w[1] == "tap") done = core.tapSos();
+    else if (need(2) && w[1] == "leave") { core.leaveSos(); done = true; }
+    else return fail("sos: begin [number], choose emergency|pickup, tap or leave");
+    settle();
+    if (!done && w[1] != "tap") out_ << "note: the core did not take that (no one to reach, or not the moment)\n";
+    return true;
+  }
+  if (name == "cellular" || name == "savemode") {
+    if (!need(2) || (w[1] != "on" && w[1] != "off")) return fail(name + " needs on or off");
+    const bool on = w[1] == "on";
+    if (name == "cellular") r.runtime->core().setCellularEnabled(on);
+    else r.runtime->core().setSaveMode(on);
+    settle();
+    return true;
+  }
+  if (name == "probe") { r.runtime->core().probeCellular(); settle(); return true; }
+
+  // Asserting.
+  if (name == "see" || name == "see-not") return see(w, name == "see");
+  if (name == "say" || name == "say-not") {
+    const std::string words = detail::rest(line, 1);
+    if (words.empty()) return fail(name + " needs a text");
+    const bool says = screenSays(words);
+    if (says != (name == "say")) {
+      out_ << "error: the screen " << (says ? "says \"" : "does not say \"") << words << "\"\n";
+      return false;
+    }
+    return true;
+  }
+  if (name == "check") return check(w, line);
+  if (name == "fails") {
+    // For a scenario that says "this is refused": succeeds only when the command after it fails.
+    const std::string inner = detail::rest(line, 1);
+    if (inner.empty()) return fail("fails needs a command");
+    std::ostringstream quiet;
+    const bool refused = !executeQuietly(inner, quiet);
+    if (!refused) out_ << "error: \"" << inner << "\" worked, and was expected to fail\n";
+    return refused;
+  }
+
   // Looking.
   if (name == "log") {
     size_t n = 20;
@@ -762,6 +834,182 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     return result.ok;
   }
   return fail("no command " + name);
+}
+
+// ---- asserting -------------------------------------------------------------------------------------------------
+
+// Whether the words are on the panel in any of the four fonts, on white or on black. The match is
+// exact over the whole word and its margin (testing/Shows.h), so a word that is cut off, drawn in
+// the wrong font or covered by another is not found.
+inline bool Simulator::screenSays(const std::string& words) {
+  const FrameBuffer& picture = pictureNow();
+  // Looking is a scan of the whole picture, so each (text, font) is looked up once.
+  std::map<std::pair<std::string, int>, bool> known;
+  auto found = [&](const std::string& text, ui::FontSize size) {
+    const auto key = std::make_pair(text, static_cast<int>(size));
+    const auto hit = known.find(key);
+    if (hit != known.end()) return hit->second;
+    bool result = false;
+    for (bool onBlack : {false, true}) result = result || shows::text(picture, text, size, ui::Rect{}, onBlack);
+    return known[key] = result;
+  };
+  for (ui::FontSize size : {ui::FontSize::Small, ui::FontSize::Text, ui::FontSize::Tile, ui::FontSize::Large}) {
+    if (found(words, size)) return true;
+    // A long text is wrapped over lines: it is said when the lines of one wrapping are all there.
+    // Which width the screen wrapped at is not known, so the widths are tried, each different
+    // wrapping once.
+    std::set<std::vector<std::string>> tried;
+    for (int width = 60; width <= ui::kScreenWidth; width += 4) {
+      std::vector<std::string> lines;
+      for (std::string_view line : ui::text::wrap(ui::font(size), words, width)) lines.emplace_back(line);
+      if (lines.size() < 2 || !tried.insert(lines).second) continue;
+      bool all = true;
+      for (size_t i = 0; all && i < lines.size(); ++i) all = found(lines[i], size);
+      if (all) return true;
+    }
+  }
+  return false;
+}
+
+// `see key name=value ...`: the catalog's text for the key in the language of the moment, with the
+// arguments filled in, so the assertion holds in every language.
+inline bool Simulator::see(const std::vector<std::string>& w, bool expected) {
+  if (w.size() < 2) {
+    out_ << "error: " << w[0] << " needs a catalog key (try help)\n";
+    return false;
+  }
+  std::vector<std::string> values;
+  std::vector<std::string> names;
+  // A word with "=" starts an argument; the words after it belong to its value ("name=Parent One").
+  for (size_t i = 2; i < w.size(); ++i) {
+    const size_t eq = w[i].find('=');
+    if (eq == std::string::npos || eq == 0) {
+      if (values.empty()) {
+        out_ << "error: " << w[i] << " is not name=value\n";
+        return false;
+      }
+      values.back() += " " + w[i];
+      continue;
+    }
+    names.push_back(w[i].substr(0, eq));
+    values.push_back(w[i].substr(eq + 1));
+  }
+  std::vector<i18n::Arg> args;
+  for (size_t i = 0; i < names.size(); ++i) {
+    char* end = nullptr;
+    const long long number = std::strtoll(values[i].c_str(), &end, 10);
+    if (!values[i].empty() && *end == '\0') args.emplace_back(names[i].c_str(), static_cast<int64_t>(number));
+    else args.emplace_back(names[i].c_str(), values[i].c_str());
+  }
+  if (translator_.text(w[1].c_str()) == nullptr) {
+    out_ << "error: no catalog key " << w[1] << "\n";
+    return false;
+  }
+  const std::string words = translator_.get(w[1].c_str(), args.data(), args.size());
+  const bool says = screenSays(words);
+  if (says != expected) {
+    out_ << "error: the screen " << (says ? "says" : "does not say") << " \"" << words << "\" (" << w[1] << ", "
+         << translator_.language() << ")\n";
+    return false;
+  }
+  return true;
+}
+
+inline bool Simulator::executeQuietly(const std::string& line, std::ostream& into) {
+  std::streambuf* const saved = out_.rdbuf(into.rdbuf());
+  const bool ok = execute(line);
+  out_.rdbuf(saved);
+  return ok;
+}
+
+inline bool Simulator::check(const std::vector<std::string>& w, const std::string& line) {
+  if (w.size() < 3) {
+    out_ << "error: check needs what and the value (try help)\n";
+    return false;
+  }
+  settle();
+  const AppCore::State s = rig_->runtime->core().state();
+  const std::string& what = w[1];
+  const std::string value = detail::rest(line, 2);
+  std::string actual;
+  static const char* const screens[] = {"home", "lock", "clock", "phone", "number", "call", "messages", "compose",
+                                        "recipient", "sos", "settings", "wifi", "net", "status", "language",
+                                        "gnss", "radio", "motion", "selftest"};
+  auto yesNo = [](bool b) { return std::string(b ? "yes" : "no"); };
+  const std::vector<FakeModem::SentSms>& sent = rig_->modem.sent();
+  if (what == "screen") actual = screens[rig_->runtime->stack().visibleId()];
+  else if (what == "locked") actual = yesNo(rig_->runtime->stack().locked());
+  else if (what == "unread") actual = std::to_string(s.unread);
+  else if (what == "school") actual = yesNo(s.schoolTime);
+  else if (what == "registered") actual = yesNo(s.registered);
+  else if (what == "cellular") actual = s.cellularEnabled ? "on" : "off";
+  else if (what == "savemode") actual = s.saveMode ? "on" : "off";
+  else if (what == "battery") actual = std::to_string(s.batteryPercent);
+  else if (what == "language") actual = translator_.language();
+  else if (what == "boots") actual = std::to_string(boots_);
+  else if (what == "sms-sent") actual = std::to_string(sent.size());
+  else if (what == "call") {
+    switch (s.callState) {
+      case ModemState::Dialing: actual = "dialing"; break;
+      case ModemState::RingingIn: actual = "ringing"; break;
+      case ModemState::InCall: actual = "incall"; break;
+      default: actual = "idle"; break;
+    }
+  } else if (what == "sos") {
+    switch (s.sosPhase) {
+      case SosFlow::Phase::Choosing: actual = "choosing"; break;
+      case SosFlow::Phase::QuietConfirm: actual = "quiet-confirm"; break;
+      default: actual = s.emergencyRunning ? "running" : (s.sosSecondsLeft > 0 ? "countdown" : "idle"); break;
+    }
+  } else if (what.rfind("haptic-", 0) == 0) {
+    // How often a pattern was played since the device started: haptic-click, -ring, -message, -sent, -failed.
+    static const char* const patterns[] = {"click", "ring", "message", "sent", "failed"};
+    size_t index = 5;
+    for (size_t i = 0; i < 5; ++i)
+      if (what == std::string("haptic-") + patterns[i]) index = i;
+    if (index == 5) {
+      out_ << "error: no vibration pattern called " << what.substr(7) << "\n";
+      return false;
+    }
+    size_t n = 0;
+    for (HapticPattern played : rig_->haptic.played()) n += static_cast<size_t>(played) == index;
+    actual = std::to_string(n);
+  } else if (what == "log-has") {
+    for (const std::string& entry : rig_->log.lines())
+      if (entry.find(value) != std::string::npos) return true;
+    out_ << "error: no line of the log has \"" << value << "\"\n";
+    return false;
+  } else if (what == "last-sms-to") {
+    actual = sent.empty() ? "" : sent.back().phone;
+  } else if (what == "last-sms-has") {
+    // The text is searched, not compared: the value is what must be in it.
+    const bool has = !sent.empty() && sent.back().body.find(value) != std::string::npos;
+    if (!has) out_ << "error: the last text sent is " << (sent.empty() ? "none" : "\"" + sent.back().body + "\"") << ", not one with \"" << value << "\"\n";
+    return has;
+  } else {
+    out_ << "error: nothing to check called " << what << " (try help)\n";
+    return false;
+  }
+  if (actual != value) {
+    out_ << "error: " << what << " is " << (actual.empty() ? "empty" : actual) << ", expected " << value << "\n";
+    return false;
+  }
+  return true;
+}
+
+// The card a script wants, from a line "# data: <directory>" among its first lines, so a scenario
+// that needs a user catalog or school time always on says so itself. Empty when it names none.
+inline std::string scriptData(const std::string& path) {
+  std::ifstream in(path);
+  std::string line;
+  for (int n = 0; n < 8 && std::getline(in, line); ++n) {
+    static const std::string key = "# data:";
+    if (line.compare(0, key.size(), key) == 0) {
+      const std::vector<std::string> w = detail::words(line.substr(key.size()));
+      return w.empty() ? "" : w[0];
+    }
+  }
+  return "";
 }
 
 }  // namespace sim

@@ -26,8 +26,12 @@ jobs:
       - name: Simulator build
         run: pio run -e sim
 
-      - name: Simulator smoke scenario (pictures compared with sim/golden)
-        run: .pio/build/sim/program --script sim/scripts/smoke.txt
+      - name: Simulator scenarios
+        run: |
+          for scenario in sim/scripts/*.txt; do
+            echo "== $scenario"
+            .pio/build/sim/program --script "$scenario"
+          done
 
       - name: Language catalogs
         run: python3 scripts/check_i18n.py

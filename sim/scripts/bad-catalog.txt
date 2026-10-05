@@ -1,0 +1,12 @@
+# data: test/data/badcatalog
+# A user catalog that does not pass (a missing string, a placeholder the reference does not have) is
+# rejected with a line in the log, and the device starts and works in the shipped languages.
+advance 5s
+check log-has config: user-catalog-error
+fails language bd
+check language en
+see home.phone
+say Phone
+language de
+see home.phone
+check registered yes

@@ -1,0 +1,14 @@
+# data: test/data/usercatalog
+# A user catalog on the card (lang/xx.toml, English with a few words changed) adds a fourth
+# language, and the configuration asks for it.
+advance 5s
+check language xx
+see home.phone
+say Xphone
+say-not Phone
+# It can be left for a shipped language and come back.
+language en
+say Phone
+language xx
+say Xphone
+check boots 1

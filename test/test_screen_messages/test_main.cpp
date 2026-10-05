@@ -179,6 +179,24 @@ void test_a_missed_call_is_worded_from_its_code_in_the_language_of_the_moment() 
   TEST_ASSERT_TRUE(page.saysEither(Page::inRow("Appel manqu\xC3\xA9 de Parent One"), FontSize::Text));
 }
 
+void test_an_entry_that_is_open_changes_its_words_when_the_language_changes() {
+  Page page;
+  page.rig.modem.injectIncomingCall(kParentOne);
+  page.rig.poll();
+  page.rig.modem.remoteHangup();
+  page.rig.poll();
+  page.draw();
+  page.key(Key::Select);                                                       // read it: the whole entry
+  page.rig.language("de");
+  page.draw();
+  for (std::string_view line : text::wrap(font(FontSize::Text), "Verpasster Anruf von Parent One", kContent.w - 8))
+    TEST_ASSERT_TRUE_MESSAGE(page.saysEither(std::string(line), FontSize::Text), std::string(line).c_str());
+  page.rig.language("en");
+  page.draw();
+  for (std::string_view line : text::wrap(font(FontSize::Text), "Missed call from Parent One", kContent.w - 8))
+    TEST_ASSERT_TRUE_MESSAGE(page.saysEither(std::string(line), FontSize::Text), std::string(line).c_str());
+}
+
 void test_the_whole_entry_is_in_the_message_view_and_the_failed_location_reply_is_there_too() {
   Page page;
   sysentry::record(const_cast<MessageStore&>(page.rig.core.history()), rig::kTuesdayAfternoon, sysentry::kLocationQueryFailed, kParentTwo);
@@ -539,6 +557,7 @@ int main(int, char**) {
   RUN_TEST(test_a_radio_message_says_whether_it_arrived_and_an_sms_says_nothing);
   RUN_TEST(test_a_radio_message_that_came_in_is_marked_and_named_by_its_radio_name);
   RUN_TEST(test_a_missed_call_is_worded_from_its_code_in_the_language_of_the_moment);
+  RUN_TEST(test_an_entry_that_is_open_changes_its_words_when_the_language_changes);
   RUN_TEST(test_the_whole_entry_is_in_the_message_view_and_the_failed_location_reply_is_there_too);
   RUN_TEST(test_an_earlier_day_has_its_date_and_an_unknown_time_is_dashes);
   RUN_TEST(test_the_message_view_has_the_head_the_whole_text_and_the_hint);

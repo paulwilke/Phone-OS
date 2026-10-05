@@ -72,6 +72,9 @@ private:
   size_t selection_ = 0;
   size_t first_ = 0;
   TextBlock text_;
+  // The words `text_` holds: asked again at every frame, because the language may have changed since
+  // the message was opened and an entry of the device is worded when it is drawn.
+  std::string worded_;
 };
 
 }  // namespace ui
