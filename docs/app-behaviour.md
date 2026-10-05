@@ -28,12 +28,14 @@ Tests in `test/test_profile/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| PRO-01 | The profile holds every setting the behaviour depends on, with defaults that match the previous defaults: message vibration on, call vibration on, call vibration in school time off, modem sleep allowed, remote-query notice 'history', no radio, no free text | `test_defaults_match_the_previous_defaults` | — | open |
-| PRO-02 | A quiet-hour window that cannot be read is refused with a reason (the profile reports it, nothing is logged by the core) | `test_an_unreadable_quiet_hour_window_is_refused_with_a_reason` | EA:test_unreadable_quiet_hours_are_reported | open |
-| PRO-03 | Quiet hours are evaluated on the clock's epoch and time zone; without a known time there is no lock | `test_school_time_needs_a_known_time` | EA:test_no_lockout_without_known_time | open |
-| PRO-04 | The first call contact of the home actions is the SOS recipient when no target is given; with none, there is no recipient | `test_the_sos_recipient_is_the_target_or_the_first_call_contact` | SC:test_without_a_contact_there_is_no_sos_tile | open |
-| PRO-05 | A number may be called when it is in the contact book (any spelling) or a call target of the home actions | `test_who_may_be_called` | EA:test_calls_only_to_known_numbers | open |
-| PRO-06 | Settings the child may change at run time (message vibration, remote-query notice visibility) change the profile until restart | `test_run_time_settings_change_the_profile` | SC:test_options_toggle_message_vibration_and_volume, SC:test_status_screen_cycles_command_notice | open |
+| PRO-01 | The profile holds every setting the behaviour depends on, with defaults that match the previous defaults: message vibration on, call vibration on, call vibration in school time off, modem sleep allowed, remote-query notice 'history', no radio, no free text | `test_defaults_match_the_defaults` | — | done |
+| PRO-02 | A quiet-hour window that cannot be read is refused with a reason (the profile reports it, nothing is logged by the core) | `test_an_unreadable_quiet_hour_window_is_refused_with_a_reason` | EA:test_unreadable_quiet_hours_are_reported | done |
+| PRO-03 | Quiet hours are evaluated on the clock's epoch and time zone; without a known time there is no lock | `test_school_time_needs_a_known_time` | EA:test_no_lockout_without_known_time | done |
+| PRO-04 | The first call contact of the home actions is the SOS recipient when no target is given; with none, there is no recipient | `test_the_sos_recipient_is_the_target_or_the_first_call_contact` | SC:test_without_a_contact_there_is_no_sos_tile | done |
+| PRO-05 | The core's log applies the profile's log level at every line, also after the level changed, and never drops a line of the always class | `test_the_log_applies_the_log_level_of_the_profile_but_never_drops_what_must_stay` | — | done |
+| PRO-06 | A level that changes while the core runs is followed | `test_the_log_follows_a_level_that_changes_while_the_core_runs` | — | done |
+| PRO-07 | A call target is compared with the country code of the contact book | `test_a_call_target_is_compared_with_the_country_code_of_the_book` | — | done |
+| PRO-08 | A number may be called when it is in the contact book (any spelling) or a call target of the home actions | `test_who_may_be_called` | EA:test_calls_only_to_known_numbers | done |
 
 ## Notices
 
@@ -41,10 +43,11 @@ Tests in `test/test_notices/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| NOT-01 | There is at most one notice; a newer one replaces the older | `test_a_newer_notice_replaces_the_older` | — | open |
-| NOT-02 | A notice expires after kNoticeSeconds (8) of uptime and reads as none afterwards | `test_a_notice_expires` | EA:test_alert_expires | open |
-| NOT-03 | A notice can be cleared at once | `test_a_notice_can_be_cleared` | — | open |
-| NOT-04 | Notices carry a kind and values, never a sentence; every kind has a text in every language | `test_every_kind_is_worded_in_every_language` | (test_notice) | open |
+| NOT-01 | There is at most one notice; a newer one replaces the older | `test_a_newer_notice_replaces_the_older` | — | done |
+| NOT-02 | A notice expires after kNoticeSeconds (8) of uptime and reads as none afterwards | `test_a_notice_expires` | EA:test_alert_expires | done |
+| NOT-03 | A notice can be cleared at once | `test_a_notice_can_be_cleared` | — | done |
+| NOT-04 | A notice carries its kind and values, and a newer one forgets the values of the older | `test_a_notice_carries_its_values_and_the_next_one_forgets_them` | — | done |
+| NOT-05 | Every notice kind can be set and read back unchanged | `test_every_kind_can_be_shown` | — | done |
 
 ## Positioning
 
@@ -52,16 +55,24 @@ Tests in `test/test_positioning/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| POS-01 | The receiver is off without a request | `test_the_receiver_is_off_without_a_request` | EA:test_gnss_is_off_without_a_request | open |
-| POS-02 | The receiver has independent reasons (start-up fix, SOS choice, SOS ping, remote query, position page, test page); it is on while any holds and one cannot switch off another's | `test_reasons_are_independent` | SC:test_a_running_command_keeps_the_receiver, EA:test_gps_page_keeps_the_receiver_after_the_startup_fix_ends | open |
-| POS-03 | A reason that is released switches the receiver off when it was the last | `test_the_last_released_reason_switches_the_receiver_off` | SC:test_gnss_screen_powers_the_receiver_while_open, SC:test_locking_switches_the_receiver_off | open |
-| POS-04 | Power is switched through the Power capability, once per change | `test_power_is_switched_once_per_change` | EA:test_locating_switches_gnss_power | open |
-| POS-05 | The start-up fix ends on the first usable fix (HDOP up to 5) and keeps it | `test_the_startup_fix_ends_on_a_usable_fix` | EA:test_startup_fix_runs_once_then_switches_off | open |
-| POS-06 | An inaccurate fix is taken after a minute | `test_an_inaccurate_fix_is_taken_after_a_minute` | EA:test_startup_fix_waits_for_accuracy_but_not_forever | open |
-| POS-07 | The start-up fix gives up after three minutes and there is no last fix | `test_the_startup_fix_gives_up_after_three_minutes` | EA:test_startup_fix_gives_up_after_three_minutes | open |
-| POS-08 | The last valid fix is kept with its age, whoever asked for the receiver | `test_the_last_fix_keeps_its_age` | EA:test_startup_fix_runs_once_then_switches_off | open |
-| POS-09 | A fix from before the last switch-on is never used | `test_a_fix_from_before_the_last_switch_on_is_not_used` | — | open |
-| POS-10 | The start-up fix is logged when it starts and when it ends | `test_the_startup_fix_is_logged` | — | open |
+| POS-01 | The receiver is off without a request | `test_the_receiver_is_off_without_a_request` | EA:test_gnss_is_off_without_a_request | done |
+| POS-02 | The receiver has independent reasons (start-up fix, SOS choice, SOS ping, remote query, position page, test page); it is on while any holds and one cannot switch off another's | `test_reasons_are_independent` | SC:test_a_running_command_keeps_the_receiver, EA:test_gps_page_keeps_the_receiver_after_the_startup_fix_ends | done |
+| POS-03 | A reason that is released switches the receiver off when it was the last | `test_the_last_released_reason_switches_the_receiver_off` | SC:test_gnss_screen_powers_the_receiver_while_open, SC:test_locking_switches_the_receiver_off | done |
+| POS-04 | Power is switched through the Power capability, once per change | `test_power_is_switched_once_per_change` | EA:test_locating_switches_gnss_power | done |
+| POS-05 | Each reason alone holds the receiver and no other reason is set by it | `test_every_reason_alone_holds_the_receiver` | — | done |
+| POS-06 | Holding a reason twice is holding it once; releasing one that is not held changes nothing | `test_holding_a_reason_twice_is_holding_it_once` | — | done |
+| POS-07 | A power switch that fails is logged and tried again at the next poll, in both directions | `test_a_switch_that_fails_is_logged_and_tried_again_at_the_next_poll` | — | done |
+| POS-08 | The position page keeps the receiver after the start-up fix ends | `test_the_position_page_keeps_the_receiver_after_the_startup_fix_ends` | EA:test_gps_page_keeps_the_receiver_after_the_startup_fix_ends | done |
+| POS-09 | An HDOP of 5.0 is usable, 5.1 is not | `test_the_hdop_limit_is_inclusive` | — | done |
+| POS-10 | The receiver answers the SOS ping only while it runs | `test_the_receiver_answers_for_the_sos_ping_only_while_it_runs` | — | done |
+| POS-11 | The start-up fix ends on the first usable fix (HDOP up to 5) and keeps it | `test_the_startup_fix_ends_on_a_usable_fix` | EA:test_startup_fix_runs_once_then_switches_off | done |
+| POS-12 | An inaccurate fix is taken after a minute | `test_an_inaccurate_fix_is_taken_after_a_minute` | EA:test_startup_fix_waits_for_accuracy_but_not_forever | done |
+| POS-13 | The start-up fix gives up after three minutes and there is no last fix | `test_the_startup_fix_gives_up_after_three_minutes` | EA:test_startup_fix_gives_up_after_three_minutes | done |
+| POS-14 | The last valid fix is kept with its age, whoever asked for the receiver | `test_the_last_fix_keeps_its_age_whoever_asked_for_the_receiver` | EA:test_startup_fix_runs_once_then_switches_off | done |
+| POS-15 | A fix from before the last switch-on is never used | `test_a_fix_from_before_the_last_switch_on_is_not_used` | — | done |
+| POS-16 | A start-up fix runs out its time even if the receiver cannot be switched on | `test_a_start_up_fix_runs_out_its_time_even_if_the_receiver_cannot_be_switched_on` | — | done |
+| POS-17 | Other reasons never end or log a start-up fix that was not requested | `test_the_end_of_a_startup_fix_is_not_claimed_by_other_reasons` | — | done |
+| POS-18 | The start-up fix is logged when it starts and when it ends | `test_the_startup_fix_is_logged` | — | done |
 
 ## Messaging
 
@@ -241,7 +252,9 @@ Tests in `test/test_app_core/`.
 | APP-05 | A remote query during an SOS | `test_a_remote_query_during_an_sos` | — | open |
 | APP-06 | The network dropping and returning | `test_the_network_dropping_and_returning` | — | open |
 | APP-07 | Save mode and the cell probe | `test_save_mode_and_the_cell_probe` | — | open |
-| APP-08 | The core contains no sentence: every notice and system entry is a code | `test_the_core_produces_only_codes` | — | open |
+| APP-08 | Settings the child may change at run time (message vibration, how visible a remote query is) change the profile until restart | `test_run_time_settings_change_the_profile` | SC:test_options_toggle_message_vibration_and_volume, SC:test_status_screen_cycles_command_notice | open |
+| APP-09 | The time zone of the profile sets the clock's offset from the epoch, so school time stays on the wall clock across the change of the clocks | `test_the_clock_follows_the_time_zone` | — | open |
+| APP-10 | The core contains no sentence: every notice and system entry is a code | `test_the_core_produces_only_codes` | — | open |
 
 ## Not ported
 

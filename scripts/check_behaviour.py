@@ -16,7 +16,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOC = os.path.join(ROOT, "docs", "app-behaviour.md")
-TESTS_LINE = re.compile(r"tests in `test/([a-z0-9_]+)/`")
+TESTS_LINE = re.compile(r"tests in `test/([a-z0-9_]+)/`", re.I)
 ROW = re.compile(r"^\| ([A-Z]{3}-\d+) \| .* \| `(test_[a-z0-9_]+)` \| .* \| (\w+) \|$")
 
 

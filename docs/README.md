@@ -23,6 +23,8 @@ The documents describe what exists in this repository — each one is written fr
 | [test-doubles.md](test-doubles.md) | the scriptable fake of every capability and what each can be made to do |
 | [ui-display.md](ui-display.md) | the 1-bit display interface, the frame buffer with clip detection, golden files |
 | [app-behaviour.md](app-behaviour.md) | the inventory of the application core's behaviour: every behaviour, its owner and its test, and every test of the previous code base |
+| [profile.md](profile.md) | the settings the behaviour depends on, as one plain struct; who may be called, whom SOS reaches; the core's log |
+| [positioning.md](positioning.md) | the reasons the satellite receiver is on, the start-up fix, the last known fix |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |

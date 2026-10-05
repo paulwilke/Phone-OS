@@ -9,6 +9,10 @@ The application core contains **no sentence**. What it has to tell the user it t
 
 The reason is the language. An entry written yesterday is worded in today's language, because only a kind and a value were stored, and a contact renamed since is renamed in the history too, because only the number was stored. The only text the core produces is the body of an SMS that leaves the device, and its wording comes from the catalogs as well (see [sos-ping.md](sos-ping.md)).
 
+## The notice line
+
+`Notices` (`src/app/Notices.{h,cpp}`, tests in `test/test_notices/`) holds the notice that is showing. There is at most one: a newer notice replaces the older one, because the newest is what the child needs to know ("Message is out" replaces "Message waits for network"), and it takes the full time for itself. A notice expires after `Notices::kSeconds` (8) seconds of uptime and reads as none afterwards. `current()` is none or the notice; `clear()` removes it.
+
 ## Notices
 
 A `Notice` is a `NoticeKind`, a `peer` (a phone number, for the kinds that name somebody) and a `minute` (the minute of the day, for the one kind that carries a time). The interface looks the name of `peer` up in the contact book and writes `minute` the way the language writes a time. `noticeWording(kind)` gives the catalog key of a kind and says which placeholders the code supplies: `{name}` and `{time}`.

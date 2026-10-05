@@ -54,6 +54,8 @@ public:
   // Replaces the contacts with those in `text`. Returns how many were taken over;
   // lines that cannot be used are skipped and listed in problems().
   size_t load(const char* text, size_t len);
+  // The country code numbers are completed with (see setCountryCode).
+  const char* countryCode() const { return country_; }
 
   size_t count() const { return count_; }
   // `i` must be below count().
