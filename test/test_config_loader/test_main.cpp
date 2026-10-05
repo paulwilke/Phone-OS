@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <Languages.h>
 #include <app/Profile.h>
 #include <config/ConfigLoader.h>
 #include <config/ConfigWriter.h>
@@ -616,6 +617,39 @@ home.phone = "Call"
 // ---------------------------------------------------------------------------
 
 // Counter-check for web_password minimum length: a 3-char password is rejected.
+void test_languages_of_installed_catalogs_give_no_diagnostic() {
+  i18n::Translator translator = languages::loaded();
+  Profile profile;
+  profile.interfaceLanguage = "de";
+  profile.smsLanguage = "fr";
+  std::vector<Diagnostic> diags;
+  TEST_ASSERT_TRUE(ConfigLoader::checkLanguages(profile, translator, diags));
+  TEST_ASSERT_TRUE(diags.empty());
+}
+
+void test_an_interface_language_nobody_has_is_reported_with_its_code() {
+  i18n::Translator translator = languages::loaded();
+  Profile profile;
+  profile.interfaceLanguage = "xx";
+  std::vector<Diagnostic> diags;
+  TEST_ASSERT_FALSE(ConfigLoader::checkLanguages(profile, translator, diags));
+  TEST_ASSERT_EQUAL(1, static_cast<int>(diags.size()));
+  TEST_ASSERT_TRUE(diags[0].code == Diagnostic::Code::BadCatalogCode);
+  TEST_ASSERT_EQUAL_STRING("interface.language", diags[0].args[1].c_str());
+  TEST_ASSERT_EQUAL_STRING("xx", diags[0].args[2].c_str());
+}
+
+void test_an_sms_language_nobody_has_is_reported_and_does_not_fail_the_interface() {
+  i18n::Translator translator = languages::loaded();
+  Profile profile;
+  profile.smsLanguage = "xx";
+  std::vector<Diagnostic> diags;
+  TEST_ASSERT_TRUE(ConfigLoader::checkLanguages(profile, translator, diags));
+  TEST_ASSERT_EQUAL(1, static_cast<int>(diags.size()));
+  TEST_ASSERT_EQUAL(0, static_cast<int>(diags[0].args[1].rfind("sms", 0)));  // the key path starts with the section
+  TEST_ASSERT_EQUAL_STRING("xx", diags[0].args[2].c_str());
+}
+
 void test_web_password_3_chars_is_rejected_counter_check() {
   FakeConfigStore store;
   store.put("/config/secrets.toml", "web_password = \"abc\"\n");
@@ -689,6 +723,9 @@ int main() {
   RUN_TEST(test_settings_need_write_is_set_when_vibration_changes);
   RUN_TEST(test_user_catalogs_are_loaded_from_lang_directory);
   RUN_TEST(test_invalid_user_catalog_gives_diagnostic_and_loading_continues);
+  RUN_TEST(test_languages_of_installed_catalogs_give_no_diagnostic);
+  RUN_TEST(test_an_interface_language_nobody_has_is_reported_with_its_code);
+  RUN_TEST(test_an_sms_language_nobody_has_is_reported_and_does_not_fail_the_interface);
   RUN_TEST(test_web_password_3_chars_is_rejected_counter_check);
   RUN_TEST(test_web_password_4_chars_is_accepted);
   RUN_TEST(test_file_at_exact_size_limit_is_accepted);

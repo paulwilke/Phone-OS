@@ -8,8 +8,9 @@
 // its line number. A missing file means defaults and one MissingFile diagnostic; a file
 // larger than kMaxFileBytes means one OversizedFile diagnostic and no load for that file.
 //
-// The loader does not validate language codes against the installed catalogs; the host
-// calls translator.select() after loading and handles an unknown code there.
+// The loader itself does not know the catalogs: loading does not validate language codes.
+// checkLanguages() does, once the host has the shipped and the user catalogs together; the host
+// then calls translator.select() and keeps English when the code is unknown.
 //
 // User catalogs: loadUserCatalogs() reads /lang/*.toml from the card and feeds each one
 // to Translator::addUser(). A catalog that fails validation is skipped with a
@@ -51,6 +52,12 @@ public:
   // Call this before load() so that catalog codes can be validated later by the host.
   static void loadUserCatalogs(ConfigStore& store, i18n::Translator& translator,
                                 std::vector<Diagnostic>& diagnostics);
+
+  // Adds a BadCatalogCode diagnostic for the interface language and for the SMS language of the
+  // profile when no installed catalog has that code. Returns whether the interface language is
+  // installed, which is what the host needs to know before it selects it.
+  static bool checkLanguages(const Profile& profile, const i18n::Translator& translator,
+                             std::vector<Diagnostic>& diagnostics);
 
 private:
   ConfigStore& store_;

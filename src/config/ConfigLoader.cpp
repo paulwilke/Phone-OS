@@ -543,6 +543,21 @@ ConfigLoader::Result ConfigLoader::load() const {
   return r;
 }
 
+bool ConfigLoader::checkLanguages(const Profile& profile, const i18n::Translator& translator,
+                                  std::vector<Diagnostic>& diagnostics) {
+  auto installed = [&](const std::string& code) {
+    for (const auto& language : translator.languages())
+      if (language.code == code) return true;
+    return false;
+  };
+  const bool interfaceOk = installed(profile.interfaceLanguage);
+  if (!interfaceOk)
+    diagnostics.push_back({Diagnostic::Code::BadCatalogCode, {"settings", "interface.language", profile.interfaceLanguage}});
+  if (!installed(profile.smsLanguage))
+    diagnostics.push_back({Diagnostic::Code::BadCatalogCode, {"settings", "sms.language", profile.smsLanguage}});
+  return interfaceOk;
+}
+
 void ConfigLoader::loadUserCatalogs(ConfigStore& store, i18n::Translator& translator,
                                      std::vector<Diagnostic>& diagnostics) {
   std::vector<FileEntry> entries;

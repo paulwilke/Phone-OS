@@ -59,7 +59,7 @@ status page words them from the catalogs in PR 3.
 | `WrongType` | file, key-path, expected | A value of the wrong TOML type. |
 | `OutOfRange` | file, key-path | An integer or string length outside the allowed range. |
 | `BadEnum` | file, key-path, value | A string not in the allowed set. |
-| `BadCatalogCode` | file, key-path, code | A language code that is not installed (not currently checked by the loader; caught at `translator.select()`). |
+| `BadCatalogCode` | file, key-path, code | The interface or SMS language is a code no catalog has (`ConfigLoader::checkLanguages`, called by the host once shipped and user catalogs are together; the interface then stays in English). |
 | `ContactNoNumber` | entry-index | A `[[contact]]` entry without a `number` field. Skipped. |
 | `UnknownRole` | role | A contact role other than `parent` or `family`. Treated as `family`. |
 | `BadQuietHours` | result-name | A `[[quiet_hours]]` entry refused by `QuietHours::add`. |
@@ -79,6 +79,11 @@ ConfigLoader::loadUserCatalogs(store, translator, diags);
 `.toml` file found there. A catalog that fails validation is skipped with a
 `UserCatalogError` diagnostic; the rest are loaded. Call this before `load()` so that
 the language codes the config sets can be selected from the Translator afterwards.
+
+`ConfigLoader::checkLanguages(profile, translator, diags)` then compares the profile's interface and SMS
+language with the catalogs that are installed, shipped and user's together, and adds a `BadCatalogCode`
+diagnostic for each code nobody has. It returns whether the interface language is installed; the host selects
+it only then ([runtime.md](runtime.md)). The loader cannot do this itself: it does not know the catalogs.
 
 ## Writing
 

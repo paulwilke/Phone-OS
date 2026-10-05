@@ -19,7 +19,7 @@ The core produces no text for the screen. Notices and system entries are codes w
 
 ## The host
 
-The host (the firmware, or the simulator) provides the capabilities and calls:
+The host (the firmware, or the simulator) provides the capabilities and builds a `Runtime` ([runtime.md](runtime.md)), which does the following with them:
 
 1. `setRadio`, `setWifi`, `attachMessageLog` before `start()` for what it has; the radio may also come later, once it has started it on request;
 2. `start()` once: restores the history, reads the trigger words, asks for the start-up fix;
