@@ -668,7 +668,7 @@ void test_a_tap_on_a_tile_selects_and_chooses_it() {
   chosen = true;
   TEST_ASSERT_FALSE(grid.handle(Input::touch(third.right() + 1, third.y + 5), kGridArea, &chosen));
   TEST_ASSERT_FALSE(chosen);
-  TEST_ASSERT_FALSE(grid.handle(Input::touch(120, kGridArea.bottom() - 2), kGridArea, &chosen));
+  TEST_ASSERT_FALSE(grid.handle(Input::touch(120, kGridArea.bottom() - 18 - 2), kGridArea, &chosen));   // above the dots
   TEST_ASSERT_EQUAL(2, grid.selected());
 }
 
@@ -726,6 +726,22 @@ void test_setting_the_tiles_again_keeps_the_selection_while_it_exists() {
   TEST_ASSERT_EQUAL(0, grid.selected());
 }
 
+void test_select_moves_the_selection_to_a_tile_or_to_the_last_one() {
+  Translator t = languages::loaded();
+  TileGrid grid(2, 3);
+  grid.setPages(homeTiles(t));
+  grid.select(5);
+  TEST_ASSERT_EQUAL(5, grid.selected());
+  TEST_ASSERT_EQUAL(1, grid.page());                   // the page follows the selection
+  grid.select(2);
+  TEST_ASSERT_EQUAL(2, grid.selected());
+  grid.select(100);                                     // no such tile: the last one, not nothing
+  TEST_ASSERT_EQUAL(grid.count() - 1, grid.selected());
+  TileGrid empty(2, 3);
+  empty.select(3);
+  TEST_ASSERT_EQUAL(0, empty.selected());
+}
+
 void test_an_empty_grid_uses_no_input_and_draws_nothing() {
   TileGrid grid(2, 3);
   bool chosen = true;
@@ -768,6 +784,33 @@ void test_page_dots_show_how_many_pages_there_are_and_where_we_are() {
   FrameBuffer none;
   single.draw(none, kGridArea);
   TEST_ASSERT_EQUAL(0, none.blackPixels(strip));   // one page: no dots
+}
+
+void test_a_tap_on_a_page_dot_goes_to_that_page_without_choosing_anything() {
+  Translator t = languages::loaded();
+  TileGrid grid(2, 3);
+  grid.setPages(homeTiles(t));
+  FrameBuffer fb;
+  grid.draw(fb, kGridArea);
+  bool chosen = true;
+  const Rect second = grid.dotTarget(kGridArea, 1);
+  TEST_ASSERT_TRUE(grid.handle(Input::touch(second.x + second.w / 2, second.y + second.h / 2), kGridArea, &chosen));
+  TEST_ASSERT_FALSE(chosen);
+  TEST_ASSERT_EQUAL(4, grid.selected());               // the first tile of the second page
+  TEST_ASSERT_EQUAL(1, grid.page());
+  const Rect first = grid.dotTarget(kGridArea, 0);
+  TEST_ASSERT_TRUE(grid.handle(Input::touch(first.x + 1, first.bottom() - 1), kGridArea, &chosen));
+  TEST_ASSERT_EQUAL(0, grid.selected());
+  // The targets are where the dots are drawn, side by side, and do not overlap.
+  FrameBuffer none;
+  grid.draw(none, kGridArea);
+  TEST_ASSERT_TRUE(none.blackPixels(first) > 0 && none.blackPixels(second) > 0);
+  TEST_ASSERT_TRUE(first.right() <= second.x);
+  TEST_ASSERT_TRUE(kGridArea.contains(first.x, first.y) && kGridArea.contains(second.x, second.bottom() - 1));
+  // One page, no dots, nothing to hit.
+  TileGrid single(2, 3);
+  single.setPages({{Tile{"only", nullptr, ""}}});
+  TEST_ASSERT_TRUE(single.dotTarget(kGridArea, 0).empty());
 }
 
 void test_the_tiles_stay_inside_their_cells_in_every_language() {
@@ -1139,9 +1182,11 @@ int main() {
   RUN_TEST(test_tiles_fill_the_grid_row_by_row_without_overlap);
   RUN_TEST(test_a_page_holds_at_most_one_grid_and_empty_pages_are_dropped);
   RUN_TEST(test_setting_the_tiles_again_keeps_the_selection_while_it_exists);
+  RUN_TEST(test_select_moves_the_selection_to_a_tile_or_to_the_last_one);
   RUN_TEST(test_an_empty_grid_uses_no_input_and_draws_nothing);
   RUN_TEST(test_the_selected_tile_is_inverted_and_the_others_are_raised);
   RUN_TEST(test_page_dots_show_how_many_pages_there_are_and_where_we_are);
+  RUN_TEST(test_a_tap_on_a_page_dot_goes_to_that_page_without_choosing_anything);
   RUN_TEST(test_the_tiles_stay_inside_their_cells_in_every_language);
   RUN_TEST(test_the_list_selection_stops_at_both_ends);
   RUN_TEST(test_the_window_follows_the_selection_in_a_long_list);

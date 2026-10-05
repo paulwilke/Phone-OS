@@ -7,7 +7,8 @@
 //
 // Up and Down move the selection one tile back or forward in reading order and wrap around;
 // the page follows the selection, there are no keys for pages. Select, or a tap on a tile,
-// chooses it. Labels are fixed catalog words and are never shortened (a tile is about 74 pixels
+// chooses it. A tap on a page dot goes to the first tile of that page: without it the second page
+// would be reachable only by stepping through the first, on a device the child mostly touches. Labels are fixed catalog words and are never shortened (a tile is about 74 pixels
 // wide; the catalog words are chosen to fit). A tile without a symbol wraps its label over
 // several lines.
 
@@ -34,6 +35,9 @@ public:
   // The tiles by page. The selection stays on its index if there still is one.
   void setPages(std::vector<std::vector<Tile>> pages);
   void resetSelection() { selected_ = 0; }
+  // Moves the selection to the tile with the global index `index`, or to the last tile when there is
+  // no such one: a screen that rebuilds its tiles keeps the user on the same tile.
+  void select(size_t index);
 
   size_t count() const;
   size_t selected() const { return selected_; }
@@ -43,6 +47,9 @@ public:
 
   // Where the tile with the global index `index` is drawn in `area`.
   Rect tileRect(const Rect& area, size_t index) const;
+  // The touch target of the dot of `page`: the dot with the room around it, because a finger does
+  // not hit six pixels. Empty when there is only one page, where no dots are drawn.
+  Rect dotTarget(const Rect& area, size_t page) const;
 
   // Used when the input moved the selection or chose a tile; `chosen` is set to the index of
   // a tile that was chosen (Select, or a tap, which also selects it).

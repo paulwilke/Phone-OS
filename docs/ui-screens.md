@@ -21,7 +21,7 @@ A screen that needs something the core does not hand out as data — the acceler
 
 `render()` first paints the whole display white, so nothing of an earlier frame shows through, and takes a snapshot of the core's state (`state()`), which the screen draws from. `handle()` takes a snapshot again, so a decision is taken on the numbers of the moment of the input. A tap on a soft key never reaches the screen as a touch: it arrives as the key it stands for (`onInput` with `Key::Back`, `Up`, `Down` or `Select`); a tap on the content arrives as a touch, with the content area; a tap on the status bar, the notice line or the gap above the keys is nobody's and returns false. A screen keeps no words: every text is asked of the catalogs when it is drawn, so a change of language is complete at the next frame.
 
-`ScreenContext` is what the application hands every screen: the core, the translator and the navigation. `ScreenIds.h` names the screens in the stack in one place, because they open each other by name and none may know another's class; `kHome`, the root, is the first.
+`ScreenContext` is what the application hands every screen: the core, the translator, the navigation and whether the device has a motion sensor (the core does not wrap the sensor, so the home screen learns it here). `ScreenIds.h` names the screens in the stack in one place, because they open each other by name and none may know another's class; `kHome`, the root, is the first.
 
 ## The status bar from the state
 

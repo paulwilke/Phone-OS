@@ -31,6 +31,9 @@ struct ScreenContext {
   AppCore& app;
   i18n::Translator& translator;
   Navigation& navigation;
+  // The device has a motion sensor. The core does not wrap the sensor (the motion page reads it
+  // through an interface of its own), so the home screen learns here whether to offer the tile.
+  bool motionSensor = false;
 };
 
 class AppScreen : public Screen {
@@ -57,6 +60,7 @@ protected:
   // A key, or a touch on the content (`area` is where the content was drawn last).
   virtual bool onInput(const Input& input, const Rect& area) = 0;
 
+  const ScreenContext& context() const { return context_; }
   AppCore& app() { return context_.app; }
   i18n::Translator& t() { return context_.translator; }
   Navigation& nav() { return context_.navigation; }

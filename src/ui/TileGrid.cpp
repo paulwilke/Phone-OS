@@ -27,6 +27,11 @@ void TileGrid::setPages(std::vector<std::vector<Tile>> pages) {
   if (selected_ >= n) selected_ = n ? n - 1 : 0;
 }
 
+void TileGrid::select(size_t index) {
+  const size_t n = count();
+  selected_ = n == 0 ? 0 : (index < n ? index : n - 1);
+}
+
 size_t TileGrid::count() const {
   size_t n = 0;
   for (const auto& p : pages_) n += p.size();
@@ -68,6 +73,13 @@ Rect TileGrid::tileRect(const Rect& area, size_t index) const {
   return {area.x + kGap + col * (cellW + kGap), area.y + kGap + row * (cellH + kGap), cellW, cellH};
 }
 
+Rect TileGrid::dotTarget(const Rect& area, size_t page) const {
+  if (pages_.size() < 2 || page >= pages_.size()) return Rect{};
+  const int total = static_cast<int>(pages_.size()) * kDot + (static_cast<int>(pages_.size()) - 1) * kDot;
+  const int x0 = area.x + (area.w - total) / 2;
+  return {x0 + static_cast<int>(page) * 2 * kDot - kDot / 2, area.bottom() - kDotsStrip, 2 * kDot, kDotsStrip};
+}
+
 bool TileGrid::handle(const Input& input, const Rect& area, bool* chosen) {
   *chosen = false;
   const size_t n = count();
@@ -85,6 +97,12 @@ bool TileGrid::handle(const Input& input, const Rect& area, bool* chosen) {
     return true;
   }
   if (input.kind == Input::Kind::Touch) {
+    for (size_t p = 0; p < pages_.size(); ++p) {
+      if (dotTarget(area, p).contains(input.x, input.y)) {
+        selected_ = firstOfPage(p);
+        return true;
+      }
+    }
     // Only the tiles of the page on show can be hit.
     const size_t shown = page();
     const size_t first = firstOfPage(shown);

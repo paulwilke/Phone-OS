@@ -144,7 +144,7 @@ void test_lookup_in_the_selected_language_and_fallback_to_english() {
   TEST_ASSERT_TRUE(t.select("de"));
   TEST_ASSERT_EQUAL_STRING("Telefon", t.text("home.phone"));
   TEST_ASSERT_TRUE(t.select("fr"));
-  TEST_ASSERT_EQUAL_STRING("Téléphone", t.text("home.phone"));
+  TEST_ASSERT_EQUAL_STRING("Appels", t.text("home.phone"));
   TEST_ASSERT_FALSE(t.select("zz"));                      // unknown: keeps French
   TEST_ASSERT_EQUAL_STRING("fr", t.language().c_str());
   TEST_ASSERT_TRUE(t.select("fr-CA"));                    // regional tag falls back to the language
@@ -217,11 +217,11 @@ void test_plural_rules_differ_by_language() {
 void test_a_message_in_a_named_language_leaves_the_selection_alone() {
   Translator t = shipped();
   t.select("de");
-  TEST_ASSERT_EQUAL_STRING("Téléphone", t.getIn("fr", "home.phone").c_str());
+  TEST_ASSERT_EQUAL_STRING("Appels", t.getIn("fr", "home.phone").c_str());
   TEST_ASSERT_EQUAL_STRING("Phone", t.getIn("en", "home.phone").c_str());
   TEST_ASSERT_EQUAL_STRING("de", t.language().c_str());
   TEST_ASSERT_EQUAL_STRING("Telefon", t.get("home.phone").c_str());       // the selected language is unchanged
-  TEST_ASSERT_EQUAL_STRING("Téléphone", t.getIn("fr-CA", "home.phone").c_str());   // regional tag
+  TEST_ASSERT_EQUAL_STRING("Appels", t.getIn("fr-CA", "home.phone").c_str());   // regional tag
 }
 
 void test_a_named_language_falls_back_to_english_and_counts_it() {

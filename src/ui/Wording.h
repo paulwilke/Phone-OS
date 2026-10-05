@@ -24,6 +24,12 @@ namespace wording {
 // has words in it, is written by the status bar from the catalogs.
 std::string clockTime(int minuteOfDay);
 
+// The weekday written out ("Tuesday"), counted from Sunday as the core's wall clock is; the date
+// without the weekday as the language writes it ("September 15, 2026", "15. September 2026"). Both
+// are empty while the time is not known.
+std::string weekdayName(const AppCore::State::WallClock& wall, i18n::Translator& t);
+std::string dateLine(const AppCore::State::WallClock& wall, i18n::Translator& t);
+
 // Who a number is for the child: the contact's name, the number itself for a caller who is not in
 // the book, and the word for "unknown" when there is no number at all.
 std::string peerName(const std::string& peer, const phone::ContactBook& contacts, i18n::Translator& t);

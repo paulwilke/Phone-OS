@@ -67,6 +67,63 @@ void test_a_minute_outside_the_day_does_not_write_a_wrong_time() {
   TEST_ASSERT_EQUAL_STRING("01:00", wording::clockTime(1440 + 60).c_str());
 }
 
+// ---- the date ------------------------------------------------------------------------------
+
+void test_every_weekday_and_month_has_words_in_every_shipped_language_and_none_repeats() {
+  Translator t = languages::loaded();
+  for (const std::string& code : shipped(t)) {
+    t.select(code);
+    std::set<std::string> days, months;
+    for (int i = 0; i < 12; ++i) {
+      AppCore::State::WallClock wall;
+      wall.known = true;
+      wall.year = 2026;
+      wall.month = i + 1;
+      wall.day = 5;
+      wall.weekday = i % 7;
+      const std::string month = wording::dateLine(wall, t);
+      expectWords(month, code + " month " + std::to_string(i + 1));
+      TEST_ASSERT_TRUE_MESSAGE(months.insert(month).second, month.c_str());
+      if (i < 7) {
+        expectWords(wording::weekdayName(wall, t), code + " weekday " + std::to_string(i));
+        TEST_ASSERT_TRUE_MESSAGE(days.insert(wording::weekdayName(wall, t)).second, code.c_str());
+      }
+    }
+  }
+  TEST_ASSERT_EQUAL(0, t.fallbackCount());
+  TEST_ASSERT_EQUAL(0, t.missingKeys().size());
+}
+
+void test_the_date_is_written_the_way_each_language_writes_it() {
+  Translator t = languages::loaded();
+  AppCore::State::WallClock wall;
+  wall.known = true;
+  wall.year = 2026;
+  wall.month = 3;
+  wall.day = 7;
+  wall.weekday = 6;
+  TEST_ASSERT_EQUAL_STRING("March 7, 2026", wording::dateLine(wall, t).c_str());
+  TEST_ASSERT_EQUAL_STRING("Saturday", wording::weekdayName(wall, t).c_str());
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("7. M\xC3\xA4rz 2026", wording::dateLine(wall, t).c_str());
+  TEST_ASSERT_EQUAL_STRING("Samstag", wording::weekdayName(wall, t).c_str());
+  t.select("fr");
+  TEST_ASSERT_EQUAL_STRING("7 mars 2026", wording::dateLine(wall, t).c_str());
+  TEST_ASSERT_EQUAL_STRING("samedi", wording::weekdayName(wall, t).c_str());
+}
+
+void test_without_a_time_there_is_no_date_and_a_wild_number_does_not_read_outside_the_table() {
+  Translator t = languages::loaded();
+  AppCore::State::WallClock wall;                              // not known
+  TEST_ASSERT_EQUAL_STRING("", wording::dateLine(wall, t).c_str());
+  TEST_ASSERT_EQUAL_STRING("", wording::weekdayName(wall, t).c_str());
+  wall.known = true;
+  wall.month = 13;
+  wall.weekday = -1;
+  TEST_ASSERT_FALSE(wording::dateLine(wall, t).empty());
+  TEST_ASSERT_FALSE(wording::weekdayName(wall, t).empty());
+}
+
 // ---- names ---------------------------------------------------------------------------------
 
 void test_a_name_is_the_contacts_name_the_number_or_the_word_for_unknown() {
@@ -275,6 +332,9 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_a_minute_of_the_day_is_written_with_two_digits_each);
   RUN_TEST(test_a_minute_outside_the_day_does_not_write_a_wrong_time);
+  RUN_TEST(test_every_weekday_and_month_has_words_in_every_shipped_language_and_none_repeats);
+  RUN_TEST(test_the_date_is_written_the_way_each_language_writes_it);
+  RUN_TEST(test_without_a_time_there_is_no_date_and_a_wild_number_does_not_read_outside_the_table);
   RUN_TEST(test_a_name_is_the_contacts_name_the_number_or_the_word_for_unknown);
   RUN_TEST(test_every_notice_kind_has_words_in_every_shipped_language);
   RUN_TEST(test_a_notice_is_worded_with_its_name_and_its_time);
