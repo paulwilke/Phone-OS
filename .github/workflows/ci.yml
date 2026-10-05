@@ -40,5 +40,14 @@ jobs:
       - name: Generated fonts
         run: python3 scripts/make_font.py --check
 
+      - name: Generated configuration files
+        run: python3 scripts/gen_config.py --check
+
+      - name: Generated web page
+        run: python3 scripts/gen_web.py --check
+
+      - name: Web page tests
+        run: node test/test_web_page/test.mjs
+
       - name: Privacy
         run: python3 scripts/privacy_check.py

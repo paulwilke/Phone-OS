@@ -1,6 +1,6 @@
 # Web interface
 
-Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `test/test_web_api/`, `test/test_web_page/`. A small HTTP/1.1 server that the parent opens in a browser over the device's Wi-Fi. The interface lets the parent read the device state, edit every configuration file, browse the card, view the log, and export or restore a backup. The page is a single HTML file embedded in the firmware; language switching is live.
+Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `test/test_web_api/`, `test/test_web_page/`. A small HTTP/1.1 server that the parent opens in a browser over the device's Wi-Fi. The interface lets the parent read the device state, edit every configuration file, browse the card, view the log, and export or restore a backup. The page is a single HTML file (`web/index.html`) that the server answers; language switching is live.
 
 ## HTTP layer
 
@@ -62,7 +62,7 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 
 6. **Every change is logged.** All writes go through the application log (`AppCore::log()`): path and byte count only, never the content. Deleting the log itself is allowed but the deletion is logged before the file is removed.
 
-The trade-off on point 1: the API returns `secrets.toml` including the password hash on `GET /api/secrets`, because a parent who can authenticate already knows the password. The alternative — refusing to return the secrets file — would make it impossible to read the SIM PIN back, which is an equally sensitive value and one the parent needs to check. The decision was taken on 2026-10-01 and is intentional.
+The trade-off: the API returns `secrets.toml` on `GET /api/secrets` and the raw editor shows it, because the parents asked for real access to every file; the secrets are stored as plain text, there is no hash. Whoever has the web password therefore sees every other secret too, and because the server speaks plain HTTP (there is no HTTPS on this device) the password and the secrets cross the Wi-Fi in clear text. Use the interface on a network you trust and keep the session short; it ends by itself when Wi-Fi switches off. Without the password nothing comes out, and `GET /api/state` only says *whether* a secret is set. The decision was taken on 2026-10-01 and is intentional.
 
 ## The page
 
