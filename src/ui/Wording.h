@@ -24,6 +24,11 @@ namespace wording {
 // has words in it, is written by the status bar from the catalogs.
 std::string clockTime(int minuteOfDay);
 
+// When a message was written, as the history shows it: the time of day for today ("14:32"), the
+// date and the time for an earlier day ("09/14 14:32", "14.09. 14:32"), and "--:--" for a message
+// that arrived before the time was known. `now` is the wall clock of the moment.
+std::string messageTime(const AppCore::State::WallClock& at, const AppCore::State::WallClock& now, i18n::Translator& t);
+
 // Who a number is for the child: the contact's name, the number itself for a caller who is not in
 // the book, and the word for "unknown" when there is no number at all.
 std::string peerName(const std::string& peer, const phone::ContactBook& contacts, i18n::Translator& t);

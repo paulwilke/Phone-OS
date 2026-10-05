@@ -67,6 +67,36 @@ void test_a_minute_outside_the_day_does_not_write_a_wrong_time() {
   TEST_ASSERT_EQUAL_STRING("01:00", wording::clockTime(1440 + 60).c_str());
 }
 
+// ---- the time of a message ----------------------------------------------------------------
+
+void test_a_message_time_is_the_clock_for_today_the_date_before_and_dashes_when_unknown() {
+  Translator t = languages::loaded();
+  AppCore::State::WallClock now;
+  now.known = true;
+  now.month = 9;
+  now.day = 15;
+  now.minuteOfDay = 14 * 60 + 32;
+  AppCore::State::WallClock today = now;
+  today.minuteOfDay = 5;
+  AppCore::State::WallClock yesterday = now;
+  yesterday.day = 14;
+  yesterday.minuteOfDay = 23 * 60 + 59;
+  AppCore::State::WallClock unknown;
+  TEST_ASSERT_EQUAL_STRING("00:05", wording::messageTime(today, now, t).c_str());
+  TEST_ASSERT_EQUAL_STRING("09/14 23:59", wording::messageTime(yesterday, now, t).c_str());
+  TEST_ASSERT_EQUAL_STRING("--:--", wording::messageTime(unknown, now, t).c_str());
+  AppCore::State::WallClock lastMonth = now;
+  lastMonth.month = 8;                                        // the same day number in another month is another day
+  TEST_ASSERT_EQUAL_STRING("08/15 14:32", wording::messageTime(lastMonth, now, t).c_str());
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("14.09. 23:59", wording::messageTime(yesterday, now, t).c_str());
+  t.select("fr");
+  TEST_ASSERT_EQUAL_STRING("14/09 23:59", wording::messageTime(yesterday, now, t).c_str());
+  // Without a known "now" every day is "another day", and the date is shown.
+  t.select("en");
+  TEST_ASSERT_EQUAL_STRING("09/15 00:05", wording::messageTime(today, unknown, t).c_str());
+}
+
 // ---- names ---------------------------------------------------------------------------------
 
 void test_a_name_is_the_contacts_name_the_number_or_the_word_for_unknown() {
@@ -275,6 +305,7 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_a_minute_of_the_day_is_written_with_two_digits_each);
   RUN_TEST(test_a_minute_outside_the_day_does_not_write_a_wrong_time);
+  RUN_TEST(test_a_message_time_is_the_clock_for_today_the_date_before_and_dashes_when_unknown);
   RUN_TEST(test_a_name_is_the_contacts_name_the_number_or_the_word_for_unknown);
   RUN_TEST(test_every_notice_kind_has_words_in_every_shipped_language);
   RUN_TEST(test_a_notice_is_worded_with_its_name_and_its_time);

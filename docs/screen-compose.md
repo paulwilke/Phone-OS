@@ -1,0 +1,15 @@
+# Writing a message
+
+Code: `src/ui/screens/ComposeScreen.{h,cpp}`; tests in `test/test_screen_compose/`. A message to the person in the session (`Session::recipient`), by SMS or over the radio when the session says so. Enter sends; the core says where it went in the notice line, and the page goes home with the session cleared. When the core cannot take the message (the queue is full) the text stays. **School time does not stop a message** (a decision of the core).
+
+**Free text is the profile's switch** (`freeText`). Without it the page offers six ready-made messages instead: shown in the child's language, **sent in the parents'** (`Profile::smsLanguage`), because the reader of an SMS is the parent. Choosing one sends it. The words are the catalog keys `sms.canned.*`, which the catalog check holds to the 7-bit SMS alphabet.
+
+**The character set.** What the display can draw is taken, nothing else (a control character, an emoji, another alphabet): the child could not read what was sent. The counter counts characters, not bytes: **160** while everything is plain ASCII, **70** as soon as one character is not, and the page says why the limit fell ("With accents only 70 characters"). A character that does not fit is not taken, nothing is cut; deleting one does not lift a limit that the text is already over. The history keeps 160 bytes, which is the second limit (53 euro signs).
+
+The recipient is a name, or a number which is never shortened; a tap on it opens the recipient page (not for a radio contact). With nobody chosen the page starts with the first call target, else the first contact, and says "Choose who to write to" when there is nobody. **A draft stays** while the page is left and entered again, and is gone when it is sent.
+
+Back deletes a whole character (never half of one) and, on an empty page, goes back. Soft keys: Back or Delete, Send.
+
+## Tests
+
+`test_screen_compose`: the start recipient and nobody; a chosen recipient kept; a number shown whole and the tap; the draft; typing and the counter; deleting whole characters; the character set (accepted and refused); a message in each language sent exactly as typed; 160/70/the accent rules/the byte limit; sending, nothing written, waiting without a network, a refused message stays, school time, radio; ready-made messages (list, parents' language, touch, 7-bit text in every language); the panel budget for typing 160 characters; soft keys by touch; layout in four languages; pictures in English and German.

@@ -119,6 +119,9 @@ public:
   // One pass of the main loop. Returns the decision on sleeping for the host.
   PowerDecision poll(bool displayOn, uint32_t nextRenderInMs);
   State state();
+  // A time as the wall clock shows it in the clock's zone, for the time of a stored message; not
+  // known for epoch 0 (a message that arrived before the time was known).
+  State::WallClock wallClockOf(uint32_t epochUtc);
 
   // --- input ---
   void noteInput() { powerCoordination_.noteInput(); }

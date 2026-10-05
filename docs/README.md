@@ -36,6 +36,9 @@ The documents describe what exists in this repository — each one is written fr
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-screens.md](ui-screens.md) | what a screen may know, the frame every screen shares (status bar, notice line, soft keys), the wording of the core's codes |
+| [screen-messages.md](screen-messages.md) | the history: lists, marks, words from codes, reading, reply and call back, delete |
+| [screen-compose.md](screen-compose.md) | writing a message: the character set and limits, ready-made messages, sending |
+| [screen-recipient.md](screen-recipient.md) | whom to write to, and when a new number is possible |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |
 | [ui-refresh.md](ui-refresh.md) | refresh policy, frame tracker, refresh controller and the frame-budget tests |
 | [ui-text.md](ui-text.md) | the four fonts, the character set and the symbols, the text engine: UTF-8, width, fit, ellipsize, wrap, draw |
