@@ -122,6 +122,8 @@ void test_without_a_time_there_is_no_date_and_a_wild_number_does_not_read_outsid
   wall.weekday = -1;
   TEST_ASSERT_FALSE(wording::dateLine(wall, t).empty());
   TEST_ASSERT_FALSE(wording::weekdayName(wall, t).empty());
+}
+
 // ---- the time of a message ----------------------------------------------------------------
 
 void test_a_message_time_is_the_clock_for_today_the_date_before_and_dashes_when_unknown() {
