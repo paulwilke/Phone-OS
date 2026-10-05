@@ -388,6 +388,16 @@ void test_screens_of_one_context_share_one_session() {
   TEST_ASSERT_FALSE(reader.radio());
 }
 
+void test_a_screen_can_read_what_it_was_given_in_a_const_function() {
+  struct Reader : Probe {
+    using Probe::Probe;
+    std::string child() const { return context().app.profile().childName; }
+  };
+  DeviceRig rig;
+  Reader reader(rig.context());
+  TEST_ASSERT_EQUAL_STRING("Alex", reader.child().c_str());
+}
+
 // ---- input ------------------------------------------------------------------------------------
 
 void test_a_key_reaches_the_screen_as_it_is() {
@@ -497,6 +507,7 @@ int main(int, char**) {
   RUN_TEST(test_a_word_is_not_found_inside_a_longer_one_or_when_cut_off);
   RUN_TEST(test_white_on_black_is_found_only_when_asked_for);
   RUN_TEST(test_screens_of_one_context_share_one_session);
+  RUN_TEST(test_a_screen_can_read_what_it_was_given_in_a_const_function);
   RUN_TEST(test_a_key_reaches_the_screen_as_it_is);
   RUN_TEST(test_a_tap_on_a_soft_key_reaches_the_screen_as_the_key);
   RUN_TEST(test_a_tap_between_the_soft_keys_or_without_buttons_is_nothing);
