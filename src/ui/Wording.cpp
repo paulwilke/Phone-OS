@@ -66,6 +66,17 @@ std::string systemEntry(const Message& message, const phone::ContactBook& contac
   return t.get(key, {{"name", name.c_str()}});
 }
 
+std::string failedCallReason(const Notice& n) {
+  switch (n.kind) {
+    case NoticeKind::CallBusy: return sysentry::kBusy;
+    case NoticeKind::CallNoAnswer: return sysentry::kNoAnswer;
+    case NoticeKind::CallNoNetwork: return sysentry::kNoNetwork;
+    case NoticeKind::CallSmsOnly: return sysentry::kSmsOnly;
+    case NoticeKind::CallFailed: return sysentry::kNotConnected;
+    default: return std::string();
+  }
+}
+
 std::string wifiReason(WifiReason reason, i18n::Translator& t) {
   // No default: a reason added to the enum without a text is a compiler warning here, and a
   // test walks every value besides.
