@@ -43,6 +43,7 @@ language by writing one text file.
 | Messages, compose and recipient screens | the history with its marks and words from codes, writing with the character set and limits, ready-made messages where free text is off, the choice of recipient | `src/ui/screens/`, [docs/screen-messages.md](docs/screen-messages.md), [docs/screen-compose.md](docs/screen-compose.md), [docs/screen-recipient.md](docs/screen-recipient.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Configuration schema | the single source of truth for every configuration key; a generator produces the C++ tables, the web form description, the reference documentation, and example files | `config/schema.toml`, `scripts/gen_config.py`, [docs/configuration-reference.md](docs/configuration-reference.md) |
+| Configuration loader and writer | reads the three config files into a Profile with structured diagnostics; writes them back atomically; loads user language catalogs; persists two settings the child may change at run time | `src/config/`, [docs/config-loader.md](docs/config-loader.md) |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 
 ## Build and test

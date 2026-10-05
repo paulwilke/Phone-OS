@@ -41,9 +41,15 @@ void AppCore::configureTriggers() {
   messaging_.configure(triggers);
 }
 
+void AppCore::setMessageVibration(bool on) {
+  profile_.messageVibration = on;
+  settingsNeedWrite_ = true;
+}
+
 void AppCore::setCommandNotice(CommandNotice notice) {
   profile_.commandNotice = notice;
   configureTriggers();
+  settingsNeedWrite_ = true;
 }
 
 void AppCore::applyTimeZone() {

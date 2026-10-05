@@ -115,6 +115,12 @@ def usage():
                 # include Profile field paths that look like catalog keys but are not.
                 if GENERATED_MARKER in text[:200]:
                     continue
+                # Skip src/config/ — it uses config key-path strings (e.g. "sms.language")
+                # as diagnostic identifiers, not catalog keys. These share namespace prefixes
+                # with the catalogs ("sms.*", "wifi.*") but are not catalog keys.
+                rel_path = os.path.relpath(path, ROOT)
+                if rel_path.startswith(os.path.join("src", "config") + os.sep):
+                    continue
                 for number, line in enumerate(text.split("\n"), 1):
                     for literal in KEY_LITERAL.findall(line):
                         literals.setdefault(literal, f"{os.path.relpath(path, ROOT)}:{number}")

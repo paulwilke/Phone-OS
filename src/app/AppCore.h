@@ -178,10 +178,15 @@ public:
   void notePowerOffFailed() { powerCoordination_.notePowerOffFailed(); }
 
   // --- settings the child may change at run time ---
-  void setMessageVibration(bool on) { profile_.messageVibration = on; }
+  // Both methods set settingsNeedWrite() so the host can persist the change.
+  void setMessageVibration(bool on);
   void setCommandNotice(CommandNotice notice);
   bool messageVibration() const { return profile_.messageVibration; }
   CommandNotice commandNotice() const { return profile_.commandNotice; }
+  // True when setMessageVibration() or setCommandNotice() was called since the last
+  // clearSettingsWrite(). The host calls ConfigWriter::writeSettings() then clears it.
+  bool settingsNeedWrite() const { return settingsNeedWrite_; }
+  void clearSettingsWrite() { settingsNeedWrite_ = false; }
 
   // --- self test ---
   void playTestPattern(HapticPattern pattern) { haptic_.play(pattern); }
@@ -201,6 +206,7 @@ private:
   Haptic& haptic_;
   i18n::Translator& translator_;
   Profile profile_;
+  bool settingsNeedWrite_ = false;
   Logger logger_;
   MessageStore store_;
   Notices notices_;
