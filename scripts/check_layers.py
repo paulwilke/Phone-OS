@@ -11,8 +11,10 @@ Rules for the layers:
   * src/hal/ (the capability interfaces) includes only standard headers and its own
     siblings, never src/app/ or src/i18n/: an interface does not know its users;
   * src/i18n/ includes nothing from the other layers;
-  * src/ui/ (the user-interface framework) includes only src/ui/ and src/i18n/: it knows no
-    application logic and no hardware interface, so a widget can be drawn on any Display.
+  * src/ui/ includes src/ui/, src/i18n/ and, from src/app/, only app/AppCore.h: the facade and
+    the plain data it hands out (the state, notices, the message history, the contact book). A
+    screen never includes a hardware interface or any other part of the application directly,
+    and never a board or a driver, so it can be drawn on any Display and tested without a device.
 src/app/ may include src/hal/ and src/i18n/.
 
 Exits with 1 on any finding.
@@ -33,6 +35,19 @@ def files():
                 yield os.path.join(base, n)
 
 
+APP_FACADE = os.path.join(ROOT, "src", "app", "AppCore.h")
+
+
+def resolve(path, target):
+    """The file an include names: next to the including file first, then from src/ (the include
+    path of the build). Resolving only the first way would read "i18n/Translator.h" in src/ui/
+    as src/ui/i18n/Translator.h and judge the wrong layer."""
+    beside = os.path.normpath(os.path.join(os.path.dirname(path), target))
+    if os.path.exists(beside):
+        return beside
+    return os.path.normpath(os.path.join(ROOT, "src", target))
+
+
 def layer(rel):
     parts = rel.split(os.sep)
     return parts[1] if len(parts) > 2 else ""
@@ -50,14 +65,14 @@ def main():
                 if kind == "<" and (target.endswith(".h") or "/" in target):
                     problems.append(f"{rel}:{n}: platform or project header in angle brackets: <{target}>")
                 if kind == '"':
-                    normal = os.path.normpath(os.path.join(os.path.dirname(path), target))
+                    normal = resolve(path, target)
                     inside = os.path.relpath(normal, os.path.join(ROOT, "src")).split(os.sep)[0]
                     if where == "hal" and inside != "hal":
                         problems.append(f"{rel}:{n}: an interface includes the layer {inside}/: {target}")
                     if where == "i18n" and inside != "i18n":
                         problems.append(f"{rel}:{n}: i18n includes the layer {inside}/: {target}")
-                    if where == "ui" and inside not in ("ui", "i18n"):
-                        problems.append(f"{rel}:{n}: ui includes the layer {inside}/: {target}")
+                    if where == "ui" and inside not in ("ui", "i18n") and normal != APP_FACADE:
+                        problems.append(f"{rel}:{n}: ui may include only ui/, i18n/ and app/AppCore.h, not {inside}/: {target}")
             elif PLATFORM.search(line) and not line.lstrip().startswith(("//", "*")):
                 problems.append(f"{rel}:{n}: platform dependency: {PLATFORM.search(line).group(0)}")
     for p in problems:
