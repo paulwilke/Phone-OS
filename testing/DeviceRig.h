@@ -63,6 +63,7 @@ struct DeviceRig {
   i18n::Translator translator = languages::loaded();
   AppCore core;
   RecordingNavigation nav;
+  ui::Session session;
   FrameBuffer frame;
 
   explicit DeviceRig(Profile profile = ProfileBuilder().childName("Alex").build())
@@ -71,7 +72,9 @@ struct DeviceRig {
     core.start();
   }
 
-  ui::ScreenContext context() { return ui::ScreenContext{core, translator, nav}; }
+  ui::ScreenContext context() { return ui::ScreenContext{core, translator, nav, session}; }
+  // The same, with another navigation: a real stack the test built around the screens.
+  ui::ScreenContext context(ui::Navigation& navigation) { return ui::ScreenContext{core, translator, navigation, session}; }
 
   void poll(bool displayOn = true) { core.poll(displayOn, 10000); }
   // Seconds pass, polled every second as the device does.

@@ -22,15 +22,18 @@
 #include "ui/Screen.h"
 #include "ui/ScreenIds.h"
 #include "ui/ScreenStack.h"
+#include "ui/Session.h"
 #include "ui/SoftKeys.h"
 
 namespace ui {
 
-// What every screen is given by the application that wires them up.
+// What every screen is given by the application that wires them up. The Session is shared by all
+// screens: it is how the screen that chooses a recipient tells the screen that writes the message.
 struct ScreenContext {
   AppCore& app;
   i18n::Translator& translator;
   Navigation& navigation;
+  Session& session;
 };
 
 class AppScreen : public Screen {
@@ -60,6 +63,7 @@ protected:
   AppCore& app() { return context_.app; }
   i18n::Translator& t() { return context_.translator; }
   Navigation& nav() { return context_.navigation; }
+  Session& session() { return context_.session; }
   const AppCore::State& state() const { return state_; }
 
 private:
