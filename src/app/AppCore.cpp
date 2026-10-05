@@ -84,19 +84,23 @@ size_t AppCore::radioPeerCount() { return radio_ ? radio_->peerCount() : 0; }
 
 bool AppCore::radioPeer(size_t index, RadioPeer& out) { return radio_ && radio_->peerAt(index, out); }
 
+AppCore::State::WallClock AppCore::wallClockOf(uint32_t epochUtc) {
+  State::WallClock wall;
+  if (epochUtc == 0) return wall;
+  const calendar::LocalTime local = calendar::toLocal(epochUtc, clock_.tzOffsetMinutes());
+  const calendar::Civil date = calendar::civilFromDays(local.days);
+  wall.known = true;
+  wall.year = date.year;
+  wall.month = date.month;
+  wall.day = date.day;
+  wall.weekday = (local.weekday + 1) % 7;  // the calendar counts from Monday, the weekday words from Sunday
+  wall.minuteOfDay = local.minuteOfDay;
+  return wall;
+}
+
 AppCore::State AppCore::state() {
   State s;
-  const uint32_t epoch = clock_.epochUtc();
-  if (epoch != 0) {
-    const calendar::LocalTime local = calendar::toLocal(epoch, clock_.tzOffsetMinutes());
-    const calendar::Civil date = calendar::civilFromDays(local.days);
-    s.wall.known = true;
-    s.wall.year = date.year;
-    s.wall.month = date.month;
-    s.wall.day = date.day;
-    s.wall.weekday = (local.weekday + 1) % 7;  // the calendar counts from Monday, the weekday words from Sunday
-    s.wall.minuteOfDay = local.minuteOfDay;
-  }
+  s.wall = wallClockOf(clock_.epochUtc());
   s.network = connectivity_.networkLabel();
   s.registered = connectivity_.registered();
   s.signalBars = modem_.signalBars();

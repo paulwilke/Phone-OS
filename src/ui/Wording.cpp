@@ -33,6 +33,16 @@ std::string dateLine(const AppCore::State::WallClock& wall, i18n::Translator& t)
   return t.get("clock.date", {{"month", month.c_str()}, {"day", wall.day}, {"year", wall.year}});
 }
 
+std::string messageTime(const AppCore::State::WallClock& at, const AppCore::State::WallClock& now, i18n::Translator& t) {
+  if (!at.known) return "--:--";
+  const std::string time = clockTime(at.minuteOfDay);
+  if (now.known && at.month == now.month && at.day == now.day) return time;
+  char month[8], day[8];
+  snprintf(month, sizeof month, "%02d", at.month);
+  snprintf(day, sizeof day, "%02d", at.day);
+  return t.get("status.date-short", {{"month", month}, {"day", day}}) + " " + time;
+}
+
 std::string peerName(const std::string& peer, const phone::ContactBook& contacts, i18n::Translator& t) {
   const std::string name = contacts.displayName(peer.c_str());
   return name.empty() ? t.get("peer.unknown") : name;

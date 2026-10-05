@@ -325,6 +325,7 @@ Tests in `test/test_app_core/`.
 | APP-15 | poll() returns the decision on sleeping, and the host's requests (restart, power off, front light) are readable | `test_the_host_gets_the_decision_and_the_requests` | — | done |
 | APP-16 | Wi-Fi stays on while it is used, switches itself off afterwards, and keeps the processor awake meanwhile | `test_wifi_stays_on_while_it_is_used` | — | done |
 | APP-17 | The position page and the test page each hold the receiver; one closing does not take it from the other | `test_the_position_page_and_the_test_page_hold_the_receiver` | — | done |
+| APP-20 | A stored time (a message's) is shown on the wall clock of the clock's zone; epoch 0 is not known | `test_a_stored_time_is_shown_on_the_wall_clock_of_the_zone` | — | done |
 | APP-18 | The radio's contacts are listed; without a radio there are none | `test_radio_contacts_are_listed` | — | done |
 | APP-19 | The state has the wall clock as numbers (year, month, day, weekday from Sunday, minute of the day) in the clock's zone, and nothing when the time is unknown | `test_the_state_has_the_wall_clock_as_numbers` | — | done |
 

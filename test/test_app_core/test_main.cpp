@@ -472,6 +472,20 @@ void test_the_state_has_the_wall_clock_as_numbers() {
   TEST_ASSERT_FALSE(d.core.state().wall.known);
 }
 
+void test_a_stored_time_is_shown_on_the_wall_clock_of_the_zone() {
+  Device d;
+  // The evening before at 23:32 UTC is 01:32 today two hours east.
+  const AppCore::State::WallClock w = d.core.wallClockOf(coretest::kTuesdayAfternoon - 13 * 3600);
+  TEST_ASSERT_TRUE(w.known);
+  TEST_ASSERT_EQUAL(15, w.day);
+  TEST_ASSERT_EQUAL(92, w.minuteOfDay);
+  TEST_ASSERT_FALSE(d.core.wallClockOf(0).known);              // no time was known when it arrived
+  // The same numbers as the state gives for the present moment.
+  const AppCore::State::WallClock now = d.core.wallClockOf(coretest::kTuesdayAfternoon);
+  TEST_ASSERT_EQUAL(d.core.state().wall.minuteOfDay, now.minuteOfDay);
+  TEST_ASSERT_EQUAL(d.core.state().wall.day, now.day);
+}
+
 void test_the_core_produces_only_codes() {
   Device d(inSchool(), true);
   d.core.markAllRead();
@@ -650,6 +664,7 @@ int main() {
   RUN_TEST(test_the_trigger_words_come_from_every_language);
   RUN_TEST(test_the_clock_follows_the_time_zone);
   RUN_TEST(test_the_state_has_the_wall_clock_as_numbers);
+  RUN_TEST(test_a_stored_time_is_shown_on_the_wall_clock_of_the_zone);
   RUN_TEST(test_without_a_known_time_the_zone_is_left_alone);
   RUN_TEST(test_the_core_produces_only_codes);
   RUN_TEST(test_a_test_pattern_can_be_played);
