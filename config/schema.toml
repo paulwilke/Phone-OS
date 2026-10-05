@@ -1,0 +1,696 @@
+# config/schema.toml
+#
+# The single source of truth for every configuration key.
+# Run scripts/gen_config.py to regenerate the derived files.
+# CI runs scripts/gen_config.py --check and fails when a generated file is out of date.
+#
+# Each [[file]] entry names one config file on the card.
+# Each [[section]] entry names a section inside a file; list=true means [[array of tables]].
+# Each [[key]] entry describes one key; its position in the file and section is given by
+# `file` and `section`.  Section and file are paths using "." as separator for nested sections
+# (e.g. "wifi.access_point").
+#
+# Key types:
+#   string        — UTF-8 string; max_val = maximum byte length (0 = no limit)
+#   integer       — integer; min_val/max_val = inclusive range
+#   bool          — true or false
+#   enum          — string from the pipe-separated list in `enums`
+#   string_list   — TOML array of strings
+#   weekday_set   — "mon-fri", "mon,wed,fri", "daily", etc.
+#   time_of_day   — "HH:MM" (24-hour)
+#   phone_number  — E.164 phone number
+#   catalog_code  — two-letter (or longer) language code of an installed catalog
+#
+# `apply`:  restart = takes effect on next start; immediate = takes effect without restart
+# `secret`: value must never appear in logs
+# `field`:  Profile field that this key fills; empty string if the key is returned separately
+#           (sim_pin, web_password) or fills a sub-struct (table-list keys use the parent
+#           section's `field`)
+
+# ---------------------------------------------------------------------------
+# Files
+# ---------------------------------------------------------------------------
+
+[[file]]
+id      = "settings"
+path    = "/config/settings.toml"
+example = "config/examples/settings.toml"
+label   = "config.file.settings.label"
+
+[[file]]
+id      = "contacts"
+path    = "/config/contacts.toml"
+example = "config/examples/contacts.toml"
+label   = "config.file.contacts.label"
+
+[[file]]
+id      = "secrets"
+path    = "/config/secrets.toml"
+example = "config/examples/secrets.toml"
+label   = "config.file.secrets.label"
+secret  = true
+
+# ---------------------------------------------------------------------------
+# Sections — list=true for [[array of tables]], list=false for [regular]
+# Every section that has user-visible text needs an entry so that the catalog
+# keys it names are tracked by check_i18n.
+# ---------------------------------------------------------------------------
+
+[[section]]
+file    = "settings"
+name    = "child"
+list    = false
+label   = "config.child.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "display"
+list    = false
+label   = "config.display.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "interface"
+list    = false
+label   = "config.interface.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "sms"
+list    = false
+label   = "config.sms.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "features"
+list    = false
+label   = "config.features.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "remote_queries"
+list    = false
+label   = "config.remote_queries.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "time"
+list    = false
+label   = "config.time.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "log"
+list    = false
+label   = "config.log.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "wifi"
+list    = false
+label   = "config.wifi.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "radio"
+list    = false
+label   = "config.radio.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "quiet_hours"
+list    = true
+label   = "config.quiet_hours.label"
+help    = "config.quiet_hours.help"
+field   = "quietHours"
+
+[[section]]
+file    = "settings"
+name    = "tiles"
+list    = true
+label   = "config.tiles.label"
+help    = "config.tiles.help"
+field   = "callTargets"
+
+[[section]]
+file    = "contacts"
+name    = "contact"
+list    = true
+label   = "config.contact.label"
+help    = "config.contact.help"
+field   = "contacts"
+
+[[section]]
+file    = "secrets"
+name    = "wifi.access_point"
+list    = false
+label   = "config.wifi.access_point.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "secrets"
+name    = "wifi.network"
+list    = true
+label   = "config.wifi.network.label"
+help    = "config.wifi.network.help"
+field   = "wifi.networks"
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [child]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "child"
+name    = "name"
+type    = "string"
+default = ""
+max_val = 24
+label   = "config.child.name.label"
+help    = "config.child.name.help"
+field   = "childName"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [display]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "display"
+name    = "map_url"
+type    = "string"
+default = "https://maps.google.com/?q={lat},{lon}"
+max_val = 120
+label   = "config.display.map_url.label"
+help    = "config.display.map_url.help"
+field   = "mapTemplate"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [interface]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "interface"
+name    = "language"
+type    = "catalog_code"
+default = "en"
+max_val = 10
+label   = "config.interface.language.label"
+help    = "config.interface.language.help"
+field   = "interfaceLanguage"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [sms]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "sms"
+name    = "language"
+type    = "catalog_code"
+default = "en"
+max_val = 10
+label   = "config.sms.language.label"
+help    = "config.sms.language.help"
+field   = "smsLanguage"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "sms"
+name    = "extra_trigger_words"
+type    = "string_list"
+default = ""
+label   = "config.sms.extra_trigger_words.label"
+help    = "config.sms.extra_trigger_words.help"
+field   = "extraTriggers"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [features]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "free_text"
+type    = "bool"
+default = "false"
+label   = "config.features.free_text.label"
+help    = "config.features.free_text.help"
+field   = "freeText"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "radio"
+type    = "bool"
+default = "false"
+label   = "config.features.radio.label"
+help    = "config.features.radio.help"
+field   = "radioAllowed"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "parent_tools"
+type    = "bool"
+default = "false"
+label   = "config.features.parent_tools.label"
+help    = "config.features.parent_tools.help"
+field   = "parentTools"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "message_vibration"
+type    = "bool"
+default = "true"
+label   = "config.features.message_vibration.label"
+help    = "config.features.message_vibration.help"
+field   = "messageVibration"
+apply   = "immediate"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "call_vibration"
+type    = "bool"
+default = "true"
+label   = "config.features.call_vibration.label"
+help    = "config.features.call_vibration.help"
+field   = "callVibration"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "quiet_call_vibration"
+type    = "bool"
+default = "false"
+label   = "config.features.quiet_call_vibration.label"
+help    = "config.features.quiet_call_vibration.help"
+field   = "quietCallVibration"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "features"
+name    = "modem_sleep"
+type    = "bool"
+default = "true"
+label   = "config.features.modem_sleep.label"
+help    = "config.features.modem_sleep.help"
+field   = "modemSleep"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [remote_queries]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "remote_queries"
+name    = "notice"
+type    = "enum"
+enums   = "silent|history|notify"
+default = "history"
+label   = "config.remote_queries.notice.label"
+help    = "config.remote_queries.notice.help"
+field   = "commandNotice"
+apply   = "immediate"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [time]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "time"
+name    = "timezone"
+type    = "string"
+default = ""
+max_val = 40
+label   = "config.time.timezone.label"
+help    = "config.time.timezone.help"
+field   = "timeZone"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [log]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "log"
+name    = "level"
+type    = "enum"
+enums   = "all|events|errors"
+default = "all"
+label   = "config.log.level.label"
+help    = "config.log.level.help"
+field   = "logLevel"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [wifi]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "wifi"
+name    = "auto_off_minutes"
+type    = "integer"
+default = "10"
+min_val = 1
+max_val = 120
+label   = "config.wifi.auto_off_minutes.label"
+help    = "config.wifi.auto_off_minutes.help"
+field   = "wifi.autoOffMinutes"
+apply   = "immediate"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [radio]
+# (was [mesh] in the previous firmware; old section name accepted as alias)
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "radio"
+name    = "name"
+type    = "string"
+default = "phoneplus"
+max_val = 32
+label   = "config.radio.name.label"
+help    = "config.radio.name.help"
+field   = "radioName"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "radio"
+name    = "peer"
+type    = "string"
+default = ""
+max_val = 32
+label   = "config.radio.peer.label"
+help    = "config.radio.peer.help"
+field   = "radioPeer"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [[quiet_hours]]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "quiet_hours"
+name    = "days"
+type    = "weekday_set"
+default = ""
+label   = "config.quiet_hours.days.label"
+help    = "config.quiet_hours.days.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
+
+[[key]]
+file    = "settings"
+section = "quiet_hours"
+name    = "from"
+type    = "time_of_day"
+default = ""
+label   = "config.quiet_hours.from.label"
+help    = "config.quiet_hours.from.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
+
+[[key]]
+file    = "settings"
+section = "quiet_hours"
+name    = "to"
+type    = "time_of_day"
+default = ""
+label   = "config.quiet_hours.to.label"
+help    = "config.quiet_hours.to.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [[tiles]]
+# Only action="call" tiles contribute to Profile.callTargets; other actions
+# are ignored with a warning naming the line.  The schema lists all known
+# action values so the loader can report unknown ones.
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "tiles"
+name    = "label"
+type    = "string"
+default = ""
+max_val = 24
+label   = "config.tiles.label_key.label"
+help    = "config.tiles.label_key.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "tiles"
+name    = "action"
+type    = "enum"
+enums   = "call|compose|messages|light|status|sos"
+default = ""
+label   = "config.tiles.action.label"
+help    = "config.tiles.action.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
+
+[[key]]
+file    = "settings"
+section = "tiles"
+name    = "target"
+type    = "phone_number"
+default = ""
+label   = "config.tiles.target.label"
+help    = "config.tiles.target.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — contacts.toml / [[contact]]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "contacts"
+section = "contact"
+name    = "number"
+type    = "phone_number"
+default = ""
+label   = "config.contact.number.label"
+help    = "config.contact.number.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
+
+[[key]]
+file    = "contacts"
+section = "contact"
+name    = "name"
+type    = "string"
+default = ""
+max_val = 40
+label   = "config.contact.name.label"
+help    = "config.contact.name.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "contacts"
+section = "contact"
+name    = "role"
+type    = "enum"
+enums   = "parent|family"
+default = "family"
+label   = "config.contact.role.label"
+help    = "config.contact.role.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — secrets.toml (root level)
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "secrets"
+section = ""
+name    = "sim_pin"
+type    = "string"
+default = ""
+max_val = 8
+label   = "config.sim_pin.label"
+help    = "config.sim_pin.help"
+field   = ""
+apply   = "restart"
+secret  = true
+required = false
+
+[[key]]
+file    = "secrets"
+section = ""
+name    = "web_password"
+type    = "string"
+default = ""
+min_val = 4
+max_val = 0
+label   = "config.web_password.label"
+help    = "config.web_password.help"
+field   = ""
+apply   = "restart"
+secret  = true
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — secrets.toml / [wifi.access_point]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "secrets"
+section = "wifi.access_point"
+name    = "ssid"
+type    = "string"
+default = "phoneplus"
+max_val = 32
+label   = "config.wifi.access_point.ssid.label"
+help    = "config.wifi.access_point.ssid.help"
+field   = "wifi.apSsid"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "secrets"
+section = "wifi.access_point"
+name    = "password"
+type    = "string"
+default = ""
+max_val = 63
+label   = "config.wifi.access_point.password.label"
+help    = "config.wifi.access_point.password.help"
+field   = "wifi.apPassword"
+apply   = "restart"
+secret  = true
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — secrets.toml / [[wifi.network]]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "secrets"
+section = "wifi.network"
+name    = "ssid"
+type    = "string"
+default = ""
+max_val = 32
+label   = "config.wifi.network.ssid.label"
+help    = "config.wifi.network.ssid.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
+
+[[key]]
+file    = "secrets"
+section = "wifi.network"
+name    = "password"
+type    = "string"
+default = ""
+max_val = 63
+label   = "config.wifi.network.password.label"
+help    = "config.wifi.network.password.help"
+field   = ""
+apply   = "restart"
+secret  = true
+required = false

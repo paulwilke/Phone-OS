@@ -42,6 +42,7 @@ language by writing one text file.
 | Phone, call and number screens | whom to call, the call in each phase with its volume and failure reasons, a typed number for a message | `src/ui/screens/`, [docs/screen-phone.md](docs/screen-phone.md), [docs/screen-call.md](docs/screen-call.md), [docs/screen-number.md](docs/screen-number.md) |
 | Messages, compose and recipient screens | the history with its marks and words from codes, writing with the character set and limits, ready-made messages where free text is off, the choice of recipient | `src/ui/screens/`, [docs/screen-messages.md](docs/screen-messages.md), [docs/screen-compose.md](docs/screen-compose.md), [docs/screen-recipient.md](docs/screen-recipient.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
+| Configuration schema | the single source of truth for every configuration key; a generator produces the C++ tables, the web form description, the reference documentation, and example files | `config/schema.toml`, `scripts/gen_config.py`, [docs/configuration-reference.md](docs/configuration-reference.md) |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 
 ## Build and test
@@ -56,6 +57,8 @@ python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeh
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
 python3 scripts/make_font.py --check # the generated fonts match their sources
 python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.md is ticked and has its test
+python3 scripts/gen_config.py --check # generated config files match the schema
+python3 test/test_schema_gen/test_gen.py # generator unit tests (Python, not part of pio test)
 python3 scripts/privacy_check.py
 ```
 

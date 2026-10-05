@@ -1,0 +1,66 @@
+# Minimal schema used by the generator tests.
+
+[[file]]
+id      = "settings"
+path    = "/config/settings.toml"
+example = "config/examples/settings.toml"
+label   = "test.file.settings.label"
+
+[[section]]
+file    = "settings"
+name    = "child"
+list    = false
+label   = "test.child.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
+name    = "tags"
+list    = true
+label   = "test.tags.label"
+help    = "test.tags.help"
+field   = "tagList"
+
+[[key]]
+file    = "settings"
+section = "child"
+name    = "name"
+type    = "string"
+default = "Alex"
+max_val = 24
+label   = "test.child.name.label"
+help    = "test.child.name.help"
+field   = "childName"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "child"
+name    = "age"
+type    = "integer"
+default = "0"
+min_val = 0
+max_val = 17
+label   = "test.child.age.label"
+help    = "test.child.age.help"
+field   = "childAge"
+apply   = "immediate"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "tags"
+name    = "value"
+type    = "string"
+default = ""
+max_val = 32
+label   = "test.tags.value.label"
+help    = "test.tags.value.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = true
