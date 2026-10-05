@@ -1,0 +1,18 @@
+# The smallest story through the whole wiring: boot, a text message in, the inbox, a call in, German.
+# Headless, from the repository root:
+#   .pio/build/sim/program --script sim/scripts/smoke.txt
+advance 5s
+golden smoke-home
+sms +491701111111 Hello Alex, are you at school yet?
+advance 2s
+golden smoke-home-unread
+key inbox
+golden smoke-inbox
+key home
+call +491702222222
+advance 1s
+golden smoke-call
+remote hangup
+advance 1s
+language de
+golden smoke-home-de

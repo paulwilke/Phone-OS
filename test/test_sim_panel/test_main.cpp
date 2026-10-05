@@ -247,6 +247,16 @@ void test_the_panel_shows_the_picture_of_the_last_refresh_not_of_the_last_frame(
   TEST_ASSERT_TRUE(first == p.panel.shown());
 }
 
+void test_the_previous_picture_is_kept_while_the_last_refresh_runs() {
+  Panel p;
+  p.frame(0);
+  const FrameBuffer first = p.panel.shown();
+  p.ms = 1000;
+  p.frame(5);
+  TEST_ASSERT_TRUE(first == p.panel.previous());
+  TEST_ASSERT_FALSE(first == p.panel.shown());
+}
+
 void test_the_png_is_the_picture_on_the_panel() {
   Panel p;
   p.frame();
@@ -285,6 +295,7 @@ int main() {
   RUN_TEST(test_a_static_picture_is_refreshed_in_full_after_four_hours);
   RUN_TEST(test_a_refresh_is_busy_for_its_duration);
   RUN_TEST(test_the_panel_shows_the_picture_of_the_last_refresh_not_of_the_last_frame);
+  RUN_TEST(test_the_previous_picture_is_kept_while_the_last_refresh_runs);
   RUN_TEST(test_the_png_is_the_picture_on_the_panel);
   RUN_TEST(test_a_png_is_written_to_a_file_and_an_unwritable_path_is_reported);
   return UNITY_END();

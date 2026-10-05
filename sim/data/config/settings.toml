@@ -1,0 +1,25 @@
+# The child's device of the demo: every value invented.
+[child]
+name = "Alex"
+[interface]
+language = "en"
+[sms]
+language = "en"
+[time]
+timezone = "Europe/Berlin"
+[features]
+free_text = false
+radio = true
+[wifi]
+auto_off_minutes = 10
+[radio]
+name = "alex-device"
+peer = "NodeOne"
+[[tiles]]
+label = "Parent One"
+action = "call"
+target = "+491701111111"
+[[tiles]]
+label = "Parent Two"
+action = "call"
+target = "+491702222222"

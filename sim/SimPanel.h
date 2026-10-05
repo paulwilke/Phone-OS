@@ -58,6 +58,8 @@ public:
   // ---- the panel --------------------------------------------------------------------------
   // What the panel shows once the last refresh is done; blank before the first one.
   const FrameBuffer& shown() const { return shown_; }
+  // What it showed before the last refresh, which a window keeps on show while that refresh runs.
+  const FrameBuffer& previous() const { return previous_; }
   // The last refresh is still running at `nowMs`: a window shows it as a flash.
   bool busy(uint32_t nowMs) const {
     if (refreshes_.empty()) return false;
@@ -81,6 +83,7 @@ private:
   void refreshPartial() override { refreshed(false); }
   void refreshFull() override { refreshed(true); }
   void refreshed(bool full) {
+    previous_ = shown_;
     shown_ = drawn_;
     refreshes_.push_back({frames_, now_(), full});
   }
@@ -88,6 +91,7 @@ private:
   std::function<uint32_t()> now_;
   FrameBuffer drawn_;
   FrameBuffer shown_;
+  FrameBuffer previous_;
   ui::RefreshController controller_;
   std::vector<Refresh> refreshes_;
   uint32_t frames_ = 0;
