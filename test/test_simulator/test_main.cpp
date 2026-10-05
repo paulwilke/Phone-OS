@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <string>
 
@@ -36,7 +37,13 @@ struct Sim {
     sim::Options o;
     o.dataDir = data;
     o.goldenDir = goldenDir;
+    o.workDir = scratch("card-" + std::to_string(counter()++)).string();   // never the default: tests run side by side with a simulator
+    o.webPort = 0;
     return o;
+  }
+  static int& counter() {
+    static int n = 0;
+    return ++n;
   }
   bool run(const std::string& line) { return sim.execute(line); }
   AppCore::State state() { return sim.runtime().core().state(); }
@@ -277,7 +284,7 @@ void test_a_gps_scenario_decides_the_position_the_device_gets() {
 
 void test_motion_and_wifi_commands_are_accepted_and_checked() {
   Sim s;
-  for (const char* ok : {"motion tilt 0 0 1", "motion shake", "motion off", "motion on", "wifi connected", "wifi failed"})
+  for (const char* ok : {"motion tilt 0 0 1", "motion shake", "motion off", "motion on", "wifi connected", "wifi failed", "wifi off"})
     TEST_ASSERT_TRUE_MESSAGE(s.run(ok), ok);
   for (const char* bad : {"motion tilt 0 0", "motion spin", "wifi", "wifi maybe"}) TEST_ASSERT_FALSE_MESSAGE(s.run(bad), bad);
 }
@@ -462,7 +469,7 @@ void test_quit_ends_a_script() {
 
 void test_a_restart_the_device_asks_for_starts_it_again_on_the_same_card() {
   Sim s;
-  s.sim.card().put("/config/settings.toml", "[child]\nname = \"Alex\"\n[interface]\nlanguage = \"de\"\n");
+  s.sim.card().write("/config/settings.toml", "[child]\nname = \"Alex\"\n[interface]\nlanguage = \"de\"\n");
   TEST_ASSERT_EQUAL(1, s.sim.boots());
   s.sim.runtime().core().requestRestart();
   s.sim.advance(1000);
@@ -479,11 +486,77 @@ void test_a_power_off_the_device_asks_for_ends_the_simulation() {
   TEST_ASSERT_TRUE(contains(s.output(), "switched itself off"));
 }
 
-void test_the_card_is_a_copy_and_the_repository_is_never_written() {
+void test_the_card_is_a_copy_and_the_data_directory_is_never_written() {
   Sim s;
-  s.sim.card().put("/config/settings.toml", "[child]\nname = \"Changed\"\n");
+  s.sim.card().write("/config/settings.toml", "[child]\nname = \"Changed\"\n");
   Sim fresh;
   TEST_ASSERT_EQUAL_STRING("Alex", fresh.sim.runtime().core().profile().childName.c_str());
+  std::string text;
+  TEST_ASSERT_TRUE(sim::detail::readFile("sim/data/config/settings.toml", text));
+  TEST_ASSERT_TRUE(contains(text, "Alex"));
+}
+
+void test_a_fresh_start_forgets_what_the_last_one_saved_unless_the_card_is_used_in_place() {
+  const std::filesystem::path data = scratch("inplace-data");
+  std::filesystem::copy("sim/data", data, std::filesystem::copy_options::recursive);
+  sim::Options o;
+  o.dataDir = data.string();
+  o.workDir = scratch("inplace-work").string();
+  o.webPort = 0;
+  {
+    std::ostringstream out;
+    sim::Simulator first(o, out);
+    first.card().write("/config/settings.toml", "[child]\nname = \"Sam\"\n");
+  }
+  std::ostringstream out;
+  sim::Simulator second(o, out);
+  TEST_ASSERT_EQUAL_STRING("Alex", second.runtime().core().profile().childName.c_str());   // the copy was made again
+  o.inPlace = true;
+  {
+    std::ostringstream out2;
+    sim::Simulator inPlace(o, out2);
+    inPlace.card().write("/config/settings.toml", "[child]\nname = \"Sam\"\n");
+  }
+  std::ostringstream out3;
+  sim::Simulator again(o, out3);
+  TEST_ASSERT_EQUAL_STRING("Sam", again.runtime().core().profile().childName.c_str());
+}
+
+void test_a_work_directory_that_is_not_the_simulators_is_never_emptied() {
+  const std::filesystem::path work = scratch("foreign");
+  std::ofstream(work / "precious.txt") << "mine";
+  sim::Options o;
+  o.workDir = work.string();
+  o.webPort = 0;
+  std::ostringstream out;
+  sim::Simulator s(o, out);
+  TEST_ASSERT_FALSE(s.ok());
+  TEST_ASSERT_TRUE(contains(s.error(), "refusing to empty"));
+  TEST_ASSERT_TRUE(std::filesystem::exists(work / "precious.txt"));
+}
+
+void test_a_work_directory_that_is_or_holds_the_data_is_refused() {
+  const std::filesystem::path data = scratch("holds");
+  std::filesystem::create_directories(data / "config");
+  for (const std::filesystem::path& work : {data, data.parent_path()}) {
+    sim::Options o;
+    o.dataDir = data.string();
+    o.workDir = work.string();
+    o.webPort = 0;
+    std::ostringstream out;
+    sim::Simulator s(o, out);
+    TEST_ASSERT_FALSE_MESSAGE(s.ok(), work.string().c_str());
+  }
+  TEST_ASSERT_TRUE(std::filesystem::exists(data / "config"));
+}
+
+void test_in_place_needs_a_data_directory() {
+  sim::Options o;
+  o.dataDir = "sim/no-such-directory";
+  o.inPlace = true;
+  std::ostringstream out;
+  sim::Simulator s(o, out);
+  TEST_ASSERT_FALSE(s.ok());
 }
 
 // ---- the smoke script -----------------------------------------------------------------------------------------------------
@@ -533,7 +606,11 @@ int main() {
   RUN_TEST(test_quit_ends_a_script);
   RUN_TEST(test_a_restart_the_device_asks_for_starts_it_again_on_the_same_card);
   RUN_TEST(test_a_power_off_the_device_asks_for_ends_the_simulation);
-  RUN_TEST(test_the_card_is_a_copy_and_the_repository_is_never_written);
+  RUN_TEST(test_the_card_is_a_copy_and_the_data_directory_is_never_written);
+  RUN_TEST(test_a_fresh_start_forgets_what_the_last_one_saved_unless_the_card_is_used_in_place);
+  RUN_TEST(test_a_work_directory_that_is_not_the_simulators_is_never_emptied);
+  RUN_TEST(test_a_work_directory_that_is_or_holds_the_data_is_refused);
+  RUN_TEST(test_in_place_needs_a_data_directory);
   RUN_TEST(test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures);
   return UNITY_END();
 }

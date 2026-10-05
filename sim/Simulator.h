@@ -6,8 +6,9 @@
 // English and are not translated: it is a developer's tool, and the device's words come from the
 // catalogs.
 //
-// A Simulator owns the card (an in-memory copy of a data directory, so nothing in the repository is
-// ever written to) and a Rig, the device built on it. A restart the device asks for builds a new Rig
+// A Simulator owns the card (a directory: by default a fresh copy of the data directory under
+// out/, so nothing in the repository is ever written to; with `inPlace` the data directory itself,
+// which the owner asks for by name) and a Rig, the device built on it. A restart the device asks for builds a new Rig
 // on the same card, as a real restart would: the clock starts again, the card keeps what was written.
 //
 // Time is the fake clock's. advance() moves it in steps of one second and runs the Runtime at each,
@@ -30,10 +31,11 @@
 
 #include <FrameBuffer.h>
 #include <GoldenCompare.h>
+#include <DirectoryStore.h>
 #include <SimPanel.h>
+#include <SocketTcp.h>
 #include <boot/Runtime.h>
 #include <fakes/FakeClock.h>
-#include <fakes/FakeConfigStore.h>
 #include <fakes/FakeEventLog.h>
 #include <fakes/FakeGnss.h>
 #include <fakes/FakeHaptic.h>
@@ -41,7 +43,6 @@
 #include <fakes/FakeMotion.h>
 #include <fakes/FakePower.h>
 #include <fakes/FakeRadioLink.h>
-#include <fakes/FakeTcpServer.h>
 #include <fakes/FakeWifi.h>
 #include <i18n/Pseudo.h>
 
@@ -118,6 +119,13 @@ struct Options {
   std::string langDir = "lang";
   std::string webPage = "web/index.html";
   std::string goldenDir = "sim/golden";
+  // Where the card is copied to. Only a directory this program made (it holds a marker file) or an
+  // empty or missing one is ever emptied.
+  std::string workDir = "out/sim-card";
+  // Use the data directory itself as the card: what the web page saves is saved into it.
+  bool inPlace = false;
+  // The port of the parents' web page on 127.0.0.1; 0 lets the system choose (for tests).
+  uint16_t webPort = 8080;
   uint32_t lapse = 1;
 };
 
@@ -128,11 +136,16 @@ public:
   static constexpr uint32_t kTickMs = 1000;
   static constexpr const char* kOperator = "Example Mobile";
 
-  Simulator(const Options& options, std::ostream& out) : options_(options), out_(out), assets_(options.webPage) {
-    loadDirectory(options.dataDir);
+  Simulator(const Options& options, std::ostream& out)
+      : options_(options), out_(out), assets_(options.webPage), card_(prepareCard(options, out, error_)) {
+    if (!error_.empty()) return;
     loadShippedCatalogs(options.langDir);
     boot();
   }
+
+  // False when the card could not be made; error() says why and nothing else works then.
+  bool ok() const { return error_.empty(); }
+  const std::string& error() const { return error_; }
 
   // ---- running ---------------------------------------------------------------------------------
   // Runs one console line. False for an error, which has been explained on the output.
@@ -168,7 +181,9 @@ public:
   FakeModem& modem() { return rig_->modem; }
   FakeHaptic& haptic() { return rig_->haptic; }
   FakeEventLog& log() { return rig_->log; }
-  FakeConfigStore& card() { return card_; }
+  DirectoryStore& card() { return card_; }
+  // The port the web page is on, 0 while Wi-Fi is off.
+  uint16_t webPort() const { return rig_->tcp.boundPort(); }
   i18n::Translator& translator() { return translator_; }
   uint32_t nowMs() { return static_cast<uint32_t>(rig_->clock.uptimeMillis()); }
   // How many times the device has been started on this card.
@@ -183,17 +198,18 @@ private:
     FakeHaptic haptic{clock};
     FakeEventLog log{&clock};
     FakeWifi wifi;
-    FakeTcpServer tcp;
+    SocketTcpServer tcp;
     FakeRadioLink radio;
     FakeMotion motion;
     SimPanel panel;
     std::unique_ptr<boot::Runtime> runtime;
     size_t hapticShown = 0;
     size_t logShown = 0;
-    explicit Rig() : panel([this] { return static_cast<uint32_t>(clock.uptimeMillis()); }) {}
+    explicit Rig(uint16_t webPort)
+        : tcp(webPort == 0 ? SocketTcpServer::Listen::Any : SocketTcpServer::Listen::Fixed, webPort), panel([this] { return static_cast<uint32_t>(clock.uptimeMillis()); }) {}
   };
 
-  void loadDirectory(const std::string& dir);
+  static std::filesystem::path prepareCard(const Options& options, std::ostream& out, std::string& error);
   void loadShippedCatalogs(const std::string& dir);
   void boot();
   void tick();
@@ -211,7 +227,8 @@ private:
   Options options_;
   std::ostream& out_;
   FileAssets assets_;
-  FakeConfigStore card_;
+  std::string error_;
+  DirectoryStore card_;
   i18n::Translator translator_;
   std::unique_ptr<Rig> rig_;
   std::string operator_ = kOperator;
@@ -220,22 +237,45 @@ private:
   bool quit_ = false;
   int boots_ = 0;
   int scriptDepth_ = 0;
+  std::string webError_;
+  uint16_t webShown_ = 0;
 };
 
 // ---- the card and the catalogs ---------------------------------------------------------------------
 
-inline void Simulator::loadDirectory(const std::string& dir) {
+inline std::filesystem::path Simulator::prepareCard(const Options& options, std::ostream& out, std::string& error) {
   namespace fs = std::filesystem;
-  if (!fs::is_directory(dir)) {
-    out_ << "warning: no data directory " << dir << ": the card is empty\n";
-    return;
+  std::error_code ec;
+  const fs::path data = options.dataDir;
+  if (options.inPlace) {
+    if (!fs::is_directory(data, ec)) error = "no data directory " + options.dataDir + " to use in place";
+    return data;
   }
-  for (const auto& entry : fs::recursive_directory_iterator(dir)) {
-    if (!entry.is_regular_file()) continue;
-    std::string content;
-    if (!detail::readFile(entry.path().string(), content)) continue;
-    card_.put("/" + fs::relative(entry.path(), dir).generic_string(), content);
+  // A work directory is emptied only when this program made it, so a wrong --work cannot cost files.
+  const fs::path work = options.workDir;
+  const fs::path marker = work / ".phoneplus-sim";
+  const fs::path card = work / "card";
+  if (fs::exists(work, ec) && !fs::is_empty(work, ec) && !fs::exists(marker, ec)) {
+    error = "refusing to empty " + options.workDir + ": it is not a directory of the simulator (no .phoneplus-sim in it)";
+    return card;
   }
+  const fs::path inside = fs::weakly_canonical(data, ec);
+  const fs::path outside = fs::weakly_canonical(work, ec);
+  const std::string relative = fs::relative(inside, outside, ec).generic_string();
+  if (inside == outside || (relative.rfind("..", 0) != 0 && !relative.empty() && relative != ".")) {
+    error = "the work directory " + options.workDir + " is the data directory or holds it";
+    return card;
+  }
+  fs::remove_all(card, ec);
+  fs::create_directories(card, ec);
+  { std::ofstream(marker) << "made by the phoneplus simulator; its card/ is emptied at every start\n"; }
+  if (!fs::is_directory(data, ec)) {
+    out << "warning: no data directory " << options.dataDir << ": the card is empty\n";
+    return card;
+  }
+  fs::copy(data, card, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
+  if (ec) error = "cannot copy " + options.dataDir + " to " + options.workDir + ": " + ec.message();
+  return card;
 }
 
 // The shipped catalogs are read from lang/, as the device would have them embedded; the
@@ -264,7 +304,7 @@ inline void Simulator::loadShippedCatalogs(const std::string& dir) {
 // ---- starting the device ---------------------------------------------------------------------------
 
 inline void Simulator::boot() {
-  rig_ = std::make_unique<Rig>();
+  rig_ = std::make_unique<Rig>(options_.webPort);
   Rig& r = *rig_;
   ++boots_;
   r.clock.advanceSeconds(100);
@@ -295,6 +335,14 @@ inline void Simulator::tick() {
   for (; r.hapticShown < r.haptic.played().size(); ++r.hapticShown) {
     static const char* const names[] = {"click", "ring", "message", "sent", "failed"};
     out_ << "haptic: " << names[static_cast<int>(r.haptic.played()[r.hapticShown])] << "\n";
+  }
+  if (r.tcp.boundPort() != webShown_) {
+    webShown_ = r.tcp.boundPort();
+    if (webShown_) out_ << "web: http://127.0.0.1:" << webShown_ << "/\n";
+  }
+  if (r.tcp.lastError() != webError_) {
+    webError_ = r.tcp.lastError();
+    if (!webError_.empty()) out_ << "web: cannot listen on 127.0.0.1: " << webError_ << "\n";
   }
   if (r.runtime->core().powerOffRequested()) {
     out_ << "the device switched itself off\n";
@@ -439,7 +487,8 @@ inline void Simulator::printHelp() {
           "    gps fix [lat lon hdop]       a fix after the receiver's start (default: 48.13745 11.57550 1.5)\n"
           "    gps none | gps bad           never a fix | a fix with poor accuracy\n"
           "    motion tilt <x> <y> <z>|shake|off|on\n"
-          "    wifi connected|failed        the answer of the access point to the device's attempt\n"
+          "    wifi ap|station|off         switch Wi-Fi: the access point answers at once, the station needs\n"
+          "    wifi connected|failed       the answer of the home network to the station's attempt\n"
           "  Time\n"
           "    date <YYYY-MM-DD> <HH:MM>    set the clock (local time of the device's zone)\n"
           "    advance <n>[ms|s|m|h]        let time pass (default seconds), the device running\n"
@@ -598,8 +647,15 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     return true;
   }
   if (name == "wifi") {
-    if (!need(2) || (w[1] != "connected" && w[1] != "failed")) return fail("wifi needs connected or failed");
-    r.wifi.finishConnecting(w[1] == "connected");
+    // What the Wi-Fi page and the parents' tools do: the web service switches Wi-Fi, and the page
+    // is reachable while it is on.
+    const uint32_t now = nowMs() / 1000;
+    if (need(2) && w[1] == "ap") r.runtime->web().setWifiMode(WifiMode::AccessPoint, now);
+    else if (need(2) && w[1] == "station") r.runtime->web().setWifiMode(WifiMode::Station, now);
+    else if (need(2) && w[1] == "off") r.runtime->web().setWifiMode(WifiMode::Off, now);
+    else if (need(2) && w[1] == "connected") r.wifi.finishConnecting(true);
+    else if (need(2) && w[1] == "failed") r.wifi.finishConnecting(false);
+    else return fail("wifi: ap, station, off, connected or failed");
     settle();
     return true;
   }

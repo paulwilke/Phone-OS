@@ -23,6 +23,9 @@ namespace {
 void usage() {
   std::cout << "usage: program [options]\n"
                "  --data <dir>      the card: a directory with config/ (and lang/); default sim/data\n"
+               "  --work <dir>      where the card is copied to (default out/sim-card); emptied at every start\n"
+               "  --in-place        use the data directory itself as the card: saved settings change it\n"
+               "  --port <n>        the port of the web page on 127.0.0.1 (default 8080)\n"
                "  --lang <dir>      the shipped catalogs; default lang\n"
                "  --web <file>      the web page; default web/index.html\n"
                "  --golden <dir>    where `golden` looks for pictures; default sim/golden\n"
@@ -88,6 +91,9 @@ int main(int argc, char** argv) {
     else if (a == "--data") { if (!value(options.dataDir)) return 2; }
     else if (a == "--lang") { if (!value(options.langDir)) return 2; }
     else if (a == "--web") { if (!value(options.webPage)) return 2; }
+    else if (a == "--work") { if (!value(options.workDir)) return 2; }
+    else if (a == "--in-place") options.inPlace = true;
+    else if (a == "--port") { if (!value(v)) return 2; options.webPort = static_cast<uint16_t>(std::atoi(v.c_str())); }
     else if (a == "--golden") { if (!value(options.goldenDir)) return 2; }
     else if (a == "--script") { if (!value(script)) return 2; }
     else if (a == "--scale") { if (!value(v)) return 2; scale = std::max(1, std::atoi(v.c_str())); }
@@ -98,6 +104,10 @@ int main(int argc, char** argv) {
   }
 
   sim::Simulator simulator(options, std::cout);
+  if (!simulator.ok()) {
+    std::cerr << "error: " << simulator.error() << "\n";
+    return 2;
+  }
   simulator.execute("lapse " + std::to_string(options.lapse));
   if (!script.empty() && !simulator.runScript(script)) return 1;
   if (!script.empty() && !interactive) return 0;
