@@ -32,6 +32,7 @@ The documents describe what exists in this repository — each one is written fr
 | [connectivity.md](connectivity.md) | cellular, save mode and the cell probe, the radio request, Wi-Fi with its rules, the network label as data |
 | [wifi-controller.md](wifi-controller.md) | Wi-Fi settings and modes, the access point password, the idle switch-off |
 | [power-coordination.md](power-coordination.md) | the power policy applied to modem, radio chip and processor; the front light |
+| [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |

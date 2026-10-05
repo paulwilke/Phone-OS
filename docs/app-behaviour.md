@@ -305,17 +305,24 @@ Tests in `test/test_app_core/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| APP-01 | poll() drains SMS, radio, call events and send failures, advances the searches and the queue and the probe, in one pass | `test_poll_drains_everything` | — | open |
-| APP-02 | The read-only state offers what the interface draws: network label data, unread count, notice, call state and peer, SOS phase and countdown, school-time end, positioning active, save mode, battery, SIM | `test_the_state_offers_what_the_interface_draws` | SC:test_net_screen_explains_sms_only, SC:test_locked_sim_is_named_not_called_no_network, SC:test_status_screen_shows_charging | open |
-| APP-03 | A full day: boot, start-up fix, message, calls in and out of school time | `test_a_full_day` | — | open |
-| APP-04 | An SOS in school time with the override | `test_an_sos_in_school_time_with_the_override` | — | open |
-| APP-05 | A remote query during an SOS | `test_a_remote_query_during_an_sos` | — | open |
-| APP-06 | The network dropping and returning | `test_the_network_dropping_and_returning` | — | open |
-| APP-07 | Save mode and the cell probe | `test_save_mode_and_the_cell_probe` | — | open |
-| APP-08 | Settings the child may change at run time (message vibration, how visible a remote query is) change the profile until restart | `test_run_time_settings_change_the_profile` | SC:test_options_toggle_message_vibration_and_volume, SC:test_status_screen_cycles_command_notice | open |
-| APP-09 | The time zone of the profile sets the clock's offset from the epoch, so school time stays on the wall clock across the change of the clocks | `test_the_clock_follows_the_time_zone` | — | open |
-| APP-10 | The core contains no sentence: every notice and system entry is a code | `test_the_core_produces_only_codes` | — | open |
-| APP-11 | A test pattern can be played on the vibration motor | `test_a_test_pattern_can_be_played` | SC:test_selftest_screen_triggers_vibration_and_light | open |
+| APP-01 | poll() drains SMS, radio, call events and send failures, advances the searches and the queue and the probe, in one pass | `test_poll_drains_everything` | — | done |
+| APP-02 | The read-only state offers what the interface draws: network label data, unread count, notice, call state and peer, SOS phase and countdown, school-time end, positioning active, save mode, battery, SIM | `test_the_state_offers_what_the_interface_draws` | SC:test_net_screen_explains_sms_only, SC:test_locked_sim_is_named_not_called_no_network, SC:test_status_screen_shows_charging | done |
+| APP-03 | A full day: boot, start-up fix, message, calls in and out of school time | `test_a_full_day` | — | done |
+| APP-04 | An SOS in school time with the override | `test_an_sos_in_school_time_with_the_override` | — | done |
+| APP-05 | A remote query during an SOS | `test_a_remote_query_during_an_sos` | — | done |
+| APP-06 | The network dropping and returning | `test_the_network_dropping_and_returning` | — | done |
+| APP-07 | Save mode and the cell probe | `test_save_mode_and_the_cell_probe` | — | done |
+| APP-08 | Settings the child may change at run time (message vibration, how visible a remote query is) change the profile until restart | `test_run_time_settings_change_the_profile` | SC:test_options_toggle_message_vibration_and_volume, SC:test_status_screen_cycles_command_notice | done |
+| APP-09 | The time zone of the profile sets the clock's offset from the epoch, so school time stays on the wall clock across the change of the clocks | `test_the_clock_follows_the_time_zone` | — | done |
+| APP-10 | The core contains no sentence: every notice and system entry is a code | `test_the_core_produces_only_codes` | — | done |
+| APP-11 | A test pattern can be played on the vibration motor | `test_a_test_pattern_can_be_played` | SC:test_selftest_screen_triggers_vibration_and_light | done |
+| APP-12 | A remote query alone is answered without the child noticing: no vibration, receiver off afterwards | `test_a_remote_query_alone_is_answered_without_the_child_noticing` | — | done |
+| APP-13 | The trigger word of every language and the profile's extra words trigger the query; anything else is a message | `test_the_trigger_words_come_from_every_language` | — | done |
+| APP-14 | Without a known time the zone is left alone | `test_without_a_known_time_the_zone_is_left_alone` | — | done |
+| APP-15 | poll() returns the decision on sleeping, and the host's requests (restart, power off, front light) are readable | `test_the_host_gets_the_decision_and_the_requests` | — | done |
+| APP-16 | Wi-Fi stays on while it is used, switches itself off afterwards, and keeps the processor awake meanwhile | `test_wifi_stays_on_while_it_is_used` | — | done |
+| APP-17 | The position page and the test page each hold the receiver; one closing does not take it from the other | `test_the_position_page_and_the_test_page_hold_the_receiver` | — | done |
+| APP-18 | The radio's contacts are listed; without a radio there are none | `test_radio_contacts_are_listed` | — | done |
 
 ## Not ported
 
