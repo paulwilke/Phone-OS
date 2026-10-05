@@ -51,6 +51,10 @@ StatusLeft statusLeft(const StatusModel& model, i18n::Translator& t) {
   } else if (model.link == StatusModel::Link::Operator && !model.operatorName.empty()) {
     left.text = model.operatorName;
     left.isOperatorName = true;
+  } else if (model.link == StatusModel::Link::Operator) {
+    // A network is there and the modem did not say whose: better a general word than the
+    // "no network" of a device that is in fact connected.
+    left.text = t.get("status.network");
   } else if (model.link == StatusModel::Link::Radio) {
     left.text = t.get("status.radio");
   } else if (model.link == StatusModel::Link::RadioOnly) {
@@ -93,7 +97,7 @@ void drawAlertBar(Display& display, const Rect& area, const std::string& text) {
   if (text.empty()) return;
   const Font& font = ui::font(FontSize::Small);
   display.fillRect(area, true);
-  const std::string shown = text::ellipsize(font, text, area.w - 6);
+  const std::string shown = text::ellipsize(font, text, area.w - kAlertBarMargin);
   text::draw(display, font, area.x + 3, area.y + 2, shown, false);
 }
 

@@ -1,6 +1,6 @@
 # The user-interface framework
 
-The parts every screen is built from: the input model, the screen stack, and the widgets. No concrete screen is in the repository yet; the framework is what the screens will be written against, and everything in it is tested on the host, in every language, without a panel.
+The parts every screen is built from: the input model, the screen stack, and the widgets. The base of the screens (the frame around the content, the wording of the core's codes) is in [ui-screens.md](ui-screens.md); the framework is what the screens are written against, and everything in it is tested on the host, in every language, without a panel.
 
 Everything lives in `src/ui/`, depends only on the display ([ui-display.md](ui-display.md)), the text engine ([ui-text.md](ui-text.md)) and the translation library ([i18n.md](i18n.md)), and draws only through `ui::Display`.
 

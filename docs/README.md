@@ -35,6 +35,7 @@ The documents describe what exists in this repository — each one is written fr
 | [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
+| [ui-screens.md](ui-screens.md) | what a screen may know, the frame every screen shares (status bar, notice line, soft keys), the wording of the core's codes |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |
 | [ui-refresh.md](ui-refresh.md) | refresh policy, frame tracker, refresh controller and the frame-budget tests |
 | [ui-text.md](ui-text.md) | the four fonts, the character set and the symbols, the text engine: UTF-8, width, fit, ellipsize, wrap, draw |

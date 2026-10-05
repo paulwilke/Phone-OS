@@ -7,7 +7,8 @@
 // the battery as five bars, not a percentage; and the network as a name or a word, not as
 // signal bars. What a parent needs to know exactly is on the status page.
 //
-// Left: the most important of: the SIM problem, school time, "SMS only", the network name.
+// Left: the most important of: the SIM problem, school time, "SMS only", the network name (a
+// general word when the network has none).
 // "GPS" follows whenever the position is being determined (a device that locates in secret is
 // what this one must not be). Right: the date and the battery.
 //
@@ -65,5 +66,8 @@ void drawStatusBar(Display& display, const Rect& area, const StatusModel& model,
 // The area is reserved either way (see Layout.h). The text is shortened if it is too long: an
 // alert may carry a name, and what matters is also in the message history.
 void drawAlertBar(Display& display, const Rect& area, const std::string& text);
+
+// The width the alert bar leaves for its text: the bar minus the margin it keeps on each side.
+constexpr int kAlertBarMargin = 6;
 
 }  // namespace ui

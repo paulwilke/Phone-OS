@@ -335,7 +335,16 @@ void test_the_left_side_without_an_operator() {
   StatusModel m;
   TEST_ASSERT_EQUAL_STRING("No network", statusLeft(m, t).text.c_str());
   m.link = StatusModel::Link::Operator;            // connected, but the network sent no name
-  TEST_ASSERT_EQUAL_STRING("No network", statusLeft(m, t).text.c_str());
+  TEST_ASSERT_EQUAL_STRING("Network", statusLeft(m, t).text.c_str());   // a general word, not "No network"
+  TEST_ASSERT_FALSE(statusLeft(m, t).isOperatorName);                   // so it is never shortened
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("Netz", statusLeft(m, t).text.c_str());
+  t.select("fr");
+  TEST_ASSERT_EQUAL_STRING("R\xC3\xA9seau", statusLeft(m, t).text.c_str());
+  t.select("en");
+  m.voiceAvailable = false;                        // the more important word still wins
+  TEST_ASSERT_EQUAL_STRING("SMS only", statusLeft(m, t).text.c_str());
+  m.voiceAvailable = true;
   m.link = StatusModel::Link::Radio;
   TEST_ASSERT_EQUAL_STRING("Radio", statusLeft(m, t).text.c_str());
   m.link = StatusModel::Link::RadioOnly;
@@ -415,6 +424,8 @@ StatusModel model(const char* kind) {
     m.link = StatusModel::Link::None;
     m.dateKnown = false;
     m.batteryPercent = -1;
+  } else if (k == "unnamed") {
+    m.operatorName.clear();
   } else if (k == "sms-only") {
     m.voiceAvailable = false;
     m.batteryPercent = 3;
@@ -427,7 +438,7 @@ StatusModel model(const char* kind) {
 void test_the_status_bar_fits_its_area_in_every_language() {
   const Rect area = ScreenLayout::standard().status;
   languages::forEach([&](const std::string& language, Translator& t) {
-    for (const char* kind : {"plain", "long-name", "school", "sim-locked", "nothing", "sms-only"}) {
+    for (const char* kind : {"plain", "long-name", "school", "sim-locked", "nothing", "sms-only", "unnamed"}) {
       FrameBuffer fb;
       fb.beginRegion(area);
       drawStatusBar(fb, area, model(kind), t);

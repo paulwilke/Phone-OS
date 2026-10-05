@@ -24,8 +24,8 @@ const NoticeWording kWording[] = {
     {"notice.sms-rejected", false, false},
     {"notice.radio-unreachable", false, false},
     {"notice.radio-unconfirmed", false, false},
-    {"system.location-queried", true, false},  // LocationQueried repeats the words of the history entry
-    {"system.query-refused", true, false},
+    {"system.location-queried", true, false},  // LocationQueried repeats the words of the history entry (a parent asks, who is in the book)
+    {"notice.query-refused", true, false},     // short: a stranger asks by number, and a number is never shortened
     {"notice.cellular-switched-on", false, false},
     {"notice.cellular-switched-off", false, false},
     {"notice.save-mode-needs-radio", false, false},

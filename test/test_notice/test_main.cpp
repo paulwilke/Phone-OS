@@ -57,7 +57,7 @@ void test_notice_kinds_have_their_own_keys() {
   TEST_ASSERT_EQUAL_STRING("school.until", noticeWording(NoticeKind::SchoolTimeUntil).key);
   TEST_ASSERT_EQUAL_STRING("notice.light-off", noticeWording(NoticeKind::LightOff).key);   // the table ends where the enum does
   TEST_ASSERT_EQUAL_STRING("system.location-queried", noticeWording(NoticeKind::LocationQueried).key);
-  TEST_ASSERT_EQUAL_STRING("system.query-refused", noticeWording(NoticeKind::QueryRefused).key);
+  TEST_ASSERT_EQUAL_STRING("notice.query-refused", noticeWording(NoticeKind::QueryRefused).key);
 }
 
 void test_an_out_of_range_kind_still_gives_a_wording_instead_of_reading_past_the_table() {
