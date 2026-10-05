@@ -66,9 +66,9 @@ struct DeviceRig {
   ui::Session session;
   FrameBuffer frame;
 
-  explicit DeviceRig(Profile profile = ProfileBuilder().childName("Alex").build())
+  explicit DeviceRig(Profile profile = ProfileBuilder().childName("Alex").build(), bool withWifi = true)
       : core((prepare(), clock), power, modem, gnss, haptic, log, translator, std::move(profile)) {
-    core.setWifi(wifi, rig::fixedRandom);
+    if (withWifi) core.setWifi(wifi, rig::fixedRandom);
     core.start();
   }
 

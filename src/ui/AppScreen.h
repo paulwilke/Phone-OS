@@ -34,6 +34,9 @@ struct ScreenContext {
   i18n::Translator& translator;
   Navigation& navigation;
   Session& session;
+  // The device has a motion sensor. The core does not wrap the sensor (the motion page reads it
+  // through an interface of its own), so the home screen learns here whether to offer the tile.
+  bool motionSensor = false;
 };
 
 class AppScreen : public Screen {

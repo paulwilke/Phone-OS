@@ -57,6 +57,7 @@ public:
     // calendar of its own. Unknown until the network or the receiver has told the time.
     struct WallClock {
       bool known = false;
+      int year = 0;
       int month = 0, day = 0;  // 1..12, 1..31
       int weekday = 0;         // 0 = Sunday .. 6 = Saturday
       int minuteOfDay = 0;     // 0 .. 1439

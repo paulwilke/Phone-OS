@@ -91,6 +91,7 @@ AppCore::State AppCore::state() {
     const calendar::LocalTime local = calendar::toLocal(epoch, clock_.tzOffsetMinutes());
     const calendar::Civil date = calendar::civilFromDays(local.days);
     s.wall.known = true;
+    s.wall.year = date.year;
     s.wall.month = date.month;
     s.wall.day = date.day;
     s.wall.weekday = (local.weekday + 1) % 7;  // the calendar counts from Monday, the weekday words from Sunday

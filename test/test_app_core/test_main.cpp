@@ -446,6 +446,7 @@ void test_the_state_has_the_wall_clock_as_numbers() {
   Device d;
   AppCore::State::WallClock w = d.core.state().wall;
   TEST_ASSERT_TRUE(w.known);
+  TEST_ASSERT_EQUAL(2026, w.year);
   TEST_ASSERT_EQUAL(9, w.month);
   TEST_ASSERT_EQUAL(15, w.day);
   TEST_ASSERT_EQUAL(2, w.weekday);                                   // a Tuesday; Sunday is 0
@@ -456,6 +457,13 @@ void test_the_state_has_the_wall_clock_as_numbers() {
   TEST_ASSERT_EQUAL(16, w.day);
   TEST_ASSERT_EQUAL(3, w.weekday);
   TEST_ASSERT_EQUAL(32, w.minuteOfDay);
+  // The year changes with the wall clock, not with UTC: 23:30 UTC on New Year's Eve is already
+  // 2027 two hours east of it.
+  d.clock.setEpochUtc(1798759800);                                    // 2026-12-31 23:30 UTC
+  w = d.core.state().wall;
+  TEST_ASSERT_EQUAL(2027, w.year);
+  TEST_ASSERT_EQUAL(1, w.month);
+  TEST_ASSERT_EQUAL(1, w.day);
   // A Sunday is 0, not 7.
   d.clock.setEpochUtc(coretest::kTuesdayAfternoon + 5 * 86400);
   TEST_ASSERT_EQUAL(0, d.core.state().wall.weekday);

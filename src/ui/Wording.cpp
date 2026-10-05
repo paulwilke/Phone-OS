@@ -17,6 +17,22 @@ std::string clockTime(int minuteOfDay) {
   return out;
 }
 
+std::string weekdayName(const AppCore::State::WallClock& wall, i18n::Translator& t) {
+  static const char* const kKeys[7] = {"clock.weekday.sun", "clock.weekday.mon", "clock.weekday.tue", "clock.weekday.wed",
+                                       "clock.weekday.thu", "clock.weekday.fri", "clock.weekday.sat"};
+  if (!wall.known) return std::string();
+  return t.get(kKeys[((wall.weekday % 7) + 7) % 7]);
+}
+
+std::string dateLine(const AppCore::State::WallClock& wall, i18n::Translator& t) {
+  static const char* const kMonths[12] = {"clock.month.01", "clock.month.02", "clock.month.03", "clock.month.04",
+                                          "clock.month.05", "clock.month.06", "clock.month.07", "clock.month.08",
+                                          "clock.month.09", "clock.month.10", "clock.month.11", "clock.month.12"};
+  if (!wall.known) return std::string();
+  const std::string month = t.get(kMonths[((wall.month - 1) % 12 + 12) % 12]);
+  return t.get("clock.date", {{"month", month.c_str()}, {"day", wall.day}, {"year", wall.year}});
+}
+
 std::string peerName(const std::string& peer, const phone::ContactBook& contacts, i18n::Translator& t) {
   const std::string name = contacts.displayName(peer.c_str());
   return name.empty() ? t.get("peer.unknown") : name;
