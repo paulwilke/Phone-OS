@@ -193,6 +193,16 @@ public:
 
   const Profile& profile() const { return profile_; }
 
+  // --- web interface ---
+  // Writes a line to the log (via the Logger, which applies the log level).
+  void log(const char* line) { logger_.log(line); }
+  // The firmware version string, set by the host at startup.
+  const std::string& firmware() const { return firmware_; }
+  void setFirmware(const char* v) { firmware_ = v; }
+  // Clock values for the state response.
+  uint32_t epochUtc() { return clock_.epochUtc(); }
+  int tzOffsetMinutes() { return clock_.tzOffsetMinutes(); }
+
 private:
   // Messaging::Hooks
   bool startLocationReply(const std::string& phone) override { return emergency_.startLocationReply(phone); }
@@ -207,6 +217,7 @@ private:
   i18n::Translator& translator_;
   Profile profile_;
   bool settingsNeedWrite_ = false;
+  std::string firmware_;
   Logger logger_;
   MessageStore store_;
   Notices notices_;
