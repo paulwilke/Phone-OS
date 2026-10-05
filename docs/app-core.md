@@ -41,7 +41,7 @@ Messaging asks the core two things through its `Hooks`, and the core forwards th
 
 ## The state
 
-`state()` returns a plain struct: the wall clock as numbers (month, day, weekday counted from Sunday, minute of the day, in the clock's zone; the interface has no calendar of its own, and the numbers are absent while the time is unknown), the network label (data), registration, signal, SIM status, cellular, save mode and probe seconds, Wi-Fi phase and reason, unread count, queued messages, the notice, the call state and its other party, the volume, the SOS phase and countdown and taps, the ping stage and progress, school time and the minute it ends, whether the receiver is on, the battery, the charge state, whether the modem is asleep, the front light. The unread count includes system entries (a missed call, a refused query).
+`state()` returns a plain struct: the wall clock as numbers (month, day, weekday counted from Sunday, minute of the day, in the clock's zone; the interface has no calendar of its own, and the numbers are absent while the time is unknown), the network label (data), registration, signal, SIM status, whether the radio is ready and how strong it is heard, the Unix time and the uptime, cellular, save mode and probe seconds, Wi-Fi phase and reason, unread count, queued messages, the notice, the call state and its other party, the volume, the SOS phase and countdown and taps, the ping stage and progress, school time and the minute it ends, whether the receiver is on, the battery, the charge state, whether the modem is asleep, the front light. The unread count includes system entries (a missed call, a refused query).
 
 ## Settings that change while the device runs
 

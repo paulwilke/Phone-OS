@@ -112,8 +112,11 @@ void ScreenStack::render(Display& display) {
 }
 
 void ScreenStack::poll(uint32_t nowSeconds) {
-  if (!begun_ || locked_ || autoLockSeconds_ == 0) return;
+  if (!begun_) return;
   Screen* shown = screen(visibleId());
+  if (shown) shown->onTick();
+  if (locked_ || autoLockSeconds_ == 0) return;
+  shown = screen(visibleId());   // a tick may have changed what is visible
   if (shown && shown->preventsAutoLock()) return;
   if (nowSeconds - lastInput_ >= autoLockSeconds_) lock();
 }

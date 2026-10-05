@@ -29,6 +29,11 @@ public:
   // The screen stopped being the visible one, for whatever reason.
   virtual void onLeave() {}
 
+  // Called by ScreenStack::poll() on the visible screen only, so often as the application polls. For what
+  // happens *while* the screen is shown: reading a sensor, or starting one after the first frame is on the
+  // panel. Starting and stopping what runs because the screen is visible stays in onEnter and onLeave.
+  virtual void onTick() {}
+
   // True when the input was used. Only the visible screen gets input.
   virtual bool handle(const Input& input) = 0;
 

@@ -63,6 +63,10 @@ public:
     return consumes;
   }
   void render(Display&) override { ++rendered; }
+  void onTick() override {
+    ++ticked;
+    if (onTickHook) onTickHook();
+  }
   bool wantsHardwareKeys() const override { return rawKeys; }
   bool preventsAutoLock() const override { return keepAwake; }
 
@@ -70,9 +74,9 @@ public:
   bool consumes = true;
   bool rawKeys = false;
   bool keepAwake = false;
-  int entered = 0, rendered = 0;
+  int entered = 0, rendered = 0, ticked = 0;
   std::vector<Input> handled;
-  std::function<void()> onEnterHook, onLeaveHook;
+  std::function<void()> onEnterHook, onLeaveHook, onTickHook;
 
 private:
   ScreenId id_;
@@ -541,6 +545,42 @@ void test_input_restarts_the_idle_time() {
   TEST_ASSERT_TRUE(r.stack.locked());
 }
 
+void test_poll_ticks_the_visible_screen_only() {
+  Rig r;
+  r.start();
+  r.stack.poll(1);
+  r.stack.poll(2);
+  TEST_ASSERT_EQUAL(2, r.home.ticked);
+  r.stack.open(Messages);
+  r.stack.poll(3);
+  TEST_ASSERT_EQUAL(2, r.home.ticked);                               // not while something else is shown
+  TEST_ASSERT_EQUAL(1, r.messages.ticked);
+}
+
+void test_poll_ticks_the_lock_screen_while_locked_and_nothing_before_begin() {
+  Rig r;
+  r.stack.poll(1);
+  TEST_ASSERT_EQUAL(0, r.home.ticked);
+  r.start();
+  r.stack.lock();
+  r.stack.poll(2);
+  TEST_ASSERT_EQUAL(1, r.lock.ticked);
+  TEST_ASSERT_EQUAL(0, r.home.ticked);
+}
+
+void test_the_idle_check_after_a_tick_asks_the_screen_that_is_visible_now() {
+  Rig r;
+  r.stack.setAutoLockSeconds(10);
+  r.stack.begin(0);
+  r.stack.open(Messages);
+  r.home.keepAwake = true;                                           // the screen the tick goes back to
+  r.log.clear();
+  r.messages.onTickHook = [&] { r.stack.back(); };
+  r.stack.poll(100);                                                 // idle for long
+  TEST_ASSERT_FALSE(r.stack.locked());
+  ASSERT_LOG(r, "-messages +home");
+}
+
 void test_a_screen_can_keep_the_device_awake() {
   Rig r;
   r.stack.setAutoLockSeconds(10);
@@ -615,6 +655,9 @@ int main() {
   RUN_TEST(test_navigating_from_inside_onleave_is_ignored);
   RUN_TEST(test_the_device_locks_after_the_idle_time);
   RUN_TEST(test_input_restarts_the_idle_time);
+  RUN_TEST(test_poll_ticks_the_visible_screen_only);
+  RUN_TEST(test_poll_ticks_the_lock_screen_while_locked_and_nothing_before_begin);
+  RUN_TEST(test_the_idle_check_after_a_tick_asks_the_screen_that_is_visible_now);
   RUN_TEST(test_a_screen_can_keep_the_device_awake);
   RUN_TEST(test_auto_lock_off_and_the_clock_wrapping_around);
   RUN_TEST(test_a_locked_device_does_not_lock_again);

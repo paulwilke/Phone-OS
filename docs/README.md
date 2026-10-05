@@ -34,6 +34,10 @@ The documents describe what exists in this repository — each one is written fr
 | [power-coordination.md](power-coordination.md) | the power policy applied to modem, radio chip and processor; the front light |
 | [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
+| [screen-gnss.md](screen-gnss.md) | the position page: the receiver held while it is open, four values, the last known position with its age |
+| [screen-radio.md](screen-radio.md) | the radio page: head line, controls per state, contacts with way and age, writing to one |
+| [screen-motion.md](screen-motion.md) | the motion page: the sensor started after the first frame, the pinned ball mapping, shakes |
+| [screen-selftest.md](screen-selftest.md) | the self-test page: eight checks, the key test without a soft key, the receiver given back |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-screens.md](ui-screens.md) | what a screen may know, the frame every screen shares (status bar, notice line, soft keys), the wording of the core's codes |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |

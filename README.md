@@ -38,6 +38,7 @@ language by writing one text file.
 | UI framework | input model, screen stack with `onEnter`/`onLeave`, soft keys, status bar, tile grid, list, text block, button | `src/ui/`, [docs/ui-framework.md](docs/ui-framework.md) |
 | E-ink refresh policy and frame budgets | when to refresh the panel in part, in full or not at all; tests that fail when the interface makes the panel work more than a scenario allows | `src/ui/`, `testing/`, [docs/ui-refresh.md](docs/ui-refresh.md) |
 | Screen frame and wording | the base of every screen: status bar from the core's state, notice line, soft keys, touch translation; every code of the core worded from the catalogs | `src/ui/`, `testing/`, [docs/ui-screens.md](docs/ui-screens.md) |
+| Position, radio, motion and self-test screens | the position with its last known fix, the radio and its contacts, the spirit level and shake count, eight hardware checks | `src/ui/screens/`, [docs/screen-gnss.md](docs/screen-gnss.md), [docs/screen-radio.md](docs/screen-radio.md), [docs/screen-motion.md](docs/screen-motion.md), [docs/screen-selftest.md](docs/screen-selftest.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Checks | catalog parity and character set, generated fonts, documentation and code hygiene, privacy | `scripts/` |
 

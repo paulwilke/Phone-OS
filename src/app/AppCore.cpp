@@ -96,6 +96,8 @@ AppCore::State AppCore::state() {
     s.wall.weekday = (local.weekday + 1) % 7;  // the calendar counts from Monday, the weekday words from Sunday
     s.wall.minuteOfDay = local.minuteOfDay;
   }
+  s.epochUtc = epoch;
+  s.uptimeSeconds = clock_.uptimeSeconds();
   s.network = connectivity_.networkLabel();
   s.registered = connectivity_.registered();
   s.signalBars = modem_.signalBars();
@@ -105,6 +107,10 @@ AppCore::State AppCore::state() {
   s.saveMode = connectivity_.saveMode();
   s.probeSecondsLeft = connectivity_.probeSecondsLeft();
   s.radioAttached = connectivity_.radioAttached();
+  if (radio_) {
+    s.radioReady = radio_->ready();
+    s.radioRssi = radio_->lastRssi();
+  }
   if (wifi_) {
     s.wifiPhase = wifi_->phase();
     s.wifiReason = wifi_->reason();
