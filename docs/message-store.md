@@ -15,6 +15,10 @@ A `Message` has a running number `seq` (assigned by the store, starting at 1, **
 - When the ring is full the oldest message leaves memory (not the file).
 - A failed write to the log does not lose the message on screen. `writeErrors()` counts the failures so the status page can show that the card is full or missing.
 
+## System entries
+
+An entry that is not a message ("missed call from Grandma", "call to Parent One failed: busy") is stored as a **kind and an argument**, not as a sentence: the text field holds `@missed-call` or `@call-failed busy`, and the other party is the peer as usual. The interface words it from the catalogs when it draws, so a language switch changes old entries and a renamed contact is renamed in the history. The file format is unchanged; see [notices.md](notices.md) for the kinds. Entries written by earlier versions hold a sentence and are shown as it is.
+
 ## The log file
 
 Only appended to, never rewritten, which keeps the code simple and survives a power loss in the middle of a write: at worst the last line is damaged. Lines are separated by tabs; everything after the message line is a line of its own:

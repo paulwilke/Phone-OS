@@ -211,6 +211,75 @@ void test_plural_rules_differ_by_language() {
 }
 
 // ---------------------------------------------------------------------------
+// A message in a named language
+// ---------------------------------------------------------------------------
+
+void test_a_message_in_a_named_language_leaves_the_selection_alone() {
+  Translator t = shipped();
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("Téléphone", t.getIn("fr", "home.phone").c_str());
+  TEST_ASSERT_EQUAL_STRING("Phone", t.getIn("en", "home.phone").c_str());
+  TEST_ASSERT_EQUAL_STRING("de", t.language().c_str());
+  TEST_ASSERT_EQUAL_STRING("Telefon", t.get("home.phone").c_str());       // the selected language is unchanged
+  TEST_ASSERT_EQUAL_STRING("Téléphone", t.getIn("fr-CA", "home.phone").c_str());   // regional tag
+}
+
+void test_a_named_language_falls_back_to_english_and_counts_it() {
+  Translator t = shipped();
+  TEST_ASSERT_EQUAL_STRING("Phone", t.getIn("zz", "home.phone").c_str());      // unknown language
+  TEST_ASSERT_EQUAL(1, t.fallbackCount());
+  const std::string text = "[meta]\ncode = \"nl\"\nname = \"Dutch\"\nnative = \"Nederlands\"\nplural = \"one-other\"\n"
+                           "[strings]\nhome.phone = \"Telefoon\"\n";
+  Catalog partial;
+  TEST_ASSERT_TRUE(partial.parse(text.data(), text.size()));
+  t.add(partial);
+  TEST_ASSERT_EQUAL_STRING("Telefoon", t.getIn("nl", "home.phone").c_str());
+  TEST_ASSERT_EQUAL(1, t.fallbackCount());                                  // found in Dutch: no new fallback
+  TEST_ASSERT_EQUAL_STRING("Inbox", t.getIn("nl", "home.inbox").c_str());     // only English has it
+  TEST_ASSERT_EQUAL(2, t.fallbackCount());
+  TEST_ASSERT_EQUAL_STRING("Inbox", t.getIn("en", "home.inbox").c_str());     // English itself is no fallback
+  TEST_ASSERT_EQUAL(2, t.fallbackCount());
+  TEST_ASSERT_EQUAL_STRING("no.such.key", t.getIn("fr", "no.such.key").c_str());
+  TEST_ASSERT_EQUAL(1, t.missingKeys().size());
+}
+
+void test_a_named_language_fills_placeholders_and_uses_its_own_plural_rule() {
+  Translator t = shipped();
+  t.select("en");
+  TEST_ASSERT_EQUAL_STRING("Papa : occupé", t.getIn("fr", "call.busy", {{"name", "Papa"}}).c_str());
+  TEST_ASSERT_EQUAL_STRING("0 nouveau message", t.pluralIn("fr", "messages.unread", 0).c_str());   // French: zero is singular
+  TEST_ASSERT_EQUAL_STRING("0 new messages", t.pluralIn("en", "messages.unread", 0).c_str());
+  TEST_ASSERT_EQUAL_STRING("2 neue Nachrichten", t.pluralIn("de", "messages.unread", 2).c_str());
+  TEST_ASSERT_EQUAL_STRING("no.such.key", t.pluralIn("de", "no.such.key", 2).c_str());
+}
+
+void test_the_texts_of_a_key_in_all_languages_come_without_repeats() {
+  Translator t = shipped();
+  std::vector<std::string> triggers = t.textsInAllLanguages("sms.command.where");
+  TEST_ASSERT_EQUAL(3, triggers.size());
+  bool english = false, german = false, french = false;
+  for (const std::string& s : triggers) {
+    english = english || s == "#WhereAreYou";
+    german = german || s == "#WoBistDu";
+    french = french || s == "#OuEsTu";
+  }
+  TEST_ASSERT_TRUE(english && german && french);
+  TEST_ASSERT_EQUAL(1, t.textsInAllLanguages("home.sos").size());      // "SOS" in all three
+  TEST_ASSERT_EQUAL(0, t.textsInAllLanguages("no.such.key").size());
+  TEST_ASSERT_EQUAL(0, t.missingKeys().size());                         // asking is not a lookup failure
+}
+
+void test_a_language_added_later_adds_its_trigger_words() {
+  Translator t = shipped();
+  const std::string text = "[meta]\ncode = \"nl\"\nname = \"Dutch\"\nnative = \"Nederlands\"\nplural = \"one-other\"\n"
+                           "[strings]\nsms.command.where = \"#WaarBenJe\"\n";
+  Catalog nl;
+  TEST_ASSERT_TRUE(nl.parse(text.data(), text.size()));
+  t.add(nl);
+  TEST_ASSERT_EQUAL(4, t.textsInAllLanguages("sms.command.where").size());
+}
+
+// ---------------------------------------------------------------------------
 // User catalogs from the SD card
 // ---------------------------------------------------------------------------
 
@@ -287,6 +356,11 @@ int main(int, char**) {
   RUN_TEST(test_placeholders_are_filled_in_any_position);
   RUN_TEST(test_formatting_edge_cases);
   RUN_TEST(test_plural_rules_differ_by_language);
+  RUN_TEST(test_a_message_in_a_named_language_leaves_the_selection_alone);
+  RUN_TEST(test_a_named_language_falls_back_to_english_and_counts_it);
+  RUN_TEST(test_a_named_language_fills_placeholders_and_uses_its_own_plural_rule);
+  RUN_TEST(test_the_texts_of_a_key_in_all_languages_come_without_repeats);
+  RUN_TEST(test_a_language_added_later_adds_its_trigger_words);
   RUN_TEST(test_a_user_catalog_can_add_a_language);
   RUN_TEST(test_a_user_catalog_can_override_single_messages_of_a_shipped_language);
   RUN_TEST(test_a_user_catalog_with_wrong_placeholders_is_rejected);

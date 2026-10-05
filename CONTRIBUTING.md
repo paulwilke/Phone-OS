@@ -14,7 +14,7 @@ PhonePlus is an emergency phone for children, so a mistake costs more here than 
 
 ## Running the checks
 
-You need [PlatformIO Core](https://docs.platformio.org/page/core/installation.html) and Python 3.11 or newer. Run all seven before every commit; the continuous-integration workflow runs the same seven.
+You need [PlatformIO Core](https://docs.platformio.org/page/core/installation.html) and Python 3.11 or newer. Run all eight before every commit; the continuous-integration workflow runs the same eight.
 
 ```bash
 pio test -e native              # host tests of the C++ code
@@ -22,6 +22,7 @@ python3 scripts/check_i18n.py   # language catalogs against the English referenc
 python3 scripts/check_i18n.py --usage # every catalog key is used by code or a test; no unknown key in the code
 python3 scripts/check_docs.py   # broken links, missing files, placeholder markers, non-English text, VERSION
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
+python3 scripts/check_behaviour.py # every ticked row of docs/app-behaviour.md has its test
 python3 scripts/make_font.py --check # generated fonts match assets/fonts/ (regenerate with --all)
 python3 scripts/privacy_check.py
 ```

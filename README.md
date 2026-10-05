@@ -51,6 +51,7 @@ python3 scripts/check_i18n.py --usage # every catalog key is used, no unknown ke
 python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeholder markers, non-English text
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
 python3 scripts/make_font.py --check # the generated fonts match their sources
+python3 scripts/check_behaviour.py # every ticked row of docs/app-behaviour.md has its test
 python3 scripts/privacy_check.py
 ```
 

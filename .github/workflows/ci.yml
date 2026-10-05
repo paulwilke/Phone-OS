@@ -28,6 +28,9 @@ jobs:
       - name: Catalog keys against the code
         run: python3 scripts/check_i18n.py --usage
 
+      - name: Behaviour inventory
+        run: python3 scripts/check_behaviour.py
+
       - name: Documentation and code hygiene
         run: python3 scripts/check_docs.py
 

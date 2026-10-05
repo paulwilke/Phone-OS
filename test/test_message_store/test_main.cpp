@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <app/MessageStore.h>
+#include <app/SystemEntry.h>
 
 namespace {
 
@@ -432,6 +433,86 @@ void test_an_empty_text_and_an_empty_peer_are_messages() {
 }
 
 // ---------------------------------------------------------------------------
+// System entries: a kind and an argument, not a sentence
+// ---------------------------------------------------------------------------
+
+void test_a_system_entry_is_a_kind_with_an_optional_argument() {
+  Message m = msg("+491701111111", "", MsgDir::In, MsgSource::Sms);
+  TEST_ASSERT_TRUE(sysentry::make(m, sysentry::kMissedCall));
+  TEST_ASSERT_EQUAL_STRING("@missed-call", m.text);
+  TEST_ASSERT_TRUE(m.source == MsgSource::System);
+  TEST_ASSERT_EQUAL_STRING("+491701111111", m.peer);   // the other party stays in the peer field
+
+  sysentry::Entry e;
+  TEST_ASSERT_TRUE(sysentry::parse(m, e));
+  TEST_ASSERT_EQUAL_STRING("missed-call", e.kind.c_str());
+  TEST_ASSERT_EQUAL_STRING("", e.argument.c_str());
+
+  Message f = msg("+491701111111", "");
+  TEST_ASSERT_TRUE(sysentry::make(f, sysentry::kCallFailed, sysentry::kNoAnswer));
+  TEST_ASSERT_EQUAL_STRING("@call-failed no-answer", f.text);
+  TEST_ASSERT_TRUE(sysentry::parse(f, e));
+  TEST_ASSERT_EQUAL_STRING("call-failed", e.kind.c_str());
+  TEST_ASSERT_EQUAL_STRING("no-answer", e.argument.c_str());
+}
+
+void test_a_system_entry_refuses_anything_that_is_not_a_catalog_word() {
+  for (const char* kind : {"", "Missed", "missed call", "missed\tcall", "missed_call", "m\xC3\xBC"}) {
+    Message m = msg("x", "unchanged");
+    TEST_ASSERT_FALSE_MESSAGE(sysentry::make(m, kind), kind);
+    TEST_ASSERT_EQUAL_STRING("unchanged", m.text);
+    TEST_ASSERT_TRUE(m.source == MsgSource::Sms);
+  }
+  for (const char* arg : {"Busy", "no answer", "a\nb", "x@y"}) {
+    Message m = msg("x", "unchanged");
+    TEST_ASSERT_FALSE_MESSAGE(sysentry::make(m, "call-failed", arg), arg);
+    TEST_ASSERT_EQUAL_STRING("unchanged", m.text);
+  }
+  Message m = msg("x", "unchanged");
+  TEST_ASSERT_FALSE(sysentry::make(m, std::string(200, 'a')));   // longer than the text field
+  TEST_ASSERT_EQUAL_STRING("unchanged", m.text);
+  TEST_ASSERT_TRUE(sysentry::make(m, std::string(150, 'a')));
+  // The text field holds 160 characters and a terminator: '@' and 159 letters fit, one more does not.
+  TEST_ASSERT_TRUE(sysentry::make(m, std::string(159, 'a')));
+  TEST_ASSERT_EQUAL(160, strlen(m.text));
+  Message full = msg("x", "unchanged");
+  TEST_ASSERT_FALSE(sysentry::make(full, std::string(160, 'a')));
+  TEST_ASSERT_EQUAL_STRING("unchanged", full.text);
+}
+
+void test_only_a_system_message_in_the_encoding_is_parsed_as_an_entry() {
+  sysentry::Entry e;
+  Message sentence = msg("+491701111111", "Missed call from Grandma", MsgDir::In, MsgSource::System);
+  TEST_ASSERT_FALSE(sysentry::parse(sentence, e));       // an entry from an earlier version holds a sentence
+  Message sms = msg("+491701111111", "@missed-call", MsgDir::In, MsgSource::Sms);
+  TEST_ASSERT_FALSE(sysentry::parse(sms, e));            // a person may type anything, even this
+  for (const char* text : {"@", "@ x", "@Missed", "@a b c", "@a  b", "@a b\tc"}) {
+    Message m = msg("x", text, MsgDir::In, MsgSource::System);
+    TEST_ASSERT_FALSE_MESSAGE(sysentry::parse(m, e), text);
+  }
+}
+
+void test_a_system_entry_goes_through_the_file_unchanged_and_old_entries_still_load() {
+  FakeLog log;
+  MessageStore s;
+  s.attach(&log);
+  Message m = msg("+493012345678", "", MsgDir::In, MsgSource::Sms);
+  TEST_ASSERT_TRUE(sysentry::make(m, sysentry::kCallFailed, sysentry::kBusy));
+  s.add(m);
+  s.add(msg("", "Verpasster Anruf von Oma", MsgDir::In, MsgSource::System));   // as an earlier version wrote it
+  TEST_ASSERT_EQUAL_STRING("M\t1\t1789475520\ty\ti\t+493012345678\t@call-failed busy", log.lines[0].c_str());
+
+  MessageStore again;
+  again.attach(&log);
+  TEST_ASSERT_TRUE(again.restore());
+  sysentry::Entry e;
+  TEST_ASSERT_TRUE(sysentry::parse(again.at(0), e));
+  TEST_ASSERT_EQUAL_STRING("busy", e.argument.c_str());
+  TEST_ASSERT_FALSE(sysentry::parse(again.at(1), e));
+  TEST_ASSERT_EQUAL_STRING("Verpasster Anruf von Oma", again.at(1).text);
+}
+
+// ---------------------------------------------------------------------------
 // Damaged files
 // ---------------------------------------------------------------------------
 
@@ -556,6 +637,10 @@ int main(int, char**) {
   RUN_TEST(test_a_long_text_is_cut_to_its_field_on_a_character_boundary);
   RUN_TEST(test_windows_line_endings_in_the_file_are_tolerated);
   RUN_TEST(test_an_empty_text_and_an_empty_peer_are_messages);
+  RUN_TEST(test_a_system_entry_is_a_kind_with_an_optional_argument);
+  RUN_TEST(test_a_system_entry_refuses_anything_that_is_not_a_catalog_word);
+  RUN_TEST(test_only_a_system_message_in_the_encoding_is_parsed_as_an_entry);
+  RUN_TEST(test_a_system_entry_goes_through_the_file_unchanged_and_old_entries_still_load);
   RUN_TEST(test_a_broken_line_is_reported_but_the_rest_survives);
   RUN_TEST(test_every_kind_of_damage_is_counted);
   RUN_TEST(test_a_repeated_number_is_damage);

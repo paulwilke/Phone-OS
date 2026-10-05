@@ -65,13 +65,33 @@ public:
   // `{n}`; the count is also passed as the argument "n").
   std::string plural(const char* key, uint32_t n, const Arg* args = nullptr, size_t argCount = 0);
 
+  // The same as get() and plural(), but in the language named by `code` instead of the
+  // selected one ("fr-CA" falls back to "fr"; an unknown code gives English). Needed where
+  // the language of the reader is not the language of the screen: an SMS goes out in the
+  // parents' language whatever the child's screen shows. A key missing in that language
+  // falls back to English like everywhere else.
+  std::string getIn(const std::string& code, const char* key, const Arg* args = nullptr, size_t argCount = 0);
+  std::string getIn(const std::string& code, const char* key, std::initializer_list<Arg> args) {
+    return getIn(code, key, args.begin(), args.size());
+  }
+  std::string pluralIn(const std::string& code, const char* key, uint32_t n, const Arg* args = nullptr,
+                       size_t argCount = 0);
+
+  // The text of `key` in every language that has it (the first form of each), without
+  // repeats, in the order of the language codes. The trigger words of the remote query come
+  // from here: a parent may write the word in any language the device speaks.
+  std::vector<std::string> textsInAllLanguages(const char* key) const;
+
   // Keys that were asked for and found in no language, and how often a lookup had to
   // fall back from the selected language to English.
   const std::set<std::string>& missingKeys() const { return missing_; }
   size_t fallbackCount() const { return fallbacks_; }
 
 private:
-  const Entry* find(const char* key, PluralRule* rule);
+  const Entry* find(const char* key, PluralRule* rule) { return findIn(current_, key, rule); }
+  const Entry* findIn(const std::string& code, const char* key, PluralRule* rule);
+  std::string render(const Entry* entry, PluralRule rule, const char* key, bool counted, uint32_t n, const Arg* args,
+                     size_t argCount);
 
   std::map<std::string, Catalog> languages_;
   std::string current_ = kReference;
