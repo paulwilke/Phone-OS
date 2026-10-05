@@ -208,7 +208,7 @@ void test_there_is_no_clock_so_a_minute_going_by_changes_nothing() {
 void test_unlocking_goes_to_the_home_screen_and_the_sensor_keys_do_nothing_meanwhile() {
   DeviceRig rig;
   ScreenStack stack(screen::kHome);
-  const ScreenContext context{rig.core, rig.translator, stack};
+  const ScreenContext context = rig.context(stack);
   HomeScreen home(context);
   LockScreen lock(context);
   stack.add(screen::kHome, home);
@@ -237,7 +237,7 @@ void test_unlocking_goes_to_the_home_screen_and_the_sensor_keys_do_nothing_meanw
 void test_a_screen_that_was_left_by_the_lock_comes_back_pair_free() {
   DeviceRig rig;
   ScreenStack stack(screen::kHome);
-  const ScreenContext context{rig.core, rig.translator, stack};
+  const ScreenContext context = rig.context(stack);
   HomeScreen home(context);
   LockScreen lock(context);
   stack.add(screen::kHome, home);
@@ -257,7 +257,7 @@ void test_a_screen_that_was_left_by_the_lock_comes_back_pair_free() {
 void test_an_hour_on_the_lock_screen_costs_no_refresh_after_the_first_picture() {
   DeviceRig rig;
   ScreenStack stack(screen::kHome);
-  const ScreenContext context{rig.core, rig.translator, stack};
+  const ScreenContext context = rig.context(stack);
   HomeScreen home(context);
   LockScreen lock(context);
   stack.add(screen::kHome, home);
@@ -282,7 +282,7 @@ void test_an_hour_on_the_lock_screen_costs_no_refresh_after_the_first_picture() 
 void test_two_minutes_on_the_home_screen_cost_the_lock_and_nothing_else() {
   DeviceRig rig;
   ScreenStack stack(screen::kHome);
-  const ScreenContext context{rig.core, rig.translator, stack};
+  const ScreenContext context = rig.context(stack);
   HomeScreen home(context);
   LockScreen lock(context);
   stack.add(screen::kHome, home);

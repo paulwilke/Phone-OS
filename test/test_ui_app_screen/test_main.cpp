@@ -364,6 +364,30 @@ void test_white_on_black_is_found_only_when_asked_for() {
   TEST_ASSERT_FALSE(shows::text(fb, "Light", FontSize::Small));
 }
 
+// ---- what the screens hand to each other -------------------------------------------------------------
+
+void test_screens_of_one_context_share_one_session() {
+  struct Writer : Probe {
+    using Probe::Probe;
+    void choose(const std::string& who) { session().recipient = who; session().viaRadio = true; }
+  };
+  struct Reader : Probe {
+    using Probe::Probe;
+    std::string who() { return session().recipient; }
+    bool radio() { return session().viaRadio; }
+  };
+  DeviceRig rig;
+  Writer writer(rig.context());
+  Reader reader(rig.context());
+  TEST_ASSERT_EQUAL_STRING("", reader.who().c_str());
+  writer.choose(kParentOne);
+  TEST_ASSERT_EQUAL_STRING(kParentOne, reader.who().c_str());
+  TEST_ASSERT_TRUE(reader.radio());
+  rig.session.clear();                                      // a finished task leaves nothing behind
+  TEST_ASSERT_EQUAL_STRING("", reader.who().c_str());
+  TEST_ASSERT_FALSE(reader.radio());
+}
+
 // ---- input ------------------------------------------------------------------------------------
 
 void test_a_key_reaches_the_screen_as_it_is() {
@@ -472,6 +496,7 @@ int main(int, char**) {
   RUN_TEST(test_a_text_is_found_where_it_is_drawn_and_not_elsewhere);
   RUN_TEST(test_a_word_is_not_found_inside_a_longer_one_or_when_cut_off);
   RUN_TEST(test_white_on_black_is_found_only_when_asked_for);
+  RUN_TEST(test_screens_of_one_context_share_one_session);
   RUN_TEST(test_a_key_reaches_the_screen_as_it_is);
   RUN_TEST(test_a_tap_on_a_soft_key_reaches_the_screen_as_the_key);
   RUN_TEST(test_a_tap_between_the_soft_keys_or_without_buttons_is_nothing);
