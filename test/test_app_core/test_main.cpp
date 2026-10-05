@@ -288,6 +288,26 @@ void test_a_remote_query_during_an_sos() {
   TEST_ASSERT_EQUAL(1, d.core.state().unread);                       // the system entry, and no message
 }
 
+void test_the_state_tells_how_the_sos_search_is_going_and_to_whom() {
+  Device d;
+  d.core.beginSos();
+  d.core.chooseSos(SosPing::Kind::Emergency);
+  AppCore::State s = d.core.state();
+  TEST_ASSERT_FALSE(s.pingHasFix);
+  TEST_ASSERT_EQUAL(0, s.pingAccuracyMeters);
+  TEST_ASSERT_EQUAL_STRING(kParentOne, s.pingPeer.c_str());
+  d.run(5);
+  s = d.core.state();
+  TEST_ASSERT_EQUAL(5, s.pingElapsedSeconds);
+  TEST_ASSERT_TRUE(s.pingHasFix);                                    // a fix after two seconds, HDOP 1.5
+  TEST_ASSERT_EQUAL(SosPing::accuracyMeters(1.5f), s.pingAccuracyMeters);
+  d.run(30);                                                         // sent: the search is over
+  s = d.core.state();
+  TEST_ASSERT_TRUE(s.pingStage == SosPing::Stage::Done);
+  TEST_ASSERT_EQUAL(0, s.pingElapsedSeconds);
+  TEST_ASSERT_EQUAL_STRING(kParentOne, s.pingPeer.c_str());          // still says whom it went to
+}
+
 void test_a_remote_query_alone_is_answered_without_the_child_noticing() {
   Device d;
   d.modem.injectSms(kParentTwo, "#WhereAreYou", 1);
@@ -635,6 +655,7 @@ int main() {
   RUN_TEST(test_a_full_day);
   RUN_TEST(test_an_sos_in_school_time_with_the_override);
   RUN_TEST(test_a_remote_query_during_an_sos);
+  RUN_TEST(test_the_state_tells_how_the_sos_search_is_going_and_to_whom);
   RUN_TEST(test_a_remote_query_alone_is_answered_without_the_child_noticing);
   RUN_TEST(test_the_network_dropping_and_returning);
   RUN_TEST(test_save_mode_and_the_cell_probe);
