@@ -46,6 +46,12 @@ void AppCore::setCommandNotice(CommandNotice notice) {
   configureTriggers();
 }
 
+bool AppCore::setInterfaceLanguage(const std::string& code) {
+  if (!translator_.select(code)) return false;
+  profile_.interfaceLanguage = translator_.language();
+  return true;
+}
+
 void AppCore::applyTimeZone() {
   const uint32_t epoch = clock_.epochUtc();
   if (!profile_.timeZone || epoch == 0) return;
@@ -54,6 +60,7 @@ void AppCore::applyTimeZone() {
 }
 
 void AppCore::start() {
+  if (!profile_.interfaceLanguage.empty()) translator_.select(profile_.interfaceLanguage);
   store_.restore();
   configureTriggers();
   applyTimeZone();
@@ -108,6 +115,10 @@ AppCore::State AppCore::state() {
   if (wifi_) {
     s.wifiPhase = wifi_->phase();
     s.wifiReason = wifi_->reason();
+    s.wifiSsid = wifi_->ssid();
+    s.wifiPassword = wifi_->phase() == WifiPhase::AccessPoint ? wifi_->apPassword() : std::string();
+    s.wifiAddress = wifi_->address();
+    s.wifiSecondsLeft = wifi_->secondsLeft(clock_.uptimeSeconds());
   }
   s.unread = store_.unread();
   s.queued = messaging_.pending();

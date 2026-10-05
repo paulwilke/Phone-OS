@@ -34,6 +34,11 @@ The documents describe what exists in this repository — each one is written fr
 | [power-coordination.md](power-coordination.md) | the power policy applied to modem, radio chip and processor; the front light |
 | [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
+| [screen-settings.md](screen-settings.md) | the options page: volume, message vibration, save mode, Wi-Fi, language |
+| [screen-wifi.md](screen-wifi.md) | the Wi-Fi page: three buttons, the mark, what to join with, why it did not work |
+| [screen-net.md](screen-net.md) | the network page: the lines, SIM problems and their explanations |
+| [screen-status.md](screen-status.md) | the status page: battery, queries, firmware, switching off |
+| [screen-language.md](screen-language.md) | the language page: native names, choosing at once through the core |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-screens.md](ui-screens.md) | what a screen may know, the frame every screen shares (status bar, notice line, soft keys), the wording of the core's codes |
 | [ui-layout-testing.md](ui-layout-testing.md) | testing layouts in every language: `languages::forEach` and the pseudo-language |

@@ -27,6 +27,10 @@ class ListView {
 public:
   void setItems(std::vector<ListItem> items);
   void resetSelection() { selected_ = 0; first_ = 0; }
+  // Puts the selection on `index` (ignored when there is no such row); the window follows when it is drawn.
+  void select(size_t index) {
+    if (index < items_.size()) selected_ = index;
+  }
 
   size_t count() const { return items_.size(); }
   size_t selected() const { return selected_; }

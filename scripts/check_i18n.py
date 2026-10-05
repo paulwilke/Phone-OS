@@ -69,6 +69,8 @@ def load(path):
 KEY_LITERAL = re.compile(r'"([a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)"')
 CODE_DIRS = ("src", "testing", "test")
 CODE_SUFFIXES = (".h", ".cpp")
+# A file name is no catalog key, even when its first part is also the name of a section ("settings.toml").
+FILE_SUFFIXES = (".toml", ".txt", ".json", ".csv")
 
 
 def usage():
@@ -89,7 +91,7 @@ def usage():
     problems = [f"`{key}` is in en.toml but no code or test mentions it" for key in sorted(ref) if key not in literals]
     problems += [f"{where}: \"{literal}\" looks like a catalog key but is not in en.toml"
                  for literal, where in sorted(literals.items())
-                 if literal.split(".")[0] in sections and literal not in ref]
+                 if literal.split(".")[0] in sections and literal not in ref and not literal.endswith(FILE_SUFFIXES)]
     for p in problems:
         print(p)
     if problems:
