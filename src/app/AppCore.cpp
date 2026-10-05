@@ -13,7 +13,7 @@ AppCore::AppCore(Clock& clock, Power& power, Modem& modem, GnssReceiver& gnss, H
       positioning_(clock, power, gnss, logger_),
       messaging_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_),
       calls_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_),
-      emergency_(clock, positioning_, messaging_, school_, profile_, translator, haptic, logger_),
+      emergency_(clock, positioning_, messaging_, school_, store_, profile_, translator, haptic, logger_),
       powerCoordination_(clock, power, modem, profile_, notices_, logger_),
       connectivity_(clock, power, modem, profile_, notices_, powerCoordination_, logger_) {
   messaging_.setHooks(this);

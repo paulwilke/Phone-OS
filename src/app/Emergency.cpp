@@ -1,8 +1,11 @@
 #include "Emergency.h"
 
+#include "SystemEntry.h"
+
 Emergency::Emergency(Clock& clock, Positioning& positioning, Messaging& messaging, SchoolTime& school,
-                     const Profile& profile, i18n::Translator& translator, Haptic& haptic, Logger& log)
-    : clock_(clock), positioning_(positioning), messaging_(messaging), school_(school), profile_(profile),
+                     MessageStore& store, const Profile& profile, i18n::Translator& translator, Haptic& haptic,
+                     Logger& log)
+    : clock_(clock), positioning_(positioning), messaging_(messaging), school_(school), store_(store), profile_(profile),
       translator_(translator), haptic_(haptic), log_(log), sos_(*this, SosPing::Config()), flow_(*this) {}
 
 bool Emergency::begin(const std::string& target) {
@@ -61,8 +64,18 @@ bool Emergency::noteSendFailed(const std::string& phone) {
     // noticed this failure already (an emergency), or must stay silent (a query reply).
     lastStage_ = SosPing::Stage::Failed;
     log_.log(queryReply ? "Remote query answer FAILED" : "SOS ping FAILED: the network refused the text");
+    if (queryReply) recordQueryFailure(phone);
   }
   return queryReply;
+}
+
+// A reply that never left is something the parents want to know, and a parent who stands in front
+// of the device sees it only in the history. The profile's rule for how visible a remote query is
+// applies to its failure as well: a query that is kept out of the history stays out, with its
+// failure. The child gets no notice and no vibration, as for the reply itself.
+void Emergency::recordQueryFailure(const std::string& peer) {
+  if (profile_.commandNotice == CommandNotice::Silent) return;
+  sysentry::record(store_, clock_.epochUtc(), sysentry::kLocationQueryFailed, peer);
 }
 
 // The receiver follows the ping: one reason for an emergency or pickup, another for a query
@@ -83,7 +96,10 @@ void Emergency::poll() {
     const bool failed = stage == SosPing::Stage::Failed;
     if (sos_.isQuery()) {
       if (done) log_.log("Remote query answer sent");
-      else if (failed) log_.log("Remote query answer FAILED");
+      else if (failed) {
+        log_.log("Remote query answer FAILED");
+        recordQueryFailure(sos_.peer());
+      }
     } else if (done) {
       haptic_.play(HapticPattern::Sent);
       log_.log("SOS ping sent");

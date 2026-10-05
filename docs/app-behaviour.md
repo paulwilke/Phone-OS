@@ -220,12 +220,15 @@ Tests in `test/test_emergency/`.
 | EME-24 | A text the network refuses after the modem took it is vibrated as failed once, not twice | `test_a_text_the_network_refuses_is_vibrated_as_failed_once` | — | done |
 | EME-25 | A text that cannot even be queued fails the ping, vibrates once and releases the receiver | `test_a_text_that_cannot_even_be_queued_is_vibrated_as_failed` | — | done |
 | EME-26 | Without any position a text with the waiting time goes out after the timeout | `test_without_a_position_a_text_goes_out_anyway` | — | done |
-| EME-27 | The failure of a query reply is only logged: no history entry, notice or vibration | `test_the_failure_of_a_query_reply_is_only_logged` | — | done |
+| EME-27 | The failure of a query reply is logged and written once to the history as `location-query-failed` naming the parent who asked; the child gets no notice, no vibration and no entry about the refused text | `test_the_failure_of_a_query_reply_is_logged_and_told_in_the_history_but_not_to_the_child` | — | done |
 | EME-28 | A query while the SOS choice is open is answered and the choice keeps its receiver | `test_a_query_while_the_choice_is_open_is_answered_and_the_choice_stays` | — | done |
 | EME-29 | An unknown SMS language falls back to English | `test_an_unknown_sms_language_falls_back_to_english` | — | done |
 | EME-30 | A name changed in the profile is used at the next press | `test_a_changed_name_is_used_at_the_next_press` | — | done |
 | EME-31 | Only the reply to a query is silent when the network refuses it: not a message to the same number during the search, not another number | `test_only_the_reply_to_a_query_is_silent_when_the_network_refuses_it` | — | done |
 | EME-32 | Leaving after the choice does not stop a running ping | `test_leave_does_not_stop_a_running_ping` | — | done |
+| EME-33 | A query reply that cannot even be queued is also told in the history | `test_a_query_reply_that_cannot_even_be_queued_is_told_in_the_history` | — | done |
+| EME-34 | A query that the profile keeps out of the history keeps its failure out too (the log has it) | `test_a_query_that_is_kept_out_of_the_history_keeps_its_failure_out_too` | — | done |
+| EME-35 | A failed emergency is not written as a failed query | `test_a_failed_emergency_is_not_a_failed_query` | — | done |
 
 ## Connectivity
 

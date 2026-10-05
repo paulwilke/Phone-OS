@@ -51,6 +51,7 @@ const char* systemKey(const std::string& kind) {
   if (kind == sysentry::kCallFailed) return "system.call-failed";
   if (kind == sysentry::kLocationQueried) return "system.location-queried";
   if (kind == sysentry::kQueryRefused) return "system.query-refused";
+  if (kind == sysentry::kLocationQueryFailed) return "system.location-query-failed";
   if (kind == sysentry::kSmsRejected) return "system.sms-rejected";
   return nullptr;
 }

@@ -31,6 +31,7 @@ constexpr const char* kMissedCall = "missed-call";            // peer: the calle
 constexpr const char* kCallFailed = "call-failed";            // peer: the number called; argument: the reason (below)
 constexpr const char* kLocationQueried = "location-queried";  // peer: the parent who asked
 constexpr const char* kQueryRefused = "query-refused";        // peer: the number that asked
+constexpr const char* kLocationQueryFailed = "location-query-failed";  // peer: the parent whose reply did not go out
 constexpr const char* kSmsRejected = "sms-rejected";          // peer: the recipient the network refused
 
 // The reasons of a failed call.

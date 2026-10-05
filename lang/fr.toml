@@ -58,6 +58,7 @@ system.missed-call       = "Appel manqué de {name}"
 system.call-failed       = "Appel à {name} échoué : {reason}"
 system.location-queried  = "Position demandée par {name}"
 system.query-refused     = "Demande de {name} refusée"
+system.location-query-failed = "Réponse de position à {name} échouée"
 system.sms-rejected      = "SMS à {name} refusé"
 
 key.back = "Retour"

@@ -19,7 +19,9 @@
 // timeout of its own.
 //
 // **The outcome** of an emergency or pickup is told once by vibration (sent: three short, failed:
-// short-long); a query reply never vibrates, also not at its end, and is only logged. A text the
+// short-long); a query reply never vibrates, also not at its end. Its failure is logged and, unless
+// the profile keeps remote queries out of the history, written there as a system entry, so the
+// parents see on the device that the answer they waited for never left. A text the
 // network refuses after the modem accepted it was already vibrated by Messaging, so it is not
 // vibrated twice.
 //
@@ -37,6 +39,7 @@
 #include "../hal/Haptic.h"
 #include "../i18n/Translator.h"
 #include "Logger.h"
+#include "MessageStore.h"
 #include "Messaging.h"
 #include "Positioning.h"
 #include "Profile.h"
@@ -46,8 +49,8 @@
 
 class Emergency : private SosFlow::Host, private SosPing::Host {
 public:
-  Emergency(Clock& clock, Positioning& positioning, Messaging& messaging, SchoolTime& school, const Profile& profile,
-            i18n::Translator& translator, Haptic& haptic, Logger& log);
+  Emergency(Clock& clock, Positioning& positioning, Messaging& messaging, SchoolTime& school, MessageStore& store,
+            const Profile& profile, i18n::Translator& translator, Haptic& haptic, Logger& log);
 
   // --- the SOS button ---
   // Opens the choice (or the school-time warning). `target` is the person to reach; empty means
@@ -92,6 +95,7 @@ private:
   bool sendText(const char* peer, const std::string& text) override { return messaging_.sendText(peer, text); }
 
   bool start(const std::string& peer, SosPing::Kind kind);
+  void recordQueryFailure(const std::string& peer);
   SosPing::Wording wording();
   void syncReceiver();
 
@@ -99,6 +103,7 @@ private:
   Positioning& positioning_;
   Messaging& messaging_;
   SchoolTime& school_;
+  MessageStore& store_;
   const Profile& profile_;
   i18n::Translator& translator_;
   Haptic& haptic_;

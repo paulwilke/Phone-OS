@@ -58,6 +58,7 @@ system.missed-call       = "Verpasster Anruf von {name}"
 system.call-failed       = "Anruf an {name} fehlgeschlagen: {reason}"
 system.location-queried  = "Standort abgefragt: {name}"
 system.query-refused     = "Abfrage von {name} abgelehnt"
+system.location-query-failed = "Standort-Antwort an {name} fehlgeschlagen"
 system.sms-rejected      = "SMS an {name} nicht angenommen"
 
 key.back = "Zurück"

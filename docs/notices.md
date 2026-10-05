@@ -41,6 +41,7 @@ A system entry is a message whose source is `System` and whose text is `@<kind>`
 | `location-queried` | the parent who asked | |
 | `query-refused` | the number that asked | |
 | `sms-rejected` | the recipient | |
+| `location-query-failed` | the parent whose reply did not go out | |
 
 `systemKey(kind)` gives the catalog key of a kind (`system.*`, placeholder `{name}`, and `{reason}` for a failed call) and `callReasonKey(reason)` the key of a reason (`call.reason-*`); both give `nullptr` for something this version does not know, and the interface shows the stored text.
 

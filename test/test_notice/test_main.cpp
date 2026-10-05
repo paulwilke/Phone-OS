@@ -69,7 +69,7 @@ void test_every_system_entry_kind_and_call_reason_has_a_text_in_every_shipped_la
   Translator t = languages::loaded();
   const struct { const char* kind; bool reason; } kinds[] = {
       {sysentry::kMissedCall, false}, {sysentry::kCallFailed, true},   {sysentry::kLocationQueried, false},
-      {sysentry::kQueryRefused, false}, {sysentry::kSmsRejected, false}};
+      {sysentry::kQueryRefused, false}, {sysentry::kSmsRejected, false}, {sysentry::kLocationQueryFailed, false}};
   const char* reasons[] = {sysentry::kBusy, sysentry::kNoAnswer, sysentry::kNoNetwork, sysentry::kSmsOnly,
                            sysentry::kNotConnected};
   for (const std::string& code : shipped(t)) {
@@ -103,6 +103,7 @@ void test_each_reason_and_kind_has_its_own_key() {
   TEST_ASSERT_EQUAL_STRING("system.location-queried", systemKey(sysentry::kLocationQueried));
   TEST_ASSERT_EQUAL_STRING("system.query-refused", systemKey(sysentry::kQueryRefused));
   TEST_ASSERT_EQUAL_STRING("system.sms-rejected", systemKey(sysentry::kSmsRejected));
+  TEST_ASSERT_EQUAL_STRING("system.location-query-failed", systemKey(sysentry::kLocationQueryFailed));
 }
 
 void test_an_unknown_system_kind_or_reason_has_no_key() {

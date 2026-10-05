@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 #include <CoreFakes.h>
 #include <app/Emergency.h>
@@ -51,7 +52,7 @@ struct Rig : CoreFakes {
       : CoreFakes(std::move(p), 100),
         positioning(clock, power, gnss, logger),
         messaging(clock, modem, power, store, profile, school, notices, haptic, logger),
-        emergency((loadCatalogs(translator), clock), positioning, messaging, school, profile, translator, haptic, logger) {
+        emergency((loadCatalogs(translator), clock), positioning, messaging, school, store, profile, translator, haptic, logger) {
     bridge.emergency = &emergency;
     messaging.setHooks(&bridge);
     messaging.configure({"#WhereAreYou"});
@@ -347,20 +348,71 @@ void test_a_remote_query_never_vibrates() {
   TEST_ASSERT_TRUE(r.notices.current().none());                      // the default setting is the history only
 }
 
-void test_the_failure_of_a_query_reply_is_only_logged() {
+namespace {
+
+// The system entries of a kind in the history, as the peers they name.
+std::vector<std::string> entriesOf(const MessageStore& store, const char* kind) {
+  std::vector<std::string> peers;
+  for (size_t i = 0; i < store.count(); ++i) {
+    sysentry::Entry e;
+    if (sysentry::parse(store.at(i), e) && e.kind == kind) peers.push_back(store.at(i).peer);
+  }
+  return peers;
+}
+
+}  // namespace
+
+void test_the_failure_of_a_query_reply_is_logged_and_told_in_the_history_but_not_to_the_child() {
   Rig r;
   r.modem.failNextSms("+CMS ERROR: 304");
   r.modem.injectSms(kParentOne, "#WhereAreYou", 1);
   r.run(40);
   TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+  TEST_ASSERT_TRUE(r.notices.current().none());
   TEST_ASSERT_TRUE(SosPing::Stage::Failed == r.emergency.ping().stage());
   TEST_ASSERT_TRUE(r.logged("Remote query answer FAILED"));
   TEST_ASSERT_FALSE(r.logged("SOS ping FAILED"));
-  // The history holds the entry of the query itself, and no entry about the refused text.
-  for (size_t i = 0; i < r.store.count(); ++i) {
-    sysentry::Entry e;
-    if (sysentry::parse(r.store.at(i), e)) TEST_ASSERT_TRUE(e.kind != sysentry::kSmsRejected);
-  }
+  // The parents find the failure in the history, once, naming who asked; the refused text itself
+  // is not an entry of its own.
+  const auto failed = entriesOf(r.store, sysentry::kLocationQueryFailed);
+  TEST_ASSERT_EQUAL(1, failed.size());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, failed[0].c_str());
+  TEST_ASSERT_EQUAL(0, entriesOf(r.store, sysentry::kSmsRejected).size());
+  r.run(60);
+  TEST_ASSERT_EQUAL(1, entriesOf(r.store, sysentry::kLocationQueryFailed).size());   // not again later
+}
+
+void test_a_query_reply_that_cannot_even_be_queued_is_told_in_the_history() {
+  Rig r;
+  r.power.setEnabled(PowerDomain::Cellular, false);
+  for (size_t i = 0; i < Messaging::kOutboxSize; ++i) TEST_ASSERT_TRUE(r.messaging.sendText(kParentTwo, "x"));
+  TEST_ASSERT_TRUE(r.emergency.startLocationReply(kParentOne));
+  r.run(130);
+  TEST_ASSERT_TRUE(SosPing::Stage::Failed == r.emergency.ping().stage());
+  const auto failed = entriesOf(r.store, sysentry::kLocationQueryFailed);
+  TEST_ASSERT_EQUAL(1, failed.size());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, failed[0].c_str());
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+}
+
+void test_a_query_that_is_kept_out_of_the_history_keeps_its_failure_out_too() {
+  Rig r(ProfileBuilder().childName("Alex").commandNotice(CommandNotice::Silent).build());
+  r.modem.failNextSms("+CMS ERROR: 304");
+  r.modem.injectSms(kParentOne, "#WhereAreYou", 1);
+  r.run(40);
+  TEST_ASSERT_TRUE(SosPing::Stage::Failed == r.emergency.ping().stage());
+  TEST_ASSERT_TRUE(r.logged("Remote query answer FAILED"));      // the log has it whatever the profile says
+  TEST_ASSERT_EQUAL(0, entriesOf(r.store, sysentry::kLocationQueryFailed).size());
+}
+
+void test_a_failed_emergency_is_not_a_failed_query() {
+  Rig r;
+  r.modem.failNextSms("+CMS ERROR: 304");
+  r.emergency.begin();
+  r.emergency.choose(SosPing::Kind::Emergency);
+  r.run(40);
+  TEST_ASSERT_TRUE(SosPing::Stage::Failed == r.emergency.ping().stage());
+  TEST_ASSERT_EQUAL(0, entriesOf(r.store, sysentry::kLocationQueryFailed).size());
 }
 
 void test_only_the_reply_to_a_query_is_silent_when_the_network_refuses_it() {
@@ -518,7 +570,10 @@ int main() {
   RUN_TEST(test_without_a_position_a_text_goes_out_anyway);
   RUN_TEST(test_a_remote_query_is_answered_like_an_sos_ping);
   RUN_TEST(test_a_remote_query_never_vibrates);
-  RUN_TEST(test_the_failure_of_a_query_reply_is_only_logged);
+  RUN_TEST(test_the_failure_of_a_query_reply_is_logged_and_told_in_the_history_but_not_to_the_child);
+  RUN_TEST(test_a_query_reply_that_cannot_even_be_queued_is_told_in_the_history);
+  RUN_TEST(test_a_query_that_is_kept_out_of_the_history_keeps_its_failure_out_too);
+  RUN_TEST(test_a_failed_emergency_is_not_a_failed_query);
   RUN_TEST(test_only_the_reply_to_a_query_is_silent_when_the_network_refuses_it);
   RUN_TEST(test_a_second_query_is_busy);
   RUN_TEST(test_an_emergency_replaces_a_query_reply);

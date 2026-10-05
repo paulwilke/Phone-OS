@@ -22,9 +22,9 @@ SOS works in school time. Pressing opens a warning instead of the choice; `SosFl
 
 ## The outcome
 
-Told once, when the stage changes: **sent** is three short pulses, **failed** is short-long. A query reply never vibrates and has no notice; it is only logged ("Remote query answer sent" / "FAILED").
+Told once, when the stage changes: **sent** is three short pulses, **failed** is short-long. A query reply never vibrates and has no notice; it is logged ("Remote query answer sent" / "FAILED"). Its **failure** is also written to the message history as the system entry `location-query-failed` naming the parent who asked, so the parents see on the device that the answer they waited for never left; a profile that keeps remote queries out of the history (`CommandNotice::Silent`) keeps this entry out too. A failed emergency is not such an entry: the child was told by vibration.
 
-A text the modem accepts and the network then refuses is reported by Messaging, which vibrates it and notes it in the history. The ping is told through `noteSendFailed`, which changes its stage without vibrating a second time. For a query reply the same call returns true, which tells Messaging to keep that failure out of the child's sight (log only).
+A text the modem accepts and the network then refuses is reported by Messaging, which vibrates it and notes it in the history. The ping is told through `noteSendFailed`, which changes its stage without vibrating a second time. For a query reply the same call returns true, which tells Messaging to keep that failure out of the child's sight: it is not a `sms-rejected` entry and gets no notice or vibration, and the entry above takes its place.
 
 If the text cannot even be queued (the queue is full), the ping fails at once: one *failed* vibration, a log line, the receiver released.
 
