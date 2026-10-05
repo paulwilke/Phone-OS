@@ -5,6 +5,7 @@
 #include <unity.h>
 
 #include <DeviceRig.h>
+#include <Shows.h>
 #include <ui/AppStatus.h>
 #include <ui/Fonts.h>
 #include <ui/Text.h>
@@ -134,6 +135,9 @@ void test_the_frame_draws_the_status_bar_the_notice_and_the_soft_keys_around_the
   drawStatusBar(expected, l.status, statusModelOf(rig.core.state()), rig.translator);
   drawAlertBar(expected, l.alert, "Number not allowed");
   TEST_ASSERT_EQUAL_STRING("Number not allowed", screen.noticeLine().c_str());
+  // What the child reads: the notice on the black line, the network on the status bar, the soft keys.
+  TEST_ASSERT_TRUE(shows::text(rig.frame, "Number not allowed", FontSize::Small, l.alert, true));
+  TEST_ASSERT_TRUE(shows::text(rig.frame, "Example", FontSize::Small, l.status));
   TEST_ASSERT_TRUE(rig.frame.toAscii(l.status) == expected.toAscii(l.status));
   TEST_ASSERT_TRUE(rig.frame.toAscii(l.alert) == expected.toAscii(l.alert));
   drawSoftKeys(expected, l.softKeys, screen.softKeys());
@@ -157,12 +161,17 @@ void test_the_notice_follows_the_language_at_the_next_frame() {
   rig.poll();
   screen.render(rig.frame);
   TEST_ASSERT_EQUAL_STRING("Number not allowed", screen.noticeLine().c_str());
+  const Rect alert = ScreenLayout::standard().alert;
+  TEST_ASSERT_TRUE(shows::text(rig.frame, "Number not allowed", FontSize::Small, alert, true));
   rig.language("de");
   screen.render(rig.frame);
   TEST_ASSERT_EQUAL_STRING("Nummer nicht erlaubt", screen.noticeLine().c_str());
+  TEST_ASSERT_TRUE(shows::text(rig.frame, "Nummer nicht erlaubt", FontSize::Small, alert, true));
+  TEST_ASSERT_FALSE(shows::text(rig.frame, "Number not allowed", FontSize::Small, alert, true));   // nothing of the old language is left
   rig.language("fr");
   screen.render(rig.frame);
   TEST_ASSERT_EQUAL_STRING("Num\xC3\xA9ro non autoris\xC3\xA9", screen.noticeLine().c_str());
+  TEST_ASSERT_TRUE(shows::text(rig.frame, "Num\xC3\xA9ro non autoris\xC3\xA9", FontSize::Small, alert, true));
 }
 
 void test_a_notice_names_the_contact_from_the_profile() {
@@ -321,6 +330,40 @@ void test_a_notice_does_not_move_the_content() {
   TEST_ASSERT_TRUE(without == rig.frame.toAscii(content));
 }
 
+// ---- finding a text in a picture ------------------------------------------------------------------
+
+void test_a_text_is_found_where_it_is_drawn_and_not_elsewhere() {
+  FrameBuffer fb;
+  text::draw(fb, font(FontSize::Text), 37, 101, "Inbox");
+  const std::optional<Rect> at = shows::where(fb, "Inbox", FontSize::Text);
+  TEST_ASSERT_TRUE(at.has_value());
+  TEST_ASSERT_EQUAL(37, at->x);
+  TEST_ASSERT_EQUAL(101, at->y);
+  TEST_ASSERT_FALSE(shows::text(fb, "Inbox", FontSize::Small));              // another font is another picture
+  TEST_ASSERT_FALSE(shows::text(fb, "inbox", FontSize::Text));
+  TEST_ASSERT_FALSE(shows::text(fb, "Inbox", FontSize::Text, Rect{0, 0, 240, 100}));   // searched where it is not
+  TEST_ASSERT_TRUE(shows::text(fb, "Inbox", FontSize::Text, Rect{30, 95, 100, 30}));
+}
+
+void test_a_word_is_not_found_inside_a_longer_one_or_when_cut_off() {
+  FrameBuffer fb;
+  text::draw(fb, font(FontSize::Text), 10, 10, "Tests");
+  TEST_ASSERT_FALSE(shows::text(fb, "Test", FontSize::Text));                // the "s" is ink in the box
+  TEST_ASSERT_TRUE(shows::text(fb, "Tests", FontSize::Text));
+  FrameBuffer cut;
+  text::draw(cut, font(FontSize::Text), 10, 10, "Test");
+  TEST_ASSERT_FALSE(shows::text(cut, "Tests", FontSize::Text));
+  TEST_ASSERT_FALSE(shows::text(cut, "", FontSize::Text));                   // nothing is not found anywhere
+}
+
+void test_white_on_black_is_found_only_when_asked_for() {
+  FrameBuffer fb;
+  fb.fillRect({0, 0, 120, 20}, true);
+  text::draw(fb, font(FontSize::Small), 4, 2, "Light", false);
+  TEST_ASSERT_TRUE(shows::text(fb, "Light", FontSize::Small, Rect{}, true));
+  TEST_ASSERT_FALSE(shows::text(fb, "Light", FontSize::Small));
+}
+
 // ---- input ------------------------------------------------------------------------------------
 
 void test_a_key_reaches_the_screen_as_it_is() {
@@ -426,6 +469,9 @@ int main(int, char**) {
   RUN_TEST(test_a_long_name_is_shortened_inside_the_line_and_the_words_after_it_stay);
   RUN_TEST(test_a_number_is_never_shortened_in_a_notice);
   RUN_TEST(test_a_notice_does_not_move_the_content);
+  RUN_TEST(test_a_text_is_found_where_it_is_drawn_and_not_elsewhere);
+  RUN_TEST(test_a_word_is_not_found_inside_a_longer_one_or_when_cut_off);
+  RUN_TEST(test_white_on_black_is_found_only_when_asked_for);
   RUN_TEST(test_a_key_reaches_the_screen_as_it_is);
   RUN_TEST(test_a_tap_on_a_soft_key_reaches_the_screen_as_the_key);
   RUN_TEST(test_a_tap_between_the_soft_keys_or_without_buttons_is_nothing);
