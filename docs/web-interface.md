@@ -1,0 +1,81 @@
+# Web interface
+
+Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `test/test_web_api/`, `test/test_web_page/`. A small HTTP/1.1 server that the parent opens in a browser over the device's Wi-Fi. The interface lets the parent read the device state, edit every configuration file, browse the card, view the log, and export or restore a backup. The page is a single HTML file embedded in the firmware; language switching is live.
+
+## HTTP layer
+
+`src/web/Http.{h,cpp}` — a bounded, stateless parser in the `http` namespace.
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `kMaxHead` | 1024 bytes | Maximum header section |
+| `kMaxBody` | 8192 bytes | Maximum body |
+
+`Parser::feed()` takes raw bytes in any chunk size and returns one of four states: `Head` (still reading headers), `Body` (reading body), `Done` (complete), `Error`. An error sets a status code — 400 (garbage), 411 (no Content-Length), 413 (body too large), 414 (URI too long), 431 (headers too large), 501 (chunked encoding). Once the parser reaches `Done` or `Error` it ignores further input. The fuzz suite (`test/test_http_fuzz/`) feeds random bytes and truncated valid requests under AddressSanitizer to check that no input causes a crash or an out-of-bounds read.
+
+`formatHead()` writes the response status line and headers into a caller-supplied buffer; the body is a separate pointer so the firmware can point directly at flash.
+
+`basicPassword()` extracts the password from an `Authorization: Basic …` header without allocating. `constantTimeEquals()` compares two strings in constant time to prevent timing attacks on the password check.
+
+## Server
+
+`src/web/WebServer.{h,cpp}` — one TCP connection at a time; port 80; idle timeout 10 seconds (`kIdleSeconds`). The server owns nothing about content: it takes a `RequestHandler` and calls `handle()` on a complete request or `error()` on a parse error. `WebAssets::indexHtml()` supplies the embedded page; `GET /` returns it.
+
+## API
+
+`src/web/WebApi.{h,cpp}` implements `RequestHandler`. All routes require a matching password from `/config/secrets.toml`; without a stored password the API is entirely locked.
+
+### Routes
+
+| Method | Path | Action |
+|---|---|---|
+| GET | `/` | The web page (index.html) |
+| GET | `/api/state` | Device state as JSON |
+| GET | `/api/settings` | `/config/settings.toml` as JSON |
+| PUT | `/api/settings` | Write `/config/settings.toml` |
+| GET | `/api/contacts` | `/config/contacts.toml` as JSON |
+| PUT | `/api/contacts` | Write `/config/contacts.toml` |
+| GET | `/api/secrets` | `/config/secrets.toml` as JSON |
+| PUT | `/api/secrets` | Write `/config/secrets.toml` |
+| GET | `/api/files` | Directory listing (query: `path=`) |
+| GET | `/api/file` | Download a file (query: `path=`) |
+| PUT | `/api/file` | Upload or overwrite a file (query: `path=`) |
+| DELETE | `/api/file` | Delete a file (query: `path=`) |
+| GET | `/api/backup` | All config files as a JSON bundle |
+| PUT | `/api/restore` | Restore a backup bundle |
+| PUT | `/api/restart` | Ask the device to restart |
+| PUT | `/api/wifi-off` | Ask Wi-Fi to switch off |
+| GET | `/api/languages` | Installed language catalog list |
+| GET | `/api/lang/<code>` | `web.*` and `config.*` translation keys for the page |
+
+### Security model
+
+1. **Password required.** The web password is read from `/config/secrets.toml` on every request (no caching): a parent who changes the password locks out any session that was using the old one immediately. A password shorter than four characters (`kMinWebPassword`) is not accepted as a credential — the API stays locked until a long-enough password is stored. Without any stored password the API is permanently locked.
+
+2. **Lockout after repeated failures.** Five consecutive wrong passwords (`kMaxFailures`) lock the API for sixty seconds (`kLockSeconds`). The counter resets on a correct password.
+
+3. **CSRF protection.** Mutating requests (PUT, POST, DELETE) must carry the header `X-Phoneplus: 1`. A cross-origin page cannot set a custom header, so the browser's same-origin policy blocks any site that tries to use a logged-in parent's session without their knowledge.
+
+4. **`/config/secrets.toml` cannot be deleted.** The `DELETE /api/file` route refuses any path that points to the secrets file. Deleting it would remove the password and unlock the API.
+
+5. **Config files are validated before writing.** Every PUT to a config route runs the file through `ConfigLoader` first. A file that the device would reject at startup is never stored.
+
+6. **Every change is logged.** All writes go through the application log (`AppCore::log()`): path and byte count only, never the content. Deleting the log itself is allowed but the deletion is logged before the file is removed.
+
+The trade-off on point 1: the API returns `secrets.toml` including the password hash on `GET /api/secrets`, because a parent who can authenticate already knows the password. The alternative — refusing to return the secrets file — would make it impossible to read the SIM PIN back, which is an equally sensitive value and one the parent needs to check. The decision was taken on 2026-10-01 and is intentional.
+
+## The page
+
+`web/index.html` is generated from `config/form_generated.json` and `lang/en.toml` by `scripts/gen_web.py`. Run `scripts/gen_web.py --check` to verify the file is up to date.
+
+The page is a single-file SPA with no external resources. On load it shows a password prompt; after a correct password it stores a `Basic` credential in memory and attaches it to every API call. The language shown is: the last choice in `localStorage`, or the browser's preferred language, or English.
+
+Every string the page shows is looked up through a `t(key)` function that reads from a `web.*` / `config.*` translation object fetched from `/api/lang/<code>`. Device-supplied content — file names, log lines, configuration values — is always set via `.textContent`, never `.innerHTML`, to prevent XSS.
+
+Form fields come from the embedded `FORM_SCHEMA` (a copy of `form_generated.json`). Field labels and help texts are catalog keys; the page fetches the translations and applies them when the language is set or changed. List sections (contacts, home networks, school times, call buttons) support adding and removing entries inline.
+
+`scripts/web_preview.py` serves the page locally against `config/*.toml` without a real device. `test/test_web_page/test.mjs` checks key coverage, data attribute validity, and that no device content goes through `innerHTML`.
+
+## Service
+
+`src/web/WebService.{h,cpp}` owns a `WifiController`, starts and stops the HTTP server together with the Wi-Fi phase, and wires the API to the rest of the application. `handleRaw()` lets a USB bridge inject a raw HTTP request and get a raw response back — the same code path as the network, for testing without Wi-Fi.
