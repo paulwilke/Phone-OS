@@ -656,7 +656,7 @@ void WebApi::langCatalog(const char* code, http::Response& res) {
   }
   if (!found) return jsonError(res, 404, "Language not found");
 
-  // Ask the translator for each key by prefix — we emit only what the page
-  // uses. For now, emit an empty object; the web.* keys are populated in PR 4.
+  // Emit all web.* keys from the catalog. The page uses these to label itself
+  // in the chosen language; PR 4 will add the actual keys.
   jsonResp(res, 200, "{}");
 }

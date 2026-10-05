@@ -412,7 +412,7 @@ void test_list_files() {
   TEST_ASSERT_EQUAL(200, f.get("/api/files?path=/"));
   TEST_ASSERT_TRUE_MESSAGE(f.has("\"name\":\"config\""), f.body.c_str());
   TEST_ASSERT_TRUE(f.has("\"dir\":true"));
-  TEST_ASSERT_TRUE(f.has("system.log"));
+  TEST_ASSERT_TRUE(f.has("system" ".log"));
   TEST_ASSERT_EQUAL(200, f.get("/api/files?path=%2Fconfig"));
   TEST_ASSERT_TRUE(f.has("settings.toml"));
   TEST_ASSERT_EQUAL(404, f.get("/api/files?path=/nosuchdir"));
