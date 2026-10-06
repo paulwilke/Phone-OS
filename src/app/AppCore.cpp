@@ -55,6 +55,7 @@ void AppCore::setCommandNotice(CommandNotice notice) {
 bool AppCore::setInterfaceLanguage(const std::string& code) {
   if (!translator_.select(code)) return false;
   profile_.interfaceLanguage = translator_.language();
+  settingsNeedWrite_ = true;
   return true;
 }
 

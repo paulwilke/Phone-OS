@@ -48,11 +48,8 @@ struct Profile {
   // --- what the device says ---
   std::string childName;                               // in the SOS texts; empty = anonymous texts
   std::string mapTemplate = maplink::defaultTemplate();
-  std::string interfaceLanguage = "en";                // language code for the device UI
+  std::string interfaceLanguage = "en";                // language code for the device UI; the child may change it in the options
   std::string smsLanguage = "en";                      // the language of every SMS the device sends
-  // The language of the screen; empty = the translator keeps the one it has. The child may change it
-  // in the options, and it lasts until the next start like the other settings of the options.
-  std::string interfaceLanguage;
   // Further words that trigger the remote query, besides the trigger word of every language of
   // the catalogs.
   std::vector<std::string> extraTriggers;

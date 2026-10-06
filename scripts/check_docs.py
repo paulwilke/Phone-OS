@@ -77,6 +77,9 @@ def main():
                 for target in TICK.findall(line):
                     if target.startswith(("http", "~", "/")) or "*" in target or "<" in target:
                         continue
+                    # out/ is build output (the demo, the simulator's card): a clean checkout has none of it.
+                    if target.startswith("out/"):
+                        continue
                     if not (os.path.exists(os.path.join(ROOT, target)) or os.path.exists(os.path.join(os.path.dirname(path), target))):
                         problems.append(f"{rel}:{n}: refers to a file that does not exist: {target}")
     for p in problems[:300]:
