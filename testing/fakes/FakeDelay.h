@@ -7,9 +7,11 @@
 
 class FakeDelay : public Delay {
 public:
-  void delayMs(uint32_t ms) override { elapsed_ += ms; }
-  uint32_t elapsedMs() const { return elapsed_; }
+  void delayMs(uint32_t ms) override { elapsedUs_ += (uint64_t)ms * 1000; }
+  void delayUs(uint32_t us) override { elapsedUs_ += us; }
+  uint32_t elapsedMs() const { return (uint32_t)(elapsedUs_ / 1000); }
+  uint64_t elapsedUs() const { return elapsedUs_; }
 
 private:
-  uint32_t elapsed_ = 0;
+  uint64_t elapsedUs_ = 0;
 };

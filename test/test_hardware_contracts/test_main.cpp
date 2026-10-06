@@ -16,6 +16,7 @@
 #include <contracts/TcpServerContract.h>
 #include <contracts/WifiContract.h>
 
+#include <BoardInputRigs.h>
 #include <BoardPowerRig.h>
 
 #include "DriverRig.h"
@@ -34,10 +35,12 @@ int main(int, char**) {
   RUN_MODEM_CONTRACT(DriverModemRig);
   RUN_EVENT_LOG_CONTRACT(FakeEventLogRig);
   RUN_HAPTIC_CONTRACT(FakeHapticRig);
+  RUN_HAPTIC_CONTRACT(BoardHapticRig);
   RUN_CONFIG_STORE_CONTRACT(FakeConfigStoreRig);
   RUN_WIFI_CONTRACT(FakeWifiRig);
   RUN_TCP_SERVER_CONTRACT(FakeTcpServerRig);
   RUN_MOTION_SENSOR_CONTRACT(FakeMotionRig);
+  RUN_MOTION_SENSOR_CONTRACT(BoardMotionRig);
   RUN_RADIO_LINK_CONTRACT(FakeRadioLinkRig);
   return UNITY_END();
 }

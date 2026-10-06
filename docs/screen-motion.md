@@ -20,7 +20,7 @@ Code: `src/ui/screens/MotionScreen.{h,cpp}` and `src/ui/MotionSource.h`; tests i
 
 The ball rolls to the lower side. A picture test checks that the drawn ball moves the same way. The first mapping on the device rolled the ball up when the device was tilted left; this one is the correction.
 
-**Open.** The capability description says a device lying flat reads about +1 on z; the sensor library on the T-Deck Max reports about −0.95 (measured on the device). The mapping is verified with the device's own values: whatever hands samples to this page must deliver those, or every direction flips.
+**The sign of z.** A device lying flat on a table reads about −0.95 on z (measured on the device); the capability description says that samples are in the sensor's own axes. The mapping is verified with the device's own values, and the board's `MotionSensor` hands the samples on unchanged (`test_board_motion` pins −0.95 through the page's source), or every direction would flip.
 
 **Layout.** Every state is drawn inside the screen in English, German, French and the pseudo-language (40 % longer than any real one); only the one action word beside the arrows may reach into the soft-key bar in the pseudo-language.
 

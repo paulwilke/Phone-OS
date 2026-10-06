@@ -31,7 +31,8 @@ struct MotionSensorContract {
     TEST_ASSERT_TRUE(std::isfinite(s.ax) && std::isfinite(s.ay) && std::isfinite(s.az));
   }
 
-  // Lying flat reads about +1 g on z: the unit is g, not m/s^2.
+  // At rest the magnitude is about one g: the unit is g, not m/s^2. The sign and the axis depend on how the
+  // sensor sits in the device (lying flat on this device reads about -0.95 on z).
   static void a_device_at_rest_reads_one_g() {
     Rig rig;
     CONTRACT_NEEDS(rig.tilt(0, 0, 1));

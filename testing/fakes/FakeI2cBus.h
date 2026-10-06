@@ -11,11 +11,18 @@
 //   removeChip(address)                                                      the chip stops answering
 //   refuseWrites(address, bool)                                              the chip acknowledges but a write fails
 //   refuseRegisterWrite(address, reg)                                        a write that touches this register fails
+//   addFifo(address, dataReg, countReg)  reading dataReg takes the next queued byte (0 when empty); reading
+//                                        countReg gives how many are queued (low nibble, as the keyboard chip does)
+//   pushFifo(address, dataReg, bytes)    queue bytes
+//   setReply(address, command, reply)    a chip without registers: after a write of exactly `command` the next
+//                                        read returns `reply` (padded with zeros), and further reads continue
+//                                        behind it; the write is logged as usual
 // Reading back: reg(address, reg), reg16(), transactions() (every call in order, stamped with the
 // delay's elapsed time when one was given), writesTo(address) (the data of each write to a chip),
 // writeCount(address, reg) (how many writes touched a register, so "write only on a difference" is a test).
 
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <set>
 #include <utility>
@@ -38,6 +45,13 @@ public:
   bool write(uint8_t address, const uint8_t* data, size_t len) override {
     if (!chips_.count(address)) return false;
     log(address, true, std::vector<uint8_t>(data, data + len));
+    pendingReply_.erase(address);
+    replyAt_[address] = 0;
+    const auto reply = replies_.find({address, std::vector<uint8_t>(data, data + len)});
+    if (reply != replies_.end()) {
+      pendingReply_[address] = reply->second;
+      return true;
+    }
     if (refuseAll_.count(address)) return false;
     if (len == 0) return true;
     for (size_t i = 1; i < len; ++i)
@@ -53,8 +67,25 @@ public:
 
   bool read(uint8_t address, uint8_t* out, size_t len) override {
     if (!chips_.count(address)) return false;
+    const auto pending = pendingReply_.find(address);
+    if (pending != pendingReply_.end()) {
+      // Reads continue where the last one stopped, so a long reply can be taken in pieces.
+      size_t& at = replyAt_[address];
+      for (size_t i = 0; i < len; ++i, ++at) out[i] = at < pending->second.size() ? pending->second[at] : 0;
+      log(address, false, std::vector<uint8_t>(out, out + len));
+      return true;
+    }
     uint8_t reg = pointer_[address];
-    for (size_t i = 0; i < len; ++i) out[i] = regs_[{address, reg++}];
+    for (size_t i = 0; i < len; ++i) {
+      const auto fifo = fifos_.find({address, reg});
+      if (fifo != fifos_.end()) {
+        out[i] = fifo->second.empty() ? 0 : fifo->second.front();
+        if (!fifo->second.empty()) fifo->second.pop_front();
+      } else {
+        out[i] = counts_.count({address, reg}) ? (uint8_t)(fifoSize(address, counts_[{address, reg}]) & 0x0F) : regs_[{address, reg}];
+      }
+      ++reg;
+    }
     pointer_[address] = reg;
     log(address, false, std::vector<uint8_t>(out, out + len));
     return true;
@@ -62,8 +93,13 @@ public:
 
   bool writeRead(uint8_t address, const uint8_t* data, size_t len, uint8_t* out, size_t outLen) override {
     if (!chips_.count(address)) return false;
+    ++repeatedStarts_[address];
     log(address, true, std::vector<uint8_t>(data, data + len));
-    if (len > 0) pointer_[address] = data[len - 1];
+    pendingReply_.erase(address);
+    replyAt_[address] = 0;
+    const auto reply = replies_.find({address, std::vector<uint8_t>(data, data + len)});
+    if (reply != replies_.end()) pendingReply_[address] = reply->second;
+    else if (len > 0) pointer_[address] = data[len - 1];
     return read(address, out, outLen);
   }
 
@@ -83,6 +119,16 @@ public:
     else refuseAll_.erase(address);
   }
   void refuseRegisterWrite(uint8_t address, uint8_t reg) { refuseReg_.insert({address, reg}); }
+  void addFifo(uint8_t address, uint8_t dataReg, uint8_t countReg) {
+    fifos_[{address, dataReg}];
+    counts_[{address, countReg}] = dataReg;
+  }
+  void pushFifo(uint8_t address, uint8_t dataReg, const std::vector<uint8_t>& bytes) {
+    for (uint8_t b : bytes) fifos_[{address, dataReg}].push_back(b);
+  }
+  void setReply(uint8_t address, const std::vector<uint8_t>& command, const std::vector<uint8_t>& reply) {
+    replies_[{address, command}] = reply;
+  }
 
   // Reading back.
   uint8_t reg(uint8_t address, uint8_t reg) const {
@@ -99,12 +145,18 @@ public:
       if (t.address == address && t.isWrite) out.push_back(t.data);
     return out;
   }
+  // How many write-then-read transactions with a repeated start the chip saw (some chips return garbage for those).
+  int repeatedStarts(uint8_t address) const {
+    const auto it = repeatedStarts_.find(address);
+    return it == repeatedStarts_.end() ? 0 : it->second;
+  }
   int writeCount(uint8_t address, uint8_t reg) const {
     const auto it = writes_.find({address, reg});
     return it == writes_.end() ? 0 : it->second;
   }
 
 private:
+  size_t fifoSize(uint8_t address, uint8_t dataReg) { return fifos_[{address, dataReg}].size(); }
   void log(uint8_t address, bool isWrite, std::vector<uint8_t> data) {
     log_.push_back({time_ ? time_->elapsedMs() : 0, address, isWrite, std::move(data)});
   }
@@ -116,5 +168,11 @@ private:
   std::map<std::pair<uint8_t, uint8_t>, uint8_t> regs_;
   std::map<std::pair<uint8_t, uint8_t>, int> writes_;
   std::map<uint8_t, uint8_t> pointer_;
+  std::map<std::pair<uint8_t, uint8_t>, std::deque<uint8_t>> fifos_;
+  std::map<std::pair<uint8_t, uint8_t>, uint8_t> counts_;  // (address, countReg) -> dataReg
+  std::map<std::pair<uint8_t, std::vector<uint8_t>>, std::vector<uint8_t>> replies_;
+  std::map<uint8_t, std::vector<uint8_t>> pendingReply_;
+  std::map<uint8_t, size_t> replyAt_;
+  std::map<uint8_t, int> repeatedStarts_;
   std::vector<Transaction> log_;
 };

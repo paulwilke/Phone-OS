@@ -24,7 +24,8 @@ Rules for the layers:
   * src/board/ holds what the device's chips need and can be tested on the host: the pin map, the seams to
     the buses and pins (I2cBus, UartPort, Gpio, Delay), register decoding and start-up sequences. It may
     include src/board/, src/hal/ and src/drivers/ (a board class implements a capability or a transport
-    of a driver) and nothing else;
+    of a driver) and, from src/ui/, only ui/Input.h (the plain data of an input event that the keyboard and the
+    touch decoders produce) and ui/Display.h (the size of the panel the touch coordinates live in), and nothing else;
   * src/boot/ is the composition of the device (the runtime both the firmware and the simulator run): it
     may include every other layer of src/, and no other layer includes it;
   * nothing under src/ reaches outside src/: the firmware never includes sim/ or testing/ (the
@@ -65,6 +66,9 @@ APP_FACADE = os.path.join(ROOT, "src", "app", "AppCore.h")
 # The one other header of src/app/ a screen may use: a value class with no device behind it, which counts
 # shakes from the samples a screen is given. The sensor itself reaches the screen through ui/MotionSource.h.
 APP_PURE = os.path.join(ROOT, "src", "app", "ShakeDetector.h")
+
+
+UI_INPUT = (os.path.join(ROOT, "src", "ui", "Input.h"), os.path.join(ROOT, "src", "ui", "Display.h"))
 
 
 def resolve(path, target):
@@ -128,7 +132,7 @@ def main():
                         problems.append(f"{rel}:{n}: reaches outside src/ (sim/ and testing/ are not the firmware's): {target}")
                     if normal.startswith(os.path.join(ROOT, "device") + os.sep) or re.match(r"(\.\./)*device/", target):
                         problems.append(f"{rel}:{n}: src/ includes device/, the platform code that includes src/: {target}")
-                    if where == "board" and inside not in ("board", "hal", "drivers"):
+                    if where == "board" and inside not in ("board", "hal", "drivers") and normal not in UI_INPUT:
                         problems.append(f"{rel}:{n}: board may include only board/, hal/, drivers/, not {inside}/: {target}")
                     if inside == "boot" and where != "boot":
                         problems.append(f"{rel}:{n}: {where or 'src'}/ includes boot/, the composition that includes everything else: {target}")

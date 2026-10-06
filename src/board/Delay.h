@@ -9,4 +9,6 @@ class Delay {
 public:
   virtual ~Delay() = default;
   virtual void delayMs(uint32_t ms) = 0;
+  // The touch chip needs a moment between the address it was given and the read that follows.
+  virtual void delayUs(uint32_t us) = 0;
 };

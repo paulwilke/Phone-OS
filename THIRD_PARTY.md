@@ -25,7 +25,10 @@ The `.bdf` files are the upstream files except for one comment line, from which 
 
 | Work | Licence | Used for |
 |---|---|---|
-| [SensorLib](https://github.com/lewisxhe/SensorLib) by Lewis He (`lib_deps` of the `device` environment only) | MIT | the fuel gauge's capacity write procedure |
+| [SensorLib](https://github.com/lewisxhe/SensorLib) by Lewis He (`lib_deps` of the `device` environment only) | MIT | the fuel gauge's capacity write procedure and the driver of the motion sensor hub |
+| the firmware image of the motion sensor hub BHI260AP (Bosch Sensortec, delivered inside SensorLib as `bosch_app30_shuttle_bhi260`) | **not verified** | the sensor loads it into its RAM at every power-up; it is not stored in this repository |
+
+**Binaries that contain the Bosch firmware image are for the owner's own device until its redistribution terms are verified.** The image is fetched by the build as part of SensorLib; nothing of it is committed here, and a binary of the `device` environment must not be published or handed to others.
 
 ### Tools
 

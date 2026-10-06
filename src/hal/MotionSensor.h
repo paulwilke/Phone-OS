@@ -4,7 +4,9 @@
 // its own: it needs firmware at power-up and a supply rail of its own, so it costs power
 // and time. It therefore runs **only while a screen needs it** (start/stop).
 //
-// Values are in g (1.0 = gravity): lying flat, az is about +1.
+// Values are in g (1.0 = gravity) and in the axes of the sensor itself, not of the screen: the sensor of the
+// T-Deck Pro MAX is turned against the screen, and lying flat on a table it reads about -0.95 on z. Whoever
+// hands samples on hands them on unchanged (the motion page's mapping was checked with exactly these values).
 
 struct MotionSample {
   float ax = 0, ay = 0, az = 0;  // in g
