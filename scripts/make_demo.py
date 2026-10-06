@@ -31,7 +31,10 @@ OUT = os.path.join(ROOT, "out", "demo")
 DEMO = os.path.join(ROOT, "sim", "demo")
 
 # The screens the keys lead to on the child's device. The walk must contain each of them.
-SCREENS = ["home", "lock", "clock", "phone", "call", "messages", "compose", "recipient"]
+# The screens the walk on the child's card must reach. The Wi-Fi page, the status page and the page for a number
+# need the parents' tools or free text, which that card does not have: scenes/scenes-parent.txt takes them.
+SCREENS = ["home", "lock", "clock", "phone", "call", "messages", "compose", "recipient", "sos", "settings", "net",
+           "language", "gnss", "radio", "motion", "selftest"]
 # Fewer states than this means the walk did not get far (the shipped interface has well over a hundred).
 MIN_STATES = 60
 
@@ -48,6 +51,7 @@ SCENE_WORDS = [
     "demo.scene-unread", "demo.scene-incoming-call", "demo.scene-call-connected", "demo.scene-call-dialing",
     "demo.scene-call-failed", "demo.scene-no-network", "demo.scene-battery-low", "demo.scene-locked",
     "demo.scene-school-time", "demo.scene-school-phone-refused", "demo.scene-school-call-refused",
+    "demo.scene-parent-wifi", "demo.scene-parent-wifi-on", "demo.scene-parent-status", "demo.scene-parent-number",
 ]
 
 

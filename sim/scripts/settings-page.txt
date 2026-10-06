@@ -1,0 +1,34 @@
+# data: sim/data
+# The options page, with the keys of the device: message vibration is switched off on the page, the next text
+# arrives without a vibration, and the choice is on the card (settings.toml) so that it survives a restart.
+advance 5s
+sms +491701111111 first
+advance 2s
+check haptic-message 1
+
+key down down down down down down down down select
+check screen settings
+see settings.vibration
+see option.on
+key down select
+see option.off
+check settings-has message_vibration = false
+key back
+sms +491701111111 second
+advance 2s
+check unread 2
+check haptic-message 1
+
+# A restart (the one the parents' page asks for): the card is read again and the page shows the choice.
+wifi ap
+advance 2s
+web post /api/restart {}
+check web-status 200
+advance 3s
+check boots 2
+key down down down down down down down down select
+see settings.vibration
+see option.off
+sms +491701111111 third
+advance 2s
+check haptic-message 0

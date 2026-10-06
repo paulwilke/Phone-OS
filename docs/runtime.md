@@ -16,7 +16,7 @@ In this order, in the constructor:
 3. the languages are checked (`ConfigLoader::checkLanguages`). The interface language is selected when a catalog has it; otherwise the translator stays on English and there is a `BadCatalogCode` diagnostic;
 4. the core is built from the profile, told the firmware version, the radio and Wi-Fi, and started (`AppCore::start`); the core's Wi-Fi controller is the only one, and the web service follows it ([wifi-controller.md](wifi-controller.md));
 5. every diagnostic is written to the event log as one English line, `config: <name> <arguments>`, and kept for `diagnostics()`;
-6. the screens are registered, the stack is given the lock screen, the auto-lock time, the three keys under the screen, and begins on the home screen.
+6. every screen of `src/ui/ScreenIds.h` is registered (home, lock, clock, phone, number, call, messages, compose, recipient, SOS, options, Wi-Fi, network, status, language, GPS, radio, motion and the self-test), the stack is given the lock screen, the auto-lock time, the three keys under the screen, and begins on the home screen.
 
 A problem on the card is a diagnostic, never a refusal to start: an empty card boots a device with the defaults and three `MissingFile` diagnostics.
 
@@ -35,10 +35,14 @@ A problem on the card is a diagnostic, never a refusal to start: an empty card b
 
 `setLanguage(code)` is what a language page or the configuration calls: the translator switches and the next frame is in the new language, history entries included, because no screen keeps words. False for a code no catalog has, and nothing changes. The choice lasts until the next start; writing it back is the configuration's job.
 
-## What is not wired yet
+## Every page is in the product
 
-Only the screens that exist are registered ([ui-screens.md](ui-screens.md)). A tile for another page (SOS, settings, Wi-Fi) opens nothing: the stack ignores a name it does not know. An SOS can be started on the core (`core().beginSos()`) and runs to the message; the page that shows the countdown does not exist yet, so the runtime does not take the screen for it.
+Every name in `src/ui/ScreenIds.h` is registered, and two tests keep it so (`test_runtime`): one asks the stack for each name (`ScreenStack::registered`), the other walks the real runtime with the keys of the device, from the home screen, with every feature on, and fails for a page it cannot reach (the lock and the call page are left out: the first needs two minutes of silence, the second a call). They were written because three packages of pages were once merged late and nothing registered them: the tiles opened nothing. Taking one `stack_.add` out of `Runtime.cpp` makes both fail.
+
+The motion page gets the sensor through `SensorMotionSource` (`boot/`), which turns the hardware's `MotionSensor` into the interface's `MotionSource`; without a sensor it says so. The status page is given the firmware version and `Capabilities::hardware` (the board's name; empty: no line).
+
+**What the child changes is written back.** After a pass and after a key, the runtime writes `settings.toml` through `ConfigWriter` when the core says something changed (`settingsNeedWrite`): message vibration, the notice of a remote query and the language of the screen. A failed write is a line in the log and the old file stays.
 
 ## Tests
 
-`test/test_runtime` — boot on the fakes in a chosen language; the frames through the refresh policy (one full refresh, none for a quiet minute); an empty card; an unknown interface language; a user catalog on the card chosen by the configuration; an incoming message (counted, one partial refresh); an incoming call (takes the screen, through the lock, goes again); auto-lock; the keys under the screen; input drawn at once; a key press starts the quiet time again; the processor sleeps only while locked; an SOS from beginning to the parent's phone; a change of language at run time (the picture is the one a device configured in that language draws; an unknown code changes nothing); the three shipped languages draw the home screen without cut-off and differently; the real web service answers through the TCP fake; a restart asked for by the web interface. Each of the behaviours above was broken on purpose and its test watched to fail.
+`test/test_runtime` — boot on the fakes in a chosen language; the frames through the refresh policy (one full refresh, none for a quiet minute); an empty card; an unknown interface language; a user catalog on the card chosen by the configuration; an incoming message (counted, one partial refresh); an incoming call (takes the screen, through the lock, goes again); auto-lock; the keys under the screen; input drawn at once; a key press starts the quiet time again; the processor sleeps only while locked; an SOS from beginning to the parent's phone; a change of language at run time (the picture is the one a device configured in that language draws; an unknown code changes nothing); the three shipped languages draw the home screen without cut-off and differently; the real web service answers through the TCP fake; a restart asked for by the web interface; every screen name registered, and every page reachable by keys. Each of the behaviours above was broken on purpose and its test watched to fail.

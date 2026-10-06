@@ -44,6 +44,8 @@ public:
 
   // Registers a screen. Screens are added before begin().
   void add(ScreenId id, Screen& screen) { screens_[id] = &screen; }
+  // Is a screen registered under this name? (The test that every name in ScreenIds.h is wired asks.)
+  bool registered(ScreenId id) const { return screens_.count(id) != 0; }
   // Which registered screen is shown while the device is locked. A locked device needs one;
   // without it lock() does nothing.
   void setLockScreen(ScreenId id) { lock_ = id; hasLock_ = true; }

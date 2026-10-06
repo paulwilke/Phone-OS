@@ -401,7 +401,7 @@ inline void Simulator::boot() {
   const uint32_t now = nowMs();
   r.runtime = std::make_unique<boot::Runtime>(
       boot::Capabilities{r.clock, r.power, r.modem, r.gnss, r.haptic, r.log, card_, r.wifi, r.tcp, assets_, r.panel,
-                         [] { return 12345678u; }, "sim", nullptr, &r.motion},
+                         [] { return 12345678u; }, "sim", nullptr, &r.motion, "simulator"},
       translator_, now);
   tick();
 }
@@ -599,7 +599,7 @@ inline void Simulator::printHelp() {
           "    say <text> | say-not <text>         the screen says this literal text (a name, an operator)\n"
           "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular, savemode,\n"
           "                                 battery, sms-sent, last-sms-to, last-sms-has, language, boots, log-has, wifi,\n"
-          "                                 wifi-seconds-left, web-status, web-has,\n"
+          "                                 wifi-seconds-left, web-status, web-has, settings-has (a line of the card's settings.toml),\n"
           "                                 haptic-click|ring|message|sent|failed (how often played)\n"
           "    fails <command>              the command is refused (an error is what the scenario expects)\n"
           "  Control\n"
@@ -734,9 +734,17 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
   }
   if (name == "motion") {
     if (!need(2)) return fail("motion needs tilt, shake, off or on");
-    if (w[1] == "tilt") {
+    if (w[1] == "tilt" && need(3) && (w[2] == "left" || w[2] == "right" || w[2] == "forward" || w[2] == "back" || w[2] == "flat")) {
+      // The side of the device that is low, in the sensor's own axes (the mapping the motion page's tests
+      // pin): the ball rolls to that side. "forward" tips the top edge down, "back" the bottom edge.
+      if (w[2] == "left") r.motion.tilt(0.0f, 0.45f, 0.89f);
+      else if (w[2] == "right") r.motion.tilt(0.0f, -0.45f, 0.89f);
+      else if (w[2] == "forward") r.motion.tilt(-0.30f, 0.0f, 0.95f);
+      else if (w[2] == "back") r.motion.tilt(0.30f, 0.0f, 0.95f);
+      else r.motion.tilt(0.0f, 0.0f, 1.0f);
+    } else if (w[1] == "tilt") {
       double v[3];
-      if (!nums(2, 3, v)) return fail("motion tilt needs x y z");
+      if (!nums(2, 3, v)) return fail("motion tilt needs left, right, forward, back, flat, or x y z");
       r.motion.tilt(static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
     } else if (w[1] == "shake") r.motion.shake();
     else if (w[1] == "off") r.motion.setAvailable(false);
@@ -1165,6 +1173,13 @@ inline bool Simulator::check(const std::vector<std::string>& w, const std::strin
       if (entry.find(value) != std::string::npos) return true;
     out_ << "error: no line of the log has \"" << value << "\"\n";
     return false;
+  } else if (what == "settings-has") {
+    // What is on the card in settings.toml, not what the device holds: a change the child made on a page
+    // counts only when it was written back.
+    std::string text;
+    const bool has = card_.read("/config/settings.toml", text, 65536) && text.find(value) != std::string::npos;
+    if (!has) out_ << "error: settings.toml on the card does not have \"" << value << "\"\n";
+    return has;
   } else if (what == "last-sms-to") {
     actual = sent.empty() ? "" : sent.back().phone;
   } else if (what == "last-sms-has") {

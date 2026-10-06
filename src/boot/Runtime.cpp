@@ -41,6 +41,17 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
       messages_(ui::ScreenContext{core_, translator, stack_, session_}),
       compose_(ui::ScreenContext{core_, translator, stack_, session_}),
       recipient_(ui::ScreenContext{core_, translator, stack_, session_}),
+      sos_(ui::ScreenContext{core_, translator, stack_, session_}),
+      settings_(ui::ScreenContext{core_, translator, stack_, session_}),
+      wifiPage_(ui::ScreenContext{core_, translator, stack_, session_}),
+      net_(ui::ScreenContext{core_, translator, stack_, session_}),
+      status_(ui::ScreenContext{core_, translator, stack_, session_}, ui::DeviceInfo{capabilities.firmware, capabilities.hardware}),
+      language_(ui::ScreenContext{core_, translator, stack_, session_}),
+      gnssPage_(ui::ScreenContext{core_, translator, stack_, session_}),
+      radioPage_(ui::ScreenContext{core_, translator, stack_, session_}),
+      motionSource_(capabilities.motion),
+      motion_(ui::ScreenContext{core_, translator, stack_, session_}, motionSource_),
+      selfTest_(ui::ScreenContext{core_, translator, stack_, session_}),
       web_(capabilities.tcp, capabilities.store, capabilities.assets, core_, translator),
       lastFrameMs_(nowMs) {
   core_.setFirmware(capabilities.firmware);
@@ -60,6 +71,16 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
   stack_.add(ui::screen::kMessages, messages_);
   stack_.add(ui::screen::kCompose, compose_);
   stack_.add(ui::screen::kRecipient, recipient_);
+  stack_.add(ui::screen::kSos, sos_);
+  stack_.add(ui::screen::kSettings, settings_);
+  stack_.add(ui::screen::kWifi, wifiPage_);
+  stack_.add(ui::screen::kNet, net_);
+  stack_.add(ui::screen::kStatus, status_);
+  stack_.add(ui::screen::kLanguage, language_);
+  stack_.add(ui::screen::kGnss, gnssPage_);
+  stack_.add(ui::screen::kRadio, radioPage_);
+  stack_.add(ui::screen::kMotion, motion_);
+  stack_.add(ui::screen::kSelfTest, selfTest_);
   stack_.setLockScreen(ui::screen::kLock);
   stack_.setAutoLockSeconds(kAutoLockSeconds);
   // The three keys under the screen act the same on every screen, like the home key of a phone.
@@ -76,6 +97,7 @@ PowerDecision Runtime::step(uint32_t nowMs) {
   // not while the device is locked, which is how it goes into the pocket.
   const PowerDecision decision = core_.poll(!stack_.locked(), untilFrame);
   web_.poll(nowMs / 1000);
+  persistSettings();
   followCalls(nowMs);
   stack_.poll(nowMs / 1000);
   if (due) {
@@ -91,6 +113,14 @@ Runtime::~Runtime() {
   translator_.releaseWeb();
 }
 
+// What the child changed on a page (message vibration, the language, the notice of a remote query) goes
+// back to settings.toml on the card; the core only says that there is something to write.
+void Runtime::persistSettings() {
+  if (!core_.settingsNeedWrite()) return;
+  core_.clearSettingsWrite();
+  if (!config::ConfigWriter(caps_.store).writeSettings(core_.profile())) core_.log("config: settings.toml could not be written");
+}
+
 void Runtime::loadUserWebCatalogs() {
   std::vector<config::Diagnostic> problems;
   config::ConfigLoader::loadUserWebCatalogs(caps_.store, translator_, problems);
@@ -100,6 +130,7 @@ void Runtime::loadUserWebCatalogs() {
 void Runtime::input(const ui::Input& in, uint32_t nowMs) {
   core_.noteInput();
   stack_.handle(in, nowMs / 1000);
+  persistSettings();
   frameDue_ = true;
 }
 

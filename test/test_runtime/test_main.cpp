@@ -4,8 +4,13 @@
 
 #include <unity.h>
 
+#include <deque>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <FrameBuffer.h>
 #include <Languages.h>
@@ -116,6 +121,90 @@ void test_it_boots_on_the_fakes_and_shows_the_home_screen_in_the_configured_lang
   TEST_ASSERT_TRUE(w.state().positioningActive);   // start() asked for the start-up fix
   TEST_ASSERT_TRUE(fb.blackPixels() > 500);      // the home screen is on the display
   TEST_ASSERT_FALSE_MESSAGE(fb.clipped(), fb.describeClips().c_str());
+}
+
+// ---- every page of the product is in the product ------------------------------------------------------------
+//
+// The guard against pages that exist in the tree and nowhere in the device: three screen packages were once
+// merged late and nothing registered them, so the home screen's tiles opened nothing. Two rules, tried on the
+// real wiring with every feature on (the radio, the parents' tools, a sensor, Wi-Fi).
+
+const char* kEverything =
+    "[child]\nname = \"Alex\"\n[interface]\nlanguage = \"en\"\n[sms]\nlanguage = \"en\"\n"
+    "[time]\ntimezone = \"Europe/Berlin\"\n[features]\nradio = true\nparent_tools = true\nfree_text = true\n"
+    "[[tiles]]\nlabel = \"Parent One\"\naction = \"call\"\ntarget = \"+491701111111\"\n";
+
+// A second contact who is not on a tile gives the recipient page its "other" row, and free text its "new number".
+void everythingOn(World& w) {
+  w.store.put("/config/settings.toml", kEverything);
+  w.store.put("/config/contacts.toml", std::string("[[contact]]\nnumber = \"") + kParentOne +
+                                           "\"\nname = \"Parent One\"\nrole = \"parent\"\n[[contact]]\nnumber = \"+491702222222\"\nname = \"Grandma\"\nrole = \"family\"\n");
+}
+
+void test_every_screen_id_is_registered_by_the_runtime() {
+  World w;
+  everythingOn(w);
+  FrameBuffer fb;
+  w.boot(fb);
+  for (ui::ScreenId id = 0; id < ui::screen::kCount; ++id)
+    TEST_ASSERT_TRUE_MESSAGE(w.runtime->stack().registered(id), (std::string("screen id ") + std::to_string(id) + " is not registered").c_str());
+}
+
+// Replays the keys on a new device and says which screen is on top and what the panel shows, which together
+// are a state of the interface (the walk of the demo does the same on the simulator).
+struct Walk {
+  ui::ScreenId screen;
+  uint32_t picture;
+};
+
+Walk replay(const std::vector<ui::Key>& keys) {
+  World w;
+  everythingOn(w);
+  sim::SimPanel panel([&] { return w.ms; });
+  w.boot(panel);
+  w.run(3);
+  for (ui::Key key : keys) {
+    w.runtime->input(ui::Input::pressed(key), w.ms);
+    w.run(1);
+  }
+  w.runtime->render();
+  return {w.runtime->stack().visibleId(), panel.shown().crc()};
+}
+
+void test_every_registered_page_can_be_reached_from_the_home_screen_by_key_presses_alone() {
+  std::set<ui::ScreenId> reached = {ui::screen::kHome};
+  std::set<std::pair<ui::ScreenId, uint32_t>> seen;
+  std::map<ui::ScreenId, int> perScreen;
+  std::deque<std::vector<ui::Key>> queue;
+  queue.push_back({});
+  seen.insert({replay({}).screen, replay({}).picture});
+  const std::vector<ui::Key> moves = {ui::Key::Down, ui::Key::Select, ui::Key::Up, ui::Key::Back};
+  // Not by keys alone: the lock (two minutes of silence) and the call page (a call, which the test of the
+  // call page and the scenarios place).
+  auto needed = [&](ui::ScreenId id) { return id != ui::screen::kLock && id != ui::screen::kCall; };
+  auto complete = [&] {
+    for (ui::ScreenId id = 0; id < ui::screen::kCount; ++id)
+      if (needed(id) && !reached.count(id)) return false;
+    return true;
+  };
+  while (!queue.empty() && !complete()) {
+    const std::vector<ui::Key> path = queue.front();
+    queue.pop_front();
+    if (path.size() >= 14) continue;
+    for (ui::Key key : moves) {
+      std::vector<ui::Key> next = path;
+      next.push_back(key);
+      const Walk state = replay(next);
+      reached.insert(state.screen);
+      if (!seen.insert({state.screen, state.picture}).second) continue;
+      if (++perScreen[state.screen] > (state.screen == ui::screen::kHome ? 60 : 30)) continue;   // the states of one screen differ in a selection: enough of them
+      queue.push_back(next);
+    }
+  }
+  for (ui::ScreenId id = 0; id < ui::screen::kCount; ++id) {
+    if (!needed(id)) continue;
+    TEST_ASSERT_TRUE_MESSAGE(reached.count(id), (std::string("screen id ") + std::to_string(id) + " cannot be reached from the home screen by keys").c_str());
+  }
 }
 
 void test_the_frames_go_through_the_refresh_policy() {
@@ -434,6 +523,8 @@ void test_a_restart_asked_by_the_web_interface_reaches_the_host() {
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_it_boots_on_the_fakes_and_shows_the_home_screen_in_the_configured_language);
+  RUN_TEST(test_every_screen_id_is_registered_by_the_runtime);
+  RUN_TEST(test_every_registered_page_can_be_reached_from_the_home_screen_by_key_presses_alone);
   RUN_TEST(test_the_frames_go_through_the_refresh_policy);
   RUN_TEST(test_a_card_with_nothing_on_it_boots_with_defaults_and_says_what_is_missing);
   RUN_TEST(test_an_unknown_interface_language_falls_back_to_english_with_a_diagnostic);

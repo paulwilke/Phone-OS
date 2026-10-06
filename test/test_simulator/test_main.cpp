@@ -705,6 +705,34 @@ void test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_thro
   TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("home", "select"));
 }
 
+// The pages write what the child changes back to the card. A walk that replays paths must start every one on
+// the card as it was, and must never write to the data directory it was given.
+void test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data_directory() {
+  const std::filesystem::path data = scratch("crawl-card");
+  std::filesystem::copy("sim/data", data, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+  const auto settingsOf = [&] {
+    std::ifstream in(data / "config" / "settings.toml");
+    std::stringstream text;
+    text << in.rdbuf();
+    return text.str();
+  };
+  const std::string before = settingsOf();
+  sim::Options options = crawlOptions();
+  options.dataDir = data.string();
+  options.workDir = (data.parent_path() / "crawl-work").string();
+  sim::Crawler crawler(options, "sim/demo/world.txt");
+  // Home, the options tile, the language row, German: the choice is written to the card of that replay.
+  std::vector<std::string> path(8, "down");
+  path.push_back("select");
+  for (const char* key : {"down", "down", "down", "select", "up", "select"}) path.push_back(key);
+  std::unique_ptr<sim::Simulator> chosen = crawler.reach(path, "");
+  TEST_ASSERT_EQUAL_STRING("de", chosen->translator().language().c_str());
+  TEST_ASSERT_TRUE(chosen->card().root() != data);
+  std::unique_ptr<sim::Simulator> next = crawler.reach({}, "");
+  TEST_ASSERT_EQUAL_STRING("en", next->translator().language().c_str());
+  TEST_ASSERT_EQUAL_STRING(before.c_str(), settingsOf().c_str());
+}
+
 void test_the_same_path_leads_to_the_same_screen_in_every_language() {
   sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
   const sim::Crawl crawl = crawler.run(3, 8);
@@ -791,6 +819,7 @@ int main() {
   RUN_TEST(test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time);
   RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);
   RUN_TEST(test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through);
+  RUN_TEST(test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data_directory);
   RUN_TEST(test_the_same_path_leads_to_the_same_screen_in_every_language);
   RUN_TEST(test_shot_writes_a_picture_into_the_directory_it_was_given);
   RUN_TEST(test_every_scenario_runs_to_its_end_on_its_own_card);

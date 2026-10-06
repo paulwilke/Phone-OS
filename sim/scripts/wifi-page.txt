@@ -1,0 +1,50 @@
+# data: sim/data-parent
+# The Wi-Fi page, with the keys of the device: the access point is switched on from the page, the parents' page
+# answers while it runs, the page's own use keeps it on past the idle time, and "Off" on the device's page ends it.
+advance 5s
+check wifi off
+key down down down down down down down down down select
+check screen wifi
+see wifi.title
+see wifi.is-off
+
+# Access point: second row.
+key down select
+check wifi access-point
+advance 2s
+see wifi.access-point
+see wifi.off-in n=10
+web get /api/state
+check web-status 200
+check web-has "state":"access_point"
+
+# Nine minutes, a request of the page, nine minutes: without the request it would be off; with it a minute is left.
+advance 9m
+web get /api/state
+advance 9m
+check wifi access-point
+check wifi-seconds-left 60
+check locked yes
+web get /api/state
+check web-has "seconds_left":600
+
+# Silence: ten minutes without anybody and it switches itself off, and the page says why.
+advance 11m
+check wifi off
+web get /api/state
+check web-status 0
+
+# The device was locked all that time (two minutes of silence). Unlocked, its Wi-Fi page says why Wi-Fi is off, and the
+# page offers it again: the access point is switched on from it, and its third row switches it off.
+key select select
+check locked no
+key select
+check screen wifi
+see wifi.reason-switched-off-by-itself
+key down select
+check wifi access-point
+key down down select
+check wifi off
+advance 2s
+web get /api/state
+check web-status 0

@@ -1,0 +1,50 @@
+# data: sim/data-parent
+# The network page and the status page, with the keys of the device, show the facts the simulator was told:
+# the operator and the signal, the SIM, the battery and the charger, and what the device knows about itself.
+advance 5s
+signal 2
+network Example Mobile
+advance 2s
+key down down down down down select
+check screen net
+see net.title
+see net.operator name=Example
+see net.signal bars=2
+see net.connected
+
+# Told something else, the page says something else.
+signal 5
+network Telco
+advance 2s
+see net.operator name=Telco
+see net.signal bars=5
+network none
+advance 2s
+see net.not-connected
+simcard pin
+advance 2s
+see net.hint-pin
+simcard ready
+advance 2s
+say-not Network: PIN missing
+key back
+
+# The status page: the battery as told, then charging, then full on the cable.
+battery 55
+key down down down down down down down select
+check screen status
+see status.title
+see status.battery percent=55
+battery 20
+advance 2s
+see status.battery percent=20
+plug charging
+advance 2s
+see status.battery-charging percent=20
+plug full
+battery 100
+advance 2s
+see status.battery-full percent=100
+see status.child name=Alex
+see status.contacts n=3
+see status.firmware version=sim

@@ -1,0 +1,18 @@
+# data: sim/data-parent
+# The pages that only a device with the parents' tools has: the Wi-Fi page (off, then with the access point), the
+# status page, and the page for a number that is not in the contact book.
+advance 5s
+key down down down down down down down down down select
+shot parent-wifi
+key down select
+advance 2s
+shot parent-wifi-on
+key back
+key down down down select
+advance 1s
+shot parent-status
+key home
+key compose
+key down down select
+key down select
+shot parent-number

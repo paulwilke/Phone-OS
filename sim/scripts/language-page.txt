@@ -1,0 +1,68 @@
+# data: sim/data
+# The language page, with the keys of the device: from the home screen to the options, to the language, and
+# a choice that changes every word of the device at once: the home screen, the status bar, an open message
+# (its history entry is worded when it is read), and the choice goes back to settings.toml on the card.
+advance 5s
+call +491701111111
+advance 3s
+remote hangup
+advance 2s
+key inbox
+key select
+see system.missed-call name=Parent One
+key home
+see home.phone
+see home.inbox
+see weekday.tue
+
+# Home, down to the options tile, into the options, down to the language row, into the language page.
+key down down down down down down down down select
+check screen settings
+see settings.title
+key down down down select
+check screen language
+see language.title
+check settings-has language = "en"
+
+# German: one step up in the list (de, en, fr), Enter.
+key up select
+check language de
+see language.title
+key back back
+see home.settings
+see home.network
+see weekday.tue
+say-not Settings
+check settings-has language = "de"
+key inbox
+key select
+see system.missed-call name=Parent One
+say-not Missed call from
+key home
+
+# French from the same page, then English: each the choice of the child, each written back.
+key select
+key down down down select
+key down down select
+check language fr
+key back back
+see home.settings
+check settings-has language = "fr"
+key inbox
+key select
+see system.missed-call name=Parent One
+say-not Anruf
+key home
+key select
+key down down down select
+key up select
+check language en
+key back back
+see home.settings
+say Settings
+check settings-has language = "en"
+
+# What was open before the switch is in the new language when it is read again.
+key inbox
+key select
+see system.missed-call name=Parent One

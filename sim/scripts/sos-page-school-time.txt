@@ -1,0 +1,22 @@
+# data: sim/data-school
+# An SOS in school time, through the real page: the page says why the device is locked and how many taps
+# it takes, four taps are not enough, the fifth lifts school time and the emergency goes out.
+advance 5s
+check school yes
+key down down select
+check screen sos
+check sos quiet-confirm
+see sos.tap
+see sos.quiet-hint n=5 seconds=10
+key select
+key select
+key select
+key select
+check school yes
+check sos quiet-confirm
+key select
+check school no
+check sos running
+advance 40s
+check sms-sent 1
+check last-sms-has Alex sends SOS

@@ -53,9 +53,13 @@ public:
     return all;
   }
 
-  // `base` names the card and the catalogs; the card is used where it is (the walk never writes).
+  // `base` names the card and the catalogs; the card is copied for every replay, so nothing the pages write reaches it.
   Crawler(Options base, std::string prelude) : options_(std::move(base)), prelude_(std::move(prelude)) {
-    options_.inPlace = true;
+    // Every replay starts on a fresh copy of the card (the simulator makes it): the pages write what the child
+    // changes (the language, a vibration) back to the card, and the walk must neither carry that from one
+    // path to the next nor write to the data directory it was given.
+    options_.inPlace = false;
+    options_.workDir += "-crawl";
     options_.webPort = 0;
   }
 

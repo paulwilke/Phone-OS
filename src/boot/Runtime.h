@@ -26,6 +26,7 @@
 
 #include "../app/AppCore.h"
 #include "../config/ConfigLoader.h"
+#include "../config/ConfigWriter.h"
 #include "../config/Diagnostic.h"
 #include "../hal/ConfigStore.h"
 #include "../hal/MotionSensor.h"
@@ -36,12 +37,23 @@
 #include "../ui/screens/CallScreen.h"
 #include "../ui/screens/ClockScreen.h"
 #include "../ui/screens/ComposeScreen.h"
+#include "../ui/screens/GnssScreen.h"
 #include "../ui/screens/HomeScreen.h"
+#include "../ui/screens/LanguageScreen.h"
 #include "../ui/screens/LockScreen.h"
 #include "../ui/screens/MessageListScreen.h"
+#include "../ui/screens/MotionScreen.h"
+#include "../ui/screens/NetScreen.h"
 #include "../ui/screens/NumberScreen.h"
 #include "../ui/screens/PhoneScreen.h"
+#include "../ui/screens/RadioScreen.h"
 #include "../ui/screens/RecipientScreen.h"
+#include "../ui/screens/SelfTestScreen.h"
+#include "../ui/screens/SettingsScreen.h"
+#include "../ui/screens/SosScreen.h"
+#include "../ui/screens/StatusScreen.h"
+#include "../ui/screens/WifiScreen.h"
+#include "SensorMotionSource.h"
 #include "../web/WebAssets.h"
 #include "../web/WebService.h"
 
@@ -64,6 +76,7 @@ struct Capabilities {
   const char* firmware;
   RadioLink* radio = nullptr;      // without it the core has no radio
   MotionSensor* motion = nullptr;  // its presence puts the motion tile on the home screen
+  const char* hardware = "";       // the board, for the status page; empty: no line
 };
 
 class Runtime {
@@ -117,6 +130,7 @@ private:
   std::vector<config::Diagnostic> diagnostics_;
   config::ConfigLoader::Result loaded_;
   void loadUserWebCatalogs();
+  void persistSettings();
   AppCore core_;
   ui::Session session_;
   ui::ScreenStack stack_;
@@ -129,6 +143,17 @@ private:
   ui::MessageListScreen messages_;
   ui::ComposeScreen compose_;
   ui::RecipientScreen recipient_;
+  ui::SosScreen sos_;
+  ui::SettingsScreen settings_;
+  ui::WifiScreen wifiPage_;
+  ui::NetScreen net_;
+  ui::StatusScreen status_;
+  ui::LanguageScreen language_;
+  ui::GnssScreen gnssPage_;
+  ui::RadioScreen radioPage_;
+  SensorMotionSource motionSource_;
+  ui::MotionScreen motion_;
+  ui::SelfTestScreen selfTest_;
   WebService web_;
 
   uint32_t lastFrameMs_ = 0;

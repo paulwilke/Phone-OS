@@ -1,0 +1,45 @@
+# data: sim/data
+# An SOS in normal time, through the real page and the keys of the device: the SOS tile, the choice with its
+# countdown, the search that runs while the child decides, the text that goes out, and a text that cannot.
+advance 5s
+key down down select
+check screen sos
+check sos choosing
+see sos.countdown seconds=40
+see sos.emergency
+see sos.pickup
+see sos.cancel
+
+# The countdown runs, and the search with it: by the time the child chooses, the position is found.
+advance 10s
+see sos.countdown seconds=30
+key select
+check sos running
+see sos.step-found
+check sms-sent 0
+
+# The text goes to the first person to reach, and the page says so.
+advance 25s
+see sos.step-sent
+see sos.sent-to name=Parent One
+check sms-sent 1
+check last-sms-to +491701111111
+check last-sms-has Alex sends SOS
+key back
+check screen home
+
+# No network: the text of a second emergency is kept, the page says it waits for the network, and it goes out
+# by itself when the network is back.
+network none
+advance 5s
+key select
+check screen sos
+key down select
+check sos running
+advance 60s
+see sos.step-sent
+see sos.sent-waiting name=Parent One
+check sms-sent 1
+network Example Mobile
+advance 60s
+check sms-sent 2
