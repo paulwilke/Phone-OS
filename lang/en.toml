@@ -104,7 +104,7 @@ net.hint-wrong-pin = "The PIN was wrong. Do not restart before it is right: thre
 net.hint-locked    = "The SIM is locked. Only the provider's PUK can save it."
 net.hint-missing   = "There is no SIM card in the device."
 net.hint-sms-only  = "The network allows this SIM messages only, no calls."
-net.hint-ims-missing = "The network is there, but calls are not ready yet. This usually passes within a minute. Messages work."
+net.hint-ims-missing = "The network is there, but calls are not ready yet. Messages work."
 
 status.title            = "Status"
 status.battery          = "Battery: {percent}%"

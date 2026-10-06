@@ -139,7 +139,7 @@ net.hint-wrong-pin = "Die PIN war falsch. Nicht neu starten, bevor sie stimmt: D
 net.hint-locked    = "Die SIM ist gesperrt. Nur die PUK des Anbieters kann sie retten."
 net.hint-missing   = "Es steckt keine SIM-Karte im Gerät."
 net.hint-sms-only  = "Das Netz erlaubt dieser SIM nur Nachrichten, keine Anrufe."
-net.hint-ims-missing = "Das Netz ist da, aber Anrufe sind noch nicht bereit. Das vergeht meist nach etwa einer Minute. Nachrichten funktionieren."
+net.hint-ims-missing = "Das Netz ist da, aber Anrufe sind noch nicht bereit. Nachrichten funktionieren."
 
 status.title            = "Status"
 status.battery          = "Akku: {percent}%"
