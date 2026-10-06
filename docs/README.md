@@ -49,6 +49,9 @@ The documents describe what exists in this repository — each one is written fr
 | [ui-refresh.md](ui-refresh.md) | refresh policy, frame tracker, refresh controller and the frame-budget tests |
 | [ui-text.md](ui-text.md) | the four fonts, the character set and the symbols, the text engine: UTF-8, width, fit, ellipsize, wrap, draw |
 | [runtime.md](runtime.md) | the one composition of core, screens and web service that the firmware and the simulator both run: boot, one pass, calls, input, language |
+| [simulator.md](simulator.md) | the application on the fakes with a console: build, run, the card, commands, scripts and assertions, the web page, what it cannot prove |
+| [demo.md](demo.md) | the generated pictures and the click-through demo: the walk, the scenes, the page, what the generator checks |
+| [translating.md](translating.md) | writing a catalog, the size limit, trying it in the simulator |
 | [simulated-panel.md](simulated-panel.md) | the e-ink panel without a window: the real refresh policy, the visible delay, a PNG of what is shown |
 | [config-loader.md](config-loader.md) | loading the three config files into a Profile with diagnostics; writing them back; user catalogs; the settings-changed flag |
 

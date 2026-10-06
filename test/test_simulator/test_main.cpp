@@ -539,10 +539,10 @@ void test_a_work_directory_that_is_not_the_simulators_is_never_emptied() {
   TEST_ASSERT_TRUE(std::filesystem::exists(work / "precious.txt"));
 }
 
-void test_a_work_directory_that_is_or_holds_the_data_is_refused() {
+void test_a_work_directory_that_is_holds_or_lies_in_the_data_is_refused() {
   const std::filesystem::path data = scratch("holds");
   std::filesystem::create_directories(data / "config");
-  for (const std::filesystem::path& work : {data, data.parent_path()}) {
+  for (const std::filesystem::path& work : {data, data.parent_path(), data / "config" / "work"}) {
     sim::Options o;
     o.dataDir = data.string();
     o.workDir = work.string();
@@ -602,6 +602,36 @@ void test_check_and_fails_report_what_differs() {
   TEST_ASSERT_TRUE(s.run("fails check unread 1"));
   TEST_ASSERT_FALSE(s.run("fails check unread 0"));                 // it worked, and was expected not to
   TEST_ASSERT_FALSE(s.run("fails"));
+}
+
+// ---- the documentation ---------------------------------------------------------------------------------------------------
+
+void test_every_command_of_the_help_is_in_the_documentation() {
+  Sim s;
+  s.run("help");
+  std::ifstream in("docs/simulator.md");
+  std::stringstream text;
+  text << in.rdbuf();
+  const std::string docs = text.str();
+  std::istringstream help(s.output());
+  std::string line;
+  size_t commands = 0;
+  while (std::getline(help, line)) {
+    if (line.rfind("    ", 0) != 0 || line[4] == ' ') continue;      // a command line starts at the fourth column
+    // The left column, up to two spaces in a row, holds the commands, separated by " | ".
+    const std::string left = line.substr(4, line.find("  ", 4) - 4);
+    size_t at = 0;
+    while (at <= left.size()) {
+      const size_t bar = left.find(" | ", at);
+      const std::string one = left.substr(at, bar == std::string::npos ? std::string::npos : bar - at);
+      const std::string name = one.substr(0, one.find(' '));
+      ++commands;
+      TEST_ASSERT_TRUE_MESSAGE(docs.find(name) != std::string::npos, (name + " is not in docs/simulator.md").c_str());
+      if (bar == std::string::npos) break;
+      at = bar + 3;
+    }
+  }
+  TEST_ASSERT_TRUE(commands > 30);
 }
 
 // ---- the crawl ----------------------------------------------------------------------------------------------------------
@@ -726,9 +756,10 @@ int main() {
   RUN_TEST(test_the_card_is_a_copy_and_the_data_directory_is_never_written);
   RUN_TEST(test_a_fresh_start_forgets_what_the_last_one_saved_unless_the_card_is_used_in_place);
   RUN_TEST(test_a_work_directory_that_is_not_the_simulators_is_never_emptied);
-  RUN_TEST(test_a_work_directory_that_is_or_holds_the_data_is_refused);
+  RUN_TEST(test_a_work_directory_that_is_holds_or_lies_in_the_data_is_refused);
   RUN_TEST(test_in_place_needs_a_data_directory);
   RUN_TEST(test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures);
+  RUN_TEST(test_every_command_of_the_help_is_in_the_documentation);
   RUN_TEST(test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time);
   RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);
   RUN_TEST(test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through);

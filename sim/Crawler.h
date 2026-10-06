@@ -79,7 +79,7 @@ public:
       const int from = queue.front();
       queue.pop_front();
       if (crawl.nodes[static_cast<size_t>(from)].depth >= maxDepth) continue;
-      const std::string& here = crawl.nodes[static_cast<size_t>(from)].screen;
+      const std::string here = crawl.nodes[static_cast<size_t>(from)].screen;  // a copy: push_back below may move the nodes
       for (const std::string& key : keys()) {
         if (!worldStaysAsItIs(here, key)) continue;
         std::vector<std::string> path = crawl.nodes[static_cast<size_t>(from)].path;

@@ -1,8 +1,8 @@
 # Test doubles
 
-Code: `testing/fakes/` (header files), tests of their scripting in `test/test_fakes/`. The directory is **not** part of the firmware: only `-I testing` of the host tests (and later of the simulator) puts it on an include path, as `<fakes/FakeClock.h>`.
+Code: `testing/fakes/` (header files), tests of their scripting in `test/test_fakes/`. The directory is **not** part of the firmware: only `-I testing` of the host tests and of the simulator puts it on an include path, as `<fakes/FakeClock.h>`.
 
-Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one scriptable fake, small enough to read in one sitting. Each is the first implementation of its interface and passes the same contract suite as any later one. A test drives it through a small **scripting surface**, documented at the top of its header; the simulator will use the same surface from outside.
+Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one scriptable fake, small enough to read in one sitting. Each is the first implementation of its interface and passes the same contract suite as any later one. A test drives it through a small **scripting surface**, documented at the top of its header; the simulator uses the same surface from outside: its console commands call these functions ([simulator.md](simulator.md)). Where the simulator needs more than a fake offers it extends the fake and its contract test, and does not write a second one.
 
 | Fake | Scripting (what a test or the simulator can make it do) | Reading back |
 |---|---|---|

@@ -41,6 +41,10 @@ language by writing one text file.
 | Home, lock and clock screens | the tiles of the home screen (three columns, two pages), the lock without a PIN, the clock page | `src/ui/screens/`, [docs/screen-home.md](docs/screen-home.md), [docs/screen-lock.md](docs/screen-lock.md), [docs/screen-clock.md](docs/screen-clock.md) |
 | Phone, call and number screens | whom to call, the call in each phase with its volume and failure reasons, a typed number for a message | `src/ui/screens/`, [docs/screen-phone.md](docs/screen-phone.md), [docs/screen-call.md](docs/screen-call.md), [docs/screen-number.md](docs/screen-number.md) |
 | Messages, compose and recipient screens | the history with its marks and words from codes, writing with the character set and limits, ready-made messages where free text is off, the choice of recipient | `src/ui/screens/`, [docs/screen-messages.md](docs/screen-messages.md), [docs/screen-compose.md](docs/screen-compose.md), [docs/screen-recipient.md](docs/screen-recipient.md) |
+| Runtime | the one composition of core, screens, configuration and web service that the firmware and the simulator both run | `src/boot/`, [docs/runtime.md](docs/runtime.md) |
+| Simulator | the application on the fakes, with a console, scripted scenarios, a simulated e-ink panel, the real web page on the loopback address, an optional window | `sim/`, [docs/simulator.md](docs/simulator.md), [docs/simulated-panel.md](docs/simulated-panel.md) |
+| Generated demo | a picture of every state and scene in English, German and French and a click-through page with a language selector, built by CI | `scripts/make_demo.py`, [docs/demo.md](docs/demo.md) |
+| Translating | writing a catalog, the size limit, trying it in the simulator | [docs/translating.md](docs/translating.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Configuration schema | the single source of truth for every configuration key; a generator produces the C++ tables, the web form description, the reference documentation, and example files | `config/schema.toml`, `scripts/gen_config.py`, [docs/configuration-reference.md](docs/configuration-reference.md) |
 | Configuration loader and writer | reads the three config files into a Profile with structured diagnostics; writes them back atomically; loads user language catalogs; persists two settings the child may change at run time | `src/config/`, [docs/config-loader.md](docs/config-loader.md) |
@@ -58,6 +62,8 @@ python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeh
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
 python3 scripts/make_font.py --check # the generated fonts match their sources
 python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.md is ticked and has its test
+pio run -e sim && .pio/build/sim/program --script sim/scripts/smoke.txt # the simulator, headless (docs/simulator.md)
+python3 scripts/make_demo.py   # the pictures and the click-through demo into out/demo/ (docs/demo.md)
 python3 scripts/gen_config.py --check # generated config files match the schema
 python3 test/test_schema_gen/test_gen.py # generator unit tests (Python, not part of pio test)
 python3 scripts/privacy_check.py

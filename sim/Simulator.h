@@ -276,9 +276,14 @@ inline std::filesystem::path Simulator::prepareCard(const Options& options, std:
   }
   const fs::path inside = fs::weakly_canonical(data, ec);
   const fs::path outside = fs::weakly_canonical(work, ec);
-  const std::string relative = fs::relative(inside, outside, ec).generic_string();
-  if (inside == outside || (relative.rfind("..", 0) != 0 && !relative.empty() && relative != ".")) {
-    error = "the work directory " + options.workDir + " is the data directory or holds it";
+  // Neither may be in the other: copying a directory into itself never ends, and emptying one that
+  // holds the data would empty the data.
+  auto within = [&](const fs::path& inner, const fs::path& outer) {
+    const std::string relative = fs::relative(inner, outer, ec).generic_string();
+    return !relative.empty() && relative.rfind("..", 0) != 0;
+  };
+  if (inside == outside || within(inside, outside) || within(outside, inside)) {
+    error = "the work directory " + options.workDir + " is the data directory, holds it or lies in it";
     return card;
   }
   fs::remove_all(card, ec);
@@ -502,8 +507,8 @@ inline void Simulator::printHelp() {
           "    gps fix [lat lon hdop]       a fix after the receiver's start (default: 48.13745 11.57550 1.5)\n"
           "    gps none | gps bad           never a fix | a fix with poor accuracy\n"
           "    motion tilt <x> <y> <z>|shake|off|on\n"
-          "    wifi ap|station|off         switch Wi-Fi: the access point answers at once, the station needs\n"
-          "    wifi connected|failed       the answer of the home network to the station's attempt\n"
+          "    wifi ap|station|off          switch Wi-Fi: the access point is there at once, the station waits for\n"
+          "    wifi connected|failed        the answer of the home network to the station's attempt\n"
           "  Time\n"
           "    date <YYYY-MM-DD> <HH:MM>    set the clock (local time of the device's zone)\n"
           "    advance <n>[ms|s|m|h]        let time pass (default seconds), the device running\n"
