@@ -33,6 +33,20 @@ jobs:
             .pio/build/sim/program --script "$scenario"
           done
 
+      - name: Demo page
+        run: node test/test_demo_page/test.mjs
+
+      # Walks the interface, takes the scenes, builds the page, and fails when a picture is missing.
+      - name: Click-through demo
+        run: python3 scripts/make_demo.py
+
+      - name: Upload the demo
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo
+          path: out/demo
+          if-no-files-found: error
+
       - name: Language catalogs
         run: python3 scripts/check_i18n.py
 

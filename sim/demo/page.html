@@ -1,0 +1,123 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<style>
+  :root { color-scheme: light dark; --paper: #e6e6dc; --ink: #1a1a18; --line: #8884; --accent: #1a1a18; }
+  body { margin: 0; font: 16px/1.4 system-ui, sans-serif; background: Canvas; color: CanvasText; }
+  header, main { max-width: 56rem; margin: 0 auto; padding: 0.75rem 1rem; }
+  header { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 1.25rem; margin: 0; }
+  h2 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+  p { margin: 0.25rem 0; }
+  .stage { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; }
+  figure { margin: 0; }
+  img { display: block; width: 240px; height: 320px; image-rendering: pixelated; border: 1px solid var(--line); background: var(--paper); }
+  @media (min-width: 40rem) { img { width: 360px; height: 480px; } }
+  .keys { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; max-width: 360px; }
+  button, select { font: inherit; padding: 0.4rem 0.7rem; min-height: 2.5rem; border: 1px solid var(--line); border-radius: 6px;
+    background: ButtonFace; color: ButtonText; cursor: pointer; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button:focus-visible, select:focus-visible { outline: 3px solid Highlight; outline-offset: 1px; }
+  ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }
+  .note { opacity: 0.75; }
+</style>
+<header>
+  <h1 id="title"></h1>
+  <label><span id="languageLabel"></span> <select id="language"></select></label>
+</header>
+<main>
+  <p id="intro"></p>
+  <div class="stage">
+    <figure>
+      <img id="picture" alt="">
+      <div class="keys" id="keys"></div>
+      <p class="note" id="status"></p>
+      <p class="note" id="callNote" hidden></p>
+    </figure>
+    <section>
+      <button id="start"></button>
+      <button id="walk" hidden></button>
+      <p class="note" id="trimmed"></p>
+      <h2 id="scenesTitle"></h2>
+      <ul id="scenes"></ul>
+    </section>
+  </div>
+</main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+"use strict";
+const data = JSON.parse(document.getElementById("data").textContent);
+const KEYS = ["up", "down", "select", "back", "home", "inbox", "compose"];
+const $ = (id) => document.getElementById(id);
+let lang = data.languages.some((l) => l.code === (navigator.language || "").slice(0, 2)) ? (navigator.language || "").slice(0, 2) : data.languages[0].code;
+let node = data.graph.start;
+let scene = null;
+
+const words = (key, values) => {
+  let text = data.words[lang][key] || key;
+  for (const name of Object.keys(values || {})) text = text.replace("{" + name + "}", values[name]);
+  return text;
+};
+const outgoing = (key) => data.graph.edges.find((e) => e.from === node && e.key === key);
+const sceneTitle = (id) => words("demo.scene-" + id);
+
+function show() {
+  document.documentElement.lang = lang;
+  document.title = words("demo.title");
+  $("title").textContent = words("demo.title");
+  $("intro").textContent = words("demo.intro");
+  $("languageLabel").textContent = words("demo.language");
+  $("start").textContent = words("demo.start-over");
+  $("walk").textContent = words("demo.back-to-walk");
+  $("scenesTitle").textContent = words("demo.scenes");
+  $("trimmed").textContent = data.graph.trimmed ? words("demo.trimmed", { n: data.graph.trimmed }) : "";
+  const picture = $("picture");
+  if (scene) {
+    picture.src = lang + "/scene-" + scene + ".png";
+    picture.alt = sceneTitle(scene);
+    $("status").textContent = sceneTitle(scene);
+  } else {
+    const current = data.graph.nodes[node];
+    picture.src = lang + "/n" + node + ".png";
+    picture.alt = words("demo.state", { n: node + 1, total: data.graph.nodes.length });
+    $("status").textContent = picture.alt;
+  }
+  $("walk").hidden = !scene;
+  $("callNote").hidden = !!scene || data.graph.nodes[node].screen !== "call";
+  $("callNote").textContent = words("demo.call-note");
+  const keys = $("keys");
+  keys.textContent = "";
+  for (const key of KEYS) {
+    const button = document.createElement("button");
+    button.textContent = words("demo.key-" + key);
+    const edge = scene ? null : outgoing(key);
+    button.disabled = !edge;
+    if (edge) button.addEventListener("click", () => { node = edge.to; show(); });
+    keys.appendChild(button);
+  }
+  const list = $("scenes");
+  list.textContent = "";
+  for (const id of data.scenes) {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.textContent = sceneTitle(id);
+    button.addEventListener("click", () => { scene = id; show(); });
+    item.appendChild(button);
+    list.appendChild(item);
+  }
+}
+
+const select = $("language");
+for (const l of data.languages) {
+  const option = document.createElement("option");
+  option.value = l.code;
+  option.textContent = l.native;
+  select.appendChild(option);
+}
+select.value = lang;
+select.addEventListener("change", () => { lang = select.value; show(); });
+$("start").addEventListener("click", () => { node = data.graph.start; scene = null; show(); });
+$("walk").addEventListener("click", () => { scene = null; show(); });
+show();
+</script>

@@ -1,0 +1,33 @@
+# Pictures the keys do not lead to, on the child's device: they need something to happen in the world.
+run sim/demo/world.txt
+shot unread
+call +491701111111
+advance 1s
+shot incoming-call
+key select
+advance 1s
+shot call-connected
+remote hangup
+advance 2s
+key select
+key select
+advance 1s
+shot call-dialing
+remote busy
+advance 2s
+shot call-failed
+key back
+key home
+advance 10s
+network none
+advance 2s
+shot no-network
+network Example Mobile
+advance 1s
+battery 8
+advance 1s
+shot battery-low
+battery 80
+advance 1s
+key back
+shot locked

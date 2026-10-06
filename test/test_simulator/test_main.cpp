@@ -10,9 +10,12 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <set>
 #include <sstream>
 #include <string>
 
+#include <Crawler.h>
 #include <Simulator.h>
 
 void setUp() {}
@@ -601,6 +604,70 @@ void test_check_and_fails_report_what_differs() {
   TEST_ASSERT_FALSE(s.run("fails"));
 }
 
+// ---- the crawl ----------------------------------------------------------------------------------------------------------
+
+namespace {
+sim::Options crawlOptions() {
+  sim::Options o;
+  o.dataDir = "sim/data";
+  o.webPort = 0;
+  return o;
+}
+}  // namespace
+
+void test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl first = crawler.run(3, 8);
+  const sim::Crawl second = crawler.run(3, 8);
+  TEST_ASSERT_EQUAL_STRING(sim::Crawler::json(first).c_str(), sim::Crawler::json(second).c_str());
+  TEST_ASSERT_EQUAL_STRING("home", first.nodes[0].screen.c_str());
+  std::set<std::string> screens;
+  for (const sim::CrawlNode& node : first.nodes) screens.insert(node.screen);
+  for (const char* screen : {"home", "lock", "phone", "messages", "recipient", "compose", "call"})
+    TEST_ASSERT_TRUE_MESSAGE(screens.count(screen) == 1, screen);
+  for (const sim::CrawlEdge& edge : first.edges) {
+    TEST_ASSERT_TRUE(edge.from >= 0 && edge.to >= 0 && edge.from != edge.to);
+    TEST_ASSERT_TRUE(static_cast<size_t>(edge.from) < first.nodes.size() && static_cast<size_t>(edge.to) < first.nodes.size());
+  }
+  for (const sim::CrawlNode& node : first.nodes) TEST_ASSERT_TRUE(node.depth <= 3 && static_cast<int>(node.path.size()) == node.depth);
+}
+
+void test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl crawl = crawler.run(5, 4);
+  std::map<std::string, size_t> per;
+  for (const sim::CrawlNode& node : crawl.nodes) ++per[node.screen];
+  for (const auto& entry : per) TEST_ASSERT_TRUE_MESSAGE(entry.second <= 4, entry.first.c_str());
+  TEST_ASSERT_TRUE(crawl.trimmed > 0);
+}
+
+void test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through() {
+  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("call", "back"));
+  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", "select"));
+  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("compose", "down"));
+  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("home", "select"));
+}
+
+void test_the_same_path_leads_to_the_same_screen_in_every_language() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl crawl = crawler.run(3, 8);
+  for (const sim::CrawlNode& node : crawl.nodes)
+    for (const char* language : {"de", "fr", "qps-ploc"}) {
+      std::unique_ptr<sim::Simulator> there = crawler.reach(node.path, language);
+      TEST_ASSERT_EQUAL_STRING_MESSAGE(node.screen.c_str(), sim::Crawler::screenOf(*there).c_str(), language);
+    }
+}
+
+void test_shot_writes_a_picture_into_the_directory_it_was_given() {
+  Sim s;
+  const std::filesystem::path dir = scratch("shots");
+  TEST_ASSERT_FALSE(s.run("shot first"));                              // no directory yet
+  TEST_ASSERT_TRUE(s.run("shotdir " + (dir / "sub").string()));
+  TEST_ASSERT_TRUE(s.run("shot first"));
+  TEST_ASSERT_TRUE(std::filesystem::exists(dir / "sub" / "first.png"));
+  TEST_ASSERT_FALSE(s.run("shotdir"));
+}
+
 // ---- the scenarios ------------------------------------------------------------------------------------------------------
 
 void test_every_scenario_runs_to_its_end_on_its_own_card() {
@@ -662,6 +729,11 @@ int main() {
   RUN_TEST(test_a_work_directory_that_is_or_holds_the_data_is_refused);
   RUN_TEST(test_in_place_needs_a_data_directory);
   RUN_TEST(test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures);
+  RUN_TEST(test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time);
+  RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);
+  RUN_TEST(test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through);
+  RUN_TEST(test_the_same_path_leads_to_the_same_screen_in_every_language);
+  RUN_TEST(test_shot_writes_a_picture_into_the_directory_it_was_given);
   RUN_TEST(test_every_scenario_runs_to_its_end_on_its_own_card);
   RUN_TEST(test_see_finds_a_word_by_its_catalog_key_in_every_language_and_says_what_is_missing);
   RUN_TEST(test_check_and_fails_report_what_differs);

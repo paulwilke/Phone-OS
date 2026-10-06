@@ -184,15 +184,8 @@ void test_the_page_can_be_had_in_every_shipped_language() {
 
 void test_a_user_catalog_on_the_card_is_offered_by_the_page() {
   Web w;
-  std::string english;
-  {
-    std::ifstream in("lang/en.toml", std::ios::binary);
-    std::stringstream text;
-    text << in.rdbuf();
-    english = text.str();
-  }
-  const std::string codeLine = "code   = \"en\"";
-  english.replace(english.find(codeLine), codeLine.size(), "code   = \"xx\"");
+  const std::string english =
+      "[meta]\ncode   = \"xx\"\nname   = \"Test language\"\nnative = \"Xtest\"\nplural = \"one-other\"\n\n[strings]\nhome.phone = \"Xphone\"\n";
   TEST_ASSERT_TRUE(w.sim.card().write("/lang/xx.toml", english));
   w.sim.execute("run /dev/null");
   w.send("GET / HTTP/1.1\r\nHost: x\r\n\r\n");

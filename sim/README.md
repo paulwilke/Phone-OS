@@ -28,6 +28,12 @@ The card is a directory: by default a fresh copy of `--data` in `out/sim-card/` 
 
 The SOS page, the settings and the Wi-Fi page do not exist yet, so a story presses the core's entry points with `sos`, `cellular`, `savemode` and `probe`, as those pages will.
 
+## The click-through demo
+
+`python3 scripts/make_demo.py` (after `pio run -e sim`) writes `out/demo/` (not committed; CI uploads it as the artifact `demo`): the simulator walks the interface by its keys from a world with a few messages in it (`program --crawl`, about 150 states: every screen the keys lead to, found in English), takes the pictures the keys do not lead to (`sim/demo/scenes*.txt`), each in English, German and French, and builds `index.html`, a static page with the keys under the picture and a language selector that swaps every picture and word. The page has no words of its own: they are the `demo.*` keys of the catalogs. The script fails when a picture, a translation or a screen is missing. Open `out/demo/index.html` in a browser.
+
+The walk keeps at most 30 states of one screen (they differ in a selection or a scroll position) and says how many more it left out; it does not press keys that would send a message or end a call.
+
 ## Pictures
 
 `golden <name>` compares the panel with `sim/golden/<name>.txt` (`#` black, `.` white, the format of `test/golden/`); `UPDATE_GOLDEN=1` writes the file, to be reviewed like code. `screenshot <file.png>` writes the panel as a picture.

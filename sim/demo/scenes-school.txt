@@ -1,0 +1,10 @@
+# data: sim/data-school
+# The same device in school time.
+advance 5s
+shot school-time
+key select
+advance 1s
+shot school-phone-refused
+call +491701111111
+advance 2s
+shot school-call-refused

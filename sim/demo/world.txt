@@ -1,0 +1,10 @@
+# The world the demo's pictures are taken in: a few days of a child's phone, in a few lines.
+advance 5s
+sms +491701111111 Hi Alex, how was school?
+advance 1s
+sms +491702222222 Dinner at six
+advance 1s
+call +493012345678
+advance 2s
+remote hangup
+advance 2s

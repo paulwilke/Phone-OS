@@ -10,11 +10,14 @@
 #include <chrono>
 #include <condition_variable>
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <string>
 #include <thread>
 
+#include "Crawler.h"
 #include "SdlWindow.h"
 #include "Simulator.h"
 
@@ -31,6 +34,12 @@ void usage() {
                "  --golden <dir>    where `golden` looks for pictures; default sim/golden\n"
                "  --script <file>   run the commands of a file first (a line `# data: <dir>` at its top names its card); the program exits after it unless\n"
                "                    --interactive is given. The exit status is 1 when a command failed\n"
+               "  --crawl <dir>     walk every picture the keys can reach: <dir>/graph.json and, for each language,\n"
+               "                    <dir>/<language>/n<state>.png; exit status 1 when the walk hit its limits\n"
+               "  --languages <a,b> the languages of the pictures of --crawl (default en,de,fr)\n"
+               "  --prelude <file>  the world the crawl starts in: commands played after every start\n"
+               "  --depth <n>       longest path of the crawl in keys (default 12)\n"
+               "  --per-screen <n>  most states kept for one screen (default 30); the rest are counted, not followed\n"
                "  --interactive     read commands from the terminal (the default without --script)\n"
                "  --headless        no window (the only choice in a build without SDL)\n"
                "  --scale <n>       window size in times 240 x 320 (default 2)\n"
@@ -76,6 +85,9 @@ int main(int argc, char** argv) {
   std::string script;
   bool interactive = false, headless = false, dataGiven = false;
   int scale = 2;
+  std::string crawlDir, prelude, languages = "en,de,fr";
+  int depth = 12;
+  size_t perScreen = 30;
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
     auto value = [&](std::string& into) {
@@ -98,11 +110,46 @@ int main(int argc, char** argv) {
     else if (a == "--script") { if (!value(script)) return 2; }
     else if (a == "--scale") { if (!value(v)) return 2; scale = std::max(1, std::atoi(v.c_str())); }
     else if (a == "--lapse") { if (!value(v)) return 2; options.lapse = static_cast<uint32_t>(std::max(1, std::atoi(v.c_str()))); }
+    else if (a == "--crawl") { if (!value(crawlDir)) return 2; }
+    else if (a == "--languages") { if (!value(languages)) return 2; }
+    else if (a == "--prelude") { if (!value(prelude)) return 2; }
+    else if (a == "--depth") { if (!value(v)) return 2; depth = std::max(1, std::atoi(v.c_str())); }
+    else if (a == "--per-screen") { if (!value(v)) return 2; perScreen = static_cast<size_t>(std::max(1, std::atoi(v.c_str()))); }
     else if (a == "--interactive") interactive = true;
     else if (a == "--headless") headless = true;
     else { std::cerr << "error: unknown option " << a << "\n"; usage(); return 2; }
   }
 
+  if (!crawlDir.empty()) {
+    sim::Crawler crawler(options, prelude);
+    const sim::Crawl crawl = crawler.run(depth, perScreen);
+    std::filesystem::create_directories(crawlDir);
+    std::ofstream(crawlDir + "/graph.json") << sim::Crawler::json(crawl);
+    std::vector<std::string> codes;
+    for (size_t at = 0; at <= languages.size();) {
+      const size_t comma = languages.find(',', at);
+      codes.push_back(languages.substr(at, comma == std::string::npos ? std::string::npos : comma - at));
+      at = comma == std::string::npos ? languages.size() + 1 : comma + 1;
+    }
+    for (const std::string& code : codes) {
+      std::filesystem::create_directories(crawlDir + "/" + code);
+      for (const sim::CrawlNode& node : crawl.nodes) {
+        std::unique_ptr<sim::Simulator> there = crawler.reach(node.path, code);
+        if (sim::Crawler::screenOf(*there) != node.screen) {
+          std::cerr << "error: in " << code << " the path to state " << node.id << " leads to "
+                    << sim::Crawler::screenOf(*there) << ", not " << node.screen << "\n";
+          return 1;
+        }
+        if (!there->panel().writePng(crawlDir + "/" + code + "/n" + std::to_string(node.id) + ".png")) {
+          std::cerr << "error: cannot write the picture of state " << node.id << "\n";
+          return 1;
+        }
+      }
+    }
+    std::cout << "crawl: " << crawl.nodes.size() << " states, " << crawl.edges.size() << " edges, " << codes.size()
+              << " languages, " << crawl.trimmed << " more states of the same screens not followed\n";
+    return 0;
+  }
   if (!dataGiven && !script.empty() && !sim::scriptData(script).empty()) options.dataDir = sim::scriptData(script);
   sim::Simulator simulator(options, std::cout);
   if (!simulator.ok()) {

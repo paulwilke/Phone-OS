@@ -159,22 +159,11 @@ void test_an_unknown_interface_language_falls_back_to_english_with_a_diagnostic(
 }
 
 void test_a_user_catalog_on_the_card_can_be_the_language_of_the_device() {
-  // The catalog is a copy of English under another code: the point is that /lang/ is read before
-  // the configuration asks for its language.
+  // A catalog with a code nobody has, and a few words: the point is that /lang/ is read before the
+  // configuration asks for its language. Missing messages fall back to English.
   World w;
-  std::string text;
-  {
-    FILE* f = std::fopen("lang/en.toml", "rb");
-    TEST_ASSERT_NOT_NULL(f);
-    char buf[4096];
-    size_t n;
-    while ((n = std::fread(buf, 1, sizeof(buf), f)) > 0) text.append(buf, n);
-    std::fclose(f);
-  }
-  const std::string codeLine = "code   = \"en\"";
-  const size_t at = text.find(codeLine);
-  TEST_ASSERT_TRUE_MESSAGE(at != std::string::npos, "lang/en.toml has no code line this test can rename");
-  text.replace(at, codeLine.size(), "code   = \"xx\"");
+  const std::string text =
+      "[meta]\ncode   = \"xx\"\nname   = \"Test language\"\nnative = \"Xtest\"\nplural = \"one-other\"\n\n[strings]\nhome.phone = \"Xphone\"\n";
   w.store.put("/lang/xx.toml", text);
   w.store.put("/config/settings.toml", settings("xx"));
   FrameBuffer fb;

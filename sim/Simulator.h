@@ -252,6 +252,7 @@ private:
   int boots_ = 0;
   int scriptDepth_ = 0;
   std::string webError_;
+  std::string shotDir_;
   uint16_t webShown_ = 0;
 };
 
@@ -519,6 +520,7 @@ inline void Simulator::printHelp() {
           "    state                        a summary of the device\n"
           "    log [n]                      the last n lines of the device's log (default 20)\n"
           "    screenshot <file.png>        the panel as a picture\n"
+          "    shotdir <dir> | shot <name>  pictures into a directory: <dir>/<name>.png\n"
           "    ascii [file]                 the panel as # and . (or into a file)\n"
           "    golden <name>                compare the panel with " << options_.goldenDir << "/<name>.txt (UPDATE_GOLDEN=1 writes it)\n"
           "  Asserting (a failed one is an error, so a script fails)\n"
@@ -803,6 +805,21 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     const std::vector<std::string> lines = r.log.lines();
     for (size_t i = lines.size() > n ? lines.size() - n : 0; i < lines.size(); ++i) out_ << lines[i] << "\n";
     return true;
+  }
+  if (name == "shotdir") {
+    if (!need(2)) return fail("shotdir needs a directory");
+    std::error_code ec;
+    std::filesystem::create_directories(w[1], ec);
+    if (ec) {
+      out_ << "error: cannot make " << w[1] << ": " << ec.message() << "\n";
+      return false;
+    }
+    shotDir_ = w[1];
+    return true;
+  }
+  if (name == "shot") {
+    if (!need(2) || shotDir_.empty()) return fail("shot needs a name, and shotdir before it");
+    return screenshotTo(shotDir_ + "/" + w[1] + ".png");
   }
   if (name == "screenshot") {
     if (!need(2)) return fail("screenshot needs a file name");
