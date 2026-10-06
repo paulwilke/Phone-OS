@@ -179,10 +179,10 @@ Tests in `test/test_calls/`.
 | CAL-14 | Every incoming call in school time, parents included, is rejected without ringing; the notice names a known caller | `test_every_call_in_school_time_is_rejected_silently_and_named` | EA:test_every_call_in_school_time_is_rejected_silently_and_named | done |
 | CAL-15 | A call rejected in school time is in the history as a missed call, so the parents see who tried | `test_a_rejected_call_is_in_the_history_as_missed` | — | done |
 | CAL-16 | After school time a call rings and is not rejected | `test_a_call_after_school_time_rings_and_is_not_rejected` | — | done |
-| CAL-17 | An unknown caller in school time gets a notice without a name | `test_an_unknown_caller_gets_a_notice_without_a_name` | — | done |
+| CAL-17 | An unknown caller in school time is rejected silently: no notice, no entry (see CAL-39) | `test_a_stranger_is_rejected_in_school_time_too_and_without_a_notice` | — | done |
 | CAL-18 | Vibration for calls in school time is a setting that defaults to off; switched on it vibrates and still rejects | `test_call_vibration_in_school_time_is_a_setting` | EA:test_call_vibration_settings_and_the_priority_of_school_time | done |
-| CAL-19 | A call without a number is neither rung nor rejected until the number arrives | `test_a_call_without_a_number_yet_is_neither_rung_nor_rejected` | EA:test_call_without_number_yet_is_neither_rung_nor_rejected | done |
-| CAL-20 | A call that never shows a number is rejected after three seconds in school time | `test_a_call_without_a_number_is_rejected_after_three_seconds` | EA:test_call_without_a_number_is_rejected_after_a_short_wait_in_school_time | done |
+| CAL-19 | A contact's call without a number yet is neither rung nor rejected until the number arrives or three seconds pass | `test_a_call_without_a_number_yet_is_neither_rung_nor_rejected` | EA:test_call_without_number_yet_is_neither_rung_nor_rejected | done |
+| CAL-20 | A call that never shows a number is rejected after three seconds, silently, in school time (the same as at any time: CAL-43) | `test_a_call_without_a_number_is_rejected_after_three_seconds` | EA:test_call_without_a_number_is_rejected_after_a_short_wait_in_school_time | done |
 | CAL-21 | The modem reports an incoming call twice; it is rejected once | `test_an_incoming_call_is_rejected_once` | — | done |
 | CAL-22 | A busy line is reported with the callee's name, vibrates the failure pattern and is recorded (call-failed busy) | `test_a_busy_line_is_reported` | EA:test_failed_call_says_why_busy, EA:test_failed_call_vibrates_the_failure_pattern | done |
 | CAL-23 | No answer is reported | `test_no_answer_is_reported` | EA:test_failed_call_says_no_answer | done |
@@ -192,7 +192,7 @@ Tests in `test/test_calls/`.
 | CAL-27 | A call that never connected and ended is a failure, a connected one is not, one the child hung up is not | `test_an_unconnected_end_is_a_failure` | EA:test_unconnected_end_counts_as_failure_but_normal_end_does_not | done |
 | CAL-28 | A failure event without a number names the number that was dialled | `test_a_failure_without_a_number_in_the_event_names_the_number_dialled` | — | done |
 | CAL-29 | A ring that begins at uptime zero is timed from zero | `test_a_ring_at_uptime_zero_is_timed_from_zero` | — | done |
-| CAL-30 | The school-time vibration setting also applies to a ringing call that has no number yet | `test_school_time_vibration_applies_to_a_ringing_call_without_a_number_too` | — | done |
+| CAL-30 | A ringing call without a number does not vibrate, whatever the school-time vibration setting says: nothing rings before the caller is known | `test_a_ringing_call_without_a_number_does_not_vibrate_even_when_school_time_would_allow_it` | — | done |
 | CAL-31 | Two calls in a row in school time are both rejected | `test_two_calls_in_a_row_in_school_time_are_both_rejected` | — | done |
 | CAL-32 | After a failed call the state is clean: a second call works and its normal end reports nothing | `test_the_state_after_a_failed_call_is_clean` | — | done |
 | CAL-33 | The modem's own reason goes to the log with the failure | `test_the_modems_reason_is_logged` | — | done |
@@ -201,6 +201,17 @@ Tests in `test/test_calls/`.
 | CAL-36 | A modem that cannot set the volume reports so | `test_a_modem_without_volume_support` | — | done |
 | CAL-37 | The default volume is set through the modem | `test_the_default_volume_is_set` | SC:test_options_toggle_message_vibration_and_volume | done |
 | CAL-38 | A call counts as active while dialling, ringing or connected | `test_a_call_is_active_while_dialling_ringing_or_connected` | SC:test_no_autolock_during_call | done |
+| CAL-39 | A call from a number that is not in the contact book is hung up at once: no ring, no vibration, no notice, no history entry, no peer, and the device shows no call | `test_a_stranger_is_hung_up_at_once_without_a_trace` | — | done |
+| CAL-40 | The rejection of a stranger is one log line with the number, on an always-kept line; the number withheld likewise | `test_the_rejection_of_a_stranger_is_one_log_line_with_the_number` | — | done |
+| CAL-41 | A stranger does not vibrate even when school-time vibration is on | `test_a_stranger_does_not_vibrate_even_when_school_time_vibration_is_on` | — | done |
+| CAL-42 | A stranger whose number arrives late is rejected when it arrives; nothing rang meanwhile | `test_a_stranger_who_is_announced_late_is_rejected_when_the_number_arrives` | — | done |
+| CAL-43 | A hidden number is rejected after three seconds at any time of day | `test_a_hidden_number_is_rejected_after_three_seconds_at_any_time_of_day` | — | done |
+| CAL-44 | A hidden number is rejected once and leaves no missed call | `test_a_hidden_number_is_rejected_once_and_leaves_no_missed_call` | — | done |
+| CAL-45 | A contact whose number arrives late, in any spelling, rings from then on | `test_a_contact_whose_number_arrives_late_rings_from_then_on` | — | done |
+| CAL-46 | The target of a call action may call the child | `test_the_target_of_a_call_action_may_call` | — | done |
+| CAL-47 | A stranger calling again is rejected again | `test_a_stranger_calling_again_is_rejected_again` | — | done |
+| CAL-48 | A stranger does not disturb the call of a contact | `test_a_stranger_does_not_disturb_the_calls_of_contacts` | — | done |
+| CAL-49 | A call the child dialled is not hidden by the rule | `test_a_call_we_dialled_is_not_hidden_by_the_rule` | — | done |
 
 ## Emergency
 

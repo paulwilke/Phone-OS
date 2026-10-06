@@ -20,7 +20,7 @@ There is no category at the call site. `loglevel::classify()` derives the import
 
 | Importance | Keywords | Examples |
 |---|---|---|
-| **Always** (never dropped) | `command`, `remote query`, `sos`, `quiet hours`, `restart`, `firmware`, `shutdown`, `config`, `web:`, `not in the contact book` | "Remote query answer sent", "SOS ping started", "Quiet hours lifted by emergency", "Restart requested", "Firmware 0.1.0 started", "SMS dropped: sender not in the contact book (+491709999999)" |
+| **Always** (never dropped) | `command`, `remote query`, `sos`, `quiet hours`, `restart`, `firmware`, `shutdown`, `config`, `web:`, `not in the contact book`, `number withheld` | "Remote query answer sent", "SOS ping started", "Quiet hours lifted by emergency", "Restart requested", "Firmware 0.1.0 started", "SMS dropped: sender not in the contact book (+491709999999)", "Call rejected: number withheld" |
 | **Error** | `failed`, `rejected`, `not found`, `not responding`, `error`, `not established`, `crash`, `blocked`, `cannot` | "Modem not responding", "SMS rejected: +CMS ERROR: 500" |
 | **Event** | `call`, `sent`, `received`, `power saving`, `wifi`, `cellular`, `message`, `mesh running`, `sim:` | "Call from Parent One", "Message received", "WiFi connected" |
 | **Detail** | everything else, a null or empty line | "Modem woke up", "GPS fix: 9 satellites" |

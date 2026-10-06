@@ -119,20 +119,27 @@ void test_back_rejects_a_ringing_call() {
   TEST_ASSERT_EQUAL(0, page.rig.nav.calls.size());
 }
 
-void test_a_caller_in_no_book_is_shown_by_the_whole_number_and_one_without_a_number_as_unknown() {
-  Page page;
+void test_a_caller_who_is_no_contact_is_shown_by_the_whole_number() {
+  // Only a call target that is no contact can ring and be in no book.
+  Page page(ProfileBuilder().childName("Alex").callTargets({kStranger}).build());
   page.ring(kStranger);
   TEST_ASSERT_TRUE(saysWhole(page.rig.frame, kStranger));
-  page.screen.handle(Input::pressed(Key::Back));
-  page.rig.poll();
+}
+
+void test_a_stranger_and_a_hidden_number_are_not_on_the_page_at_all() {
+  Page page;
+  page.ring(kStranger);
+  TEST_ASSERT_FALSE(page.rig.core.state().callActive);
+  TEST_ASSERT_FALSE(saysWhole(page.rig.frame, kStranger));
   Page none;
   none.ring("");
-  TEST_ASSERT_TRUE(says(none.rig.frame, "Unknown", FontSize::Large));
+  TEST_ASSERT_FALSE(none.rig.core.state().callActive);
+  TEST_ASSERT_FALSE(says(none.rig.frame, "Unknown", FontSize::Large));
 }
 
 void test_a_number_that_does_not_fit_the_large_font_is_drawn_smaller_not_shortened() {
-  Page page;
   const std::string wide = "+491709999999";
+  Page page(ProfileBuilder().childName("Alex").callTargets({wide}).build());
   TEST_ASSERT_TRUE(text::width(font(FontSize::Large), wide) > kContent.w - 16);   // too wide for the large font ...
   page.ring(wide.c_str());
   TEST_ASSERT_FALSE(says(page.rig.frame, wide, FontSize::Large));
@@ -411,7 +418,8 @@ int main(int, char**) {
   RUN_TEST(test_a_ringing_call_offers_answer_and_reject);
   RUN_TEST(test_enter_answers_a_ringing_call);
   RUN_TEST(test_back_rejects_a_ringing_call);
-  RUN_TEST(test_a_caller_in_no_book_is_shown_by_the_whole_number_and_one_without_a_number_as_unknown);
+  RUN_TEST(test_a_caller_who_is_no_contact_is_shown_by_the_whole_number);
+  RUN_TEST(test_a_stranger_and_a_hidden_number_are_not_on_the_page_at_all);
   RUN_TEST(test_a_number_that_does_not_fit_the_large_font_is_drawn_smaller_not_shortened);
   RUN_TEST(test_a_connected_call_shows_the_volume_as_boxes_and_the_arrows_change_it);
   RUN_TEST(test_the_volume_stops_at_both_ends);

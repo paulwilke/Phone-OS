@@ -1,5 +1,6 @@
 #include "Calls.h"
 
+#include "PhoneNumber.h"
 #include "SystemEntry.h"
 
 std::string Calls::nameOf(const std::string& phone) const {
@@ -7,9 +8,28 @@ std::string Calls::nameOf(const std::string& phone) const {
   return profile_.contacts.displayName(phone.c_str());
 }
 
-bool Calls::active() const {
+bool Calls::callerAllowed() const { return !peer_.empty() && profile_.mayReceiveFrom(peer_); }
+
+ModemState Calls::state() const {
+  const ModemState s = modem_.state();
+  return (s == ModemState::RingingIn && !callerAllowed()) ? ModemState::Ready : s;
+}
+
+bool Calls::modemBusy() const {
   const ModemState s = modem_.state();
   return s == ModemState::Dialing || s == ModemState::RingingIn || s == ModemState::InCall;
+}
+
+bool Calls::active() const {
+  const ModemState s = state();
+  return s == ModemState::Dialing || s == ModemState::RingingIn || s == ModemState::InCall;
+}
+
+void Calls::rejectUnknown(const std::string& why) {
+  rejectedUnknown_ = true;
+  peer_.clear();
+  log_.log("Call rejected: " + why);
+  modem_.hangup();
 }
 
 void Calls::clearCall() {
@@ -79,15 +99,25 @@ bool Calls::poll() {
 }
 
 void Calls::handleIncoming(const CallEvent& ev) {
+  // A number-less call is decided in ring(), after the modem has had time to name the caller.
+  if (ev.phone.empty()) {
+    peer_.clear();
+    return;
+  }
+  if (!profile_.mayReceiveFrom(ev.phone)) {
+    if (!rejectedUnknown_) {
+      const std::string number = phone::canonical(ev.phone.c_str(), profile_.contacts.countryCode());
+      rejectUnknown("caller not in the contact book (" + (number.empty() ? std::string("non-numeric number") : number) + ")");
+    }
+    return;
+  }
   peer_ = ev.phone;
   dialedOut_ = connected_ = hangupRequested_ = false;
   log_.log("Call from " + nameOf(ev.phone));
-  // Decided with the number, so that the notice can name the caller; a call that never shows one
-  // is dealt with in ring().
-  if (!ev.phone.empty() && school_.active() && !rejectedInSchool_) {
+  // Decided with the number, so that the notice can name the caller.
+  if (school_.active() && !rejectedInSchool_) {
     rejectedInSchool_ = true;
-    if (profile_.contacts.isKnown(ev.phone.c_str())) notices_.set(NoticeKind::CallerInSchoolTime, ev.phone);
-    else notices_.set(NoticeKind::CallInSchoolTime);
+    notices_.set(NoticeKind::CallerInSchoolTime, ev.phone);
     log_.log("Call rejected in quiet hours: " + nameOf(ev.phone));
     if (profile_.quietCallVibration) haptic_.play(HapticPattern::Ring);
     modem_.hangup();
@@ -95,6 +125,13 @@ void Calls::handleIncoming(const CallEvent& ev) {
 }
 
 void Calls::handleEvent(const CallEvent& ev) {
+  // What the modem says about a call from nobody we know, one we rejected, is not for the
+  // history, the notices or the log: the child never learns that it happened. A call we dialled is
+  // about a number we allowed.
+  if (ev.type != CallEventType::Incoming && !dialedOut_) {
+    const std::string& who = ev.phone.empty() ? peer_ : ev.phone;
+    if (!profile_.mayReceiveFrom(who)) return;
+  }
   switch (ev.type) {
     case CallEventType::Incoming:
       handleIncoming(ev);
@@ -152,7 +189,8 @@ void Calls::reportFailed(const CallEvent& ev, const char* reason) {
   clearCall();
 }
 
-// Ringing means vibrating. In school time a call is rejected, never answered.
+// Ringing means vibrating, but only for a caller who is allowed. A call that shows no number is
+// hung up after kQuietRejectSeconds, whatever the time of day.
 void Calls::ring() {
   const bool nowRinging = modem_.state() == ModemState::RingingIn;
   const uint32_t now = clock_.uptimeSeconds();
@@ -160,6 +198,7 @@ void Calls::ring() {
     ringing_ = false;
     ringSeen_ = false;
     rejectedInSchool_ = false;
+    rejectedUnknown_ = false;
     return;
   }
   if (!ringSeen_) {
@@ -167,15 +206,13 @@ void Calls::ring() {
     ringStarted_ = now;
   }
 
-  const bool school = school_.active();
-  if (school && now - ringStarted_ >= kQuietRejectSeconds && !rejectedInSchool_) {
-    // The number never came (caller identification is off): hang up all the same, or the call
-    // would ring on unnoticed.
-    rejectedInSchool_ = true;
-    log_.log("Call rejected in quiet hours (no number)");
-    notices_.set(NoticeKind::CallInSchoolTime);
-    modem_.hangup();
+  // Nobody is known yet: nothing rings. The number never came (caller identification is off or
+  // the number is withheld): hang up all the same, or the call would ring on unnoticed.
+  if (!callerAllowed()) {
+    if (now - ringStarted_ >= kQuietRejectSeconds && !rejectedUnknown_) rejectUnknown("number withheld");
+    return;
   }
+  const bool school = school_.active();
   // School time has priority over everything else for the vibration setting.
   const bool vibrate = school ? profile_.quietCallVibration : profile_.callVibration;
   if (!vibrate) return;

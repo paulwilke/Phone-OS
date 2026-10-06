@@ -71,9 +71,8 @@ void Messaging::handleSms(const SmsMessage& sms) {
   // in the book anyway). The log line stays so that parents can see that something knocked; it
   // names the number only, never the text.
   if (!profile_.mayReceiveFrom(sms.phone)) {
-    char number[phone::kNormalizedSize];
-    const bool numeric = phone::normalize(sms.phone.c_str(), profile_.contacts.countryCode(), number, sizeof number);
-    log_.log(std::string("SMS dropped: sender not in the contact book (") + (numeric ? number : "non-numeric sender") + ")");
+    const std::string number = phone::canonical(sms.phone.c_str(), profile_.contacts.countryCode());
+    log_.log("SMS dropped: sender not in the contact book (" + (number.empty() ? std::string("non-numeric sender") : number) + ")");
     return;
   }
   // A query is recognised first and never stored as a message.

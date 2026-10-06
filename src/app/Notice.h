@@ -27,10 +27,8 @@ enum class NoticeKind : uint8_t {
   CallNoNetwork,
   CallSmsOnly,
   CallFailed,
-  // An incoming call rejected in school time; peer empty when the caller is not in the contact
-  // book or sent no number
+  // An incoming call from a contact rejected in school time (a stranger is rejected without a notice)
   CallerInSchoolTime,
-  CallInSchoolTime,
   // Messages
   MessageWaiting,
   MessageSent,

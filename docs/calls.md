@@ -13,12 +13,19 @@ Code: `src/app/Calls.{h,cpp}`; tests in `test/test_calls/`. Pure C++17 on the mo
 
 A dial the modem then refuses (for example on a network that allows SMS only) leaves no call behind. `answer()` and `hangup()` go to the modem; hanging up clears the other party.
 
+## Only the contact book may call
+
+**A call from a number that is not allowed, or with no number, is hung up at once** (`Profile::mayReceiveFrom`: the contact book in any spelling, or the target of a call action; the same rule as for incoming texts, see [messaging.md](messaging.md)). No ring, no vibration, no notice, no history entry, no missed call: the child never learns that it happened, and until it is over `state()` says `Ready`, `active()` is false and `peer()` is empty, so no screen follows it. One log line says that it did: `Call rejected: caller not in the contact book (+491709999999)` or `Call rejected: number withheld`; both are always-kept lines ([log-level.md](log-level.md)). It holds at every time of day, in school time too, and there is no switch.
+
+- The modem reports a call twice: first without a number, then with it. The decision is taken with the number. **Nothing rings before the caller is known to be allowed**, so a contact whose number arrives late rings from then on.
+- A call that never shows a number is rejected after `kQuietRejectSeconds` (3) at every time of day. A family member who withholds the number is rejected too.
+- The modem's later reports about a rejected call (missed, ended) are ignored; a call the child dialled is unaffected.
+
 ## Incoming calls in school time
 
-**Every incoming call in school time is rejected — parents included — without ringing.** What the child sees is a notice naming who tried, and the call is in the history as a missed call (`missed-call`, with the number, so the parents can call back).
+**Every incoming call from a contact in school time is rejected — parents included — without ringing.** What the child sees is a notice naming who tried (`CallerInSchoolTime`), and the call is in the history as a missed call (`missed-call`, with the number, so the parents can call back). A caller who is not a contact never gets this far: see above.
 
-- The modem reports a call twice: first without a number, then with it. The decision is taken with the number, so the notice can name the caller: a contact is named (`CallerInSchoolTime`), a caller who is not in the contact book gets a notice without a name (`CallInSchoolTime`). A call is rejected once however often it is reported.
-- A call that never shows a number is neither rung nor rejected at first; after `kQuietRejectSeconds` (3) it is rejected anyway, or it would ring on unnoticed.
+- A call is rejected once however often the modem reports it.
 - Vibration for a call in school time is `Profile::quietCallVibration`, off by default; the everyday `callVibration` has no say in school time.
 
 ## Ringing

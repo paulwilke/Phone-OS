@@ -1,0 +1,31 @@
+# Only the contact book may call the child: a stranger's call is hung up before anything shows,
+# rings or is written down; a contact's call rings and takes the screen. The log keeps one line.
+advance 5s
+check screen home
+check call idle
+check unread 0
+
+# A stranger calls: the screen never changes, nothing rings, nothing is in the history.
+call +491709999999
+check call idle
+check screen home
+advance 1s
+check call idle
+check screen home
+check haptic-ring 0
+check unread 0
+check log-has Call rejected: caller not in the contact book (+491709999999)
+advance 10s
+check screen home
+check unread 0
+
+# The same stranger in school time (another card) is the school-time scenario's business; here a
+# contact calls, in another spelling of the number: it rings and takes the screen.
+call 0170-1111111
+advance 1s
+check call ringing
+check screen call
+check haptic-ring 1
+remote hangup
+advance 2s
+check call idle
