@@ -2,6 +2,8 @@
 
 This is the inventory of what the application does, taken from the previous code base: the one class that did everything (`EmergencyApp`), its test suite, the application behaviour exercised by the screen tests, and the Wi-Fi controller with its tests. Every row is one observable behaviour, the component that owns it, and the test that pins it. **Every previous test case appears** in the column *Previous* (`EA:` is the application test, `SC:` the screen tests, `WF:` the Wi-Fi tests), or in the list of what is not ported at the end, with the reason.
 
+**One rule stands above the tables:** only the contact book may write to the device and call it (`Profile::mayReceiveFrom`, [contacts.md](contacts.md)); the rows PRO-09, PRO-10, MSG-46 to 57 and CAL-39 to 49 pin it, and every other row about incoming texts and calls is about an allowed number.
+
 The application core is split into small components with one owner each, composed by a thin facade (`AppCore`). The core contains **no sentence**: it produces notices and system entries as codes with arguments (`src/app/Notice.h`, `src/app/SystemEntry.h`), and the interface words them from the catalogs when it draws. The only text the core produces is the body of an SMS that leaves the device, and that wording also comes from the catalogs.
 
 | Component | Owns |
