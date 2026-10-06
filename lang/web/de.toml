@@ -22,6 +22,10 @@ config.display.label                  = "Anzeige"
 config.display.map_url.label          = "Kartenlink"
 config.display.map_url.help           = "URL-Vorlage fuer den Kartenlink in SOS-Nachrichten. Platzhalter: {lat} und {lon}."
 
+config.modem.label = "Modem"
+config.modem.apn.label = "APN"
+config.modem.apn.help = "Zugangspunktname des Mobilfunknetzes, etwa von der Hilfeseite des Anbieters. Das Modem braucht ihn, um sich fuer Anrufe ueber LTE anzumelden. Leer lassen, um das im Modem Gespeicherte zu behalten. Nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
+
 config.interface.label                = "Oberflaeche"
 config.interface.language.label       = "Sprache"
 config.interface.language.help        = "Sprachcode der Oberflaeche (z. B. en, de, fr). Unbekannter Code faellt auf die Voreinstellung zurueck."

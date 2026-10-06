@@ -30,6 +30,17 @@ String, at most 120 characters.
 Default: `https://maps.google.com/?q={lat},{lon}`.
 Takes effect on next start.
 
+### `[modem]`
+
+| Key | Type | Default | Required | Apply |
+|-----|------|---------|----------|-------|
+| `apn` | string | `—` | no | restart |
+
+#### `apn`
+
+String, at most 100 characters.
+Takes effect on next start.
+
 ### `[interface]`
 
 | Key | Type | Default | Required | Apply |

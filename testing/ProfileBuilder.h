@@ -89,6 +89,10 @@ public:
     profile_.smsLanguage = code;
     return *this;
   }
+  ProfileBuilder& modemApn(const std::string& apn) {
+    profile_.modemApn = apn;
+    return *this;
+  }
   ProfileBuilder& mapTemplate(const std::string& tmpl) {
     profile_.mapTemplate = tmpl;
     return *this;

@@ -453,6 +453,68 @@ void test_radio_section_gives_no_mesh_alias_diagnostic() {
 }
 
 // ---------------------------------------------------------------------------
+// [modem] apn: it ends up inside an AT command, so only an APN's own characters pass
+// ---------------------------------------------------------------------------
+
+namespace {
+
+ConfigLoader::Result loadApn(const std::string& valueLine) {
+  static FakeConfigStore store;
+  store.put("/config/settings.toml", ("[modem]\n" + valueLine + "\n").c_str());
+  return ConfigLoader(store).load();
+}
+
+bool hasOutOfRange(const ConfigLoader::Result& r) {
+  for (const Diagnostic& d : r.diagnostics)
+    if (d.code == Diagnostic::Code::OutOfRange && d.args.size() >= 2 && d.args[1] == "modem.apn") return true;
+  return false;
+}
+
+}  // namespace
+
+void test_the_apn_defaults_to_empty_and_is_read_from_the_modem_section() {
+  FakeConfigStore store;
+  TEST_ASSERT_EQUAL_STRING("", loadWith(store).profile.modemApn.c_str());
+  const auto r = loadApn("apn = \"internet.example-provider_1.net\"");
+  TEST_ASSERT_EQUAL_STRING("internet.example-provider_1.net", r.profile.modemApn.c_str());
+  TEST_ASSERT_FALSE(hasOutOfRange(r));
+}
+
+void test_an_apn_with_a_character_that_does_not_belong_in_one_is_refused() {
+  const char* bad[] = {"apn = \"a b\"", "apn = \"a\\\"b\"", "apn = \"a;b\"", "apn = \"a\\nb\"", "apn = \"a,b\"",
+                       "apn = \"caf\\u00e9\"", "apn = \"a\\tb\""};
+  for (const char* line : bad) {
+    const auto r = loadApn(line);
+    TEST_ASSERT_TRUE_MESSAGE(hasOutOfRange(r), line);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", r.profile.modemApn.c_str(), line);
+  }
+}
+
+void test_an_apn_of_100_characters_passes_and_one_of_101_does_not() {
+  TEST_ASSERT_EQUAL(100, loadApn("apn = \"" + std::string(100, 'a') + "\"").profile.modemApn.size());
+  const auto r = loadApn("apn = \"" + std::string(101, 'a') + "\"");
+  TEST_ASSERT_TRUE(hasOutOfRange(r));
+  TEST_ASSERT_EQUAL_STRING("", r.profile.modemApn.c_str());
+}
+
+void test_an_apn_that_is_not_a_string_or_a_key_nobody_knows_is_reported() {
+  bool wrongType = false;
+  for (const Diagnostic& d : loadApn("apn = 5").diagnostics) wrongType = wrongType || d.code == Diagnostic::Code::WrongType;
+  TEST_ASSERT_TRUE(wrongType);
+  bool unknown = false;
+  for (const Diagnostic& d : loadApn("apm = \"x\"").diagnostics) unknown = unknown || d.code == Diagnostic::Code::UnknownKey;
+  TEST_ASSERT_TRUE(unknown);
+}
+
+void test_the_apn_survives_the_writer() {
+  FakeConfigStore store;
+  auto r1 = ConfigLoader(store).load();
+  r1.profile.modemApn = "internet.example";
+  TEST_ASSERT_TRUE(ConfigWriter(store).writeSettings(r1.profile));
+  TEST_ASSERT_EQUAL_STRING("internet.example", ConfigLoader(store).load().profile.modemApn.c_str());
+}
+
+// ---------------------------------------------------------------------------
 // ConfigWriter round-trip
 // ---------------------------------------------------------------------------
 
@@ -801,6 +863,11 @@ int main() {
   UNITY_BEGIN();
 
   RUN_TEST(test_empty_card_gives_defaults_and_missing_file_diagnostics);
+  RUN_TEST(test_the_apn_defaults_to_empty_and_is_read_from_the_modem_section);
+  RUN_TEST(test_an_apn_with_a_character_that_does_not_belong_in_one_is_refused);
+  RUN_TEST(test_an_apn_of_100_characters_passes_and_one_of_101_does_not);
+  RUN_TEST(test_an_apn_that_is_not_a_string_or_a_key_nobody_knows_is_reported);
+  RUN_TEST(test_the_apn_survives_the_writer);
   RUN_TEST(test_previous_layout_loads_correctly);
   RUN_TEST(test_new_layout_loads_correctly);
   RUN_TEST(test_contacts_are_loaded_with_roles);

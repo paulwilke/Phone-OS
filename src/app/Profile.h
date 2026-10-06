@@ -48,6 +48,9 @@ struct Profile {
   // --- what the device says ---
   std::string childName;                               // in the SOS texts; empty = anonymous texts
   std::string mapTemplate = maplink::defaultTemplate();
+  // The access point name of the mobile data context the modem needs for the IMS (calls over LTE).
+  // Empty: the modem's own contexts are left alone.
+  std::string modemApn;
   std::string interfaceLanguage = "en";                // language code for the device UI; the child may change it in the options
   std::string smsLanguage = "en";                      // the language of every SMS the device sends
   // Further words that trigger the remote query, besides the trigger word of every language of

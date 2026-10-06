@@ -180,6 +180,26 @@ void applyDisplay(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d
   if (const toml::Value* v = sec.find("map_url")) checkStr(*v, "settings", "display.map_url", 0, 120, d, p.mapTemplate);
 }
 
+// An APN is a dotted name of letters, digits, hyphens and underscores. It ends up inside an AT
+// command, so anything else (a quote, a space, a line break) is refused rather than escaped.
+bool isApnCharacter(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '_';
+}
+
+void applyModem(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
+  const toml::Value* v = sec.find("apn");
+  if (!v) return;
+  std::string apn;
+  if (!checkStr(*v, "settings", "modem.apn", 0, 100, d, apn)) return;
+  for (char c : apn) {
+    if (!isApnCharacter(c)) {
+      d.push_back({Diagnostic::Code::OutOfRange, {"settings", "modem.apn"}});
+      return;
+    }
+  }
+  p.modemApn = apn;
+}
+
 void applyInterface(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
   if (const toml::Value* v = sec.find("language")) checkStr(*v, "settings", "interface.language", 0, 10, d, p.interfaceLanguage);
 }
@@ -295,7 +315,7 @@ void applyTileEntry(const toml::Value& entry, std::vector<std::string>& callTarg
 // ---------------------------------------------------------------------------
 
 static const char* kSettingsTopLevel[] = {
-  "child", "display", "interface", "sms", "features", "remote_queries",
+  "child", "display", "modem", "interface", "sms", "features", "remote_queries",
   "time", "log", "wifi", "radio", "mesh", "quiet_hours", "tiles", nullptr
 };
 
@@ -309,6 +329,10 @@ void loadSettings(const toml::Value& root, Profile& p, std::vector<Diagnostic>& 
   if (const toml::Value* s = root.find("display")) {
     checkLeafKeys(d, *s, "settings", "display");
     applyDisplay(*s, p, d);
+  }
+  if (const toml::Value* s = root.find("modem")) {
+    checkLeafKeys(d, *s, "settings", "modem");
+    applyModem(*s, p, d);
   }
   if (const toml::Value* s = root.find("interface")) {
     checkLeafKeys(d, *s, "settings", "interface");

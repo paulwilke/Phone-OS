@@ -22,6 +22,10 @@ config.display.label                  = "Affichage"
 config.display.map_url.label          = "Lien carte"
 config.display.map_url.help           = "Modele d'URL pour le lien cartographique dans les messages SOS. Utilisez {lat} et {lon} comme espaces reserves."
 
+config.modem.label = "Modem"
+config.modem.apn.label = "APN"
+config.modem.apn.help = "Nom du point d'acces du reseau mobile, par exemple depuis l'aide de l'operateur. Le modem en a besoin pour s'enregistrer pour les appels en LTE. Laisser vide pour garder ce que le modem a memorise. Lettres, chiffres, points, traits d'union et tirets bas uniquement."
+
 config.interface.label                = "Interface"
 config.interface.language.label       = "Langue"
 config.interface.language.help        = "Code de langue de l'interface (ex. en, de, fr). Un code inconnu revient a la valeur par defaut."

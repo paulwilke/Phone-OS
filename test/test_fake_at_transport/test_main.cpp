@@ -181,6 +181,47 @@ void test_the_clock_starts_anywhere_and_wraps() {
   TEST_ASSERT_EQUAL_STRING("\r\nRING\r\n", readAll(t).c_str());
 }
 
+void test_a_cold_modem_ignores_everything_until_the_power_key_wakes_it() {
+  FakeAtTransport t;
+  t.reply("AT", {});
+  t.setCold(true);
+  send(t, "AT");
+  TEST_ASSERT_EQUAL(-1, t.read());
+  TEST_ASSERT_EQUAL(1, t.sent().size());      // it was sent, nobody answered
+  TEST_ASSERT_EQUAL(0, t.unexpected().size());
+  t.pwrkeyPulse();
+  TEST_ASSERT_EQUAL(1, t.pwrkeyPulses());
+  TEST_ASSERT_EQUAL_STRING("\r\n*ATREADY: 1\r\n", readAll(t).c_str());   // the boot
+  send(t, "AT");
+  TEST_ASSERT_EQUAL_STRING("\r\nOK\r\n", readAll(t).c_str());
+}
+
+// What the driver must never do to a running modem.
+void test_the_power_key_switches_a_running_modem_off() {
+  FakeAtTransport t;
+  t.reply("AT", {});
+  t.pwrkeyPulse();
+  send(t, "AT");
+  TEST_ASSERT_EQUAL(-1, t.read());
+  t.pwrkeyPulse();                            // and on again
+  readAll(t);
+  send(t, "AT");
+  TEST_ASSERT_EQUAL_STRING("\r\nOK\r\n", readAll(t).c_str());
+}
+
+void test_a_modem_without_supply_does_not_answer() {
+  FakeAtTransport t;
+  t.reply("AT", {});
+  TEST_ASSERT_TRUE(t.powered());              // a bench modem is on until the driver says otherwise
+  t.power(false);
+  TEST_ASSERT_FALSE(t.powered());
+  send(t, "AT");
+  TEST_ASSERT_EQUAL(-1, t.read());
+  t.power(true);
+  send(t, "AT");
+  TEST_ASSERT_EQUAL_STRING("\r\nOK\r\n", readAll(t).c_str());
+}
+
 // The fake and the parser together: a stored message read through the byte protocol.
 void test_a_scripted_inbox_is_read_through_the_line_reader_and_the_sms_parser() {
   FakeAtTransport t;
@@ -212,6 +253,9 @@ int main(int, char**) {
   RUN_TEST(test_escape_cancels_the_text_without_an_answer);
   RUN_TEST(test_a_restart_loses_what_was_on_its_way_and_announces_itself);
   RUN_TEST(test_the_clock_starts_anywhere_and_wraps);
+  RUN_TEST(test_a_cold_modem_ignores_everything_until_the_power_key_wakes_it);
+  RUN_TEST(test_the_power_key_switches_a_running_modem_off);
+  RUN_TEST(test_a_modem_without_supply_does_not_answer);
   RUN_TEST(test_a_scripted_inbox_is_read_through_the_line_reader_and_the_sms_parser);
   return UNITY_END();
 }

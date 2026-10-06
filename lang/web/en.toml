@@ -24,6 +24,10 @@ config.display.label = "Display"
 config.display.map_url.label = "Map link"
 config.display.map_url.help = "URL template for the map link in SOS messages. Use {lat} and {lon} as placeholders."
 
+config.modem.label = "Modem"
+config.modem.apn.label = "APN"
+config.modem.apn.help = "Access point name of the mobile network, for example from the provider's help pages. The modem needs it to register for calls over LTE. Leave empty to keep what the modem has stored. Letters, digits, dots, hyphens and underscores only."
+
 config.interface.label = "Interface"
 config.interface.language.label = "Language"
 config.interface.language.help = "Language code of the interface (e.g. en, de, fr). Unknown code falls back to the default with a warning."

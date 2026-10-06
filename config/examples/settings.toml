@@ -7,6 +7,9 @@ name = ""  # restart
 [display]
 map_url = "https://maps.google.com/?q={lat},{lon}"  # restart
 
+[modem]
+apn = ""  # restart
+
 [interface]
 language = "en"  # restart
 

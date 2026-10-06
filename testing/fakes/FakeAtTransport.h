@@ -27,8 +27,11 @@
 //                                            "*ATREADY: 1" arrives
 // Echo: setEcho(true) makes the modem repeat each command line, as before ATE0; the script's
 // "ATE0" turns it off.
+// The supply: power(true/false) is recorded (powered()); a pulse on the power key (pwrkeyPulses())
+// wakes a modem that was set cold with setCold(true), which ignores everything until then, as a
+// modem does that has never been started; a pulse on a running modem switches it off, as it does.
 // Time: advance(ms) moves the clock (setNow() starts it anywhere, to test the wrap).
-// Reading back: sent() (every command line, without its line end), bodies() (every text sent
+// Reading back: powered(), pwrkeyPulses(), sent() (every command line, without its line end), bodies() (every text sent
 // after a prompt, without the Ctrl-Z), unexpected(), pendingOutput() (bytes not read yet).
 
 #include <cstdint>
@@ -56,6 +59,19 @@ public:
 
   uint32_t now() override { return now_; }
 
+  void power(bool on) override { powered_ = on; }
+  void pwrkeyPulse() override {
+    ++pulses_;
+    if (cold_) {
+      cold_ = false;
+      const std::string ready = "\r\n*ATREADY: 1\r\n";
+      out_.insert(out_.end(), ready.begin(), ready.end());
+    } else {
+      cold_ = true;  // a pulse on a running modem switches it off
+      out_.clear();
+    }
+  }
+
   // Scripting.
   void reply(const std::string& command, std::initializer_list<std::string> lines, const std::string& final = "OK") {
     queue(command, 0, frame(lines, final), false);
@@ -79,6 +95,7 @@ public:
     out_.insert(out_.end(), ready.begin(), ready.end());
   }
   void setEcho(bool on) { echo_ = on; }
+  void setCold(bool cold) { cold_ = cold; }
   void advance(uint32_t ms) { now_ += ms; }
   void setNow(uint32_t ms) { now_ = ms; }
 
@@ -86,6 +103,8 @@ public:
   const std::vector<std::string>& bodies() const { return bodies_; }
   const std::vector<std::string>& unexpected() const { return unexpected_; }
   size_t pendingOutput() const { return out_.size(); }
+  bool powered() const { return powered_; }
+  int pwrkeyPulses() const { return pulses_; }
 
 private:
   struct Answer {
@@ -155,6 +174,7 @@ private:
     const std::string command = line_;
     line_.clear();
     sent_.push_back(command);
+    if (cold_ || !powered_) return;   // nobody is listening
     if (echo_) {
       out_.insert(out_.end(), command.begin(), command.end());
       out_.push_back('\r');
@@ -178,6 +198,9 @@ private:
 
   uint32_t now_ = 0;
   bool echo_ = false;
+  bool cold_ = false;
+  bool powered_ = true;  // a bench modem is on until the driver says otherwise
+  int pulses_ = 0;
   bool inBody_ = false;
   std::string line_;
   std::deque<char> out_;

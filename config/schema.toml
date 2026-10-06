@@ -74,6 +74,14 @@ field   = ""
 
 [[section]]
 file    = "settings"
+name    = "modem"
+list    = false
+label   = "config.modem.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
 name    = "interface"
 list    = false
 label   = "config.interface.label"
@@ -208,6 +216,24 @@ max_val = 120
 label   = "config.display.map_url.label"
 help    = "config.display.map_url.help"
 field   = "mapTemplate"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [modem]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "modem"
+name    = "apn"
+type    = "string"
+default = ""
+max_val = 100
+label   = "config.modem.apn.label"
+help    = "config.modem.apn.help"
+field   = "modemApn"
 apply   = "restart"
 secret  = false
 required = false

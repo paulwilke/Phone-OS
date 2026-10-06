@@ -50,6 +50,29 @@
           ]
         },
         {
+          "id": "modem",
+          "label": "config.modem.label",
+          "help": "",
+          "list": false,
+          "field": "",
+          "keys": [
+            {
+              "name": "apn",
+              "type": "string",
+              "required": false,
+              "secret": false,
+              "apply": "restart",
+              "default": "",
+              "min_val": 0,
+              "max_val": 100,
+              "enums": "",
+              "label": "config.modem.apn.label",
+              "help": "config.modem.apn.help",
+              "field": "modemApn"
+            }
+          ]
+        },
+        {
           "id": "interface",
           "label": "config.interface.label",
           "help": "",

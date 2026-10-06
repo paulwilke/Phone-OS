@@ -62,6 +62,10 @@ inline constexpr KeyDef kKeys[] = {
     {"settings", "display", "map_url", KeyType::String, false, false, Apply::Restart,
      "https://maps.google.com/?q={lat},{lon}", 0, 120, "",
      "config.display.map_url.label", "config.display.map_url.help", "mapTemplate"},
+    // settings / [modem]
+    {"settings", "modem", "apn", KeyType::String, false, false, Apply::Restart,
+     "", 0, 100, "",
+     "config.modem.apn.label", "config.modem.apn.help", "modemApn"},
     // settings / [interface]
     {"settings", "interface", "language", KeyType::CatalogCode, false, false, Apply::Restart,
      "en", 0, 10, "",
@@ -177,6 +181,8 @@ inline constexpr SectionDef kSections[] = {
      "config.child.label", "", ""},
     {"settings", "display", false,
      "config.display.label", "", ""},
+    {"settings", "modem", false,
+     "config.modem.label", "", ""},
     {"settings", "interface", false,
      "config.interface.label", "", ""},
     {"settings", "sms", false,

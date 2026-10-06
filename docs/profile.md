@@ -15,6 +15,7 @@ The defaults are those of a freshly flashed device that has no settings file: me
 | `freeText`, `radioAllowed`, `parentTools` | what the child may do |
 | `messageVibration`, `callVibration`, `quietCallVibration` | the three vibration switches |
 | `modemSleep` | whether the modem may sleep when idle |
+| `modemApn` | the access point name for the modem's data context 1, which the IMS bearer for calls is built from; empty leaves the modem's own contexts alone ([modem-driver.md](modem-driver.md)) |
 | `childName`, `mapTemplate`, `smsLanguage`, `extraTriggers` | what goes into the SMS the device sends and what triggers a remote query |
 | `commandNotice` | how visible a remote query is on the device: log only, history, or history and a notice |
 | `logLevel` | how much of the log is written (see [log-level.md](log-level.md)) |

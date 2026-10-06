@@ -73,6 +73,9 @@ bool ConfigWriter::writeSettings(const Profile& p) const {
   out += "[display]\n";
   out += "map_url = "; appendStr(out, p.mapTemplate); out += "\n\n";
 
+  out += "[modem]\n";
+  out += "apn = "; appendStr(out, p.modemApn); out += "\n\n";
+
   out += "[interface]\n";
   out += "language = "; appendStr(out, p.interfaceLanguage); out += "\n\n";
 
