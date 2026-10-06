@@ -604,6 +604,33 @@ void test_check_and_fails_report_what_differs() {
   TEST_ASSERT_FALSE(s.run("fails"));
 }
 
+// ---- words only the host shows ----------------------------------------------------------------------------------------------
+
+void test_the_words_of_the_demo_page_are_in_the_simulators_languages_but_not_in_the_shipped_files() {
+  Sim s;
+  for (const char* code : {"en", "de", "fr"}) {
+    TEST_ASSERT_TRUE(s.sim.translator().select(code));
+    TEST_ASSERT_TRUE_MESSAGE(s.sim.translator().get("demo.title") != "demo.title", code);   // a missing key answers with itself
+    TEST_ASSERT_TRUE_MESSAGE(s.sim.translator().get("home.phone") != "home.phone", code);
+  }
+  TEST_ASSERT_TRUE(s.sim.translator().get("demo.title") != s.sim.translator().getIn("en", "demo.title"));
+  // The shipped catalog of the device holds none of them.
+  std::ifstream in("lang/en.toml");
+  std::stringstream text;
+  text << in.rdbuf();
+  TEST_ASSERT_TRUE(text.str().find("\ndemo.") == std::string::npos);
+  // Without the host directory the simulator still runs, without those words.
+  sim::Options o;
+  o.webPort = 0;
+  o.hostLangDir = "tools/no-such-directory";
+  o.workDir = scratch("nohost").string();
+  std::ostringstream out;
+  sim::Simulator bare(o, out);
+  TEST_ASSERT_TRUE(bare.ok());
+  TEST_ASSERT_EQUAL_STRING("demo.title", bare.translator().get("demo.title").c_str());
+  TEST_ASSERT_TRUE(bare.translator().get("home.phone") != "home.phone");
+}
+
 // ---- the documentation ---------------------------------------------------------------------------------------------------
 
 void test_every_command_of_the_help_is_in_the_documentation() {
@@ -759,6 +786,7 @@ int main() {
   RUN_TEST(test_a_work_directory_that_is_holds_or_lies_in_the_data_is_refused);
   RUN_TEST(test_in_place_needs_a_data_directory);
   RUN_TEST(test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures);
+  RUN_TEST(test_the_words_of_the_demo_page_are_in_the_simulators_languages_but_not_in_the_shipped_files);
   RUN_TEST(test_every_command_of_the_help_is_in_the_documentation);
   RUN_TEST(test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time);
   RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);

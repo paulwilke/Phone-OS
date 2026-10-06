@@ -6,14 +6,24 @@ A language does not have to be shipped to be used: a catalog with a new code on 
 
 ## The limit
 
-**A catalog on the card may be at most 16,384 bytes** (`ConfigLoader::kMaxCatalogBytes`); a larger file is skipped with an `OversizedFile` diagnostic. The shipped catalogs are larger than that, so copying `lang/en.toml` whole does not work. Keep what you translated: a message you leave out falls back to English, and `[meta]` is required. Start from the file, delete the lines you do not translate, and the rest fits. (The limit is the owner's decision; this page tells what it is.)
+**A catalog on the card may be at most 16,384 bytes** (`ConfigLoader::kMaxCatalogBytes`); a larger file is skipped with an `OversizedFile` diagnostic. The device must not load unlimited text from the card into a small memory. The limit is the owner's decision, to be looked at again with real memory numbers.
+
+What that means today (bytes, `scripts/check_i18n.py` prints them):
+
+| Catalog | Size | |
+|---|---|---|
+| `lang/en.toml` | 14,591 | fits; **copy it whole** as the start of a new language: change `[meta]`, translate, keep the `{placeholders}` |
+| `lang/de.toml` | 16,956 | 572 over |
+| `lang/fr.toml` | 17,400 | 1,016 over |
+
+The shipped German and French catalogs are over the limit, so a translation as complete as they are does not fit as one file. What a translator does meanwhile: keep the lines you translated and delete the rest. A message you leave out falls back to English, and `[meta]` is required. A test keeps English under the limit, so the starting point always fits; the words of the demo page are not in these files (they are in `tools/lang/`, which the device never gets, [i18n.md](i18n.md)).
 
 ## Try your catalog in the simulator
 
 You need no device. Put the catalog and a configuration that asks for it on a card, and look at the screens.
 
 1. Build the simulator once: `pio run -e sim` ([simulator.md](simulator.md)).
-2. Make a directory for the card, with your catalog and the settings of the demo card:
+2. Make a directory for the card, with your catalog and the settings of the demo card (the catalog may be `lang/en.toml` with a new code and your words, which fits the limit):
 
    ```sh
    mkdir -p my-card/lang && cp -r sim/data/config my-card/

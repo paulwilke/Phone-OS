@@ -10,7 +10,7 @@ language, and a static page that walks through them.
 2. The scene scripts under sim/demo/ take the pictures the keys do not lead to (a call coming in,
    school time), once for each language.
 3. sim/demo/page.html is filled with the graph, the scene names and the words of the page, which come
-   from the catalogs (`demo.*`): the page has no words of its own, and a language selector swaps every
+   from the catalogs (`demo.*`, in the host-only files `tools/lang/demo.<code>.toml`): the page has no words of its own, and a language selector swaps every
    picture and every word.
 
 Then the result is checked: every language has a picture for every state and every scene, every
@@ -69,7 +69,13 @@ def catalogs():
             continue
         with open(os.path.join(folder, name), "rb") as f:
             data = tomllib.load(f)
-        result.append((data["meta"]["code"], data["meta"]["native"], flatten(data.get("strings", {}))))
+        words = flatten(data.get("strings", {}))
+        # The words of the page are in the host-only set tools/lang/demo.<code>.toml, which the device never gets.
+        host = os.path.join(ROOT, "tools", "lang", "demo." + name)
+        if os.path.exists(host):
+            with open(host, "rb") as f:
+                words.update(flatten(tomllib.load(f).get("strings", {})))
+        result.append((data["meta"]["code"], data["meta"]["native"], words))
     return result
 
 

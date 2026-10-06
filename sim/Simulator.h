@@ -141,6 +141,8 @@ private:
 struct Options {
   std::string dataDir = "sim/data";
   std::string langDir = "lang";
+  // Words only host tools show (the demo page): merged into the shipped languages here, never on the device.
+  std::string hostLangDir = "tools/lang";
   std::string webPage = "web/index.html";
   std::string goldenDir = "sim/golden";
   // Where the card is copied to. Only a directory this program made (it holds a marker file) or an
@@ -343,6 +345,24 @@ inline void Simulator::loadShippedCatalogs(const std::string& dir) {
       }
       translator_.add(catalog);
       if (entry.path().stem() == i18n::Translator::kReference) english = catalog;
+    }
+  }
+  // The host-only sets (tools/lang/<set>.<code>.toml): their words are added to the language of the same
+  // code, as a user catalog with the code of a shipped language would be.
+  if (fs::is_directory(options_.hostLangDir)) {
+    std::vector<fs::path> sets;
+    for (const auto& entry : fs::directory_iterator(options_.hostLangDir))
+      if (entry.path().extension() == ".toml") sets.push_back(entry.path());
+    std::sort(sets.begin(), sets.end());
+    for (const fs::path& path : sets) {
+      std::string text;
+      i18n::Catalog catalog;
+      if (!detail::readFile(path.string(), text) || !catalog.parse(text.data(), text.size())) {
+        out_ << "warning: cannot load host catalog " << path.string() << "\n";
+        continue;
+      }
+      translator_.add(catalog);
+      if (catalog.code() == i18n::Translator::kReference) english.merge(catalog);
     }
   }
   if (english.size() == 0) out_ << "warning: no English catalog in " << dir << "\n";

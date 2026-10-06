@@ -30,6 +30,7 @@ void usage() {
                "  --in-place        use the data directory itself as the card: saved settings change it\n"
                "  --port <n>        the port of the web page on 127.0.0.1 (default 8080)\n"
                "  --lang <dir>      the shipped catalogs; default lang\n"
+               "  --host-lang <dir> words only host tools show (the demo page); default tools/lang\n"
                "  --web <file>      the web page; default web/index.html\n"
                "  --golden <dir>    where `golden` looks for pictures; default sim/golden\n"
                "  --script <file>   run the commands of a file first (a line `# data: <dir>` at its top names its card); the program exits after it unless\n"
@@ -102,6 +103,7 @@ int main(int argc, char** argv) {
     if (a == "--help" || a == "-h") { usage(); return 0; }
     else if (a == "--data") { if (!value(options.dataDir)) return 2; dataGiven = true; }
     else if (a == "--lang") { if (!value(options.langDir)) return 2; }
+    else if (a == "--host-lang") { if (!value(options.hostLangDir)) return 2; }
     else if (a == "--web") { if (!value(options.webPage)) return 2; }
     else if (a == "--work") { if (!value(options.workDir)) return 2; }
     else if (a == "--in-place") options.inPlace = true;

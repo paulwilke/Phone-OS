@@ -3,6 +3,8 @@
 
 #include <unity.h>
 
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -617,6 +619,51 @@ home.phone = "Call"
 // ---------------------------------------------------------------------------
 
 // Counter-check for web_password minimum length: a 3-char password is rejected.
+// The English catalog is the file a translator copies and starts from, so it must be a file the device
+// accepts as a catalog on the card. The limit is the device's (it must not load unlimited text into
+// memory); the file has to stay under it.
+std::string readFile(const char* path) {
+  std::ifstream in(path, std::ios::binary);
+  std::stringstream text;
+  text << in.rdbuf();
+  return text.str();
+}
+
+void test_the_english_catalog_fits_what_a_catalog_on_the_card_may_have() {
+  const std::string english = readFile("lang/en.toml");
+  TEST_ASSERT_TRUE_MESSAGE(!english.empty(), "run the tests from the repository root");
+  TEST_ASSERT_TRUE_MESSAGE(english.size() <= ConfigLoader::kMaxCatalogBytes,
+                           (std::to_string(english.size()) + " bytes, the limit is " + std::to_string(ConfigLoader::kMaxCatalogBytes)).c_str());
+}
+
+void test_the_english_catalog_copied_under_a_new_code_is_accepted_whole_as_a_user_catalog() {
+  std::string text = readFile("lang/en.toml");
+  const std::string code = "code = \"en\"";
+  TEST_ASSERT_TRUE_MESSAGE(text.find(code) != std::string::npos, "lang/en.toml has no code line this test can rename");
+  text.replace(text.find(code), code.size(), "code = \"xx\"");
+  FakeConfigStore store;
+  store.put("/lang/xx.toml", text);
+  i18n::Translator translator = languages::loaded();
+  std::vector<Diagnostic> diags;
+  ConfigLoader::loadUserCatalogs(store, translator, diags);
+  TEST_ASSERT_EQUAL_MESSAGE(0, static_cast<int>(diags.size()), diags.empty() ? "" : diagnosticName(diags[0].code));
+  TEST_ASSERT_TRUE(translator.select("xx"));
+}
+
+void test_a_catalog_one_byte_over_the_limit_is_skipped_and_one_at_the_limit_is_read() {
+  const std::string head = "[meta]\ncode = \"xx\"\nname = \"Test\"\nnative = \"Test\"\nplural = \"one-other\"\n\n[strings]\nhome.phone = \"Xphone\"\n# ";
+  auto sized = [&](size_t bytes) { return head + std::string(bytes - head.size() - 1, 'x') + "\n"; };
+  for (size_t bytes : {ConfigLoader::kMaxCatalogBytes, ConfigLoader::kMaxCatalogBytes + 1}) {
+    FakeConfigStore store;
+    store.put("/lang/xx.toml", sized(bytes));
+    i18n::Translator translator = languages::loaded();
+    std::vector<Diagnostic> diags;
+    ConfigLoader::loadUserCatalogs(store, translator, diags);
+    if (bytes == ConfigLoader::kMaxCatalogBytes) TEST_ASSERT_TRUE(diags.empty() && translator.select("xx"));
+    else TEST_ASSERT_TRUE(hasDiag(diags, Diagnostic::Code::OversizedFile) && !translator.select("xx"));
+  }
+}
+
 void test_languages_of_installed_catalogs_give_no_diagnostic() {
   i18n::Translator translator = languages::loaded();
   Profile profile;
@@ -723,6 +770,9 @@ int main() {
   RUN_TEST(test_settings_need_write_is_set_when_vibration_changes);
   RUN_TEST(test_user_catalogs_are_loaded_from_lang_directory);
   RUN_TEST(test_invalid_user_catalog_gives_diagnostic_and_loading_continues);
+  RUN_TEST(test_the_english_catalog_fits_what_a_catalog_on_the_card_may_have);
+  RUN_TEST(test_the_english_catalog_copied_under_a_new_code_is_accepted_whole_as_a_user_catalog);
+  RUN_TEST(test_a_catalog_one_byte_over_the_limit_is_skipped_and_one_at_the_limit_is_read);
   RUN_TEST(test_languages_of_installed_catalogs_give_no_diagnostic);
   RUN_TEST(test_an_interface_language_nobody_has_is_reported_with_its_code);
   RUN_TEST(test_an_sms_language_nobody_has_is_reported_and_does_not_fail_the_interface);

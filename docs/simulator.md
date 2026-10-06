@@ -15,7 +15,7 @@ pio run -e sim                                            # the console, headles
 .pio/build/sim/program --data sim/data-parent             # another card
 ```
 
-Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](demo.md)). `--help` lists them.
+Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](demo.md)). `--help` lists them.
 
 A script without `--interactive` runs and exits. A line `# data: <dir>` among its first lines names the card the script needs, when `--data` is not given.
 

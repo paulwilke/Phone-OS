@@ -25,7 +25,7 @@ The pictures the keys do not lead to need something to happen: a call coming in,
 
 `index.html` is one file: the graph, the scene names and the words are embedded, the pictures are beside it (`<language>/n<state>.png`, `<language>/scene-<name>.png`). It shows the picture, the seven keys (enabled where the key leads somewhere), "start over", and the list of scenes; the language selector swaps every picture and every word, and keeps the state. Pictures are drawn without smoothing.
 
-**The page has no words of its own.** Its title, keys, status line and scene names are the `demo.*` keys of the catalogs in English, German and French, and `test/test_demo_page` fails when the markup holds text or the script holds a sentence. A new scene needs a script line, a `demo.scene-<name>` key in every catalog and a row in `SCENE_WORDS` of the generator.
+**The page has no words of its own.** Its title, keys, status line and scene names are the `demo.*` keys of the host-only files `tools/lang/demo.<code>.toml` in English, German and French (they are not shipped to the device, so they do not weigh on the limit of a catalog on the card, [i18n.md](i18n.md)), and `test/test_demo_page` fails when the markup holds text or the script holds a sentence. A new scene needs a script line, a `demo.scene-<name>` key in every `tools/lang/demo.<code>.toml` and a row in `SCENE_WORDS` of the generator.
 
 ## What the generator checks
 
