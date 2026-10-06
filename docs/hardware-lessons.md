@@ -1,0 +1,34 @@
+# Hardware lessons: the T-Deck Pro MAX
+
+Things that went wrong on the real device, why, and the rule that keeps them from coming back. Each entry says what was measured, not what was assumed. The device drivers (a later work package) must implement every rule marked **Driver rule**; the host tests cannot prove them, so each rule also names how the owner checks it on the device.
+
+## The fuel gauge ships with the wrong battery size
+
+**What happened.** The device seemed not to charge: the status page said "full on the cable" next to 56 %, and the battery bar and the percentage disagreed. A read-only diagnosis of both chips (2026-10-06) showed that the charger was fine and the battery full (cell 4.16 V, charge done, target 4.208 V), but the fuel gauge (BQ27220) held its factory design capacity of **3000 mAh** and a full-charge capacity of 3000 mAh, with a cycle count of 0. The battery is **1500 mAh**. The gauge therefore reported about half the real charge (remaining 1655 mAh, more than the battery can hold) and a time to empty twice as long as the truth (2858 min at 35 mA is 1667 mAh, which is 56 % of 2977). Writing 1500 mAh into both registers once made it read 97 % at 4.13 V.
+
+**Why it is easy to miss.** Every value comes from one chip and looks plausible. Nothing shows an error; the percentage only disagrees with the cell voltage, and nobody compares the two.
+
+**Driver rule.**
+
+1. At start, read the gauge's design and full-charge capacity. When they differ from the configured battery capacity (`[battery] capacity_mah`), write the configured value to both and read it back; write only on a difference, so the chip's memory is not worn by every start.
+2. Never show a percentage the voltage contradicts: a gauge that says "less than 70 %" while the cell is above 4.1 V and the charger reports the charge as done is wrong, and the interface must show the state it can trust (the charger's "full") instead of the number.
+3. A diagnostic command reads both chips without writing (gauge: voltage, remaining, full-charge and design capacity, cycle count, state of charge; charger: all registers, input current limit, charge state, battery voltage) so that nobody has to flash a special program to find out.
+
+**Owner's check.** After a full charge the gauge reads 100 % within a few percent of the cell voltage chart, and the diagnostic command shows the configured capacity.
+
+## The IMS bearer needs a default context of type IPV4V6
+
+Outgoing calls hung the modem two seconds after dialling when the IMS was not registered. Defining PDP context 1 as IPV4V6 and restarting the radio fixed it. The modem driver sets this up itself at start (read the contexts first, write only when they differ) and refuses to dial while the IMS is not registered.
+
+## Smaller facts that cost time
+
+- **The charger changed during the production series.** Newer boards carry an SY6970 on I2C address 0x6A, older ones a BQ25896 on 0x6B. A driver that looks at only one address treats the bus as broken.
+- **"Cable present" is not "charging".** The charger's power-good bit says a supply is attached; the charge state says it is charging. A full battery on a cable reads "not charging". Decisions about sleep must use the cable bit.
+- **The USB console disappears in light sleep.** The USB bridge of the ESP32-S3 is switched off while it sleeps, the connection drops and the device cannot be flashed until it wakes; nothing sleeps while a charger is attached.
+- **Opening the USB serial port resets the ESP32.** A tool that reads logs over USB restarts the device.
+- **A bad SIM contact looks like "no network".** The modem restarts every 30 to 60 seconds, which also stresses the SD card that shares the tray.
+- **LTE-only mode gives "no network service" for calls** on this module; voice needs the IMS registration.
+
+## How to add a lesson
+
+A lesson belongs here when it was measured on the device and cost real time. State the measurement, the cause, the rule for the drivers, and how the owner checks it. A lesson that is only a guess does not belong here.
