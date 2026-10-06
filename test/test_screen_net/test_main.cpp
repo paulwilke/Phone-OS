@@ -147,7 +147,7 @@ void test_a_network_without_ims_is_told_as_calls_not_ready_and_explained() {
   TEST_ASSERT_TRUE(page.says("Network: Example"));
   TEST_ASSERT_TRUE(page.says("IMS: no"));
   TEST_ASSERT_TRUE(page.says("Status: calls not ready"));
-  TEST_ASSERT_TRUE(page.saysWrapped("The network is there, but calls are not ready yet. This usually passes within a minute. Messages work."));
+  TEST_ASSERT_TRUE(page.saysWrapped("The network is there, but calls are not ready yet. Messages work."));
   TEST_ASSERT_FALSE(page.saysWrapped("The network allows this SIM messages only, no calls."));
 }
 

@@ -9,7 +9,7 @@ Code: `src/ui/screens/NetScreen.{h,cpp}`; tests in `test/test_screen_net/`. What
 - the signal as a number ("4/5" reads even when the display is small);
 - cellular power, the modem's sleep, whether the time is known, how many messages wait.
 
-Under the lines a paragraph explains a SIM problem, why a network that allows messages only is no fault of the device, or that calls are not ready yet and usually are within a minute. A wrong PIN says not to restart before it is right, because three wrong tries lock the SIM. The explanations name no file or setting that this repository does not have: the parents are told to enter the PIN, not where.
+Under the lines a paragraph explains a SIM problem, why a network that allows messages only is no fault of the device, or that calls are not ready yet while messages work. A wrong PIN says not to restart before it is right, because three wrong tries lock the SIM. The explanations name no file or setting that this repository does not have: the parents are told to enter the PIN, not where.
 
 The page is a text and scrolls with the arrows when a language makes it longer than the page; the soft keys offer the arrows only then. It opens at the top.
 

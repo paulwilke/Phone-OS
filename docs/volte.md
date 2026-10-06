@@ -40,7 +40,7 @@ The six test cases of the proposal exist, with counter-checks (the bug put back,
 - **`AT+CFUN=0/1` while registered drops a message in flight.** The job therefore runs before registration and before the first sending; a message queued before a restart goes out after the cycle (`test_a_message_queued_before_a_restart_goes_out_after_the_radio_cycle`). A message that was in flight when the modem restarted is reported as failed and not sent again.
 - **Not understood:** why the IMS registered in one earlier good run without this setting.
 - **The modem firmware** (`A7682M7_B15V01_241119`) may have a fault in the call setup path: it hangs without the IMS. No update package is published; that is a question for the vendor, not for this change. The driver's answer is to never dial without the IMS and to recognise the restart when it comes.
-- **The registration of the IMS takes time.** After the radio cycle the IMS may need a minute; until then the voice status is `ImsMissing` and the screens say "calls not ready". The text on the network page says this usually passes within a minute; that sentence is an assumption, not a measurement.
+- **The registration of the IMS takes time.** After the radio cycle the IMS may need a minute; until then the voice status is `ImsMissing` and the screens say "calls not ready". The text on the network page names no duration, because none was measured.
 
 ## The owner's checklist on the device
 
