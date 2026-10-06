@@ -21,6 +21,7 @@ The documents describe what exists in this repository — each one is written fr
 | [power-policy.md](power-policy.md) | what may sleep when: the eight rules and their order |
 | [hardware-capabilities.md](hardware-capabilities.md) | the interfaces to the hardware (capabilities), their contracts, vibration patterns |
 | [hardware-lessons.md](hardware-lessons.md) | what went wrong on the real device, why, and the rule that prevents it (fuel gauge capacity, IMS context, charger, USB) |
+| [at-layer.md](at-layer.md) | the modem driver's AT layer: the transport seam, lines, the answers the driver reads, the SMS answers, UCS2, the scripted modem |
 | [test-doubles.md](test-doubles.md) | the scriptable fake of every capability and what each can be made to do |
 | [ui-display.md](ui-display.md) | the 1-bit display interface, the frame buffer with clip detection, golden files |
 | [app-behaviour.md](app-behaviour.md) | the inventory of the application core's behaviour: every behaviour, its owner and its test, and every test of the previous code base |
