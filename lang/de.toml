@@ -258,7 +258,7 @@ config.log.level.help                 = "Wie viel protokolliert wird: all, event
 
 config.wifi.label                     = "WLAN"
 config.wifi.auto_off_minutes.label    = "Automatisch aus nach (Minuten)"
-config.wifi.auto_off_minutes.help     = "Das WLAN schaltet sich diese viele Minuten nach der letzten Seite ab. Bereich: 1-120."
+config.wifi.auto_off_minutes.help     = "Das WLAN schaltet sich so viele Minuten nach der letzten Nutzung der Elternseite ab. Bereich: 1-120."
 config.wifi.access_point.label        = "Zugangspunkt"
 config.wifi.access_point.ssid.label   = "Name des Zugangspunkts"
 config.wifi.access_point.ssid.help    = "Name des eigenen WLAN-Netzes des Geraets."

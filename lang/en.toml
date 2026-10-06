@@ -260,7 +260,7 @@ config.log.level.help                 = "How much of the log is written: all, ev
 
 config.wifi.label                     = "Wi-Fi"
 config.wifi.auto_off_minutes.label    = "Auto-off after (minutes)"
-config.wifi.auto_off_minutes.help     = "Wi-Fi switches itself off this many minutes after the last page was served. Range: 1-120."
+config.wifi.auto_off_minutes.help     = "Wi-Fi switches itself off this many minutes after the parents' page was last used. Range: 1-120."
 config.wifi.access_point.label        = "Access point"
 config.wifi.access_point.ssid.label   = "Access point name"
 config.wifi.access_point.ssid.help    = "Name of the device's own Wi-Fi network."

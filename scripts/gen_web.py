@@ -531,11 +531,15 @@ function showEditor(path, text) {{
 }}
 
 // ---------- Log ----------
+var LOG_PATH = '/system.log';
 function loadLog() {{
   var pre = document.getElementById('log-content');
   var emptyEl = document.getElementById('log-empty');
-  api('GET', '/api/log').then(function(r) {{ return r.json(); }}).then(function(d) {{
-    var lines = Array.isArray(d) ? d : (d.lines || []);
+  api('GET', '/api/file?path=' + LOG_PATH).then(function(r) {{
+    // No log file yet is an empty log, not an error. The device sends the end of a long log.
+    return r.ok ? r.text() : '';
+  }}).then(function(text) {{
+    var lines = text.split('\\n').filter(function(l) {{ return l.length > 0; }});
     if (lines.length === 0) {{ pre.textContent = ''; emptyEl.hidden = false; return; }}
     emptyEl.hidden = true;
     pre.textContent = lines.join('\\n');
@@ -545,7 +549,7 @@ function loadLog() {{
 document.getElementById('log-refresh').addEventListener('click', loadLog);
 document.getElementById('log-clear').addEventListener('click', function() {{
   if (!confirm(t('web.log.confirm-clear'))) return;
-  api('DELETE', '/api/log', {{}}).then(function() {{ loadLog(); }});
+  api('DELETE', '/api/file?path=' + LOG_PATH, {{}}).then(function() {{ loadLog(); }});
 }});
 
 // ---------- Backup ----------

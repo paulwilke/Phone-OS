@@ -425,7 +425,7 @@ max_val = 120
 label   = "config.wifi.auto_off_minutes.label"
 help    = "config.wifi.auto_off_minutes.help"
 field   = "wifi.autoOffMinutes"
-apply   = "immediate"
+apply   = "restart"
 secret  = false
 required = false
 

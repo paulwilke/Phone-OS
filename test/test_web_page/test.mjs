@@ -178,15 +178,12 @@ assert(!dangerousInner, 'no innerHTML = <variable> patterns (device data via tex
 console.log('\nTest: every route the page calls is a route of the API; the Wi-Fi status and buttons');
 const api = readFileSync(resolve(ROOT, 'src', 'web', 'WebApi.cpp'), 'utf8');
 const routes = [...new Set([...html.matchAll(/['"`]\/api\/([a-z-]+)/g)].map((m) => m[1]))];
-// The log tab asks for /api/log, which the API does not have yet (the device's log is a file, and which file
-// is for the host to say): known, reported to the owner, and the only one allowed to be missing.
-const missingRoutes = ['log'];
-const unknown = routes.filter((r) => !missingRoutes.includes(r) && !api.includes(`"/${r}"`) && !api.includes(`"/${r}/"`));
+const unknown = routes.filter((r) => !api.includes(`"/${r}"`) && !api.includes(`"/${r}/"`));
 assert(routes.length >= 8, `the page calls ${routes.length} routes`);
-assert(missingRoutes.every((r) => !api.includes(`"/${r}"`)), 'the list of known missing routes is still true (a route that exists now must leave it)');
-assert(unknown.length === 0, 'no other route of the page is missing in WebApi.cpp' + (unknown.length ? ': ' + unknown.join(', ') : ''));
+assert(unknown.length === 0, 'no route of the page is missing in WebApi.cpp' + (unknown.length ? ': ' + unknown.join(', ') : ''));
 assert(/id="wifi-extend-btn"[^>]*\s+data-t="web\.status\.wifi-extend-btn"/.test(html), 'the button "keep Wi-Fi on" is in the page, worded from the catalog');
 assert(html.includes("api('POST', '/api/wifi-extend'") && html.includes("api('POST', '/api/wifi-off'"), 'the two buttons call their routes');
+assert(html.includes("LOG_PATH = '/system.log'") && html.includes("'/api/file?path=' + LOG_PATH") && !html.includes('/api/log'), 'the log tab reads and clears /system.log through the file route');
 assert(html.includes('w.seconds_left') && html.includes('w.state') && !html.includes('d.wifi_mode'), 'the status reads the fields the API sends');
 
 // ---------- summary ----------

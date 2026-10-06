@@ -297,7 +297,7 @@
               "type": "integer",
               "required": false,
               "secret": false,
-              "apply": "immediate",
+              "apply": "restart",
               "default": "10",
               "min_val": 1,
               "max_val": 120,

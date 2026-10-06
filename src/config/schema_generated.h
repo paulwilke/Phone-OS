@@ -108,7 +108,7 @@ inline constexpr KeyDef kKeys[] = {
      "all", 0, 0, "all|events|errors",
      "config.log.level.label", "config.log.level.help", "logLevel"},
     // settings / [wifi]
-    {"settings", "wifi", "auto_off_minutes", KeyType::Integer, false, false, Apply::Immediate,
+    {"settings", "wifi", "auto_off_minutes", KeyType::Integer, false, false, Apply::Restart,
      "10", 1, 120, "",
      "config.wifi.auto_off_minutes.label", "config.wifi.auto_off_minutes.help", "wifi.autoOffMinutes"},
     // settings / [radio]

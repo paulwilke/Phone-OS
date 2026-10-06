@@ -250,6 +250,19 @@ void test_a_file_the_device_would_reject_is_not_stored_and_a_typo_is_stored_with
   TEST_ASSERT_TRUE(typo.has("unknown-key"));
 }
 
+void test_the_log_tab_reads_and_clears_the_log_file_of_the_card_through_the_file_route() {
+  Web w;
+  TEST_ASSERT_EQUAL(404, w.get("/api/file?path=/system.log").status);          // no log yet: the page shows an empty one
+  TEST_ASSERT_TRUE(w.sim.card().write("/system.log", "boot ok\nWEB: something happened\n"));
+  const Reply log = w.get("/api/file?path=/system.log");
+  TEST_ASSERT_EQUAL(200, log.status);
+  TEST_ASSERT_TRUE(log.has("WEB: something happened"));
+  TEST_ASSERT_EQUAL(403, w.change("DELETE", "/api/file?path=/system.log", "", /*header=*/false).status);
+  TEST_ASSERT_TRUE(w.sim.card().fileSize("/system.log") > 0);
+  TEST_ASSERT_EQUAL(200, w.change("DELETE", "/api/file?path=/system.log", "{}").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/file?path=/system.log").status);
+}
+
 void test_the_wifi_off_button_ends_the_page() {
   Web w;
   TEST_ASSERT_EQUAL(200, w.change("POST", "/api/wifi-off", "{}").status);
@@ -336,6 +349,7 @@ int main() {
   RUN_TEST(test_a_setting_saved_through_the_api_is_in_the_file_of_the_card);
   RUN_TEST(test_a_language_saved_through_the_api_is_the_devices_after_the_restart_the_page_asks_for);
   RUN_TEST(test_a_file_the_device_would_reject_is_not_stored_and_a_typo_is_stored_with_a_warning);
+  RUN_TEST(test_the_log_tab_reads_and_clears_the_log_file_of_the_card_through_the_file_route);
   RUN_TEST(test_the_wifi_off_button_ends_the_page);
   RUN_TEST(test_a_change_without_the_header_is_refused_and_changes_nothing);
   RUN_TEST(test_five_wrong_passwords_lock_everybody_out_for_a_minute);

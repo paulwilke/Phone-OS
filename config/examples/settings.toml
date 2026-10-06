@@ -33,7 +33,7 @@ timezone = ""  # restart
 level = "all"  # restart
 
 [wifi]
-auto_off_minutes = 10  # immediate
+auto_off_minutes = 10  # restart
 
 [radio]
 name = "phoneplus"  # restart

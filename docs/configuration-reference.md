@@ -153,13 +153,13 @@ Takes effect on next start.
 
 | Key | Type | Default | Required | Apply |
 |-----|------|---------|----------|-------|
-| `auto_off_minutes` | integer | `10` | no | immediate |
+| `auto_off_minutes` | integer | `10` | no | restart |
 
 #### `auto_off_minutes`
 
 Integer, 1–120.
 Default: `10`.
-Takes effect immediately without restart.
+Takes effect on next start.
 
 ### `[radio]`
 
