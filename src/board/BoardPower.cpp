@@ -24,10 +24,17 @@ bool BoardPower::setEnabled(PowerDomain domain, bool on) {
       if (on) modem_.begin();
       else modem_.shutdown();
       return true;
-    case PowerDomain::Positioning: return expander_.set(leg::kGnssPower, on);
-    case PowerDomain::Radio: return expander_.set(leg::kRadioPower, on);
+    case PowerDomain::Positioning:
+    case PowerDomain::Radio: {
+      const uint8_t rail = domain == PowerDomain::Positioning ? leg::kGnssPower : leg::kRadioPower;
+      const bool was = expander_.level(rail);
+      if (!expander_.set(rail, on)) return false;
+      if (on && !was) ++switchOns_[(int)domain];
+      return true;
+    }
     case PowerDomain::Frontlight:
       gpio_.write(pin::kFrontlight, on);
+      if (on && !frontlight_) ++switchOns_[(int)domain];
       frontlight_ = on;
       return true;
   }

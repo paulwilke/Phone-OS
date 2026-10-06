@@ -1,7 +1,9 @@
 // The firmware's entry point. It starts the board in the documented order and says what it found; the
 // capabilities, the runtime and the console are wired in the later parts of the device work (docs/device.md).
 // Until then the input the keyboard and the touch chip produce is written to the console, so the first
-// start on the device shows at once whether the keys, the touch and the three keys under the screen work.
+// start on the device shows at once whether the keys, the touch and the three keys under the screen work,
+// and the modem and the receiver run for the bring-up: the modem is started, the receiver is on, and what they
+// report is written to the console.
 //
 // The USB console is the processor's own USB port: opening the serial port from a computer resets the
 // ESP32, and nothing here waits for a computer to open it.
@@ -9,21 +11,30 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include <drivers/A7682EDriver.h>
+
 #include <board/BatteryDiagnostic.h>
+#include <board/BoardGnss.h>
 #include <board/BoardMotion.h>
+#include <board/BoardPower.h>
 #include <board/Charger.h>
 #include <board/Cst66xx.h>
+#include <board/DeviceClock.h>
 #include <board/FuelGauge.h>
 #include <board/KeyboardDecoder.h>
+#include <board/ModemTransport.h>
 #include <board/PinMap.h>
 #include <board/PowerUp.h>
 #include <board/Tca8418.h>
+#include <board/TimeSync.h>
 
 #include "Esp32Bhi260Hub.h"
 #include "Esp32Delay.h"
 #include "Esp32GaugeWriter.h"
 #include "Esp32Gpio.h"
 #include "Esp32I2cBus.h"
+#include "Esp32Millis.h"
+#include "Esp32UartPort.h"
 #include "SerialLog.h"
 
 namespace {
@@ -41,6 +52,20 @@ board::Cst66xxTouch touch(i2cBus, delays);
 board::TouchDecoder touchDecoder;
 Esp32Bhi260Hub motionHub;
 board::BoardMotion motion(expander, motionHub, delays);
+
+// The pins are given from the processor's side: it receives on the line the modem transmits on.
+Esp32UartPort modemUart(Serial1, 115200, board::pin::kModemUartRx, board::pin::kModemUartTx);
+Esp32UartPort gnssUart(Serial2, 38400, board::pin::kGnssUartRx, board::pin::kGnssUartTx);
+Esp32Millis millisSource;
+board::DeviceClock deviceClock(millisSource);
+board::TimeSync timeSync(deviceClock, eventLog);
+board::ModemTransport modemTransport(modemUart, expander, gpio, delays, millisSource, eventLog);
+A7682EDriver::Config modemConfig;  // the APN and the PIN come from the configuration once it is read
+A7682EDriver modemDriver(modemTransport, modemConfig);
+board::BoardPower power(expander, gpio, charger, gauge, modemDriver);
+board::BoardGnss gnss(power, gnssUart, deviceClock);
+ModemState lastModemState = ModemState::Off;
+uint32_t lastReportMs = 0;
 
 void printInput(const char* source, const ui::Input& in) {
   switch (in.kind) {
@@ -61,8 +86,7 @@ void setup() {
 
   // The battery size of the profile's default until the configuration is read from the card.
   const int batteryMah = board::kDefaultBatteryMah;
-  charger.detect();
-  eventLog.log(board::describeCapacityCheck(board::ensureCapacity(gauge, gaugeWriter, (uint16_t)batteryMah)));
+  power.begin((uint16_t)batteryMah, gaugeWriter, eventLog);
   for (const std::string& line : board::formatBatteryDiagnostic(board::readBatteryDiagnostic(gauge, charger), batteryMah))
     eventLog.log(line);
 
@@ -70,6 +94,12 @@ void setup() {
   Serial.printf("[boot] touch %s\n", touch.begin() ? "CST66xx" : "not found or not a CST66xx");
   motion.begin();
   Serial.printf("[boot] motion sensor %s\n", motion.available() ? "on the board, idle" : "unavailable");
+
+  modemUart.begin();
+  gnssUart.begin();
+  modemTransport.begin();
+  power.setEnabled(PowerDomain::Cellular, true);
+  power.setEnabled(PowerDomain::Positioning, true);
 }
 
 void loop() {
@@ -79,5 +109,24 @@ void loop() {
     if (keyboardDecoder.decode(key, in)) printInput("keyboard", in);
   board::cst66xx::Report report;
   if (touch.poll(report) && touchDecoder.decode(report, in)) printInput("touch", in);
+
+  modemDriver.poll();
+  std::string line;
+  while (modemDriver.pollLog(line)) eventLog.log(line);
+  if (modemDriver.state() != lastModemState) {
+    lastModemState = modemDriver.state();
+    Serial.printf("[modem] state %d\n", (int)lastModemState);
+  }
+  at::NetworkTime networkTime;
+  if (modemDriver.networkTime(networkTime)) timeSync.offerNetwork(networkTime.epochUtc, networkTime.tzOffsetMinutes);
+
+  GnssFix fix;
+  if (gnss.readFix(fix) && fix.valid && fix.utc) timeSync.offerSatellite(fix.utc);
+  if (millis() - lastReportMs >= 5000) {
+    lastReportMs = millis();
+    if (fix.valid) Serial.printf("[gnss] fix, %u satellites, hdop %.1f\n", (unsigned)fix.sats, (double)fix.hdop);
+    else Serial.println("[gnss] no fix");
+    Serial.printf("[clock] epoch %u\n", (unsigned)deviceClock.epochUtc());
+  }
   delay(10);
 }

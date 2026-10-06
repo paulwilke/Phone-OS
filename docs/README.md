@@ -21,6 +21,7 @@ The documents describe what exists in this repository — each one is written fr
 | [power-policy.md](power-policy.md) | what may sleep when: the eight rules and their order |
 | [hardware-capabilities.md](hardware-capabilities.md) | the interfaces to the hardware (capabilities), their contracts, vibration patterns |
 | [device.md](device.md) | the firmware's platform code: where what lives, the pin map, the seams and their fakes, the start-up order, how to build |
+| [device-gnss-modem-clock.md](device-gnss-modem-clock.md) | the NMEA reader and its rules, the receiver and the modem's lines on the board, the clock and which time to believe |
 | [device-input.md](device-input.md) | keyboard, touch and the three keys under the screen, vibration and the motion sensor on the board: the decoding, the layout, what is host-tested |
 | [device-power.md](device-power.md) | the Power capability on the board: rails, the fuel gauge capacity check, the plausibility rule, the charger revisions, the diagnosis |
 | [hardware-lessons.md](hardware-lessons.md) | what went wrong on the real device, why, and the rule that prevents it (fuel gauge capacity, IMS context, charger, USB) |

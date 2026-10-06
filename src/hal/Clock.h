@@ -29,6 +29,10 @@ public:
   // synchronised reports 1970 or 2000; setting that would make the device believe it
   // knows the time. Anything earlier than 2020-01-01 is refused.
   static constexpr uint32_t kEarliestEpoch = 1577836800;
+  // The first date no source may deliver (2070-01-01): the year of a network time or a satellite sentence has
+  // two digits, and a source that counts wrongly lands far beyond any date this device will see. A source
+  // that offers such a time is ignored by whoever sets the clock; the clock itself does not check it.
+  static constexpr uint32_t kLatestEpoch = 3155760000;
   // Offsets from UTC that exist, in minutes (UTC-12:00 to UTC+14:00).
   static constexpr int kMinOffsetMinutes = -720;
   static constexpr int kMaxOffsetMinutes = 840;

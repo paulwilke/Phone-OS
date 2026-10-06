@@ -35,6 +35,10 @@ public:
   // in the log, one line each.
   void begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer, EventLog& log);
 
+  // How often a domain was switched from off to on since the start. A receiver that was switched off and on
+  // again between two readings still has to start afresh, and only a counter shows that it happened.
+  uint32_t switchOns(PowerDomain domain) const { return switchOns_[(int)domain]; }
+
   bool setEnabled(PowerDomain domain, bool on) override;
   bool isEnabled(PowerDomain domain) override;
   // Switches the rails off and disconnects the battery. False, with nothing changed, while a cable feeds
@@ -62,6 +66,7 @@ private:
   FuelGauge& gauge_;
   Modem& modem_;
   bool frontlight_ = false;
+  uint32_t switchOns_[4] = {};
 };
 
 }  // namespace board

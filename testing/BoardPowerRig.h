@@ -8,6 +8,7 @@
 // the charger saying "charge done", and a gauge that still held the factory capacity and said 56 %.
 // The hooks at the bottom are those of the Power contract (testing/contracts/PowerContract.h).
 
+#include <board/BoardGnss.h>
 #include <board/BoardPower.h>
 #include <board/PinMap.h>
 #include <fakes/FakeClock.h>
@@ -17,6 +18,8 @@
 #include <fakes/FakeGpio.h>
 #include <fakes/FakeI2cBus.h>
 #include <fakes/FakeModem.h>
+#include <fakes/FakeUartPort.h>
+#include <NmeaSource.h>
 
 struct BoardPowerRig {
   static constexpr uint16_t kConfiguredMah = 1500;
@@ -100,4 +103,30 @@ struct BoardPowerRig {
     return true;
   }
   bool forbidPowerOff() { return plugIn(ChargeState::Charging); }
+};
+
+// The receiver: BoardGnss on a scripted UART behind the power side of the board. The contract's `advanceSeconds`
+// moves the clock a second at a time and lets the scripted receiver say its sentences after each.
+struct BoardGnssRig {
+  BoardPowerRig board;
+  FakeUartPort uart;
+  NmeaSource receiver{uart, board.impl};
+  board::BoardGnss impl{board.impl, uart, board.clock};
+
+  GnssReceiver& gnss() { return impl; }
+  Power& power() { return board.impl; }
+  void advanceSeconds(uint32_t seconds) {
+    for (uint32_t i = 0; i < seconds; ++i) {
+      board.clock.advanceSeconds(1);
+      receiver.step();
+    }
+  }
+  bool scriptFix(double lat, double lon, float hdop, uint32_t afterSeconds) {
+    receiver.script(lat, lon, hdop, afterSeconds);
+    return true;
+  }
+  bool scriptNoFix() {
+    receiver.never();
+    return true;
+  }
 };
