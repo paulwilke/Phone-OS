@@ -38,6 +38,8 @@ CASES = [
     ("board includes ui", {**GOOD, "src/ui/U.h": "", "src/board/Bad.h": '#include "../ui/U.h"\n'}, 1, "board may include only"),
     ("board includes the input event of the ui", {**GOOD, "src/ui/Input.h": "", "src/board/Ok.h": '#include "../ui/Input.h"\n'}, 0, ""),
     ("board includes the size of the panel", {**GOOD, "src/ui/Display.h": "", "src/board/Ok2.h": '#include "../ui/Display.h"\n'}, 0, ""),
+    ("board includes the path check", {**GOOD, "src/app/SafePath.h": "", "src/board/Ok3.h": '#include "../app/SafePath.h"\n'}, 0, ""),
+    ("board includes another app header", {**GOOD, "src/app/Profile.h": "", "src/board/Bad2.h": '#include "../app/Profile.h"\n'}, 1, "board may include only"),
     ("board includes a screen header", {**GOOD, "src/ui/Screen.h": "", "src/board/Bad.h": '#include "../ui/Screen.h"\n'}, 1, "board may include only"),
     ("board includes a driver", {**GOOD, "src/drivers/D.h": "", "src/board/Ok.h": '#include "../drivers/D.h"\n'}, 0, ""),
     ("a driver includes board", {**GOOD, "src/drivers/D.h": '#include "../board/Pins.h"\n'}, 1, "driver may include only"),

@@ -21,6 +21,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "../hal/MessageLog.h"
+
 enum class MsgSource : uint8_t { Sms, Radio, System };
 
 // Only for outgoing radio messages: the radio network confirms an arrival. SMS
@@ -42,18 +44,6 @@ struct Message {
   char text[161] = {};
 };
 
-// What the store needs from the file system: append a line, read all lines back.
-class MessageLog {
-public:
-  virtual ~MessageLog() = default;
-  virtual bool append(const char* line) = 0;  // without the line break
-  class Visitor {
-  public:
-    virtual ~Visitor() = default;
-    virtual void line(const char* text) = 0;
-  };
-  virtual bool readAll(Visitor& visitor) = 0;
-};
 
 class MessageStore {
 public:

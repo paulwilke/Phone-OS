@@ -25,7 +25,8 @@ Rules for the layers:
     the buses and pins (I2cBus, UartPort, Gpio, Delay), register decoding and start-up sequences. It may
     include src/board/, src/hal/ and src/drivers/ (a board class implements a capability or a transport
     of a driver) and, from src/ui/, only ui/Input.h (the plain data of an input event that the keyboard and the
-    touch decoders produce) and ui/Display.h (the size of the panel the touch coordinates live in), and nothing else;
+    touch decoders produce) and ui/Display.h (the size of the panel the touch coordinates live in), and, from src/app/, only app/SafePath.h
+    (the one check of every path from outside, which the card's store applies like every other store), and nothing else;
   * src/boot/ is the composition of the device (the runtime both the firmware and the simulator run): it
     may include every other layer of src/, and no other layer includes it;
   * nothing under src/ reaches outside src/: the firmware never includes sim/ or testing/ (the
@@ -68,7 +69,8 @@ APP_FACADE = os.path.join(ROOT, "src", "app", "AppCore.h")
 APP_PURE = os.path.join(ROOT, "src", "app", "ShakeDetector.h")
 
 
-UI_INPUT = (os.path.join(ROOT, "src", "ui", "Input.h"), os.path.join(ROOT, "src", "ui", "Display.h"))
+UI_INPUT = (os.path.join(ROOT, "src", "ui", "Input.h"), os.path.join(ROOT, "src", "ui", "Display.h"),
+            os.path.join(ROOT, "src", "app", "SafePath.h"))
 
 
 def resolve(path, target):

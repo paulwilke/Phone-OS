@@ -21,8 +21,14 @@
 #include <board/Cst66xx.h>
 #include <board/DeviceClock.h>
 #include <board/FuelGauge.h>
+#include <board/BoardTcpServer.h>
+#include <board/BoardWifi.h>
 #include <board/KeyboardDecoder.h>
 #include <board/ModemTransport.h>
+#include <board/SdCard.h>
+#include <board/SdConfigStore.h>
+#include <board/SdEventLog.h>
+#include <board/SdMessageLog.h>
 #include <board/PinMap.h>
 #include <board/PowerUp.h>
 #include <board/Tca8418.h>
@@ -34,14 +40,18 @@
 #include "Esp32Gpio.h"
 #include "Esp32I2cBus.h"
 #include "Esp32Millis.h"
+#include "Esp32SdVolume.h"
+#include "Esp32TcpListener.h"
 #include "Esp32UartPort.h"
+#include "Esp32WifiRadio.h"
+#include "FlashAssets.h"
 #include "SerialLog.h"
 
 namespace {
 Esp32I2cBus i2cBus;
 Esp32Gpio gpio;
 Esp32Delay delays;
-SerialLog eventLog;
+SerialLog serialLog;
 board::Xl9555 expander(i2cBus);
 board::Charger charger(i2cBus);
 board::FuelGauge gauge(i2cBus);
@@ -58,6 +68,21 @@ Esp32UartPort modemUart(Serial1, 115200, board::pin::kModemUartRx, board::pin::k
 Esp32UartPort gnssUart(Serial2, 38400, board::pin::kGnssUartRx, board::pin::kGnssUartTx);
 Esp32Millis millisSource;
 board::DeviceClock deviceClock(millisSource);
+
+// The card and what lives on it. Without a card the device runs on its defaults and says so; the log goes to
+// the console in every case and waits in memory for the card.
+Esp32SdVolume sdVolume;
+board::SdCard sdCard(sdVolume, gpio, delays);
+board::SdEventLog eventLog(sdCard, deviceClock, &serialLog);
+board::SdConfigStore configStore(sdCard);
+board::SdMessageLog messageLog(sdCard);
+
+Esp32WifiRadio wifiRadio;
+board::BoardWifi wifi(wifiRadio);
+Esp32TcpListener tcpListener;
+board::BoardTcpServer tcpServer(tcpListener);
+FlashAssets flashAssets;
+
 board::TimeSync timeSync(deviceClock, eventLog);
 board::ModemTransport modemTransport(modemUart, expander, gpio, delays, millisSource, eventLog);
 A7682EDriver::Config modemConfig;  // the APN and the PIN come from the configuration once it is read
@@ -90,6 +115,16 @@ void setup() {
   for (const std::string& line : board::formatBatteryDiagnostic(board::readBatteryDiagnostic(gauge, charger), batteryMah))
     eventLog.log(line);
 
+  // The card first: what the other parts say about themselves is then written to it.
+  boardSpi();  // starts the one SPI bus before anything on it is asked
+  sdCard.begin(eventLog);
+  const int recovered = configStore.recover();
+  if (recovered) Serial.printf("[boot] %d scratch files of an interrupted write dealt with\n", recovered);
+  std::vector<FileEntry> config;
+  if (configStore.list("/config", config)) Serial.printf("[boot] /config holds %u files\n", (unsigned)config.size());
+  Serial.printf("[boot] web page in the firmware: %u bytes, Wi-Fi %s\n", (unsigned)[] { size_t n = 0; flashAssets.indexHtml(n); return n; }(),
+                wifi.state() == WifiState::Off ? "off" : "on");
+
   Serial.printf("[boot] keyboard %s\n", keyboard.begin() ? "answers" : "does not answer");
   Serial.printf("[boot] touch %s\n", touch.begin() ? "CST66xx" : "not found or not a CST66xx");
   motion.begin();
@@ -110,6 +145,8 @@ void loop() {
   board::cst66xx::Report report;
   if (touch.poll(report) && touchDecoder.decode(report, in)) printInput("touch", in);
 
+  sdCard.poll(millis(), eventLog);
+  eventLog.flush();
   modemDriver.poll();
   std::string line;
   while (modemDriver.pollLog(line)) eventLog.log(line);

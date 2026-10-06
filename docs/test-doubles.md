@@ -17,6 +17,8 @@ Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one
 | `FakeWifi` | `finishConnecting(success)`, `failAccessPoint`, `setStationAddress` | `ssid()`, `password()` |
 | `FakeTcpServer` | `connect()` returns a client to script: `fromPeer(bytes)`, `peerClose()`, `limitWritesTo(n)` | `sentToPeer()`, `closedBySoftware()`, `listening()`, `port()` |
 | `FakeMotion` | `setAvailable`, `failNextStart`, `tilt(x, y, z)`, `clearSample`, `shake()` | the interface |
+| `FakeSdVolume` | `removeCard`/`insertCard`, `mountsOnlyAtOrBelow(hz)`, `refuseMount`, `setCapacity`, `failNextWrite`, `failAllWrites`, `failRenames`, `failRemoves`, `failReads`, `loseCardAfter(n)`/`powerBack()` (the board's card classes run on it) | `operations()`, `mountAttempts()`, `file()`, `paths()`, `readCount()` |
+| `FakeWifiRadio`, `FakeTcpListener` | `finishConnecting`, `failAccessPoint`, `setStationAddress`; `connect()` returns a client to script (the board's Wi-Fi and TCP classes run on them) | `beginStationCalls()`, `shutdowns()`, the client's `received()`, `stopped()` |
 | `FakeRadioLink` | `setUp`, `addPeer`, `setDefaultPeer`, `deliver`, `confirm(arrived)` for the oldest open message, `setRssi` | `sent()` |
 
 ## What they keep

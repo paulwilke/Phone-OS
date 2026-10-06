@@ -23,6 +23,7 @@ Consequences that show in the code:
 | modem | `Modem.h` | SMS, calls, signal, operator, SIM state | everything is polled, each event exactly once; a send failure is reported once with the modem's own reason; call events end in exactly one final event |
 | log | `EventLog.h` | the record of calls, messages and every remote query | writes every line it is given, one record per call, cannot be switched off |
 | vibration | `Haptic.h`, `HapticPattern.h` | telling a call, message, SOS or error apart in a pocket | `play()` returns at once; a new pattern replaces a running one; `busy()` is true until the last pulse |
+| message log | `MessageLog.h` | the message history's file | append a line, read all lines back; a line that cannot be written is reported, never lost silently |
 | files | `ConfigStore.h` | configuration, logs and files for the web page | a failed write leaves the old content intact; unsafe paths are refused; scratch files are invisible |
 | WLAN | `Wifi.h` | setting the device up from a phone or the home network | non-blocking; an access point password has 8–63 characters; starting one mode stops the other |
 | TCP server | `TcpServer.h` (`TcpConnection`) | the web server | non-blocking; one connection at a time; read returns 0 for "nothing now" and -1 for "gone" |

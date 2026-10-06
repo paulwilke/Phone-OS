@@ -9,6 +9,7 @@
 #include <contracts/EventLogContract.h>
 #include <contracts/GnssContract.h>
 #include <contracts/HapticContract.h>
+#include <contracts/MessageLogContract.h>
 #include <contracts/ModemContract.h>
 #include <contracts/MotionSensorContract.h>
 #include <contracts/PowerContract.h>
@@ -18,7 +19,9 @@
 
 #include <BoardClockRig.h>
 #include <BoardInputRigs.h>
+#include <BoardNetworkRigs.h>
 #include <BoardPowerRig.h>
+#include <BoardStorageRigs.h>
 
 #include "DriverRig.h"
 #include "Rigs.h"
@@ -37,11 +40,17 @@ int main(int, char**) {
   RUN_MODEM_CONTRACT(FakeModemRig);
   RUN_MODEM_CONTRACT(DriverModemRig);
   RUN_EVENT_LOG_CONTRACT(FakeEventLogRig);
+  RUN_EVENT_LOG_CONTRACT(SdEventLogRig);
   RUN_HAPTIC_CONTRACT(FakeHapticRig);
   RUN_HAPTIC_CONTRACT(BoardHapticRig);
   RUN_CONFIG_STORE_CONTRACT(FakeConfigStoreRig);
+  RUN_CONFIG_STORE_CONTRACT(SdConfigStoreRig);
+  RUN_MESSAGE_LOG_CONTRACT(FakeMessageLogRig);
+  RUN_MESSAGE_LOG_CONTRACT(SdMessageLogRig);
   RUN_WIFI_CONTRACT(FakeWifiRig);
+  RUN_WIFI_CONTRACT(BoardWifiRig);
   RUN_TCP_SERVER_CONTRACT(FakeTcpServerRig);
+  RUN_TCP_SERVER_CONTRACT(BoardTcpServerRig);
   RUN_MOTION_SENSOR_CONTRACT(FakeMotionRig);
   RUN_MOTION_SENSOR_CONTRACT(BoardMotionRig);
   RUN_RADIO_LINK_CONTRACT(FakeRadioLinkRig);
