@@ -2,6 +2,7 @@
 """Checks that the source layers stay pure and point the right way.
 
     scripts/check_layers.py          # from the repository root
+    scripts/check_layers.py --root <dir>   # another tree (the tests of this script use it)
 
 Rules for everything under src/:
   * only C++ standard headers are included with angle brackets (no `<Arduino.h>`, no
@@ -20,10 +21,18 @@ Rules for the layers:
     nothing else (no application, no UI, no configuration, no web, no catalogs), and no MeshCore. A
     platform header belongs behind the small transport interface of a driver, which the tests replace
     with a scripted fake, so the rule above (no platform names under src/) holds for drivers too;
+  * src/board/ holds what the device's chips need and can be tested on the host: the pin map, the seams to
+    the buses and pins (I2cBus, UartPort, Gpio, Delay), register decoding and start-up sequences. It may
+    include src/board/, src/hal/ and src/drivers/ (a board class implements a capability or a transport
+    of a driver) and nothing else;
   * src/boot/ is the composition of the device (the runtime both the firmware and the simulator run): it
     may include every other layer of src/, and no other layer includes it;
   * nothing under src/ reaches outside src/: the firmware never includes sim/ or testing/ (the
-    simulator is a platform that includes src/, not the other way round);
+    simulator is a platform that includes src/, not the other way round), and nothing under src/
+    includes device/;
+  * device/ is the firmware's platform code, the counterpart of sim/: it may include src/ and the
+    Arduino and ESP32 headers, and never sim/ or testing/ (a fake in the firmware would hide a missing
+    implementation);
   * src/ui/ includes src/ui/, src/i18n/ and, from src/app/, only app/AppCore.h: the facade and
     the plain data it hands out (the state, notices, the message history, the contact book), and
     app/ShakeDetector.h, a value class that counts shakes from samples. A
@@ -39,6 +48,8 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if len(sys.argv) == 3 and sys.argv[1] == "--root":
+    ROOT = os.path.abspath(sys.argv[2])
 INCLUDE = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 PLATFORM = re.compile(r"\b(Arduino|ESP32|ESP-IDF|FreeRTOS)\b|\besp_|WiFi\.h")
 
@@ -72,15 +83,30 @@ def layer(rel):
 
 
 def other_files():
-    for top in ("sim", "testing", "test"):
+    for top in ("sim", "testing", "test", "device"):
         for base, _, names in os.walk(os.path.join(ROOT, top)):
             for n in names:
                 if n.endswith((".h", ".cpp")):
                     yield os.path.join(base, n)
 
 
+def device_files():
+    for base, _, names in os.walk(os.path.join(ROOT, "device")):
+        for n in names:
+            if n.endswith((".h", ".cpp")):
+                yield os.path.join(base, n)
+
+
 def main():
     problems = []
+    for path in device_files():
+        rel = os.path.relpath(path, ROOT)
+        for n, line in enumerate(open(path, encoding="utf-8").read().split("\n"), 1):
+            m = INCLUDE.match(line)
+            if m and m.group(1) == '"':
+                target = m.group(2)
+                if re.match(r"(\.\./)*(sim|testing)/", target):
+                    problems.append(f"{rel}:{n}: the firmware includes {target}; sim/ and testing/ are not the firmware's")
     for path in list(files()) + list(other_files()):
         for n, line in enumerate(open(path, encoding="utf-8").read().split("\n"), 1):
             m = INCLUDE.match(line)
@@ -100,6 +126,10 @@ def main():
                     inside = os.path.relpath(normal, os.path.join(ROOT, "src")).split(os.sep)[0]
                     if inside == "..":
                         problems.append(f"{rel}:{n}: reaches outside src/ (sim/ and testing/ are not the firmware's): {target}")
+                    if normal.startswith(os.path.join(ROOT, "device") + os.sep) or re.match(r"(\.\./)*device/", target):
+                        problems.append(f"{rel}:{n}: src/ includes device/, the platform code that includes src/: {target}")
+                    if where == "board" and inside not in ("board", "hal", "drivers"):
+                        problems.append(f"{rel}:{n}: board may include only board/, hal/, drivers/, not {inside}/: {target}")
                     if inside == "boot" and where != "boot":
                         problems.append(f"{rel}:{n}: {where or 'src'}/ includes boot/, the composition that includes everything else: {target}")
                     if where == "hal" and inside != "hal":
