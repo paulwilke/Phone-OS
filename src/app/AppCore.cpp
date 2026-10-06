@@ -114,6 +114,8 @@ AppCore::State::WallClock AppCore::wallClockOf(uint32_t epochUtc) {
 AppCore::State AppCore::state() {
   State s;
   s.wall = wallClockOf(clock_.epochUtc());
+  s.epochUtc = clock_.epochUtc();
+  s.uptimeSeconds = clock_.uptimeSeconds();
   s.network = connectivity_.networkLabel();
   s.registered = connectivity_.registered();
   s.signalBars = modem_.signalBars();
@@ -123,6 +125,10 @@ AppCore::State AppCore::state() {
   s.saveMode = connectivity_.saveMode();
   s.probeSecondsLeft = connectivity_.probeSecondsLeft();
   s.radioAttached = connectivity_.radioAttached();
+  if (radio_) {
+    s.radioReady = radio_->ready();
+    s.radioRssi = radio_->lastRssi();
+  }
   if (wifi_) {
     s.wifiPhase = wifi_->phase();
     s.wifiReason = wifi_->reason();

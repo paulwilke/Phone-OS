@@ -358,6 +358,7 @@ Tests in `test/test_app_core/`.
 | APP-22 | The state has what somebody needs to join the Wi-Fi: the network, the access point's password (only while the access point runs), the address and the seconds until it switches itself off | `test_the_state_tells_what_somebody_needs_to_join_the_wifi` | — | done |
 | APP-23 | The interface language changes at once through one entry point, which refuses a code no catalog has, keeps the code in the profile, and leaves the SMS language alone | `test_the_interface_language_changes_at_once_and_the_sms_language_stays` | — | done |
 | APP-24 | A language in the profile is applied at start | `test_a_language_in_the_profile_is_applied_at_start` | — | done |
+| APP-25 | The state has the Unix time (0 while unknown) and the uptime, to measure ages and idle times against | `test_the_state_has_the_time_to_measure_ages_against_and_what_the_radio_says` | — | done |
 
 ## Not ported
 

@@ -64,6 +64,10 @@ public:
       int minuteOfDay = 0;     // 0 .. 1439
     };
     WallClock wall;
+    // Unix time (0 = unknown) and the seconds since the device started, for what the interface must
+    // measure against "now": the age of a radio contact, how long a test has been waiting for a key.
+    uint32_t epochUtc = 0;
+    uint32_t uptimeSeconds = 0;
     // network
     Connectivity::NetworkLabel network;
     bool registered = false;
@@ -74,6 +78,8 @@ public:
     bool saveMode = false;
     uint32_t probeSecondsLeft = 0;
     bool radioAttached = false;
+    bool radioReady = false;  // the radio runs and knows at least one contact
+    int radioRssi = 0;        // dBm of the last message, 0 = unknown
     WifiPhase wifiPhase = WifiPhase::Off;
     WifiReason wifiReason = WifiReason::None;
     // What somebody needs to join: the network (or the device's own), the access point's password

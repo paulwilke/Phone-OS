@@ -41,6 +41,10 @@ The documents describe what exists in this repository — each one is written fr
 | [screen-net.md](screen-net.md) | the network page: the lines, SIM problems and their explanations |
 | [screen-status.md](screen-status.md) | the status page: battery, queries, firmware, switching off |
 | [screen-language.md](screen-language.md) | the language page: native names, choosing at once through the core |
+| [screen-gnss.md](screen-gnss.md) | the position page: the receiver held while it is open, four values, the last known position with its age |
+| [screen-radio.md](screen-radio.md) | the radio page: head line, controls per state, contacts with way and age, writing to one |
+| [screen-motion.md](screen-motion.md) | the motion page: the sensor started after the first frame, the pinned ball mapping, shakes |
+| [screen-selftest.md](screen-selftest.md) | the self-test page: eight checks, the key test without a soft key, the receiver given back |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-screens.md](ui-screens.md) | what a screen may know, the frame every screen shares (status bar, notice line, soft keys), the wording of the core's codes |
 | [screen-home.md](screen-home.md) | the home screen: which tiles exist for which profile, their order, what each does, the badge, school time |

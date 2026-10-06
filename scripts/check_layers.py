@@ -21,7 +21,8 @@ Rules for the layers:
   * nothing under src/ reaches outside src/: the firmware never includes sim/ or testing/ (the
     simulator is a platform that includes src/, not the other way round);
   * src/ui/ includes src/ui/, src/i18n/ and, from src/app/, only app/AppCore.h: the facade and
-    the plain data it hands out (the state, notices, the message history, the contact book). A
+    the plain data it hands out (the state, notices, the message history, the contact book), and
+    app/ShakeDetector.h, a value class that counts shakes from samples. A
     screen never includes a hardware interface or any other part of the application directly,
     and never a board or a driver, so it can be drawn on any Display and tested without a device.
 
@@ -46,6 +47,9 @@ def files():
 
 
 APP_FACADE = os.path.join(ROOT, "src", "app", "AppCore.h")
+# The one other header of src/app/ a screen may use: a value class with no device behind it, which counts
+# shakes from the samples a screen is given. The sensor itself reaches the screen through ui/MotionSource.h.
+APP_PURE = os.path.join(ROOT, "src", "app", "ShakeDetector.h")
 
 
 def resolve(path, target):
@@ -102,8 +106,8 @@ def main():
                         problems.append(f"{rel}:{n}: config may include only config/, app/, hal/, i18n/, not {inside}/: {target}")
                     if where == "web" and inside not in ("web", "config", "app", "hal", "i18n"):
                         problems.append(f"{rel}:{n}: web may include only web/, config/, app/, hal/, i18n/, not {inside}/: {target}")
-                    if where == "ui" and inside not in ("ui", "i18n") and normal != APP_FACADE:
-                        problems.append(f"{rel}:{n}: ui may include only ui/, i18n/ and app/AppCore.h, not {inside}/: {target}")
+                    if where == "ui" and inside not in ("ui", "i18n") and normal not in (APP_FACADE, APP_PURE):
+                        problems.append(f"{rel}:{n}: ui may include only ui/, i18n/, app/AppCore.h and app/ShakeDetector.h, not {inside}/: {target}")
             elif PLATFORM.search(line) and not line.lstrip().startswith(("//", "*")):
                 problems.append(f"{rel}:{n}: platform dependency: {PLATFORM.search(line).group(0)}")
     for p in problems:

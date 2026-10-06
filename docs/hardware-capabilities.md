@@ -72,7 +72,7 @@ Station or access point; `startAccessPoint()` refuses a password outside 8–63 
 
 ### Motion
 
-The sensor is a small computer with its own firmware and supply rail, so it runs only while a screen needs it. Values are in g, lying flat is about `az = +1`. See [shake-detector.md](shake-detector.md).
+The sensor is a small computer with its own firmware and supply rail, so it runs only while a screen needs it. Values are in g, lying flat is about `az = +1`. See [shake-detector.md](shake-detector.md). The motion page reaches the sensor through the interface's own `ui::MotionSource` ([screen-motion.md](screen-motion.md)), which the application implements over this capability.
 
 ### Radio
 

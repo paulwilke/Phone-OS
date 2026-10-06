@@ -62,7 +62,8 @@ public:
   // Routes the input; true when something used it. Counts as activity for the auto-lock.
   bool handle(const Input& input, uint32_t nowSeconds);
   void render(Display& display);
-  // Call regularly: locks the device after the idle time, unless the visible screen forbids it.
+  // Call regularly: ticks the visible screen (Screen::onTick), then locks the device after the idle time,
+  // unless the visible screen forbids it.
   void poll(uint32_t nowSeconds);
 
   // Brings a screen to the front even from the lock screen (an incoming call), keeping the path

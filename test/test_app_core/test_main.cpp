@@ -710,6 +710,24 @@ void test_radio_contacts_are_listed() {
   TEST_ASSERT_FALSE(e.core.radioPeer(0, peer));
 }
 
+void test_the_state_has_the_time_to_measure_ages_against_and_what_the_radio_says() {
+  Device d(ProfileBuilder().radio(true).build(), true);
+  const AppCore::State s = d.poll();
+  TEST_ASSERT_EQUAL(d.clock.epochUtc(), s.epochUtc);
+  TEST_ASSERT_EQUAL(d.clock.uptimeSeconds(), s.uptimeSeconds);
+  TEST_ASSERT_TRUE(s.radioAttached);
+  TEST_ASSERT_TRUE(s.radioReady);
+  TEST_ASSERT_EQUAL(-95, s.radioRssi);
+  d.radio.setRssi(-80);
+  d.run(1);
+  TEST_ASSERT_EQUAL(-80, d.core.state().radioRssi);
+  Device none;                                                       // no radio: not ready, no strength
+  TEST_ASSERT_FALSE(none.poll().radioReady);
+  TEST_ASSERT_EQUAL(0, none.core.state().radioRssi);
+  none.clock.setEpochUtc(0);
+  TEST_ASSERT_EQUAL(0, none.core.state().epochUtc);                  // unknown stays 0
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_poll_drains_everything);
@@ -739,5 +757,6 @@ int main() {
   RUN_TEST(test_a_language_in_the_profile_is_applied_at_start);
   RUN_TEST(test_the_position_page_and_the_test_page_hold_the_receiver);
   RUN_TEST(test_radio_contacts_are_listed);
+  RUN_TEST(test_the_state_has_the_time_to_measure_ages_against_and_what_the_radio_says);
   return UNITY_END();
 }
