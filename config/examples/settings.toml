@@ -10,6 +10,9 @@ map_url = "https://maps.google.com/?q={lat},{lon}"  # restart
 [modem]
 apn = ""  # restart
 
+[battery]
+capacity_mah = 1500  # restart
+
 [interface]
 language = "en"  # restart
 

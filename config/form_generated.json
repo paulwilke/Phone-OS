@@ -73,6 +73,29 @@
           ]
         },
         {
+          "id": "battery",
+          "label": "config.battery.label",
+          "help": "",
+          "list": false,
+          "field": "",
+          "keys": [
+            {
+              "name": "capacity_mah",
+              "type": "integer",
+              "required": false,
+              "secret": false,
+              "apply": "restart",
+              "default": "1500",
+              "min_val": 100,
+              "max_val": 10000,
+              "enums": "",
+              "label": "config.battery.capacity_mah.label",
+              "help": "config.battery.capacity_mah.help",
+              "field": "batteryCapacityMah"
+            }
+          ]
+        },
+        {
           "id": "interface",
           "label": "config.interface.label",
           "help": "",

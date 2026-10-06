@@ -200,6 +200,13 @@ void applyModem(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) 
   p.modemApn = apn;
 }
 
+void applyBattery(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
+  if (const toml::Value* v = sec.find("capacity_mah")) {
+    int64_t n = 0;
+    if (checkInt(*v, "settings", "battery.capacity_mah", 100, 10000, d, n)) p.batteryCapacityMah = (int)n;
+  }
+}
+
 void applyInterface(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
   if (const toml::Value* v = sec.find("language")) checkStr(*v, "settings", "interface.language", 0, 10, d, p.interfaceLanguage);
 }
@@ -315,7 +322,7 @@ void applyTileEntry(const toml::Value& entry, std::vector<std::string>& callTarg
 // ---------------------------------------------------------------------------
 
 static const char* kSettingsTopLevel[] = {
-  "child", "display", "modem", "interface", "sms", "features", "remote_queries",
+  "child", "display", "modem", "battery", "interface", "sms", "features", "remote_queries",
   "time", "log", "wifi", "radio", "mesh", "quiet_hours", "tiles", nullptr
 };
 
@@ -333,6 +340,10 @@ void loadSettings(const toml::Value& root, Profile& p, std::vector<Diagnostic>& 
   if (const toml::Value* s = root.find("modem")) {
     checkLeafKeys(d, *s, "settings", "modem");
     applyModem(*s, p, d);
+  }
+  if (const toml::Value* s = root.find("battery")) {
+    checkLeafKeys(d, *s, "settings", "battery");
+    applyBattery(*s, p, d);
   }
   if (const toml::Value* s = root.find("interface")) {
     checkLeafKeys(d, *s, "settings", "interface");

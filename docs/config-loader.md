@@ -7,7 +7,7 @@
 
 | File | Contains |
 |---|---|
-| `/config/settings.toml` | device behaviour: child name, the modem's APN, features, school times, call targets, radio, timezone, log level, Wi-Fi idle time |
+| `/config/settings.toml` | device behaviour: child name, the modem's APN, the battery size, features, school times, call targets, radio, timezone, log level, Wi-Fi idle time |
 | `/config/contacts.toml` | who may call and write, and which contacts are parents |
 | `/config/secrets.toml` | SIM PIN, web password, Wi-Fi access point and home networks |
 
@@ -117,3 +117,7 @@ if (core.settingsNeedWrite()) {
 ## `[modem] apn`
 
 The access point name of the modem's data context 1 ([modem-driver.md](modem-driver.md)), at most 100 characters of letters, digits, dots, hyphens and underscores. It ends up inside an AT command, so a quote, a space, a semicolon, a line break or a non-ASCII character is refused with `out-of-range` and the profile keeps an empty APN, which leaves the modem's own contexts alone. The APN is not a secret and stands in `settings.toml`; it is not an account (no user name, no password).
+
+## `[battery] capacity_mah`
+
+The size of the battery in mAh, 100 to 10000, default 1500. The device writes it into the fuel gauge at start when the gauge holds another one ([device-power.md](device-power.md)); a value outside the range is refused with `out-of-range` and the profile keeps the default, so a typo can never put a nonsense size into the chip.

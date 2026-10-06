@@ -51,6 +51,9 @@ struct Profile {
   // The access point name of the mobile data context the modem needs for the IMS (calls over LTE).
   // Empty: the modem's own contexts are left alone.
   std::string modemApn;
+  // The size of the battery in mAh. The fuel gauge ships with a factory size that is not ours, and the device
+  // writes this value into it at start when they differ (docs/hardware-lessons.md).
+  int batteryCapacityMah = 1500;
   std::string interfaceLanguage = "en";                // language code for the device UI; the child may change it in the options
   std::string smsLanguage = "en";                      // the language of every SMS the device sends
   // Further words that trigger the remote query, besides the trigger word of every language of

@@ -66,6 +66,10 @@ inline constexpr KeyDef kKeys[] = {
     {"settings", "modem", "apn", KeyType::String, false, false, Apply::Restart,
      "", 0, 100, "",
      "config.modem.apn.label", "config.modem.apn.help", "modemApn"},
+    // settings / [battery]
+    {"settings", "battery", "capacity_mah", KeyType::Integer, false, false, Apply::Restart,
+     "1500", 100, 10000, "",
+     "config.battery.capacity_mah.label", "config.battery.capacity_mah.help", "batteryCapacityMah"},
     // settings / [interface]
     {"settings", "interface", "language", KeyType::CatalogCode, false, false, Apply::Restart,
      "en", 0, 10, "",
@@ -183,6 +187,8 @@ inline constexpr SectionDef kSections[] = {
      "config.display.label", "", ""},
     {"settings", "modem", false,
      "config.modem.label", "", ""},
+    {"settings", "battery", false,
+     "config.battery.label", "", ""},
     {"settings", "interface", false,
      "config.interface.label", "", ""},
     {"settings", "sms", false,

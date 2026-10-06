@@ -21,6 +21,7 @@ The documents describe what exists in this repository — each one is written fr
 | [power-policy.md](power-policy.md) | what may sleep when: the eight rules and their order |
 | [hardware-capabilities.md](hardware-capabilities.md) | the interfaces to the hardware (capabilities), their contracts, vibration patterns |
 | [device.md](device.md) | the firmware's platform code: where what lives, the pin map, the seams and their fakes, the start-up order, how to build |
+| [device-power.md](device-power.md) | the Power capability on the board: rails, the fuel gauge capacity check, the plausibility rule, the charger revisions, the diagnosis |
 | [hardware-lessons.md](hardware-lessons.md) | what went wrong on the real device, why, and the rule that prevents it (fuel gauge capacity, IMS context, charger, USB) |
 | [modem-driver.md](modem-driver.md) | the modem driver: start-up, SIM and PIN, the data bearer and the IMS, registration, restarts |
 | [volte.md](volte.md) | voice over LTE: what the measurements prove, what the driver does about it, what is not proven or not built, and the owner's checklist on the device |

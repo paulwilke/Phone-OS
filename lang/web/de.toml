@@ -26,6 +26,10 @@ config.modem.label = "Modem"
 config.modem.apn.label = "APN"
 config.modem.apn.help = "Zugangspunktname des Mobilfunknetzes, etwa von der Hilfeseite des Anbieters. Das Modem braucht ihn, um sich fuer Anrufe ueber LTE anzumelden. Leer lassen, um das im Modem Gespeicherte zu behalten. Nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
 
+config.battery.label = "Akku"
+config.battery.capacity_mah.label = "Akkukapazitaet (mAh)"
+config.battery.capacity_mah.help = "Die Groesse des Akkus in Milliamperestunden. Der Ladezustandsmesser kommt mit einer Werksgroesse, die nicht die des Geraets ist; bei jedem Start vergleicht das Geraet beide und schreibt diesen Wert in den Messer, wenn sie sich unterscheiden. Bereich: 100-10000."
+
 config.interface.label                = "Oberflaeche"
 config.interface.language.label       = "Sprache"
 config.interface.language.help        = "Sprachcode der Oberflaeche (z. B. en, de, fr). Unbekannter Code faellt auf die Voreinstellung zurueck."

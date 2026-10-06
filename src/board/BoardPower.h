@@ -1,0 +1,67 @@
+#pragma once
+
+// The Power capability on the T-Deck Pro MAX: the rails through the expander, the battery through the fuel
+// gauge and the charger, shutdown through the charger's battery switch.
+//
+//   Cellular     the modem: begin() and shutdown() of the Modem, which owns its supply and its power key
+//   Positioning  the satellite receiver's rail (expander)
+//   Radio        the radio chip's rail (expander); the feature is off, nothing uses it yet
+//   Frontlight   the display's light (a pin of the processor)
+//
+// "Cable present" is the charger's power-good bit and nothing else, and externalPower() follows it. The
+// charge state is derived from it and the charge phase; the battery percentage passes the plausibility
+// rule (BatteryPlausibility.h) before anybody sees it.
+
+#include "../hal/EventLog.h"
+#include "../hal/Modem.h"
+#include "../hal/Power.h"
+
+#include "BatteryPlausibility.h"
+#include "Charger.h"
+#include "FuelGauge.h"
+#include "Gpio.h"
+#include "Xl9555.h"
+
+namespace board {
+
+class BoardPower : public Power {
+public:
+  BoardPower(Xl9555& expander, Gpio& gpio, Charger& charger, FuelGauge& gauge, Modem& modem)
+      : expander_(expander), gpio_(gpio), charger_(charger), gauge_(gauge), modem_(modem) {}
+
+  // The start of the power side, once, after board::powerUp(): finds the charger (both addresses), checks
+  // the gauge's capacity against the configured battery size and writes only on a difference, and puts
+  // the rails nobody has asked for yet into their idle state (receiver and radio off). Says what it found
+  // in the log, one line each.
+  void begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer, EventLog& log);
+
+  bool setEnabled(PowerDomain domain, bool on) override;
+  bool isEnabled(PowerDomain domain) override;
+  // Switches the rails off and disconnects the battery. False, with nothing changed, while a cable feeds
+  // the board (VBUS keeps it powered, so the battery switch would do nothing) or when the charger does
+  // not answer. A modem that should say goodbye to the network is shut down by the caller first.
+  bool powerOff() override;
+  bool externalPower() override;
+  int batteryPercent() override;
+  int batteryMinutesRemaining() override;
+  ChargeState chargeState() override;
+
+private:
+  struct Reading {
+    bool chargerOk = false;
+    ChargerStatus charger;
+    bool gaugeOk = false;
+    GaugeReading gauge;
+  };
+  Reading read();
+  static BatteryInputs inputsOf(const Reading& r);
+
+  Xl9555& expander_;
+  Gpio& gpio_;
+  Charger& charger_;
+  FuelGauge& gauge_;
+  Modem& modem_;
+  bool frontlight_ = false;
+};
+
+}  // namespace board

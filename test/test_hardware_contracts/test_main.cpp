@@ -16,6 +16,8 @@
 #include <contracts/TcpServerContract.h>
 #include <contracts/WifiContract.h>
 
+#include <BoardPowerRig.h>
+
 #include "DriverRig.h"
 #include "Rigs.h"
 
@@ -26,6 +28,7 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_CLOCK_CONTRACT(FakeClockRig);
   RUN_POWER_CONTRACT(FakePowerRig);
+  RUN_POWER_CONTRACT(BoardPowerRig);
   RUN_GNSS_CONTRACT(FakeGnssRig);
   RUN_MODEM_CONTRACT(FakeModemRig);
   RUN_MODEM_CONTRACT(DriverModemRig);

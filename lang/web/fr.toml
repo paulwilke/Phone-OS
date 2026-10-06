@@ -26,6 +26,10 @@ config.modem.label = "Modem"
 config.modem.apn.label = "APN"
 config.modem.apn.help = "Nom du point d'acces du reseau mobile, par exemple depuis l'aide de l'operateur. Le modem en a besoin pour s'enregistrer pour les appels en LTE. Laisser vide pour garder ce que le modem a memorise. Lettres, chiffres, points, traits d'union et tirets bas uniquement."
 
+config.battery.label = "Batterie"
+config.battery.capacity_mah.label = "Capacite de la batterie (mAh)"
+config.battery.capacity_mah.help = "La taille de la batterie en milliampere-heures. La jauge de charge est livree avec une taille d'usine qui n'est pas celle de l'appareil ; a chaque demarrage l'appareil compare les deux et ecrit cette valeur dans la jauge si elles different. Plage : 100-10000."
+
 config.interface.label                = "Interface"
 config.interface.language.label       = "Langue"
 config.interface.language.help        = "Code de langue de l'interface (ex. en, de, fr). Un code inconnu revient a la valeur par defaut."

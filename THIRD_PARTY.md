@@ -21,6 +21,12 @@ The notices the licence requires:
 
 The `.bdf` files are the upstream files except for one comment line, from which the author's e-mail address was removed because this repository keeps no e-mail addresses (`scripts/privacy_check.py`). The generator moves a glyph into its cell where the source puts ink outside it, and changes no pixel; see [docs/ui-text.md](docs/ui-text.md). The interface symbols in `assets/fonts/symbols.txt` are our own and under the repository's licence.
 
+### Fetched by the firmware build, not stored here
+
+| Work | Licence | Used for |
+|---|---|---|
+| [SensorLib](https://github.com/lewisxhe/SensorLib) by Lewis He (`lib_deps` of the `device` environment only) | MIT | the fuel gauge's capacity write procedure |
+
 ### Tools
 
 The Python scripts in `scripts/` use only the standard library.

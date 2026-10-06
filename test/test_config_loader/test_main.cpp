@@ -3,6 +3,8 @@
 
 #include <unity.h>
 
+#include <board/FuelGauge.h>
+
 #include <algorithm>
 
 #include <fstream>
@@ -515,6 +517,62 @@ void test_the_apn_survives_the_writer() {
 }
 
 // ---------------------------------------------------------------------------
+// [battery] capacity_mah: the size the fuel gauge is set to at start
+// ---------------------------------------------------------------------------
+
+namespace {
+
+ConfigLoader::Result loadBattery(const std::string& valueLine) {
+  static FakeConfigStore store;
+  store.put("/config/settings.toml", ("[battery]\n" + valueLine + "\n").c_str());
+  return ConfigLoader(store).load();
+}
+
+bool hasBatteryDiagnostic(const ConfigLoader::Result& r, Diagnostic::Code code) {
+  for (const Diagnostic& d : r.diagnostics)
+    if (d.code == code && d.args.size() >= 2 && d.args[1] == "battery.capacity_mah") return true;
+  return false;
+}
+
+}  // namespace
+
+void test_the_battery_capacity_defaults_to_1500_and_is_read_from_the_battery_section() {
+  FakeConfigStore store;
+  TEST_ASSERT_EQUAL(1500, loadWith(store).profile.batteryCapacityMah);
+  TEST_ASSERT_EQUAL(1400, loadBattery("capacity_mah = 1400").profile.batteryCapacityMah);
+}
+
+void test_the_default_battery_capacity_is_the_one_the_board_code_assumes() {
+  TEST_ASSERT_EQUAL(board::kDefaultBatteryMah, Profile().batteryCapacityMah);
+}
+
+void test_a_battery_capacity_outside_100_to_10000_is_refused_and_the_default_stays() {
+  const char* bad[] = {"capacity_mah = 99", "capacity_mah = 10001", "capacity_mah = 0", "capacity_mah = -1500"};
+  for (const char* line : bad) {
+    const auto r = loadBattery(line);
+    TEST_ASSERT_TRUE_MESSAGE(hasBatteryDiagnostic(r, Diagnostic::Code::OutOfRange), line);
+    TEST_ASSERT_EQUAL_MESSAGE(1500, r.profile.batteryCapacityMah, line);
+  }
+  TEST_ASSERT_EQUAL(100, loadBattery("capacity_mah = 100").profile.batteryCapacityMah);
+  TEST_ASSERT_EQUAL(10000, loadBattery("capacity_mah = 10000").profile.batteryCapacityMah);
+}
+
+void test_a_battery_capacity_that_is_not_an_integer_or_a_key_nobody_knows_is_reported() {
+  TEST_ASSERT_TRUE(hasBatteryDiagnostic(loadBattery("capacity_mah = \"1500\""), Diagnostic::Code::WrongType));
+  bool unknown = false;
+  for (const Diagnostic& d : loadBattery("capacity = 1500").diagnostics) unknown = unknown || d.code == Diagnostic::Code::UnknownKey;
+  TEST_ASSERT_TRUE(unknown);
+}
+
+void test_the_battery_capacity_survives_the_writer() {
+  FakeConfigStore store;
+  auto r1 = ConfigLoader(store).load();
+  r1.profile.batteryCapacityMah = 1234;
+  TEST_ASSERT_TRUE(ConfigWriter(store).writeSettings(r1.profile));
+  TEST_ASSERT_EQUAL(1234, ConfigLoader(store).load().profile.batteryCapacityMah);
+}
+
+// ---------------------------------------------------------------------------
 // ConfigWriter round-trip
 // ---------------------------------------------------------------------------
 
@@ -868,6 +926,11 @@ int main() {
   RUN_TEST(test_an_apn_of_100_characters_passes_and_one_of_101_does_not);
   RUN_TEST(test_an_apn_that_is_not_a_string_or_a_key_nobody_knows_is_reported);
   RUN_TEST(test_the_apn_survives_the_writer);
+  RUN_TEST(test_the_battery_capacity_defaults_to_1500_and_is_read_from_the_battery_section);
+  RUN_TEST(test_the_default_battery_capacity_is_the_one_the_board_code_assumes);
+  RUN_TEST(test_a_battery_capacity_outside_100_to_10000_is_refused_and_the_default_stays);
+  RUN_TEST(test_a_battery_capacity_that_is_not_an_integer_or_a_key_nobody_knows_is_reported);
+  RUN_TEST(test_the_battery_capacity_survives_the_writer);
   RUN_TEST(test_previous_layout_loads_correctly);
   RUN_TEST(test_new_layout_loads_correctly);
   RUN_TEST(test_contacts_are_loaded_with_roles);

@@ -82,6 +82,14 @@ field   = ""
 
 [[section]]
 file    = "settings"
+name    = "battery"
+list    = false
+label   = "config.battery.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
 name    = "interface"
 list    = false
 label   = "config.interface.label"
@@ -234,6 +242,25 @@ max_val = 100
 label   = "config.modem.apn.label"
 help    = "config.modem.apn.help"
 field   = "modemApn"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [battery]
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "battery"
+name    = "capacity_mah"
+type    = "integer"
+default = "1500"
+min_val = 100
+max_val = 10000
+label   = "config.battery.capacity_mah.label"
+help    = "config.battery.capacity_mah.help"
+field   = "batteryCapacityMah"
 apply   = "restart"
 secret  = false
 required = false

@@ -41,6 +41,18 @@ Takes effect on next start.
 String, at most 100 characters.
 Takes effect on next start.
 
+### `[battery]`
+
+| Key | Type | Default | Required | Apply |
+|-----|------|---------|----------|-------|
+| `capacity_mah` | integer | `1500` | no | restart |
+
+#### `capacity_mah`
+
+Integer, 100–10000.
+Default: `1500`.
+Takes effect on next start.
+
 ### `[interface]`
 
 | Key | Type | Default | Required | Apply |
