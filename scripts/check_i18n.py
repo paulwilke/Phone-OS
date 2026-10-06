@@ -133,6 +133,8 @@ def runs_on_device(rel):
     the schema, and the generator of the web page the device serves. Everything else (the simulator,
     the demo generator, other scripts) is host code, which the device does not need words for."""
     return rel.split(os.sep)[0] in ("src", "testing", "test", "config") or rel == os.path.join("scripts", "gen_web.py")
+# A file name is no catalog key, even when its first part is also the name of a section ("settings.toml").
+FILE_SUFFIXES = (".toml", ".txt", ".json", ".csv")
 
 
 def usage():
@@ -165,6 +167,8 @@ def usage():
                     continue
                 for number, line in enumerate(text.split("\n"), 1):
                     for literal in KEY_LITERAL.findall(line):
+                        if literal.endswith(FILE_SUFFIXES):
+                            continue
                         literals.setdefault(literal, []).append((f"{rel_path}:{number}", runs_on_device(rel_path)))
     # config/schema.toml is a user of its label/help catalog keys
     for k, src in _schema_catalog_keys().items():

@@ -354,6 +354,10 @@ Tests in `test/test_app_core/`.
 | APP-21 | The state tells how the SOS search goes (seconds since the press, whether there is a position and how accurate it is) and to whom the text goes, also after it was sent | `test_the_state_tells_how_the_sos_search_is_going_and_to_whom` | — | done |
 | APP-18 | The radio's contacts are listed; without a radio there are none | `test_radio_contacts_are_listed` | — | done |
 | APP-19 | The state has the wall clock as numbers (year, month, day, weekday from Sunday, minute of the day) in the clock's zone, and nothing when the time is unknown | `test_the_state_has_the_wall_clock_as_numbers` | — | done |
+| APP-19 | The state has the wall clock as numbers (month, day, weekday from Sunday, minute of the day) in the clock's zone, and nothing when the time is unknown | `test_the_state_has_the_wall_clock_as_numbers` | — | done |
+| APP-22 | The state has what somebody needs to join the Wi-Fi: the network, the access point's password (only while the access point runs), the address and the seconds until it switches itself off | `test_the_state_tells_what_somebody_needs_to_join_the_wifi` | — | done |
+| APP-23 | The interface language changes at once through one entry point, which refuses a code no catalog has, keeps the code in the profile, and leaves the SMS language alone | `test_the_interface_language_changes_at_once_and_the_sms_language_stays` | — | done |
+| APP-24 | A language in the profile is applied at start | `test_a_language_in_the_profile_is_applied_at_start` | — | done |
 
 ## Not ported
 

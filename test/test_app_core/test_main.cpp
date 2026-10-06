@@ -645,6 +645,46 @@ void test_wifi_stays_on_while_it_is_used() {
   TEST_ASSERT_TRUE(d.core.state().wifiReason == WifiReason::SwitchedOffByItself);
 }
 
+void test_the_state_tells_what_somebody_needs_to_join_the_wifi() {
+  Device d;
+  d.core.markAllRead();
+  TEST_ASSERT_EQUAL(0, d.core.state().wifiSsid.size());              // nothing while it is off
+  TEST_ASSERT_TRUE(d.core.setWifiMode(WifiMode::AccessPoint));
+  d.run(2);
+  const AppCore::State s = d.core.state();
+  TEST_ASSERT_TRUE(s.wifiPhase == WifiPhase::AccessPoint);
+  TEST_ASSERT_EQUAL_STRING("phoneplus", s.wifiSsid.c_str());
+  TEST_ASSERT_EQUAL_STRING("12345678", s.wifiPassword.c_str());      // the invented one: the screen reveals it
+  TEST_ASSERT_TRUE(s.wifiAddress.size() > 0);
+  TEST_ASSERT_TRUE(s.wifiSecondsLeft > 9 * 60 && s.wifiSecondsLeft <= 10 * 60);
+}
+
+void test_the_interface_language_changes_at_once_and_the_sms_language_stays() {
+  Device d(ProfileBuilder().childName("Alex").smsLanguage("en").build());
+  TEST_ASSERT_EQUAL_STRING("en", d.translator.language().c_str());
+  TEST_ASSERT_TRUE(d.core.setInterfaceLanguage("de"));
+  TEST_ASSERT_EQUAL_STRING("de", d.translator.language().c_str());
+  TEST_ASSERT_EQUAL_STRING("de", d.core.profile().interfaceLanguage.c_str());
+  TEST_ASSERT_EQUAL_STRING("en", d.core.profile().smsLanguage.c_str());
+  TEST_ASSERT_FALSE(d.core.setInterfaceLanguage("xx"));              // no catalog: nothing changes
+  TEST_ASSERT_EQUAL_STRING("de", d.translator.language().c_str());
+  TEST_ASSERT_EQUAL_STRING("de", d.core.profile().interfaceLanguage.c_str());
+  TEST_ASSERT_TRUE(d.core.beginSos());
+  d.core.chooseSos(SosPing::Kind::Emergency);
+  d.run(40);
+  TEST_ASSERT_TRUE(d.modem.sent().size() > 0);
+  TEST_ASSERT_TRUE(d.modem.sent().back().body.find("sends SOS") != std::string::npos);   // still English
+}
+
+void test_a_language_in_the_profile_is_applied_at_start() {
+  Hardware hw;
+  Profile profile = ProfileBuilder().childName("Alex").build();
+  profile.interfaceLanguage = "fr";
+  AppCore core(hw.clock, hw.power, hw.modem, hw.gnss, hw.haptic, hw.log, hw.translator, std::move(profile));
+  core.start();
+  TEST_ASSERT_EQUAL_STRING("fr", hw.translator.language().c_str());
+}
+
 void test_the_position_page_and_the_test_page_hold_the_receiver() {
   Device d;
   d.run(200);                                                        // the start-up fix is over
@@ -694,6 +734,9 @@ int main() {
   RUN_TEST(test_the_history_and_the_wifi_settings_are_loaded);
   RUN_TEST(test_the_host_gets_the_decision_and_the_requests);
   RUN_TEST(test_wifi_stays_on_while_it_is_used);
+  RUN_TEST(test_the_state_tells_what_somebody_needs_to_join_the_wifi);
+  RUN_TEST(test_the_interface_language_changes_at_once_and_the_sms_language_stays);
+  RUN_TEST(test_a_language_in_the_profile_is_applied_at_start);
   RUN_TEST(test_the_position_page_and_the_test_page_hold_the_receiver);
   RUN_TEST(test_radio_contacts_are_listed);
   return UNITY_END();

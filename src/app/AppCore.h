@@ -11,7 +11,8 @@
 // the profile's SMS language. The interface words everything else when it draws.
 //
 // **The profile** is the core's own copy. Two settings may change while the device runs, because
-// the child may change them in the options (message vibration, how visible a remote query is);
+// the child may change them in the options (message vibration, how visible a remote query is, the
+// language of the screen);
 // they last until the next start, since writing the configuration back is the configuration's job.
 //
 // **The time zone** of the profile sets the clock's offset from the epoch on every pass, so school
@@ -75,6 +76,10 @@ public:
     bool radioAttached = false;
     WifiPhase wifiPhase = WifiPhase::Off;
     WifiReason wifiReason = WifiReason::None;
+    // What somebody needs to join: the network (or the device's own), the access point's password
+    // (only for the device's screen), the address of the device and the minutes it stays on.
+    std::string wifiSsid, wifiPassword, wifiAddress;
+    uint32_t wifiSecondsLeft = 0;
     // messages and the notice line
     size_t unread = 0;
     size_t queued = 0;
@@ -185,6 +190,10 @@ public:
   // --- settings the child may change at run time ---
   // Both methods set settingsNeedWrite() so the host can persist the change.
   void setMessageVibration(bool on);
+  // Switches the language of the screen at once. False, and nothing changes, for a code that no
+  // catalog has. The code is kept in the profile and applied again by start(); writing it to the
+  // card is the configuration's job. The language of the SMS is not touched: it is the parents'.
+  bool setInterfaceLanguage(const std::string& code);
   void setCommandNotice(CommandNotice notice);
   bool messageVibration() const { return profile_.messageVibration; }
   CommandNotice commandNotice() const { return profile_.commandNotice; }

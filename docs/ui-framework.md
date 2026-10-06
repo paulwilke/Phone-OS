@@ -66,7 +66,9 @@ Every widget draws inside the rectangle it is given and nothing outside it; the 
 | `StatusBar` | operator or status word, "GPS" while locating, date, battery as five bars; built from a `StatusModel`; changes rarely, because every change is a panel redraw | the operator's name (the GPS note and the date are never pushed out; the weekday goes first when space is short) |
 | alert bar | an inverted line with a message, or the reserved empty space | the whole message |
 | `TileGrid` | symbol above a short label in a grid of tiles over pages; selected tile inverted, others raised; page dots; Up/Down move through the tiles in reading order and wrap | none (a tile without a symbol wraps its label) |
-| `ListView` | one-line rows with a moving window and a scroll bar; Up/Down stop at the ends | rows marked as user text |
+| `ListView` | one-line rows with a moving window and a scroll bar; Up/Down stop at the ends; `select` puts the focus on a row | rows marked as user text |
+| `OptionRows` | boxes that each set one thing: the question in the small font, the answer under it; a row without an answer is a button, and one marked `current` has a second outline; Up/Down stop at the ends, the window follows the focus | none |
+| `PageTitle` | the title of an options page and its rule; wraps in a long language, so the page lays out what is left below it | none |
 | `TextBlock` | wrapped paragraph, scrolled by line, with a scroll bar | none (scrolling reaches the end) |
 | `Button` | an outlined box with a centred label, inverted when focused | none |
 | `shapes` | rounded rectangles and a scroll bar | |

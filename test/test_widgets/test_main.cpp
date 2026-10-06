@@ -13,6 +13,7 @@
 #include <ui/Button.h>
 #include <ui/Layout.h>
 #include <ui/ListView.h>
+#include <ui/OptionRows.h>
 #include <ui/Shapes.h>
 #include <ui/SoftKeys.h>
 #include <ui/StatusBar.h>
@@ -1167,6 +1168,106 @@ void test_button_labels_fit_in_every_language() {
   });
 }
 
+// ---- option rows ----------------------------------------------------------------------------------
+
+namespace {
+
+std::vector<OptionRow> options(size_t n, bool values = true) {
+  std::vector<OptionRow> rows;
+  for (size_t i = 0; i < n; ++i) rows.push_back({"Option " + std::to_string(i), values ? "on" : ""});
+  return rows;
+}
+
+void pressRow(OptionRows& rows, Key key, int times = 1) {
+  bool chosen;
+  for (int i = 0; i < times; ++i) rows.handle(Input::pressed(key), kListArea, &chosen);
+}
+
+}  // namespace
+
+void test_option_rows_stop_at_both_ends_and_choose_with_select() {
+  OptionRows rows;
+  rows.setRows(options(3));
+  pressRow(rows, Key::Up);
+  TEST_ASSERT_EQUAL(0, rows.selected());
+  pressRow(rows, Key::Down, 5);
+  TEST_ASSERT_EQUAL(2, rows.selected());
+  bool chosen = false;
+  TEST_ASSERT_TRUE(rows.handle(Input::pressed(Key::Select), kListArea, &chosen));
+  TEST_ASSERT_TRUE(chosen);
+  TEST_ASSERT_EQUAL(2, rows.selected());
+}
+
+void test_a_tap_on_an_option_row_moves_the_focus_and_chooses_it() {
+  OptionRows rows;
+  rows.setRows(options(4));
+  bool chosen = false;
+  const Rect second = rows.rowRect(kListArea, 1);
+  TEST_ASSERT_TRUE(rows.handle(Input::touch(second.x + 10, second.y + 5), kListArea, &chosen));
+  TEST_ASSERT_TRUE(chosen);
+  TEST_ASSERT_EQUAL(1, rows.selected());
+  chosen = true;
+  const Rect none = rows.rowRect(kListArea, 20);                         // below the rows
+  TEST_ASSERT_FALSE(rows.handle(Input::touch(none.x + 10, none.y), kListArea, &chosen));
+  TEST_ASSERT_FALSE(chosen);
+  TEST_ASSERT_FALSE(rows.handle(Input::touch(kListArea.right() - 1, kListArea.y + 5), kListArea, &chosen));   // the scroll bar
+  TEST_ASSERT_EQUAL(1, rows.selected());
+}
+
+void test_option_rows_scroll_with_the_focus() {
+  OptionRows rows;
+  rows.setRows(options(12));
+  const size_t visible = rows.visibleRows(kListArea);
+  TEST_ASSERT_TRUE(visible >= 3 && visible < 12);
+  pressRow(rows, Key::Down, static_cast<int>(visible));                  // one past the last on show
+  bool chosen = false;
+  const Rect last = rows.rowRect(kListArea, visible - 1);
+  TEST_ASSERT_TRUE(rows.handle(Input::touch(last.x + 10, last.y + 5), kListArea, &chosen));
+  TEST_ASSERT_EQUAL(visible, rows.selected());                           // the window moved by one row
+}
+
+void test_a_row_without_a_value_is_a_lower_button() {
+  OptionRows withValues, buttons;
+  withValues.setRows(options(2));
+  buttons.setRows(options(2, false));
+  TEST_ASSERT_TRUE(buttons.rowHeight() < withValues.rowHeight());
+  TEST_ASSERT_TRUE(buttons.visibleRows(kListArea) > withValues.visibleRows(kListArea));
+}
+
+void test_the_focused_option_row_is_drawn_inverted() {
+  OptionRows rows;
+  rows.setRows(options(2));
+  FrameBuffer fb;
+  rows.draw(fb, kListArea);
+  const Rect first = rows.rowRect(kListArea, 0), second = rows.rowRect(kListArea, 1);
+  TEST_ASSERT_TRUE(fb.pixel(first.x + first.w / 2, first.y + first.h / 2 - 12));   // the fill, between the words
+  TEST_ASSERT_FALSE(fb.pixel(second.x + second.w / 2, second.bottom() - 6));       // the inside of an outline
+  TEST_ASSERT_TRUE(fb.pixel(second.x + second.w / 2, second.y));                   // its edge
+}
+
+void test_a_list_selection_can_be_put_on_a_row_and_a_row_that_is_not_there_is_ignored() {
+  ListView list;
+  list.setItems(numbered(5));
+  list.select(3);
+  TEST_ASSERT_EQUAL(3, list.selected());
+  list.select(5);
+  TEST_ASSERT_EQUAL(3, list.selected());
+}
+
+void test_the_current_option_row_has_a_second_outline_in_both_colours() {
+  OptionRows rows;
+  rows.setRows({{"One", "", true}, {"Two", "", false}, {"Three", "", true}});
+  FrameBuffer fb;
+  rows.draw(fb, kListArea);
+  const auto inner = [&](size_t i) {
+    const Rect box = rows.rowRect(kListArea, i);
+    return fb.pixel(box.x + 3, box.y + box.h / 2);
+  };
+  TEST_ASSERT_TRUE(inner(2));            // current, not in focus: black line inside the white box
+  TEST_ASSERT_FALSE(inner(1));           // not current: nothing inside
+  TEST_ASSERT_FALSE(inner(0));           // current and in focus: a white line inside the black fill
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_the_standard_layout_tiles_the_screen_from_top_to_bottom);
@@ -1220,6 +1321,13 @@ int main() {
   RUN_TEST(test_replacing_the_items_keeps_the_selection_inside_the_list);
   RUN_TEST(test_the_selected_row_is_inverted_and_a_long_list_shows_a_scroll_bar);
   RUN_TEST(test_a_list_that_shrinks_fills_its_window_again);
+  RUN_TEST(test_option_rows_stop_at_both_ends_and_choose_with_select);
+  RUN_TEST(test_a_tap_on_an_option_row_moves_the_focus_and_chooses_it);
+  RUN_TEST(test_option_rows_scroll_with_the_focus);
+  RUN_TEST(test_a_row_without_a_value_is_a_lower_button);
+  RUN_TEST(test_the_focused_option_row_is_drawn_inverted);
+  RUN_TEST(test_a_list_selection_can_be_put_on_a_row_and_a_row_that_is_not_there_is_ignored);
+  RUN_TEST(test_the_current_option_row_has_a_second_outline_in_both_colours);
   RUN_TEST(test_user_text_is_shortened_and_fixed_text_is_not);
   RUN_TEST(test_rows_stay_inside_their_row_in_every_language);
   RUN_TEST(test_a_long_text_wraps_and_scrolls_by_line);
