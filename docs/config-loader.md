@@ -85,6 +85,8 @@ language with the catalogs that are installed, shipped and user's together, and 
 diagnostic for each code nobody has. It returns whether the interface language is installed; the host selects
 it only then ([runtime.md](runtime.md)). The loader cannot do this itself: it does not know the catalogs.
 
+`loadUserWebCatalogs(store, translator, diags)` does the same for `/lang/web/*.toml` with `Translator::addUserWeb()`, under the same limit for each file. It is not called at start: the runtime gives it to the translator as the source of the page's user catalogs, so it runs when the page's catalogs are loaded, and a rejected file is logged in the same words ([i18n.md](i18n.md), [runtime.md](runtime.md)).
+
 ## Writing
 
 ```cpp

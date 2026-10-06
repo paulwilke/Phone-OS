@@ -9,7 +9,7 @@ PhonePlus is an emergency phone for children, so a mistake costs more here than 
 3. **Comments explain why**, never what the next line does. A comment records a decision, a constraint or a bug that was found once.
 4. **No leftovers.** No placeholder markers (the words that promise work for later; `scripts/check_docs.py` has the list), no documentation of things that do not exist, no code that nothing uses. Open work belongs in the issue tracker.
 5. **Every module has tests.** Logic that can run on a laptop is written so that it does, and `pio test -e native` covers it. A bug that was found once gets a test, and you prove the test by putting the bug back and watching it fail.
-6. **Users read text from catalogs.** Anything shown to the user lives in `lang/en.toml`, `lang/de.toml` and `lang/fr.toml`; see [docs/i18n.md](docs/i18n.md). Pure logic modules contain no user text: they return codes and data, and the interface turns those into words.
+6. **Users read text from catalogs.** Anything shown to the user lives in `lang/en.toml`, `lang/de.toml` and `lang/fr.toml` (the device) or `lang/web/*.toml` (the parents' page); see [docs/i18n.md](docs/i18n.md). Pure logic modules contain no user text: they return codes and data, and the interface turns those into words.
 7. **Security limits are the maintainer's decision.** Do not weaken a password rule, a path check, a rate limit or a validation on your own initiative. Propose the change and explain why.
 
 ## Running the checks
@@ -19,7 +19,8 @@ You need [PlatformIO Core](https://docs.platformio.org/page/core/installation.ht
 ```bash
 pio test -e native              # host tests of the C++ code
 python3 scripts/check_i18n.py   # language catalogs against the English reference
-python3 scripts/check_i18n.py --usage # every catalog key is used by code or a test; no unknown key in the code
+python3 scripts/check_i18n.py --usage # every catalog key is used by code or a test of its own set; no unknown key in the code
+python3 test/test_check_i18n/test_check.py # the catalog check itself (wrong set, both sets, a missing file, the limit)
 python3 scripts/check_docs.py   # broken links, missing files, placeholder markers, non-English text, VERSION
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
 python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.md is ticked and has its test

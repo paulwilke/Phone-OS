@@ -50,6 +50,9 @@ public:
   void handle(const http::Request& req, http::Response& res, uint32_t nowSeconds) override;
   void error(int status, http::Response& res) override;
 
+  // The page is no longer reachable: its catalogs (Translator's web set) are let go.
+  void pageGone() { translator_.releaseWeb(); }
+
 private:
   void jsonResp(http::Response& res, int status, const char* body);
   void jsonError(http::Response& res, int status, const char* message);

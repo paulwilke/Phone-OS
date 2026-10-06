@@ -14,9 +14,16 @@
 // to tests and the catalog check, and (as "home.phone") plainly wrong on screen
 // instead of silently empty.
 //
+// Two sets of catalogs per language: the **device** set (what the device's own screens, notices
+// and SMS say) is loaded at start and is what everything above uses; the **web** set (the words of
+// the parents' page and of the configuration form) is kept apart, loaded on demand through a source
+// the host provides (ensureWeb) and released when the page is no longer reachable (releaseWeb).
+// A language with a device catalog and no web catalog gets English on the page, as a missing key does.
+//
 // Strings are UTF-8. Turning them into glyphs is the display layer's job.
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <set>
 #include <string>
@@ -82,11 +89,34 @@ public:
   // from here: a parent may write the word in any language the device speaks.
   std::vector<std::string> textsInAllLanguages(const char* key) const;
 
-  // All key-value pairs whose key starts with `prefix` in language `code`, falling back to
-  // English for any key the language lacks. Used by the web API to serve the catalog for
-  // the browser page.
-  std::map<std::string, std::string> textsByPrefix(const std::string& code,
-                                                    const std::string& prefix) const;
+  // ---- the web set ----------------------------------------------------------------------------------
+
+  using WebSource = std::function<void(Translator&)>;
+
+  // Where the web catalogs come from: `shipped` adds the shipped ones (host: read from lang/web/,
+  // device: the embedded ones) with addWeb(), `user` adds those of the card with addUserWeb().
+  // Either may be empty. The sources are called by ensureWeb(), shipped first.
+  void setWebShippedSource(WebSource shipped) { webShipped_ = std::move(shipped); }
+  void setWebUserSource(WebSource user) { webUser_ = std::move(user); }
+
+  // Adds a web catalog (layered like add()). False when it is empty.
+  bool addWeb(const Catalog& catalog);
+  // Parses and adds a user web catalog; rejected like addUser(), with the placeholders compared with
+  // the English web catalog when that one is loaded.
+  bool addUserWeb(const char* text, size_t length, std::vector<std::string>* errors);
+
+  // Loads the web catalogs through the sources when they are not loaded; does nothing when they are.
+  void ensureWeb();
+  // Drops every web catalog (the next ensureWeb() reads them again).
+  void releaseWeb();
+  bool webLoaded() const { return webLoaded_; }
+  // Codes that have a web catalog (loaded ones only).
+  std::vector<std::string> webLanguages() const;
+
+  // All key-value pairs of the web set whose key starts with `prefix` in language `code`, falling
+  // back to English for any key the language lacks (a language without a web catalog is English
+  // throughout). Used by the web API to serve the catalog for the browser page. Loads the web set.
+  std::map<std::string, std::string> webTextsByPrefix(const std::string& code, const std::string& prefix);
 
   // Keys that were asked for and found in no language, and how often a lookup had to
   // fall back from the selected language to English.
@@ -100,6 +130,9 @@ private:
                      size_t argCount);
 
   std::map<std::string, Catalog> languages_;
+  std::map<std::string, Catalog> web_;
+  WebSource webShipped_, webUser_;
+  bool webLoaded_ = false;
   std::string current_ = kReference;
   std::set<std::string> missing_;
   size_t fallbacks_ = 0;

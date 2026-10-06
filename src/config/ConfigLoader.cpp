@@ -558,10 +558,14 @@ bool ConfigLoader::checkLanguages(const Profile& profile, const i18n::Translator
   return interfaceOk;
 }
 
-void ConfigLoader::loadUserCatalogs(ConfigStore& store, i18n::Translator& translator,
-                                     std::vector<Diagnostic>& diagnostics) {
+namespace {
+
+// Reads every *.toml of `dir` on the card and hands it to `add`; a file that is too big or that `add`
+// refuses is skipped with a diagnostic naming it. Never throws, never stops at the first bad file.
+template <class Add>
+void readCatalogs(ConfigStore& store, const char* dir, size_t maxBytes, std::vector<Diagnostic>& diagnostics, Add add) {
   std::vector<FileEntry> entries;
-  if (!store.list("/lang", entries)) return;
+  if (!store.list(dir, entries)) return;
 
   for (const FileEntry& e : entries) {
     if (e.isDir) continue;
@@ -571,21 +575,37 @@ void ConfigLoader::loadUserCatalogs(ConfigStore& store, i18n::Translator& transl
     if (name.substr(name.size() - 5) != ".toml" &&
         name.substr(name.size() - 5) != ".TOML") continue;
 
-    const std::string path = "/lang/" + name;
+    const std::string path = std::string(dir) + "/" + name;
     std::string text;
     int64_t sz = store.fileSize(path);
-    if (sz < 0 || (size_t)sz > kMaxCatalogBytes) {
+    if (sz < 0 || (size_t)sz > maxBytes) {
       diagnostics.push_back({Diagnostic::Code::OversizedFile, {path}});
       continue;
     }
-    if (!store.read(path, text, kMaxCatalogBytes)) continue;
+    if (!store.read(path, text, maxBytes)) continue;
 
     std::vector<std::string> errors;
-    if (!translator.addUser(text.c_str(), text.size(), &errors)) {
+    if (!add(text, &errors)) {
       std::string firstError = errors.empty() ? "invalid catalog" : errors[0];
       diagnostics.push_back({Diagnostic::Code::UserCatalogError, {path, firstError}});
     }
   }
+}
+
+}  // namespace
+
+void ConfigLoader::loadUserCatalogs(ConfigStore& store, i18n::Translator& translator,
+                                     std::vector<Diagnostic>& diagnostics) {
+  readCatalogs(store, "/lang", kMaxCatalogBytes, diagnostics, [&](const std::string& text, std::vector<std::string>* errors) {
+    return translator.addUser(text.c_str(), text.size(), errors);
+  });
+}
+
+void ConfigLoader::loadUserWebCatalogs(ConfigStore& store, i18n::Translator& translator,
+                                        std::vector<Diagnostic>& diagnostics) {
+  readCatalogs(store, "/lang/web", kMaxCatalogBytes, diagnostics, [&](const std::string& text, std::vector<std::string>* errors) {
+    return translator.addUserWeb(text.c_str(), text.size(), errors);
+  });
 }
 
 }  // namespace config

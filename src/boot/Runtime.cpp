@@ -47,6 +47,8 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
   if (capabilities.radio) core_.setRadio(capabilities.radio);
   core_.setWifi(capabilities.wifi, capabilities.random);
   core_.start();
+  // The page's catalogs on the card are read when the page needs them (Translator::ensureWeb()).
+  translator.setWebUserSource([this](i18n::Translator&) { loadUserWebCatalogs(); });
   for (const config::Diagnostic& diagnostic : diagnostics_) core_.log(describe(diagnostic).c_str());
 
   stack_.add(ui::screen::kHome, home_);
@@ -81,6 +83,18 @@ PowerDecision Runtime::step(uint32_t nowMs) {
     lastFrameMs_ = nowMs;
   }
   return decision;
+}
+
+Runtime::~Runtime() {
+  // This start's card goes with it: the next one reads its own.
+  translator_.setWebUserSource(nullptr);
+  translator_.releaseWeb();
+}
+
+void Runtime::loadUserWebCatalogs() {
+  std::vector<config::Diagnostic> problems;
+  config::ConfigLoader::loadUserWebCatalogs(caps_.store, translator_, problems);
+  for (const config::Diagnostic& diagnostic : problems) core_.log(describe(diagnostic).c_str());
 }
 
 void Runtime::input(const ui::Input& in, uint32_t nowMs) {

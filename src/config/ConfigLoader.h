@@ -13,7 +13,7 @@
 // then calls translator.select() and keeps English when the code is unknown.
 //
 // User catalogs: loadUserCatalogs() reads /lang/*.toml from the card and feeds each one
-// to Translator::addUser(). A catalog that fails validation is skipped with a
+// to Translator::addUser(); /lang/web/*.toml are the page's (loadUserWebCatalogs()). A catalog that fails validation is skipped with a
 // UserCatalogError diagnostic; loading continues with the next file.
 
 #include <string>
@@ -52,6 +52,11 @@ public:
   // Call this before load() so that catalog codes can be validated later by the host.
   static void loadUserCatalogs(ConfigStore& store, i18n::Translator& translator,
                                 std::vector<Diagnostic>& diagnostics);
+
+  // The same for the page's catalogs in /lang/web/*.toml (Translator::addUserWeb()), each file under
+  // the same size limit. Called when the web catalogs are loaded, not at start.
+  static void loadUserWebCatalogs(ConfigStore& store, i18n::Translator& translator,
+                                  std::vector<Diagnostic>& diagnostics);
 
   // Adds a BadCatalogCode diagnostic for the interface language and for the SMS language of the
   // profile when no installed catalog has that code. Returns whether the interface language is

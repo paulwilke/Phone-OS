@@ -11,6 +11,7 @@ Code: `src/boot/Runtime.{h,cpp}`; tests in `test/test_runtime/`. The wiring is w
 In this order, in the constructor:
 
 1. the user's catalogs from `/lang/` are added to the translator (`ConfigLoader::loadUserCatalogs`), so a language the card brings can be the one the configuration asks for;
+   (The page's catalogs, `/lang/web/`, are not read here: the runtime registers them as the translator's user source for the web set, read when the page first needs them and let go when Wi-Fi goes off; the destructor withdraws the source.)
 2. `/config/` is read into the `Profile` (`ConfigLoader::load`);
 3. the languages are checked (`ConfigLoader::checkLanguages`). The interface language is selected when a catalog has it; otherwise the translator stays on English and there is a `BadCatalogCode` diagnostic;
 4. the core is built from the profile, told the firmware version, the radio and Wi-Fi, and started (`AppCore::start`); the core's Wi-Fi controller is the only one, and the web service follows it ([wifi-controller.md](wifi-controller.md));

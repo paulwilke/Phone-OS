@@ -347,6 +347,22 @@ inline void Simulator::loadShippedCatalogs(const std::string& dir) {
       if (entry.path().stem() == i18n::Translator::kReference) english = catalog;
     }
   }
+  // The page's catalogs (lang/web/<code>.toml) are read when the page asks for them and let go when it
+  // is gone, as the device would do with the embedded ones.
+  translator_.setWebShippedSource([this, dir](i18n::Translator& translator) {
+    const std::string webDir = dir + "/web";
+    if (!fs::is_directory(webDir)) return;
+    for (const auto& entry : fs::directory_iterator(webDir)) {
+      if (entry.path().extension() != ".toml") continue;
+      std::string text;
+      i18n::Catalog catalog;
+      if (!detail::readFile(entry.path().string(), text) || !catalog.parse(text.data(), text.size())) {
+        out_ << "warning: cannot load catalog " << entry.path().string() << "\n";
+        continue;
+      }
+      translator.addWeb(catalog);
+    }
+  });
   // The host-only sets (tools/lang/<set>.<code>.toml): their words are added to the language of the same
   // code, as a user catalog with the code of a shipped language would be.
   if (fs::is_directory(options_.hostLangDir)) {

@@ -5,7 +5,7 @@
  *  1. web/index.html exists and has content.
  *  2. Every data-t attribute references a known web.* key (full key name).
  *  3. The page uses textContent (not innerHTML) for device-supplied content.
- *  4. The WEB_KEYS list in gen_web.py matches the web.* keys in lang/en.toml.
+ *  4. The WEB_KEYS list in gen_web.py matches the web.* keys in lang/web/en.toml.
  *  5. Every web.* key in en.toml also exists in de.toml and fr.toml.
  *  6. Translations are non-empty for all languages.
  */
@@ -57,17 +57,17 @@ function webKeys(catalog) {
 // ---------- load files ----------
 
 const htmlPath = resolve(ROOT, 'web', 'index.html');
-const enPath   = resolve(ROOT, 'lang', 'en.toml');
-const dePath   = resolve(ROOT, 'lang', 'de.toml');
-const frPath   = resolve(ROOT, 'lang', 'fr.toml');
+const enPath   = resolve(ROOT, 'lang', 'web', 'en.toml');
+const dePath   = resolve(ROOT, 'lang', 'web', 'de.toml');
+const frPath   = resolve(ROOT, 'lang', 'web', 'fr.toml');
 const genPath  = resolve(ROOT, 'scripts', 'gen_web.py');
 
 // ---------- test 1: file existence ----------
 console.log('\nTest: file existence');
 assert(existsSync(htmlPath), 'web/index.html exists');
-assert(existsSync(enPath), 'lang/en.toml exists');
-assert(existsSync(dePath), 'lang/de.toml exists');
-assert(existsSync(frPath), 'lang/fr.toml exists');
+assert(existsSync(enPath), 'lang/web/en.toml exists');
+assert(existsSync(dePath), 'lang/web/de.toml exists');
+assert(existsSync(frPath), 'lang/web/fr.toml exists');
 assert(existsSync(genPath), 'scripts/gen_web.py exists');
 
 const html    = existsSync(htmlPath) ? readFileSync(htmlPath, 'utf8') : '';
@@ -120,7 +120,7 @@ assert(badInnerHTML === 0,
   `no non-static innerHTML assignments (found ${badInnerHTML} suspicious uses)`);
 
 // ---------- test 4: WEB_KEYS in gen_web.py matches en.toml web.* keys ----------
-console.log('\nTest: WEB_KEYS in gen_web.py matches lang/en.toml web.* keys');
+console.log('\nTest: WEB_KEYS in gen_web.py matches lang/web/en.toml web.* keys');
 // Extract WEB_KEYS list from gen_web.py
 const webKeyRe = /"(web\.[a-z][a-z0-9.-]*)"/g;
 const genWebKeys = new Set();

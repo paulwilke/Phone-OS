@@ -182,6 +182,49 @@ void test_the_page_can_be_had_in_every_shipped_language() {
   TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz").status);
 }
 
+// The page's words are in memory while the page can be reached and let go when Wi-Fi goes off.
+void test_the_page_catalogs_are_loaded_by_the_page_and_let_go_when_wifi_is_off() {
+  Web w;
+  TEST_ASSERT_FALSE(w.sim.translator().webLoaded());                                 // the device started without them
+  TEST_ASSERT_EQUAL(200, w.get("/api/lang/de").status);
+  TEST_ASSERT_TRUE(w.sim.translator().webLoaded());
+  w.sim.execute("wifi off");
+  w.sim.advance(2000);
+  TEST_ASSERT_FALSE(w.sim.translator().webLoaded());
+  w.sim.execute("wifi ap");
+  w.sim.advance(2000);
+  w.port = w.sim.webPort();
+  TEST_ASSERT_EQUAL(200, w.get("/api/lang/de").has("Anmelden") ? 200 : 0);           // and they come back when asked again
+}
+
+// A catalog for the page is /lang/web/<code>.toml: it changes the page's words in that language and
+// leaves the device's words alone; a bad one is refused with a line in the log, and the page still works.
+void test_a_user_catalog_for_the_page_changes_the_page_and_not_the_device() {
+  Web w;
+  const Reply before = w.get("/api/lang/de");
+  TEST_ASSERT_TRUE(before.has("Anmelden"));
+  const std::string head = "[meta]\ncode = \"de\"\nname = \"German\"\nnative = \"Deutsch\"\nplural = \"one-other\"\n\n[strings]\n";
+  TEST_ASSERT_TRUE(w.sim.card().write("/lang/readme.txt", "the card has a lang/ folder"));  // a folder is made one level at a time
+  TEST_ASSERT_TRUE(w.sim.card().write("/lang/web/de.toml", head + "web.auth.enter = \"Reinkommen\"\n"));
+  TEST_ASSERT_TRUE(w.sim.card().write("/lang/web/fr.toml", std::string(head).replace(head.find("\"de\""), 4, "\"fr\"") + "web.auth.enter = \"kaputt {nom}\"\n"));   // a placeholder the page does not have: refused
+  w.sim.execute("run /dev/null");
+  TEST_ASSERT_EQUAL(200, w.change("POST", "/api/restart", "{}").status);
+  w.sim.advance(2000);
+  w.sim.execute("wifi ap");
+  w.sim.advance(2000);
+  w.port = w.sim.webPort();
+  const Reply after = w.get("/api/lang/de");
+  TEST_ASSERT_TRUE(after.has("Reinkommen"));
+  TEST_ASSERT_FALSE(after.has("Anmelden"));                                         // the word it replaced
+  TEST_ASSERT_TRUE(after.has("web.title"));                                         // everything else is still there
+  const std::string home = w.sim.translator().getIn("de", "home.phone");
+  TEST_ASSERT_EQUAL_STRING("Telefon", home.c_str());                                 // the device's words did not move
+  TEST_ASSERT_FALSE(w.get("/api/lang/en").has("Reinkommen"));
+  const Reply french = w.get("/api/lang/fr");
+  TEST_ASSERT_EQUAL(200, french.status);
+  TEST_ASSERT_FALSE(french.has("kaputt"));                                          // the catalog with the wrong placeholder was refused
+}
+
 void test_a_user_catalog_on_the_card_is_offered_by_the_page() {
   Web w;
   const std::string english =
@@ -345,6 +388,8 @@ int main() {
   RUN_TEST(test_the_real_page_is_served_without_a_password);
   RUN_TEST(test_the_state_needs_the_password);
   RUN_TEST(test_the_page_can_be_had_in_every_shipped_language);
+  RUN_TEST(test_the_page_catalogs_are_loaded_by_the_page_and_let_go_when_wifi_is_off);
+  RUN_TEST(test_a_user_catalog_for_the_page_changes_the_page_and_not_the_device);
   RUN_TEST(test_a_user_catalog_on_the_card_is_offered_by_the_page);
   RUN_TEST(test_a_setting_saved_through_the_api_is_in_the_file_of_the_card);
   RUN_TEST(test_a_language_saved_through_the_api_is_the_devices_after_the_restart_the_page_asks_for);

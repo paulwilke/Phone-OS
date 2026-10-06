@@ -28,6 +28,7 @@ from urllib.parse import urlparse, parse_qs
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HTML_PATH = os.path.join(ROOT, "web", "index.html")
 LANG_DIR  = os.path.join(ROOT, "lang")
+WEB_LANG_DIR = os.path.join(LANG_DIR, "web")   # the page's words; the device's are in LANG_DIR
 CFG_DIR   = os.path.join(ROOT, "config")
 
 # ── TOML helpers ────────────────────────────────────────────────────────────
@@ -54,7 +55,8 @@ def flatten_toml(d, prefix=""):
 # ── Language catalog ────────────────────────────────────────────────────────
 
 def load_catalog(code):
-    path = os.path.join(LANG_DIR, f"{code}.toml")
+    """The page's catalog; a language without one is empty (English fills in, as on the device)."""
+    path = os.path.join(WEB_LANG_DIR, f"{code}.toml")
     data = load_toml(path)
     strings = data.get("strings", {})
     return flatten_toml(strings)

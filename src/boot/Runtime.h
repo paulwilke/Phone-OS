@@ -76,6 +76,7 @@ public:
 
   // `translator` holds the shipped catalogs. `nowMs` is the host's millisecond counter.
   Runtime(const Capabilities& capabilities, i18n::Translator& translator, uint32_t nowMs);
+  ~Runtime();
   Runtime(const Runtime&) = delete;
   Runtime& operator=(const Runtime&) = delete;
 
@@ -115,6 +116,7 @@ private:
   i18n::Translator& translator_;
   std::vector<config::Diagnostic> diagnostics_;
   config::ConfigLoader::Result loaded_;
+  void loadUserWebCatalogs();
   AppCore core_;
   ui::Session session_;
   ui::ScreenStack stack_;

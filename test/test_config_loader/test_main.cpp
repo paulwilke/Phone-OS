@@ -3,6 +3,8 @@
 
 #include <unity.h>
 
+#include <algorithm>
+
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -664,6 +666,62 @@ void test_a_catalog_one_byte_over_the_limit_is_skipped_and_one_at_the_limit_is_r
   }
 }
 
+// The page's catalogs on the card are /lang/web/<code>.toml: read by their own call, under the same limit
+// for each file, and /lang/ itself does not take them for device catalogs.
+void test_the_english_web_catalog_fits_and_is_accepted_whole_as_a_user_catalog_for_the_page() {
+  std::string text = readFile("lang/web/en.toml");
+  TEST_ASSERT_TRUE_MESSAGE(!text.empty(), "run the tests from the repository root");
+  TEST_ASSERT_TRUE(text.size() <= ConfigLoader::kMaxCatalogBytes);
+  const std::string code = "code = \"en\"";
+  text.replace(text.find(code), code.size(), "code = \"xx\"");
+  FakeConfigStore store;
+  store.put("/lang/readme.txt", "the card has a lang/ folder");  // the store makes one level of folder per file
+  store.put("/lang/web/xx.toml", text);
+  i18n::Translator translator;
+  const std::string reference = readFile("lang/web/en.toml");
+  i18n::Catalog english;
+  TEST_ASSERT_TRUE(english.parse(reference.data(), reference.size()));
+  translator.addWeb(english);
+  std::vector<Diagnostic> diags;
+  ConfigLoader::loadUserCatalogs(store, translator, diags);          // the device's read does not see /lang/web/
+  TEST_ASSERT_EQUAL(0, static_cast<int>(diags.size()));
+  TEST_ASSERT_EQUAL(1, static_cast<int>(translator.webLanguages().size()));
+  ConfigLoader::loadUserWebCatalogs(store, translator, diags);
+  TEST_ASSERT_EQUAL_MESSAGE(0, static_cast<int>(diags.size()), diags.empty() ? "" : diagnosticName(diags[0].code));
+  TEST_ASSERT_EQUAL(2, static_cast<int>(translator.webLanguages().size()));
+  TEST_ASSERT_EQUAL(0, static_cast<int>(translator.languages().size()));   // a language of the page alone is no language of the device
+}
+
+void test_a_web_catalog_one_byte_over_the_limit_is_skipped_and_one_at_the_limit_is_read_each_file_alone() {
+  const std::string head = "[meta]\ncode = \"xx\"\nname = \"Test\"\nnative = \"Test\"\nplural = \"one-other\"\n\n[strings]\nweb.title = \"X\"\n# ";
+  auto sized = [&](size_t bytes) { return head + std::string(bytes - head.size() - 1, 'x') + "\n"; };
+  for (size_t bytes : {ConfigLoader::kMaxCatalogBytes, ConfigLoader::kMaxCatalogBytes + 1}) {
+    FakeConfigStore store;
+    store.put("/lang/readme.txt", "the card has a lang/ folder");
+    store.put("/lang/web/xx.toml", sized(bytes));
+    store.put("/lang/web/yy.toml", sized(ConfigLoader::kMaxCatalogBytes).replace(head.find("xx"), 2, "yy"));
+    i18n::Translator translator;
+    std::vector<Diagnostic> diags;
+    ConfigLoader::loadUserWebCatalogs(store, translator, diags);
+    const std::vector<std::string> codes = translator.webLanguages();
+    TEST_ASSERT_TRUE(std::find(codes.begin(), codes.end(), "yy") != codes.end());   // a file at the limit is read whatever its neighbour
+    if (bytes == ConfigLoader::kMaxCatalogBytes) TEST_ASSERT_TRUE(diags.empty() && codes.size() == 2);
+    else TEST_ASSERT_TRUE(hasDiag(diags, Diagnostic::Code::OversizedFile) && codes.size() == 1);
+  }
+}
+
+void test_a_broken_web_catalog_gives_a_diagnostic_and_loading_continues() {
+  FakeConfigStore store;
+  store.put("/lang/readme.txt", "the card has a lang/ folder");
+  store.put("/lang/web/broken.toml", "this is not valid toml [[[");
+  store.put("/lang/web/valid.toml", "[meta]\ncode = \"xx\"\nname = \"Test\"\nnative = \"Test\"\nplural = \"one-other\"\n[strings]\nweb.title = \"X\"\n");
+  i18n::Translator translator;
+  std::vector<Diagnostic> diags;
+  ConfigLoader::loadUserWebCatalogs(store, translator, diags);
+  TEST_ASSERT_TRUE(hasDiag(diags, Diagnostic::Code::UserCatalogError));
+  TEST_ASSERT_EQUAL(1, static_cast<int>(translator.webLanguages().size()));
+}
+
 void test_languages_of_installed_catalogs_give_no_diagnostic() {
   i18n::Translator translator = languages::loaded();
   Profile profile;
@@ -773,6 +831,9 @@ int main() {
   RUN_TEST(test_the_english_catalog_fits_what_a_catalog_on_the_card_may_have);
   RUN_TEST(test_the_english_catalog_copied_under_a_new_code_is_accepted_whole_as_a_user_catalog);
   RUN_TEST(test_a_catalog_one_byte_over_the_limit_is_skipped_and_one_at_the_limit_is_read);
+  RUN_TEST(test_the_english_web_catalog_fits_and_is_accepted_whole_as_a_user_catalog_for_the_page);
+  RUN_TEST(test_a_web_catalog_one_byte_over_the_limit_is_skipped_and_one_at_the_limit_is_read_each_file_alone);
+  RUN_TEST(test_a_broken_web_catalog_gives_a_diagnostic_and_loading_continues);
   RUN_TEST(test_languages_of_installed_catalogs_give_no_diagnostic);
   RUN_TEST(test_an_interface_language_nobody_has_is_reported_with_its_code);
   RUN_TEST(test_an_sms_language_nobody_has_is_reported_and_does_not_fail_the_interface);

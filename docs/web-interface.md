@@ -47,7 +47,7 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 | PUT, POST | `/api/wifi-off` | Ask Wi-Fi to switch off (done after the answer has gone out) |
 | PUT, POST | `/api/wifi-extend` | Keep Wi-Fi on: restarts the idle time on purpose; answers with `seconds_left`; logged like every change |
 | GET | `/api/languages` | Installed language catalog list |
-| GET | `/api/lang/<code>` | `web.*` and `config.*` translation keys for the page |
+| GET | `/api/lang/<code>` | `web.*` and `config.*` translation keys for the page, from the web set (`lang/web/<code>.toml` layered with `/lang/web/<code>.toml` of the card; English where a language has no web catalog) |
 
 ### Security model
 
@@ -67,11 +67,11 @@ The trade-off: the API returns `secrets.toml` on `GET /api/secrets` and the raw 
 
 ## The page
 
-`web/index.html` is generated from `config/form_generated.json` and `lang/en.toml` by `scripts/gen_web.py`. Run `scripts/gen_web.py --check` to verify the file is up to date.
+`web/index.html` is generated from `config/form_generated.json` and `lang/web/en.toml` (the page's own catalog, apart from the device's) by `scripts/gen_web.py`. Run `scripts/gen_web.py --check` to verify the file is up to date.
 
 The page is a single-file SPA with no external resources. On load it shows a password prompt; after a correct password it stores a `Basic` credential in memory and attaches it to every API call. The language shown is: the last choice in `localStorage`, or the browser's preferred language, or English.
 
-Every string the page shows is looked up through a `t(key)` function that reads from a `web.*` / `config.*` translation object fetched from `/api/lang/<code>`. Device-supplied content — file names, log lines, configuration values — is always set via `.textContent`, never `.innerHTML`, to prevent XSS.
+Every string the page shows is looked up through a `t(key)` function that reads from a `web.*` / `config.*` translation object fetched from `/api/lang/<code>`. The device reads these catalogs only when the page asks for them and lets them go when Wi-Fi goes off ([i18n.md](i18n.md)). Device-supplied content — file names, log lines, configuration values — is always set via `.textContent`, never `.innerHTML`, to prevent XSS.
 
 Form fields come from the embedded `FORM_SCHEMA` (a copy of `form_generated.json`). Field labels and help texts are catalog keys; the page fetches the translations and applies them when the language is set or changed. List sections (contacts, home networks, school times, call buttons) support adding and removing entries inline.
 

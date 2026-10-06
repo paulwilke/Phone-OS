@@ -34,6 +34,25 @@ Catalog load(const std::string& name) {
   return c;
 }
 
+Catalog loadWeb(const std::string& name) {
+  Catalog c;
+  std::ifstream in("lang/web/" + name);
+  std::stringstream ss;
+  ss << in.rdbuf();
+  const std::string text = ss.str();
+  TEST_ASSERT_TRUE_MESSAGE(!text.empty(), "web catalog file not found");
+  TEST_ASSERT_TRUE_MESSAGE(c.parse(text.data(), text.size()), name.c_str());
+  return c;
+}
+
+// The device's catalogs, and a source for the page's that reads lang/web/ (what a host provides).
+void useShippedWebSource(Translator& t, int* reads = nullptr) {
+  t.setWebShippedSource([reads](Translator& into) {
+    if (reads) ++*reads;
+    for (const char* name : {"en.toml", "de.toml", "fr.toml"}) into.addWeb(loadWeb(name));
+  });
+}
+
 Translator shipped() {
   Translator t;
   t.add(load("en.toml"));
@@ -279,6 +298,96 @@ void test_a_language_added_later_adds_its_trigger_words() {
   TEST_ASSERT_EQUAL(4, t.textsInAllLanguages("sms.command.where").size());
 }
 
+// The page's catalogs are a set of their own with the same rules.
+void test_shipped_web_languages_match_the_reference() {
+  const Catalog en = loadWeb("en.toml");
+  for (const char* name : {"de.toml", "fr.toml"}) {
+    const Catalog other = loadWeb(name);
+    const auto issues = other.compare(en);
+    for (const auto& i : issues) TEST_MESSAGE((std::string(name) + ": " + i.key + ": " + i.what).c_str());
+    TEST_ASSERT_EQUAL(0, issues.size());
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The two sets: the device's words at start, the page's on demand
+// ---------------------------------------------------------------------------
+
+void test_the_device_has_no_page_words_and_the_page_has_no_device_words() {
+  Translator t = shipped();
+  useShippedWebSource(t);
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("web.title", t.text("web.title"));      // not a device key: shown as the key
+  TEST_ASSERT_EQUAL_STRING("config.file.settings.label", t.text("config.file.settings.label"));
+  TEST_ASSERT_FALSE(t.webLoaded());                                // nothing of the page is in memory yet
+  const auto page = t.webTextsByPrefix("de", "web.");
+  TEST_ASSERT_TRUE(page.count("web.title") == 1);
+  TEST_ASSERT_TRUE(t.webLoaded());
+  TEST_ASSERT_EQUAL(0, t.webTextsByPrefix("de", "home.").size());  // the device's words are not the page's
+}
+
+void test_the_page_catalogs_are_read_once_and_let_go_on_release() {
+  Translator t = shipped();
+  int reads = 0;
+  useShippedWebSource(t, &reads);
+  t.webTextsByPrefix("en", "web.");
+  t.webTextsByPrefix("de", "web.");
+  TEST_ASSERT_EQUAL(1, reads);                                     // loaded once, kept
+  t.releaseWeb();
+  TEST_ASSERT_FALSE(t.webLoaded());
+  TEST_ASSERT_EQUAL(0, t.webLanguages().size());
+  const auto again = t.webTextsByPrefix("de", "web.");
+  TEST_ASSERT_EQUAL(2, reads);                                     // and read again when asked again
+  TEST_ASSERT_TRUE(again.size() > 0);
+  TEST_ASSERT_EQUAL(3, t.languages().size());                      // the device's languages were never touched
+}
+
+// A language with a device catalog and no catalog for the page shows the page in English.
+void test_a_language_without_a_page_catalog_is_english_on_the_page() {
+  Translator t = shipped();
+  t.setWebShippedSource([](Translator& into) { into.addWeb(loadWeb("en.toml")); });
+  const auto english = t.webTextsByPrefix("en", "web.");
+  const auto german = t.webTextsByPrefix("de", "web.");
+  TEST_ASSERT_TRUE(english.size() > 0);
+  TEST_ASSERT_TRUE(english == german);
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("Telefon", t.text("home.phone"));       // the device itself is German all the same
+}
+
+void test_a_user_catalog_for_the_page_changes_the_page_and_not_the_device() {
+  Translator t = shipped();
+  useShippedWebSource(t);
+  t.setWebUserSource([](Translator& into) {
+    const std::string text =
+        "[meta]\ncode = \"de\"\nname = \"German\"\nnative = \"Deutsch\"\nplural = \"one-other\"\n"
+        "[strings]\nweb.title = \"Eltern-Seite\"\n";
+    into.addUserWeb(text.data(), text.size(), nullptr);
+  });
+  const auto page = t.webTextsByPrefix("de", "web.");
+  TEST_ASSERT_EQUAL_STRING("Eltern-Seite", page.at("web.title").c_str());
+  TEST_ASSERT_TRUE(page.at("web.tab.status") != "web.tab.status");  // the rest of the page stays as shipped
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("Telefon", t.text("home.phone"));
+  TEST_ASSERT_EQUAL(3, t.languages().size());
+}
+
+void test_a_user_catalog_for_the_page_with_wrong_placeholders_is_rejected() {
+  Translator t = shipped();
+  useShippedWebSource(t);
+  t.ensureWeb();
+  const std::string text =
+      "[meta]\ncode = \"de\"\nname = \"German\"\nnative = \"Deutsch\"\nplural = \"one-other\"\n"
+      "[strings]\nweb.status.wifi-left = \"noch {zeit}\"\n";
+  std::vector<std::string> errors;
+  TEST_ASSERT_FALSE(t.addUserWeb(text.data(), text.size(), &errors));
+  TEST_ASSERT_EQUAL(1, errors.size());
+  TEST_ASSERT_NOT_NULL(strstr(errors[0].c_str(), "web.status.wifi-left"));
+  const std::string broken = std::string(kHead) + "ok = \"fine\"\nbroken line\n";
+  errors.clear();
+  TEST_ASSERT_FALSE(t.addUserWeb(broken.data(), broken.size(), &errors));
+  TEST_ASSERT_NOT_NULL(strstr(errors[0].c_str(), "line 8"));
+}
+
 // ---------------------------------------------------------------------------
 // User catalogs from the SD card
 // ---------------------------------------------------------------------------
@@ -364,6 +473,12 @@ int main(int, char**) {
   RUN_TEST(test_a_user_catalog_can_add_a_language);
   RUN_TEST(test_a_user_catalog_can_override_single_messages_of_a_shipped_language);
   RUN_TEST(test_a_user_catalog_with_wrong_placeholders_is_rejected);
+  RUN_TEST(test_shipped_web_languages_match_the_reference);
+  RUN_TEST(test_the_device_has_no_page_words_and_the_page_has_no_device_words);
+  RUN_TEST(test_the_page_catalogs_are_read_once_and_let_go_on_release);
+  RUN_TEST(test_a_language_without_a_page_catalog_is_english_on_the_page);
+  RUN_TEST(test_a_user_catalog_for_the_page_changes_the_page_and_not_the_device);
+  RUN_TEST(test_a_user_catalog_for_the_page_with_wrong_placeholders_is_rejected);
   RUN_TEST(test_a_broken_user_catalog_adds_nothing_and_says_where);
   RUN_TEST(test_compare_finds_missing_extra_and_changed);
   return UNITY_END();

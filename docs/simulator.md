@@ -15,7 +15,7 @@ pio run -e sim                                            # the console, headles
 .pio/build/sim/program --data sim/data-parent             # another card
 ```
 
-Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](demo.md)). `--help` lists them.
+Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`, the page's are in its `web/` folder and are read when the page asks for them), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](demo.md)). `--help` lists them.
 
 A script without `--interactive` runs and exits. A line `# data: <dir>` among its first lines names the card the script needs, when `--data` is not given.
 
@@ -25,7 +25,7 @@ A script without `--interactive` runs and exits. A line `# data: <dir>` among it
 
 ## The card
 
-The card is a directory with `config/` (`settings.toml`, `contacts.toml`, `secrets.toml`) and, for a user catalog, `lang/`, behind `DirectoryStore`, a `ConfigStore` that is held to the same contract suite as the fake and the real card: paths are checked with `SafePath`, names are compared without regard to case, a write goes through a scratch file, and scratch files are never visible. By default the simulator copies the data directory to `out/sim-card/card` at every start, so **what the web page saves never reaches the repository**; it empties that directory only if it made it (it holds a marker file), and refuses a work directory that is, holds or lies in the data directory. `--in-place` uses the data directory itself, for the owner who wants the changes kept. A restart that the device asks for (the page's restart button) starts the device again on the same card.
+The card is a directory with `config/` (`settings.toml`, `contacts.toml`, `secrets.toml`) and, for a user catalog, `lang/` (and `lang/web/` for the page's words), behind `DirectoryStore`, a `ConfigStore` that is held to the same contract suite as the fake and the real card: paths are checked with `SafePath`, names are compared without regard to case, a write goes through a scratch file, and scratch files are never visible. By default the simulator copies the data directory to `out/sim-card/card` at every start, so **what the web page saves never reaches the repository**; it empties that directory only if it made it (it holds a marker file), and refuses a work directory that is, holds or lies in the data directory. `--in-place` uses the data directory itself, for the owner who wants the changes kept. A restart that the device asks for (the page's restart button) starts the device again on the same card.
 
 `sim/data` is the child's device, `sim/data-parent` a parent's (free text, the parents' tools), `sim/data-school` one on which school time never ends. Every value is invented: the numbers `+491701111111`, `+491702222222` and `+493012345678`, the child Alex, the contacts Parent One and Parent Two, and a convenience password, `test-password-1`, which is an invented value in their `secrets.toml` and weakens no rule. A test loads each card and expects no diagnostic.
 
@@ -88,6 +88,6 @@ It proves that the application does what it should **given what the capabilities
 - **e-ink behaviour**: no ghosting, no temperature effects, and not the true look of the panel;
 - **the modem and the receiver**: their answers are scripted, so a real operator's surprises, a real SIM and a real sky are not here (the contract suites say what every implementation promises, and a real driver has to pass them);
 - **power and sleep**: the power policy's decisions are checked, not what a board does with them;
-- **a user catalog bigger than the limit** of 32,768 bytes is rejected as on the device ([translating.md](translating.md)).
+- **a user catalog bigger than the limit** of 32,768 bytes (each file, the device's and the page's) is rejected as on the device ([translating.md](translating.md)).
 
 A scenario that passes here and a device that fails are a reason to look at the capability that was assumed.

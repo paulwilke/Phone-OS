@@ -36,6 +36,9 @@ void WebService::poll(uint32_t now) {
   const WifiPhase phase = wifi ? wifi->phase() : WifiPhase::Off;
   const bool reachable = phase == WifiPhase::Connected || phase == WifiPhase::AccessPoint;
   if (reachable && !server_.running()) server_.begin();
-  if (!reachable && server_.running()) server_.stop();
+  if (!reachable && server_.running()) {
+    server_.stop();
+    api_.pageGone();
+  }
   server_.poll(now);
 }

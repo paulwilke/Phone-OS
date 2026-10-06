@@ -32,7 +32,7 @@ MUTATIONS = [
     ('language-during-emergency', [('src/app/Emergency.cpp', 'const std::string& language = profile_.smsLanguage;', 'const std::string language = translator_.language();')], "the SOS text follows the child's screen language"),
     ('missed-call', [('src/ui/screens/MessageListScreen.cpp', 'if (words != worded_) {', 'if (false) {')], 'an open entry keeps the words of the language it was opened in'),
     ('user-catalog', [('src/boot/Runtime.cpp', '  config::ConfigLoader::loadUserCatalogs(capabilities.store, translator, diagnostics);', '')], 'the catalogs on the card are not read'),
-    ('bad-catalog', [('src/config/ConfigLoader.cpp', 'if (!translator.addUser(text.c_str(), text.size(), &errors)) {', 'if (!translator.addUser(text.c_str(), text.size(), &errors) && false) {')], 'a user catalog that fails is no longer reported'),
+    ('bad-catalog', [('src/config/ConfigLoader.cpp', 'if (!add(text, &errors)) {', 'if (!add(text, &errors) && false) {')], 'a user catalog that fails is no longer reported'),
     ("wifi-admin-page",
      [("src/app/AppCore.h", "WifiController* wifiController() { return wifi_.get(); }",
        "WifiController* wifiController() { return second_.get(); }\n  std::unique_ptr<WifiController> second_;"),

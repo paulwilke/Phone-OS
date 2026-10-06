@@ -53,6 +53,9 @@ jobs:
       - name: Catalog keys against the code
         run: python3 scripts/check_i18n.py --usage
 
+      - name: Catalog check tests
+        run: python3 test/test_check_i18n/test_check.py
+
       - name: Behaviour inventory
         run: python3 scripts/check_behaviour.py --complete
 

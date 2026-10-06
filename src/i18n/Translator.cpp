@@ -125,23 +125,69 @@ std::vector<std::string> Translator::textsInAllLanguages(const char* key) const 
   return out;
 }
 
-std::map<std::string, std::string> Translator::textsByPrefix(const std::string& code,
-                                                              const std::string& prefix) const {
+bool Translator::addWeb(const Catalog& catalog) {
+  if (catalog.code().empty()) return false;
+  auto it = web_.find(catalog.code());
+  if (it == web_.end()) web_[catalog.code()] = catalog;
+  else it->second.merge(catalog);
+  return true;
+}
+
+bool Translator::addUserWeb(const char* text, size_t length, std::vector<std::string>* errors) {
+  Catalog cat;
+  if (!cat.parse(text, length)) {
+    if (errors) {
+      for (const auto& e : cat.errors()) errors->push_back("line " + std::to_string(e.line) + ": " + e.message);
+    }
+    return false;
+  }
+  auto ref = web_.find(kReference);
+  if (ref != web_.end()) {
+    bool bad = false;
+    for (const auto& issue : cat.compare(ref->second)) {
+      if (issue.what == "placeholders differ from the reference") {
+        bad = true;
+        if (errors) errors->push_back("`" + issue.key + "`: " + issue.what);
+      }
+    }
+    if (bad) return false;
+  }
+  return addWeb(cat);
+}
+
+void Translator::ensureWeb() {
+  if (webLoaded_) return;
+  webLoaded_ = true;  // set first: a source that asks again must not recurse
+  if (webShipped_) webShipped_(*this);
+  if (webUser_) webUser_(*this);
+}
+
+void Translator::releaseWeb() {
+  web_.clear();
+  webLoaded_ = false;
+}
+
+std::vector<std::string> Translator::webLanguages() const {
+  std::vector<std::string> out;
+  for (const auto& kv : web_) out.push_back(kv.first);
+  return out;
+}
+
+std::map<std::string, std::string> Translator::webTextsByPrefix(const std::string& code, const std::string& prefix) {
+  ensureWeb();
   std::map<std::string, std::string> out;
-  auto ref = languages_.find(kReference);
-  if (ref == languages_.end()) return out;
+  auto ref = web_.find(kReference);
+  if (ref == web_.end()) return out;
+  auto cur = web_.find(code);
+  if (cur == web_.end()) {
+    const size_t dash = code.find('-');
+    if (dash != std::string::npos) cur = web_.find(code.substr(0, dash));
+  }
   for (const auto& kv : ref->second.entries()) {
     if (kv.first.substr(0, prefix.size()) != prefix) continue;
-    // Find the entry in the requested language, falling back to English.
-    auto cur = languages_.find(code);
-    if (cur == languages_.end()) {
-      const size_t dash = code.find('-');
-      if (dash != std::string::npos) cur = languages_.find(code.substr(0, dash));
-    }
-    const Entry* e = nullptr;
-    if (cur != languages_.end()) e = cur->second.find(kv.first);
-    if (!e) e = &kv.second;  // fall back to reference
-    if (e && !e->forms.empty()) out[kv.first] = e->forms[0];
+    const Entry* e = cur != web_.end() ? cur->second.find(kv.first) : nullptr;
+    if (!e) e = &kv.second;  // fall back to the reference
+    if (!e->forms.empty()) out[kv.first] = e->forms[0];
   }
   return out;
 }

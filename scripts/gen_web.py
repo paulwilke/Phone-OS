@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates web/index.html from config/form_generated.json and lang/en.toml.
+"""Generates web/index.html from config/form_generated.json and lang/web/en.toml.
 
     scripts/gen_web.py           # regenerate web/index.html
     scripts/gen_web.py --check   # exit 1 if web/index.html is out of date
@@ -19,7 +19,7 @@ import tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# All catalog keys used by the web page (web.* from lang/en.toml).
+# All catalog keys used by the web page (web.* from lang/web/en.toml).
 # This list is the authoritative reference for check_i18n.py --usage.
 WEB_KEYS = [
     "web.title",
@@ -90,7 +90,7 @@ def load_schema():
 
 
 def load_en_toml():
-    path = os.path.join(ROOT, "lang", "en.toml")
+    path = os.path.join(ROOT, "lang", "web", "en.toml")
     with open(path, "rb") as f:
         data = tomllib.load(f)
     strings = data.get("strings", {})

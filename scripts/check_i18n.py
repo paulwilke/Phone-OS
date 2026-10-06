@@ -2,34 +2,42 @@
 """Checks the language catalogs in lang/ against the English reference. (allow-non-english: holds the GSM alphabet, which has umlauts.)
 
     scripts/check_i18n.py            # from the repository root
-    scripts/check_i18n.py --usage    # the keys of en.toml against the code that uses them
+    scripts/check_i18n.py --usage    # the keys of the English files against the code that uses them
 
-Two sets of catalogs: lang/<code>.toml are shipped to the device; tools/lang/<set>.<code>.toml hold
-words that only host tools show (the demo page) and never go to the device, so they do not weigh on
-its limit for a catalog (ConfigLoader::kMaxCatalogBytes). The host sets are checked like the others
-(same keys in every language, same placeholders, plural forms), except that their text goes to a
-browser and not to the device font; a key must be in one set only. The size of every shipped
-catalog is printed against the limit; lang/en.toml, the file a translator starts from, must fit.
+Two catalogs per language: lang/<code>.toml is what the device's own screens, notices, SMS bodies and
+system entries say; lang/web/<code>.toml is what the parents' page and the configuration form say
+(web.*, config.*). The device loads the first at start and the second only when the page needs it. A key
+lives in one of the two, never in both. Each set is checked on its own against its English file: the
+same keys in every language, the same {placeholders}, the plural forms. Words that only host tools show
+(the demo page) are a third kind, tools/lang/<set>.<code>.toml; they never go to the device, so they
+do not weigh on its limit for a catalog (ConfigLoader::kMaxCatalogBytes), and are checked like the
+others (their text goes to a browser and not to the device font). The size of every shipped file is
+printed against the limit, which applies to each file; lang/en.toml and lang/web/en.toml, the files a
+translator starts from, must fit.
 
-For every lang/*.toml:
+For every file of the two sets:
   * the [meta] header is complete and the plural rule is known;
   * every message has the number of plural forms the rule needs (or one form);
-  * the keys are exactly the keys of en.toml (nothing missing, no leftovers);
+  * the keys are exactly the keys of the English file of the set (nothing missing, no leftovers);
   * every message uses the same {placeholders} as the English one;
-  * only characters the display fonts can draw are used (assets/fonts/charset.txt);
-  * messages whose key starts with `sms.` use only the GSM 7-bit alphabet, so that an SMS stays
-    one part.
+  * (device set) only characters the display fonts can draw are used (assets/fonts/charset.txt); the web
+    set goes to a browser and has no such limit;
+  * (device set) messages whose key starts with `sms.` use only the GSM 7-bit alphabet, so that an SMS
+    stays one part.
 
 The runtime parser (src/i18n/Catalog.cpp) enforces the same format rules on catalogs
 users put on the SD card; this script adds the cross-language checks for the catalogs
 that ship with the firmware. Exits with 1 on any problem.
 
-`--usage` checks the other direction: every key of en.toml appears as a string literal in the
-code or in a test (a key nothing asks for is dead weight, or the screen that should use it
-has lost it), and every string literal that looks like a key of a catalog section ("status.gps")
-is a key of en.toml (a misspelled key shows the key itself on the child's screen). The code is
-src/, testing/ and test/; a key used only by a test is used, because the tests are where a
-screen's texts are laid out in every language before the screen exists.
+`--usage` checks the other direction: every key of the English files appears as a string literal in the
+code or in a test (a key nothing asks for is dead weight, or the screen that should use it has lost it),
+and every string literal that looks like a key of a catalog section ("status.gps") is a key of one of
+them (a misspelled key shows the key itself on the child's screen). Which code uses which set: the device
+code (src/ without src/web/) uses the device set; scripts/gen_web.py, config/schema.toml and the web
+service code (src/web/) use the web set. A key of the device set that only web code uses, and a key of the
+web set that only device code uses, is reported: it is in the wrong file. The code is src/, testing/ and
+test/; a key used only by a test is used, because the tests are where a screen's texts are laid out in
+every language before the screen exists.
 """
 import glob
 import os
@@ -50,6 +58,9 @@ GSM7 = set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&
            "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"
            "^{}\\[~]|€")
 PLACEHOLDER = re.compile(r"(?<!\{)\{([a-z0-9_-]+)\}(?!\})")
+
+DEVICE_DIR = os.path.join(ROOT, "lang")
+WEB_DIR = os.path.join(ROOT, "lang", "web")
 
 
 def flatten(table, prefix=""):
@@ -95,6 +106,19 @@ def host_sets():
     return sets
 
 
+def shipped(directory):
+    """{code: (path, meta, strings)} of the *.toml files of one directory (not of its sub-directories)."""
+    out = {}
+    for path in sorted(glob.glob(os.path.join(directory, "*.toml"))):
+        meta, strings = load(path)
+        out[os.path.basename(path)[:-5]] = (path, meta, strings)
+    return out
+
+
+def shown(path):
+    return os.path.relpath(path, ROOT)
+
+
 KEY_LITERAL = re.compile(r'"([a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)"')
 # scripts/ is also searched so that gen_web.py's WEB_KEYS list covers the web.* catalog keys.
 CODE_DIRS = ("src", "testing", "test", "scripts", "sim")
@@ -127,25 +151,42 @@ def _schema_catalog_keys():
     return keys
 
 
-def runs_on_device(rel):
-    """Does the file belong to what the device is, or tests what it shows? The firmware (src/), the
-    tests and the test helpers (the texts of a screen are laid out there before the screen exists),
-    the schema, and the generator of the web page the device serves. Everything else (the simulator,
-    the demo generator, other scripts) is host code, which the device does not need words for."""
-    return rel.split(os.sep)[0] in ("src", "testing", "test", "config") or rel == os.path.join("scripts", "gen_web.py")
+def kind_of(rel):
+    """Who is the file, for the question which set a key belongs to?
+      web    - the parents' page: the web service (src/web/), its generator, the schema of the form;
+      device - the firmware (src/, the rest of it);
+      test   - the tests and the test helpers (the texts of a screen are laid out there before the screen
+               exists): they count as a user of either set;
+      host   - everything else (the simulator, the demo generator, other scripts), which the device does
+               not need words for."""
+    top = rel.split(os.sep)
+    if rel == os.path.join("scripts", "gen_web.py") or rel == os.path.join("config", "schema.toml") or rel.startswith(os.path.join("src", "web") + os.sep):
+        return "web"
+    if top[0] == "src":
+        return "device"
+    if top[0] in ("testing", "test"):
+        return "test"
+    return "host"
+
+
 # A file name is no catalog key, even when its first part is also the name of a section ("settings.toml").
 FILE_SUFFIXES = (".toml", ".txt", ".json", ".csv")
 
 
 def usage():
     """Compares the keys of the catalogs with the key-like string literals of the code."""
-    _, ref = load(os.path.join(ROOT, "lang", "en.toml"))
+    device = shipped(DEVICE_DIR).get("en")
+    web = shipped(WEB_DIR).get("en")
+    if not device or not web:
+        print("lang/en.toml or lang/web/en.toml is missing")
+        return 1
+    ref, web_ref = device[2], web[2]
     host = {}
     for name, langs in host_sets().items():
         if "en" in langs:
             host.update({key: name for key in langs["en"][2]})
-    sections = {key.split(".")[0] for key in ref} | {key.split(".")[0] for key in host}
-    literals = {}  # literal -> [(file:line, on the device?)]
+    sections = {key.split(".")[0] for key in ref} | {key.split(".")[0] for key in web_ref} | {key.split(".")[0] for key in host}
+    literals = {}  # literal -> [(file:line, kind)]
     GENERATED_MARKER = "Generated by scripts/gen_config.py"
     for top in CODE_DIRS:
         for folder, _, names in os.walk(os.path.join(ROOT, top)):
@@ -169,23 +210,35 @@ def usage():
                     for literal in KEY_LITERAL.findall(line):
                         if literal.endswith(FILE_SUFFIXES):
                             continue
-                        literals.setdefault(literal, []).append((f"{rel_path}:{number}", runs_on_device(rel_path)))
+                        literals.setdefault(literal, []).append((f"{rel_path}:{number}", kind_of(rel_path)))
     # config/schema.toml is a user of its label/help catalog keys
     for k, src in _schema_catalog_keys().items():
-        literals.setdefault(k, []).append((src, True))
+        literals.setdefault(k, []).append((src, "web"))
     problems = []
-    for key in sorted(ref):
+
+    def judge(key, set_name, own, other, other_name):
+        """`own` is the kind that belongs to the set, `other` the kind that does not."""
         users = literals.get(key, [])
+        kinds = {kind for _, kind in users}
         if not users:
-            problems.append(f"`{key}` is in en.toml but no code or test mentions it")
-        elif not any(on_device for _, on_device in users):
-            problems.append(f"`{key}` is shipped to the device in lang/ but only host code uses it ({users[0][0]}): "
-                            f"move it to tools/lang/")
+            problems.append(f"`{key}` is in the {set_name} set but no code or test mentions it")
+        elif own not in kinds and "test" not in kinds:
+            where = next(place for place, kind in users if kind == other) if other in kinds else users[0][0]
+            if other in kinds:
+                problems.append(f"`{key}` is in the {set_name} set ({'lang/web/' if set_name == 'web' else 'lang/'}) but only {other} code uses it ({where}): "
+                                f"move it to the {other_name} set")
+            else:
+                problems.append(f"`{key}` is shipped in the {set_name} set but only host code uses it ({where}): move it to tools/lang/")
+
+    for key in sorted(ref):
+        judge(key, "device", "device", "web", "web")
+    for key in sorted(web_ref):
+        judge(key, "web", "web", "device", "device")
     for key, name in sorted(host.items()):
         if key not in literals:
             problems.append(f"`{key}` is in the host set `{name}` (tools/lang/) but no code or test mentions it")
-    known = set(ref) | set(host)
-    problems += [f"{users[0][0]}: \"{literal}\" looks like a catalog key but is not in en.toml or a host set (tools/lang/)"
+    known = set(ref) | set(web_ref) | set(host)
+    problems += [f"{users[0][0]}: \"{literal}\" looks like a catalog key but is not in a catalog (lang/, lang/web/) or a host set (tools/lang/)"
                  for literal, users in sorted(literals.items())
                  if literal.split(".")[0] in sections and literal not in known]
     for p in problems:
@@ -193,54 +246,48 @@ def usage():
     if problems:
         print(f"\n{len(problems)} problems with the use of the keys.")
         return 1
-    print(f"check_i18n --usage: {len(ref)} keys of the device and {len(host)} of the host sets, all used, no unknown keys in the code")
+    print(f"check_i18n --usage: {len(ref)} keys of the device set, {len(web_ref)} of the web set and {len(host)} of the host sets, "
+          f"all used by the code that belongs to their set, no unknown keys in the code")
     return 0
 
 
-def main():
-    if "--usage" in sys.argv[1:]:
-        return usage()
-    problems = []
-    files = sorted(glob.glob(os.path.join(ROOT, "lang", "*.toml")))
-    if not files:
-        print("no catalogs in lang/")
-        return 1
-    ref_path = os.path.join(ROOT, "lang", "en.toml")
-    ref_meta, ref = load(ref_path)
-
-    loaded = {}  # name → strings (for the schema-key check at the end)
-    for path in files:
-        name = os.path.basename(path)
-        meta, strings = load(path)
-        loaded[name] = strings
+def check_set(label, langs, ref_code, problems, device):
+    """One set of catalogs (a dict code -> (path, meta, strings)) against its English file."""
+    if ref_code not in langs:
+        problems.append(f"{label}/{ref_code}.toml is missing: English is the reference of the set")
+        return
+    ref = langs[ref_code][2]
+    for code, (path, meta, strings) in sorted(langs.items()):
+        name = f"{label}/{code}.toml"
         for field in ("code", "name", "native", "plural"):
             if not meta.get(field):
                 problems.append(f"{name}: [meta] lacks `{field}`")
         if meta.get("plural") not in PLURAL_FORMS:
             problems.append(f"{name}: unknown plural rule {meta.get('plural')!r}")
             continue
-        if meta.get("code") != name[:-5]:
+        if meta.get("code") != code:
             problems.append(f"{name}: code {meta.get('code')!r} does not match the file name")
         want = PLURAL_FORMS[meta["plural"]]
         for key, value in strings.items():
             f = forms(value)
             if len(f) not in (1, want):
                 problems.append(f"{name}: `{key}` has {len(f)} forms, the rule needs {want}")
+            if not device:
+                continue
             for form in f:
                 if key.startswith("sms."):
                     outside = sorted({c for c in PLACEHOLDER.sub("", form) if c not in GSM7})
                     if outside:
                         problems.append(f"{name}: `{key}` is sent by SMS but uses characters outside the GSM alphabet: {''.join(outside)}")
-                if not key.startswith("web."):  # web.* strings go to the browser, not the device font
-                    bad = charset.allowed_text(form, CODEPOINTS)
-                    if bad:
-                        problems.append(f"{name}: `{key}` uses characters outside assets/fonts/charset.txt: {''.join(bad)}")
-        if name == "en.toml":
+                bad = charset.allowed_text(form, CODEPOINTS)
+                if bad:
+                    problems.append(f"{name}: `{key}` uses characters outside assets/fonts/charset.txt: {''.join(bad)}")
+        if code == ref_code:
             continue
         for key in sorted(set(ref) - set(strings)):
             problems.append(f"{name}: missing `{key}`")
         for key in sorted(set(strings) - set(ref)):
-            problems.append(f"{name}: `{key}` is not in en.toml (renamed or removed?)")
+            problems.append(f"{name}: `{key}` is not in {ref_code}.toml of the set (renamed or removed?)")
         for key in sorted(set(ref) & set(strings)):
             want_ph = {p for form in forms(ref[key]) for p in PLACEHOLDER.findall(form)}
             for form in forms(strings[key]):
@@ -248,27 +295,56 @@ def main():
                     problems.append(f"{name}: `{key}` has different {{placeholders}} than English")
                     break
 
-    # What a translator copies must fit what the device reads: lang/en.toml is the file to start from.
+
+def main():
+    if "--usage" in sys.argv[1:]:
+        return usage()
+    problems = []
+    device = shipped(DEVICE_DIR)
+    web = shipped(WEB_DIR)
+    if not device:
+        print("no catalogs in lang/")
+        return 1
+    if not web:
+        print("no catalogs in lang/web/")
+        return 1
+
+    check_set("lang", device, "en", problems, True)
+    check_set("lang/web", web, "en", problems, False)
+    # Both sets name the same languages: a language with a device catalog and no web catalog would show
+    # the page in English, which is what the device does for a language it lacks, but not what ships.
+    for code in sorted(set(device) - set(web)):
+        problems.append(f"lang/web/{code}.toml is missing: the device has lang/{code}.toml")
+    for code in sorted(set(web) - set(device)):
+        problems.append(f"lang/{code}.toml is missing: the page has lang/web/{code}.toml")
+
+    device_ref = device.get("en", (None, None, {}))[2]
+    web_ref = web.get("en", (None, None, {}))[2]
+    for key in sorted(set(device_ref) & set(web_ref)):
+        problems.append(f"`{key}` is in lang/en.toml and in lang/web/en.toml: a key is in one of the two sets only")
+
+    # What a translator copies must fit what the device reads: the English files are the ones to start from.
     limit = catalog_limit()
     sizes = []
     if limit is None:
         problems.append("cannot find kMaxCatalogBytes in src/config/ConfigLoader.h")
     else:
-        for path in files:
-            name, size = os.path.basename(path), os.path.getsize(path)
-            sizes.append(f"{name} {size}" + (f" (over by {size - limit})" if size > limit else ""))
-            if size > limit and name == "en.toml":
-                problems.append(f"en.toml is {size} bytes, over the {limit} that a catalog on the card may have: "
-                                f"it is the file a translator starts from")
+        for langs, prefix in ((device, "lang/"), (web, "lang/web/")):
+            for code, (path, _, _) in sorted(langs.items()):
+                size = os.path.getsize(path)
+                sizes.append(f"{prefix}{code}.toml {size}" + (f" (over by {size - limit})" if size > limit else ""))
+                if size > limit and code == "en":
+                    problems.append(f"{prefix}en.toml is {size} bytes, over the {limit} that a catalog on the card may have: "
+                                    f"it is the file a translator starts from")
 
-    # Host-only sets: the same rules, without the device's font, and no key in both places.
+    # Host-only sets: the same rules, without the device's font, and no key in the shipped ones.
     for set_name, langs in sorted(host_sets().items()):
         label = f"tools/lang/{set_name}"
         if "en" not in langs:
             problems.append(f"{label}.en.toml is missing: English is the reference of the set")
             continue
-        _, set_ref = langs["en"][1], langs["en"][2]
-        for code in sorted({os.path.basename(p)[:-5] for p in files} - set(langs)):
+        set_ref = langs["en"][2]
+        for code in sorted(set(device) - set(langs)):
             problems.append(f"{label}.{code}.toml is missing")
         for code, (path, meta, strings) in sorted(langs.items()):
             name = f"{label}.{code}.toml"
@@ -278,11 +354,11 @@ def main():
             if meta.get("plural") not in PLURAL_FORMS:
                 problems.append(f"{name}: unknown plural rule {meta.get('plural')!r}")
                 continue
-            if meta.get("code") != code or not os.path.exists(os.path.join(ROOT, "lang", code + ".toml")):
+            if meta.get("code") != code or code not in device:
                 problems.append(f"{name}: code {meta.get('code')!r} is not the language of a catalog in lang/")
             for key, value in strings.items():
-                if key in ref:
-                    problems.append(f"{name}: `{key}` is in lang/en.toml too: a key is in one place only")
+                if key in device_ref or key in web_ref:
+                    problems.append(f"{name}: `{key}` is in a shipped catalog too: a key is in one place only")
                 if len(forms(value)) not in (1, PLURAL_FORMS[meta["plural"]]):
                     problems.append(f"{name}: `{key}` has {len(forms(value))} forms, the rule needs {PLURAL_FORMS[meta['plural']]}")
             if code == "en":
@@ -298,19 +374,18 @@ def main():
                         problems.append(f"{name}: `{key}` has different {{placeholders}} than English")
                         break
 
-    # Every catalog key named in config/schema.toml must exist in every catalog.
-    schema_keys = _schema_catalog_keys()
-    for key in sorted(schema_keys):
-        for name, strings in loaded.items():
+    # Every catalog key named in config/schema.toml is a word of the form: it must exist in every web catalog.
+    for key in sorted(_schema_catalog_keys()):
+        for code, (_, _, strings) in sorted(web.items()):
             if key not in strings:
-                problems.append(f"{name}: `{key}` is named in config/schema.toml but missing")
+                problems.append(f"lang/web/{code}.toml: `{key}` is named in config/schema.toml but missing")
 
     for p in problems:
         print(p)
     if problems:
         print(f"\n{len(problems)} problems in the catalogs.")
         return 1
-    print(f"check_i18n: {len(files)} catalogs, {len(ref)} messages, no problems")
+    print(f"check_i18n: {len(device)} device and {len(web)} web catalogs, {len(device_ref)} + {len(web_ref)} messages, no problems")
     if sizes:
         print(f"sizes against the {limit} bytes a catalog on the card may have: " + ", ".join(sizes))
     return 0

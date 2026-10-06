@@ -658,18 +658,19 @@ void WebApi::languages(http::Response& res) {
 void WebApi::langCatalog(const char* code, http::Response& res) {
   if (*code == '\0') return jsonError(res, 400, "Language code missing");
 
-  const auto langs = translator_.languages();
+  // The page can be had in every language the device has, and in one only the page has (a user
+  // catalog for the page alone); a language without a web catalog is English on the page.
+  translator_.ensureWeb();
   bool found = false;
-  for (const auto& lang : langs) {
-    if (lang.code == code) { found = true; break; }
-  }
+  for (const auto& lang : translator_.languages()) found = found || lang.code == code;
+  for (const auto& web : translator_.webLanguages()) found = found || web == code;
   if (!found) return jsonError(res, 404, "Language not found");
 
   // Emit web.* keys (prefix stripped) and config.*.label keys (full name).
   // The browser uses web.* keys for UI chrome and config.*.label for form fields.
   const std::string codeStr(code);
-  const auto webKeys    = translator_.textsByPrefix(codeStr, "web.");
-  const auto cfgKeys    = translator_.textsByPrefix(codeStr, "config.");
+  const auto webKeys    = translator_.webTextsByPrefix(codeStr, "web.");
+  const auto cfgKeys    = translator_.webTextsByPrefix(codeStr, "config.");
 
   size_t n = 0;
   auto puts = [&](const char* s) { while (*s && n + 1 < sizeof(resp_)) resp_[n++] = *s++; };
