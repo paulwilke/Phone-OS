@@ -15,6 +15,12 @@
 // so a scenario costs no real time; the real-time loop of main.cpp calls advance() with the time that
 // has passed times the lapse factor.
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <chrono>
+#include <thread>
+#include <config/ConfigLoader.h>
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
@@ -25,6 +31,7 @@
 #include <iomanip>
 #include <map>
 #include <set>
+#include <poll.h>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -91,6 +98,20 @@ inline std::string rest(const std::string& line, size_t skip) {
   }
   at = line.find_first_not_of(" \t", at);
   return at == std::string::npos ? "" : line.substr(at);
+}
+
+inline std::string base64(const std::string& in) {
+  static const char* t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::string out;
+  for (size_t i = 0; i < in.size(); i += 3) {
+    const uint32_t n = (static_cast<uint8_t>(in[i]) << 16) | (i + 1 < in.size() ? static_cast<uint8_t>(in[i + 1]) << 8 : 0) |
+                       (i + 2 < in.size() ? static_cast<uint8_t>(in[i + 2]) : 0);
+    out += t[(n >> 18) & 63];
+    out += t[(n >> 12) & 63];
+    out += i + 1 < in.size() ? t[(n >> 6) & 63] : '=';
+    out += i + 2 < in.size() ? t[n & 63] : '=';
+  }
+  return out;
 }
 
 inline bool number(const std::string& text, double& out) {
@@ -231,6 +252,11 @@ private:
   // Runs a line with its output kept apart (see `fails`); true when it worked.
   bool executeQuietly(const std::string& line, std::ostream& into);
   bool screenSays(const std::string& words);
+  // One request to the parents' page through the real socket, as a browser would send it; the
+  // simulated time runs on, a few milliseconds at a time, until the answer is there. `password` null:
+  // no Authorization header.
+  void webRequest(const std::string& method, const std::string& path, const std::string& body, const std::string* password);
+  bool webCommand(const std::vector<std::string>& w, const std::string& line);
   bool see(const std::vector<std::string>& w, bool expected);
   bool check(const std::vector<std::string>& w, const std::string& line);
   void setSignal(int bars) {
@@ -253,6 +279,8 @@ private:
   int scriptDepth_ = 0;
   std::string webError_;
   std::string shotDir_;
+  int webStatus_ = 0;  // of the last `web` request: 0 when nothing answered
+  std::string webBody_;
   uint16_t webShown_ = 0;
 };
 
@@ -528,12 +556,14 @@ inline void Simulator::printHelp() {
           "    shotdir <dir> | shot <name>  pictures into a directory: <dir>/<name>.png\n"
           "    ascii [file]                 the panel as # and . (or into a file)\n"
           "    golden <name>                compare the panel with " << options_.goldenDir << "/<name>.txt (UPDATE_GOLDEN=1 writes it)\n"
+          "    web [as <password>|anonymous] get|post|put|delete <path> [body]   a request to the parents' page\n"
           "  Asserting (a failed one is an error, so a script fails)\n"
           "    see <catalog key> [name=value...]   (a value may have spaces) the screen says that text, in the language of the moment\n"
           "    see-not <catalog key> [name=value...]\n"
           "    say <text> | say-not <text>         the screen says this literal text (a name, an operator)\n"
           "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular, savemode,\n"
-          "                                 battery, sms-sent, last-sms-to, last-sms-has, language, boots, log-has,\n"
+          "                                 battery, sms-sent, last-sms-to, last-sms-has, language, boots, log-has, wifi,\n"
+          "                                 wifi-seconds-left, web-status, web-has,\n"
           "                                 haptic-click|ring|message|sent|failed (how often played)\n"
           "    fails <command>              the command is refused (an error is what the scenario expects)\n"
           "  Control\n"
@@ -680,12 +710,12 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     return true;
   }
   if (name == "wifi") {
-    // What the Wi-Fi page and the parents' tools do: the web service switches Wi-Fi, and the page
-    // is reachable while it is on.
-    const uint32_t now = nowMs() / 1000;
-    if (need(2) && w[1] == "ap") r.runtime->web().setWifiMode(WifiMode::AccessPoint, now);
-    else if (need(2) && w[1] == "station") r.runtime->web().setWifiMode(WifiMode::Station, now);
-    else if (need(2) && w[1] == "off") r.runtime->web().setWifiMode(WifiMode::Off, now);
+    // What the device's Wi-Fi page does: the core's one Wi-Fi controller is switched, with the rules in
+    // front of it (save mode, battery), and the parents' page is reachable while it is on.
+    AppCore& core = r.runtime->core();
+    if (need(2) && w[1] == "ap") core.setWifiMode(WifiMode::AccessPoint);
+    else if (need(2) && w[1] == "station") core.setWifiMode(WifiMode::Station);
+    else if (need(2) && w[1] == "off") core.setWifiMode(WifiMode::Off);
     else if (need(2) && w[1] == "connected") r.wifi.finishConnecting(true);
     else if (need(2) && w[1] == "failed") r.wifi.finishConnecting(false);
     else return fail("wifi: ap, station, off, connected or failed");
@@ -780,6 +810,8 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
   }
   if (name == "probe") { r.runtime->core().probeCellular(); settle(); return true; }
 
+  if (name == "web") return webCommand(w, line);
+
   // Asserting.
   if (name == "see" || name == "see-not") return see(w, name == "see");
   if (name == "say" || name == "say-not") {
@@ -856,6 +888,83 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     return result.ok;
   }
   return fail("no command " + name);
+}
+
+// ---- the parents' page ----------------------------------------------------------------------------------------------
+
+inline void Simulator::webRequest(const std::string& method, const std::string& path, const std::string& body,
+                                  const std::string* password) {
+  webStatus_ = 0;
+  webBody_.clear();
+  const uint16_t port = webPort();
+  if (port == 0) return;  // Wi-Fi is off: nobody is listening
+  const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+  sockaddr_in address{};
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  address.sin_port = htons(port);
+  if (fd < 0 || ::connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+    if (fd >= 0) ::close(fd);
+    return;
+  }
+  std::string request = method + " " + path + " HTTP/1.1\r\nHost: 127.0.0.1\r\n";
+  if (password) request += "Authorization: Basic " + detail::base64("parent:" + *password) + "\r\n";
+  if (method != "GET") request += "X-Phoneplus: 1\r\n";
+  request += "Content-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+  ::send(fd, request.data(), request.size(), 0);
+  // The server answers when the simulator runs: a few milliseconds of its time at a time.
+  std::string raw;
+  char buffer[4096];
+  for (int round = 0; round < 600; ++round) {
+    advance(20);
+    pollfd p{fd, POLLIN, 0};
+    bool closed = false;
+    while (::poll(&p, 1, 0) > 0) {
+      const ssize_t n = ::recv(fd, buffer, sizeof(buffer), 0);
+      if (n <= 0) {
+        closed = true;
+        break;
+      }
+      raw.append(buffer, static_cast<size_t>(n));
+    }
+    if (closed) break;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  ::close(fd);
+  const size_t split = raw.find("\r\n\r\n");
+  if (split == std::string::npos) return;
+  webStatus_ = std::atoi(raw.c_str() + raw.find(' ') + 1);
+  webBody_ = raw.substr(split + 4);
+}
+
+inline bool Simulator::webCommand(const std::vector<std::string>& w, const std::string& line) {
+  size_t at = 1;
+  std::string password;
+  bool useAuth = true;
+  if (w.size() > 3 && w[1] == "anonymous") {
+    useAuth = false;
+    at = 2;
+  } else if (w.size() > 4 && w[1] == "as") {
+    password = w[2];
+    at = 3;
+  } else {
+    // The parents' password of the card, as the page's visitor would type it.
+    config::ConfigLoader::Result loaded = config::ConfigLoader(card_).load();
+    password = loaded.webPassword;
+  }
+  if (w.size() < at + 2) {
+    out_ << "error: web needs a method and a path (try help)\n";
+    return false;
+  }
+  std::string method = w[at];
+  for (char& c : method) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+  if (method != "GET" && method != "POST" && method != "PUT" && method != "DELETE") {
+    out_ << "error: web: get, post, put or delete\n";
+    return false;
+  }
+  webRequest(method, w[at + 1], detail::rest(line, at + 2), useAuth ? &password : nullptr);
+  out_ << "web: " << (webStatus_ ? std::to_string(webStatus_) : std::string("no answer")) << " " << method << " " << w[at + 1] << "\n";
+  return true;
 }
 
 // ---- asserting -------------------------------------------------------------------------------------------------
@@ -996,6 +1105,25 @@ inline bool Simulator::check(const std::vector<std::string>& w, const std::strin
     size_t n = 0;
     for (HapticPattern played : rig_->haptic.played()) n += static_cast<size_t>(played) == index;
     actual = std::to_string(n);
+  } else if (what == "wifi") {
+    // The state the device's own screens read: the one Wi-Fi controller's phase.
+    switch (s.wifiPhase) {
+      case WifiPhase::Connecting: actual = "connecting"; break;
+      case WifiPhase::Connected: actual = "station"; break;
+      case WifiPhase::AccessPoint: actual = "access-point"; break;
+      case WifiPhase::Failed: actual = "failed"; break;
+      default: actual = "off"; break;
+    }
+  } else if (what == "wifi-seconds-left") {
+    const WifiController* wifi = rig_->runtime->core().wifi();
+    actual = std::to_string(wifi ? wifi->secondsLeft(nowMs() / 1000) : 0);
+  } else if (what == "web-status") {
+    actual = std::to_string(webStatus_);
+  } else if (what == "web-has") {
+    const bool has = webBody_.find(value) != std::string::npos;
+    if (!has) out_ << "error: the last answer of the page is " << (webBody_.size() > 200 ? webBody_.substr(0, 200) + "..." : webBody_)
+                   << ", not one with \"" << value << "\"\n";
+    return has;
   } else if (what == "log-has") {
     for (const std::string& entry : rig_->log.lines())
       if (entry.find(value) != std::string::npos) return true;

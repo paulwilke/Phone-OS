@@ -13,7 +13,7 @@ In this order, in the constructor:
 1. the user's catalogs from `/lang/` are added to the translator (`ConfigLoader::loadUserCatalogs`), so a language the card brings can be the one the configuration asks for;
 2. `/config/` is read into the `Profile` (`ConfigLoader::load`);
 3. the languages are checked (`ConfigLoader::checkLanguages`). The interface language is selected when a catalog has it; otherwise the translator stays on English and there is a `BadCatalogCode` diagnostic;
-4. the core is built from the profile, told the firmware version, the radio and Wi-Fi, and started (`AppCore::start`); the web service reads its Wi-Fi settings;
+4. the core is built from the profile, told the firmware version, the radio and Wi-Fi, and started (`AppCore::start`); the core's Wi-Fi controller is the only one, and the web service follows it ([wifi-controller.md](wifi-controller.md));
 5. every diagnostic is written to the event log as one English line, `config: <name> <arguments>`, and kept for `diagnostics()`;
 6. the screens are registered, the stack is given the lock screen, the auto-lock time, the three keys under the screen, and begins on the home screen.
 

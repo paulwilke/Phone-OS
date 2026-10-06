@@ -14,7 +14,10 @@
 //   5. Config files are validated before writing; a file the device would reject
 //      is never stored. secrets.toml is validated more strictly (any unknown key
 //      is an error — a typo in "sim_pin" means the PIN silently does nothing).
-//   6. Every change is logged (path and size only, never content). Deleting a
+//   6. Every authenticated request restarts the idle time of Wi-Fi, so a parent who is still editing
+//      is never cut off; a request without the right password, from a locked-out client, or for the
+//      login page does not, or anybody could keep Wi-Fi on. POST /api/wifi-extend does it on purpose.
+//   7. Every change is logged (path and size only, never content). Deleting a
 //      log is allowed but never silent: the deletion itself is logged first.
 //      secrets.toml cannot be deleted through the web.
 
@@ -27,7 +30,6 @@
 #include "RequestHandler.h"
 #include "WebAssets.h"
 
-class WifiController;
 
 class WebApi : public web::RequestHandler {
 public:
@@ -42,7 +44,7 @@ public:
   static constexpr size_t kResponseMax = 12288;
 
   WebApi(ConfigStore& store, WebAssets& assets, WebHost& host, AppCore& app,
-         WifiController& wifi, i18n::Translator& translator);
+         i18n::Translator& translator);
 
   // web::RequestHandler
   void handle(const http::Request& req, http::Response& res, uint32_t nowSeconds) override;
@@ -82,7 +84,6 @@ private:
   WebAssets& assets_;
   WebHost& host_;
   AppCore& app_;
-  WifiController& wifi_;
   i18n::Translator& translator_;
 
   uint32_t failures_ = 0;

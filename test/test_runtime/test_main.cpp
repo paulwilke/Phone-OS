@@ -355,9 +355,7 @@ void test_the_web_service_is_the_real_one_and_answers_through_the_tcp_fake() {
   World w;
   FrameBuffer fb;
   w.boot(fb);
-  w.runtime->core().setWifiMode(WifiMode::Station);
-  w.run(1);
-  TEST_ASSERT_TRUE(w.runtime->web().wifi().request(WifiMode::AccessPoint, w.ms / 1000));
+  TEST_ASSERT_TRUE(w.runtime->core().setWifiMode(WifiMode::AccessPoint));   // from the device, as its Wi-Fi page does
   w.run(2);
   TEST_ASSERT_TRUE(w.tcp.listening());
   FakeTcpConnection* client = w.tcp.connect();
@@ -365,6 +363,63 @@ void test_the_web_service_is_the_real_one_and_answers_through_the_tcp_fake() {
   client->fromPeer("GET / HTTP/1.1\r\nHost: x\r\n\r\n");
   w.run(2);
   TEST_ASSERT_TRUE(client->sentToPeer().find("test page") != std::string::npos);
+}
+
+// One request to the page through the fake socket; true when the page answered.
+static std::string ask(World& w, const std::string& request) {
+  FakeTcpConnection* client = w.tcp.connect();
+  TEST_ASSERT_NOT_NULL(client);
+  client->fromPeer(request);
+  w.run(3);
+  return client->sentToPeer();
+}
+static const char* kAuthorized = "GET /api/state HTTP/1.1\r\nHost: x\r\nAuthorization: Basic cGFyZW50OnRlc3QtcGFzc3dvcmQtMQ==\r\n\r\n";
+
+void test_the_server_runs_exactly_while_the_one_controller_says_wifi_is_up() {
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(2);
+  TEST_ASSERT_FALSE(w.tcp.listening());
+  TEST_ASSERT_TRUE(w.runtime->core().setWifiMode(WifiMode::AccessPoint));     // from the device
+  w.run(2);
+  TEST_ASSERT_TRUE(w.tcp.listening());
+  TEST_ASSERT_TRUE(w.runtime->core().state().wifiPhase == WifiPhase::AccessPoint);
+  w.runtime->core().setWifiMode(WifiMode::Off);                               // from the device
+  w.run(2);
+  TEST_ASSERT_FALSE(w.tcp.listening());
+  TEST_ASSERT_TRUE(w.runtime->core().state().wifiPhase == WifiPhase::Off);
+}
+
+void test_silence_switches_wifi_and_the_page_off_after_the_idle_time() {
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.runtime->core().setWifiMode(WifiMode::AccessPoint);
+  w.run(599);
+  TEST_ASSERT_TRUE(w.tcp.listening());
+  w.run(3);
+  TEST_ASSERT_FALSE(w.tcp.listening());
+  TEST_ASSERT_TRUE(w.runtime->core().state().wifiPhase == WifiPhase::Off);
+  TEST_ASSERT_TRUE(w.runtime->core().state().wifiReason == WifiReason::SwitchedOffByItself);
+}
+
+void test_a_parent_who_keeps_using_the_page_is_never_cut_off_and_a_stranger_cannot_keep_it_on() {
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.runtime->core().setWifiMode(WifiMode::AccessPoint);
+  for (int i = 0; i < 5; ++i) {                                               // 5 x 8 minutes: far past the idle time
+    w.run(480);
+    TEST_ASSERT_TRUE(ask(w, kAuthorized).find("200 OK") != std::string::npos);
+  }
+  TEST_ASSERT_TRUE(w.runtime->core().state().wifiPhase == WifiPhase::AccessPoint);
+  for (int i = 0; i < 6; ++i) {                                               // a stranger every 2 minutes: no password
+    w.run(120);
+    if (!w.tcp.listening()) break;
+    ask(w, "GET /api/state HTTP/1.1\r\nHost: x\r\n\r\n");
+  }
+  TEST_ASSERT_TRUE(w.runtime->core().state().wifiPhase == WifiPhase::Off);    // ten minutes after the parent's last request
 }
 
 void test_a_restart_asked_by_the_web_interface_reaches_the_host() {
@@ -397,6 +452,9 @@ int main() {
   RUN_TEST(test_the_shipped_languages_draw_the_home_screen_without_cut_off);
   RUN_TEST(test_the_three_languages_draw_three_different_pictures);
   RUN_TEST(test_the_web_service_is_the_real_one_and_answers_through_the_tcp_fake);
+  RUN_TEST(test_the_server_runs_exactly_while_the_one_controller_says_wifi_is_up);
+  RUN_TEST(test_silence_switches_wifi_and_the_page_off_after_the_idle_time);
+  RUN_TEST(test_a_parent_who_keeps_using_the_page_is_never_cut_off_and_a_stranger_cannot_keep_it_on);
   RUN_TEST(test_a_restart_asked_by_the_web_interface_reaches_the_host);
   return UNITY_END();
 }

@@ -44,7 +44,8 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 | GET | `/api/backup` | All config files as a JSON bundle |
 | PUT | `/api/restore` | Restore a backup bundle |
 | PUT | `/api/restart` | Ask the device to restart |
-| PUT | `/api/wifi-off` | Ask Wi-Fi to switch off |
+| PUT, POST | `/api/wifi-off` | Ask Wi-Fi to switch off (done after the answer has gone out) |
+| PUT, POST | `/api/wifi-extend` | Keep Wi-Fi on: restarts the idle time on purpose; answers with `seconds_left`; logged like every change |
 | GET | `/api/languages` | Installed language catalog list |
 | GET | `/api/lang/<code>` | `web.*` and `config.*` translation keys for the page |
 
@@ -78,4 +79,6 @@ Form fields come from the embedded `FORM_SCHEMA` (a copy of `form_generated.json
 
 ## Service
 
-`src/web/WebService.{h,cpp}` owns a `WifiController`, starts and stops the HTTP server together with the Wi-Fi phase, and wires the API to the rest of the application. `handleRaw()` lets a USB bridge inject a raw HTTP request and get a raw response back — the same code path as the network, for testing without Wi-Fi.
+`src/web/WebService.{h,cpp}` has no Wi-Fi controller of its own: it uses the application core's, the only one ([wifi-controller.md](wifi-controller.md)). It starts the HTTP server when that controller says Wi-Fi is up and stops it when it goes off, whoever switched it off, and wires the API to the rest of the application.
+
+**Idle time.** Wi-Fi switches itself off after `auto_off_minutes` (default 10) without use. **Every authenticated request restarts that time**, so a parent who is still editing is never cut off; the status tab has a button "Keep Wi-Fi on" and shows how many minutes are left. A request that is not the parent's — no password, a wrong one, a client that is locked out, the login page — does not restart it. The tests pin each of these (`test/test_web_api`, `test/test_runtime`) and the scenario `sim/scripts/wifi-admin-page.txt` runs them through the simulator. `handleRaw()` lets a USB bridge inject a raw HTTP request and get a raw response back — the same code path as the network, for testing without Wi-Fi.

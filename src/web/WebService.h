@@ -1,44 +1,32 @@
 #pragma once
 
-// Wi-Fi and the web server as one unit. The server runs only while Wi-Fi is
-// up — it starts when a connection or access point is established and stops
-// when Wi-Fi goes off. Both start only on request from the device screen and
-// switch themselves off after an idle period.
+// The web server of the parents' page, tied to the device's Wi-Fi. There is **one Wi-Fi controller**,
+// the application core's: the device's own screens switch it, this service tells it about every
+// authenticated request (so the idle time restarts, see WebApi.h), and the server runs exactly while
+// that controller says Wi-Fi is up — it starts when a connection or the access point is established
+// and stops when Wi-Fi goes off, whoever switched it off or whatever the reason (the idle time, the
+// "switch off" button, a lost access point).
 //
-// Wiring in main.cpp / sim/main.cpp: one Wifi, one TcpServer, one ConfigStore
-// and one WebAssets implementation; AppCore and Translator are shared:
+// Wiring in main.cpp / sim/main.cpp: one TcpServer, one ConfigStore and one WebAssets
+// implementation; AppCore and Translator are shared, and the core has its Wi-Fi set (setWifi):
 //
-//   WebService web(wifi, tcp, store, assets, app, translator, random);
-//   web.begin();
+//   WebService web(tcp, store, assets, app, translator);
 //   // in the main loop:
 //   web.poll(clock.uptimeSeconds());
-
 #include <cstddef>
 #include <cstdint>
-
 #include "../app/AppCore.h"
-#include "../app/WifiController.h"
 #include "../hal/ConfigStore.h"
 #include "../hal/TcpServer.h"
-#include "../hal/Wifi.h"
 #include "../i18n/Translator.h"
 #include "WebApi.h"
 #include "WebAssets.h"
-#include "WebControl.h"
 #include "WebServer.h"
-
-class WebService : public WebControl, public WebHost {
+class WebService : public WebHost {
 public:
-  WebService(Wifi& wifi, TcpServer& tcp, ConfigStore& store, WebAssets& assets,
-             AppCore& app, i18n::Translator& translator, WifiController::Random random);
+  WebService(TcpServer& tcp, ConfigStore& store, WebAssets& assets, AppCore& app, i18n::Translator& translator);
 
-  // Reads the Wi-Fi settings from the config store and configures the controller.
-  void begin();
   void poll(uint32_t nowSeconds);
-
-  // WebControl
-  bool setWifiMode(WifiMode mode, uint32_t nowSeconds) override;
-  WifiStatus wifiStatus(uint32_t nowSeconds) override;
 
   // WebHost
   void requestRestart() override { restartRequested_ = true; }
@@ -54,15 +42,12 @@ public:
 
   bool restartRequested() const { return restartRequested_; }
   void clearRestartRequest() { restartRequested_ = false; }
-  bool active() const { return wifi_.active(); }
 
-  // Exposed for tests and the display layer.
-  WifiController& wifi()   { return wifi_; }
+  // Exposed for tests.
   web::WebServer& server() { return server_; }
 
 private:
-  ConfigStore& store_;
-  WifiController wifi_;
+  AppCore& app_;
   WebApi api_;
   web::WebServer server_;
   http::Parser rawParser_;

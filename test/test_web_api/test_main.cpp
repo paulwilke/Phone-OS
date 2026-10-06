@@ -123,7 +123,6 @@ struct Fixture {
   FakeEventLog log{&clock};
   i18n::Translator translator;
   FakeWifi     fw;
-  WifiController wifi{fw, rnd};
   MemStore     store;
   StubAssets   assets;
   StubHost     host;
@@ -131,10 +130,13 @@ struct Fixture {
   WebApi       api;
   http::Response res;
   std::string  body;
+  // The one Wi-Fi controller of the device: the core's.
+  WifiController& wifi() { return *app.wifiController(); }
 
   explicit Fixture(bool withPassword = true)
       : app{clock, power, modem, gnss, haptic, log, translator, Profile{}} ,
-        api{store, assets, host, app, wifi, translator} {
+        api{store, assets, host, app, translator} {
+    app.setWifi(fw, rnd);
     clock.advanceSeconds(100);
     clock.setEpochUtc(1789475520);  // a known time for epoch test
     clock.setTzOffsetMinutes(120);
@@ -567,14 +569,106 @@ void test_restart_and_wifi_off_reach_the_host() {
   TEST_ASSERT_EQUAL(1, f.host.wifiOffs);
 }
 
-// Rule 1 counter-check: a request postpones the Wi-Fi auto-off timer.
-void test_a_request_postpones_the_wifi_shutdown() {
+// ---- one Wi-Fi controller, and what keeps it on ------------------------------------------------------------
+//
+// Wi-Fi is switched on at t=100 (the core's clock); the idle time is ten minutes. Requests arrive at the
+// times given to call(), which are the host's seconds.
+
+void test_every_authenticated_request_restarts_the_idle_time() {
   Fixture f;
-  f.wifi.configure(WifiSettings{});
-  f.wifi.request(WifiMode::AccessPoint, 0);
+  TEST_ASSERT_TRUE(f.app.setWifiMode(WifiMode::AccessPoint));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60, f.wifi().secondsLeft(100));
   f.get("/api/state", 500);
-  // After the API call at t=500, the idle timer was reset; seconds left = 10 * 60.
-  TEST_ASSERT_EQUAL_UINT32(10 * 60, f.wifi.secondsLeft(500));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60, f.wifi().secondsLeft(500));
+  f.get("/api/settings", 900);
+  TEST_ASSERT_EQUAL_UINT32(10 * 60, f.wifi().secondsLeft(900));
+  f.put("/api/settings", "{\"child\":{\"name\":\"Sam\"}}");        // a change counts too
+  TEST_ASSERT_EQUAL_UINT32(10 * 60 - 300, f.wifi().secondsLeft(1300));   // put() is at t=1000 by default
+}
+
+void test_a_request_without_the_password_does_not_restart_the_idle_time() {
+  Fixture f;
+  f.app.setWifiMode(WifiMode::AccessPoint);                              // activity at t=100
+  TEST_ASSERT_EQUAL(401, f.call("GET", "/api/state", "", nullptr, true, 500));
+  TEST_ASSERT_EQUAL(401, f.call("GET", "/api/state", "", kBadAuth, true, 500));
+  TEST_ASSERT_EQUAL(404, f.call("GET", "/nothing", "", nullptr, true, 500));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60 - 400, f.wifi().secondsLeft(500));
+}
+
+void test_the_login_page_does_not_restart_the_idle_time() {
+  Fixture f;
+  f.app.setWifiMode(WifiMode::AccessPoint);
+  TEST_ASSERT_EQUAL(200, f.call("GET", "/", "", nullptr, true, 500));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60 - 400, f.wifi().secondsLeft(500));
+}
+
+void test_a_locked_out_client_does_not_restart_the_idle_time_even_with_the_right_password() {
+  Fixture f;
+  f.app.setWifiMode(WifiMode::AccessPoint);
+  for (int i = 0; i < 5; ++i) f.call("GET", "/api/state", "", kBadAuth, true, 500);
+  TEST_ASSERT_EQUAL(429, f.call("GET", "/api/state", "", kAuth, true, 510));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60 - 410, f.wifi().secondsLeft(510));
+  TEST_ASSERT_EQUAL(200, f.call("GET", "/api/state", "", kAuth, true, 580));    // the minute is over
+  TEST_ASSERT_EQUAL_UINT32(10 * 60, f.wifi().secondsLeft(580));
+}
+
+void test_without_a_stored_password_nothing_restarts_the_idle_time() {
+  Fixture f(false);
+  f.app.setWifiMode(WifiMode::AccessPoint);
+  TEST_ASSERT_EQUAL(403, f.call("GET", "/api/state", "", kAuth, true, 500));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60 - 400, f.wifi().secondsLeft(500));
+}
+
+void test_the_button_keeps_wifi_on_behind_the_password_and_the_header_and_is_logged() {
+  Fixture f;
+  f.app.setWifiMode(WifiMode::AccessPoint);
+  TEST_ASSERT_EQUAL(401, f.call("POST", "/api/wifi-extend", "", nullptr, true, 500));
+  TEST_ASSERT_EQUAL(403, f.call("POST", "/api/wifi-extend", "", kAuth, false, 500));   // no X-Phoneplus header
+  TEST_ASSERT_EQUAL(404, f.call("GET", "/api/wifi-extend", "", kAuth, true, 500));     // a change is not a GET
+  TEST_ASSERT_FALSE(f.log.contains("WEB: Wi-Fi kept on"));
+  TEST_ASSERT_EQUAL(200, f.call("POST", "/api/wifi-extend", "", kAuth, true, 550));
+  TEST_ASSERT_TRUE(f.has("\"seconds_left\":600"));
+  TEST_ASSERT_TRUE(f.log.contains("WEB: Wi-Fi kept on"));
+  TEST_ASSERT_EQUAL_UINT32(10 * 60, f.wifi().secondsLeft(550));
+}
+
+void test_the_state_is_the_one_controllers_state() {
+  Fixture f;
+  TEST_ASSERT_EQUAL(200, f.get("/api/state"));
+  TEST_ASSERT_TRUE(f.has("\"state\":\"off\""));
+  f.app.setWifiMode(WifiMode::AccessPoint);
+  TEST_ASSERT_EQUAL(200, f.get("/api/state"));
+  TEST_ASSERT_TRUE(f.has("\"state\":\"access_point\""));
+  TEST_ASSERT_TRUE(f.has("\"ssid\":\"phoneplus\""));
+  TEST_ASSERT_TRUE(f.has("\"address\":\"192.168.4.1\""));
+  f.app.setWifiMode(WifiMode::Off);                                      // from the device's screen
+  TEST_ASSERT_EQUAL(200, f.get("/api/state"));
+  TEST_ASSERT_TRUE(f.has("\"state\":\"off\""));
+  TEST_ASSERT_TRUE(f.has("\"seconds_left\":0"));
+}
+
+void test_a_device_without_wifi_answers_and_says_off() {
+  FakeClock clock;
+  FakePower power{&clock};
+  FakeModem modem{clock};
+  FakeGnss gnss{power, clock};
+  FakeHaptic haptic{clock};
+  FakeEventLog log{&clock};
+  i18n::Translator translator;
+  AppCore app{clock, power, modem, gnss, haptic, log, translator, Profile{}};
+  MemStore store;
+  store.files["/config/secrets.toml"] = "web_password = \"test-password-1\"\n";
+  StubAssets assets;
+  StubHost host;
+  WebApi api{store, assets, host, app, translator};
+  http::Request r{};
+  strcpy(r.method, "GET");
+  strcpy(r.path, "/api/state");
+  strcpy(r.authorization, kAuth);
+  http::Response res;
+  api.handle(r, res, 1000);
+  TEST_ASSERT_EQUAL(200, res.status);
+  TEST_ASSERT_TRUE(std::string(res.body, res.length).find("\"state\":\"off\"") != std::string::npos);
 }
 
 void test_state_reports_the_device() {
@@ -641,7 +735,14 @@ int main() {
   RUN_TEST(test_backup_roundtrip);
   RUN_TEST(test_restore_rejects_foreign_files_and_writes_nothing);
   RUN_TEST(test_restart_and_wifi_off_reach_the_host);
-  RUN_TEST(test_a_request_postpones_the_wifi_shutdown);
+  RUN_TEST(test_every_authenticated_request_restarts_the_idle_time);
+  RUN_TEST(test_a_request_without_the_password_does_not_restart_the_idle_time);
+  RUN_TEST(test_the_login_page_does_not_restart_the_idle_time);
+  RUN_TEST(test_a_locked_out_client_does_not_restart_the_idle_time_even_with_the_right_password);
+  RUN_TEST(test_without_a_stored_password_nothing_restarts_the_idle_time);
+  RUN_TEST(test_the_button_keeps_wifi_on_behind_the_password_and_the_header_and_is_logged);
+  RUN_TEST(test_the_state_is_the_one_controllers_state);
+  RUN_TEST(test_a_device_without_wifi_answers_and_says_off);
   RUN_TEST(test_state_reports_the_device);
   RUN_TEST(test_error_helper);
   RUN_TEST(test_languages_returns_a_json_array);

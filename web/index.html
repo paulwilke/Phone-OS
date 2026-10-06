@@ -100,6 +100,8 @@ pre{background:#222;color:#eee;padding:1rem;border-radius:6px;overflow:auto;
       <div style="display:flex;gap:.5rem;margin-top:1rem">
         <button id="restart-btn"  class="btn-primary action-btn"
                 data-t="web.status.restart"></button>
+        <button id="wifi-extend-btn" class="btn-primary action-btn"
+                data-t="web.status.wifi-extend-btn"></button>
         <button id="wifi-off-btn" class="btn-secondary action-btn"
                 data-t="web.status.wifi-off-btn"></button>
       </div>
@@ -237,13 +239,17 @@ function loadStatus() {
       dd.textContent = value;
       dl.appendChild(dt); dl.appendChild(dd);
     }
-    var modeMap = { off: t('web.status.mode-off'), ap: t('web.status.mode-ap'),
-                     home: t('web.status.mode-home') };
-    row('web.status.wifi-mode', modeMap[d.wifi_mode] || d.wifi_mode || '');
-    row('web.status.address', d.address || '');
+    var w = d.wifi || {};
+    var modeMap = { off: t('web.status.mode-off'), access_point: t('web.status.mode-ap'),
+                     station: t('web.status.mode-home'), connecting: t('web.status.mode-connecting'),
+                     failed: t('web.status.mode-failed') };
+    row('web.status.wifi-mode', modeMap[w.state] || w.state || '');
+    row('web.status.address', w.address || '');
+    if (w.state && w.state !== 'off')
+      row('web.status.wifi-left', t('web.status.minutes').replace('{n}', Math.ceil((w.seconds_left || 0) / 60)));
     row('web.status.firmware', d.firmware || '');
-    if (d.epoch_utc) {
-      var dt2 = new Date(d.epoch_utc * 1000);
+    if (d.epoch) {
+      var dt2 = new Date(d.epoch * 1000);
       row('web.status.time', dt2.toLocaleString());
     }
   }).catch(function() {});
@@ -253,7 +259,10 @@ document.getElementById('restart-btn').addEventListener('click', function() {
   api('POST', '/api/restart', {}).then(function() { loadStatus(); });
 });
 document.getElementById('wifi-off-btn').addEventListener('click', function() {
-  api('POST', '/api/wifi', { mode: 'off' }).then(function() { loadStatus(); });
+  api('POST', '/api/wifi-off', {}).then(function() { loadStatus(); });
+});
+document.getElementById('wifi-extend-btn').addEventListener('click', function() {
+  api('POST', '/api/wifi-extend', {}).then(function() { loadStatus(); });
 });
 
 // ---------- Config forms ----------
@@ -422,7 +431,7 @@ function loadConfigForm(fileId) {
   formEl.innerHTML = '';
   var fileDef = SCHEMA.files[fileId];
   if (!fileDef) return;
-  api('GET', '/api/config/' + fileId).then(function(r) { return r.json(); }).then(function(data) {
+  api('GET', '/api/' + fileId).then(function(r) { return r.json(); }).then(function(data) {
     fileDef.sections.forEach(function(sec) {
       var secData = sec.id ? getNestedValue(data, sec.id) : data;
       formEl.appendChild(buildSection(sec, secData, fileId));
@@ -434,7 +443,7 @@ function loadConfigForm(fileId) {
     var statusEl = document.createElement('span');
     saveBtn.addEventListener('click', function() {
       var payload = collectFormData(formEl, fileDef.sections);
-      api('PUT', '/api/config/' + fileId, payload).then(function(r) { return r.json(); })
+      api('PUT', '/api/' + fileId, payload).then(function(r) { return r.json(); })
         .then(function(d) {
           if (d.ok) {
             statusEl.className = 'status-msg';

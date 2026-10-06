@@ -2,37 +2,9 @@
 
 #include <cstring>
 
-#include "../config/ConfigLoader.h"
 
-WebService::WebService(Wifi& wifi, TcpServer& tcp, ConfigStore& store, WebAssets& assets,
-                       AppCore& app, i18n::Translator& translator, WifiController::Random random)
-    : store_(store),
-      wifi_(wifi, random),
-      api_(store, assets, *this, app, wifi_, translator),
-      server_(tcp, api_) {}
-
-void WebService::begin() {
-  config::ConfigLoader loader(store_);
-  const auto result = loader.load();
-  wifi_.configure(result.profile.wifi);
-}
-
-bool WebService::setWifiMode(WifiMode mode, uint32_t now) {
-  return wifi_.request(mode, now);
-}
-
-WifiStatus WebService::wifiStatus(uint32_t now) {
-  WifiStatus s;
-  s.mode         = wifi_.mode();
-  s.phase        = wifi_.phase();
-  s.ssid         = wifi_.ssid();
-  s.apPassword   = wifi_.apPassword();
-  s.address      = wifi_.address();
-  s.reason       = wifi_.reason();
-  s.secondsLeft  = wifi_.secondsLeft(now);
-  s.serverRunning = server_.running();
-  return s;
-}
+WebService::WebService(TcpServer& tcp, ConfigStore& store, WebAssets& assets, AppCore& app, i18n::Translator& translator)
+    : app_(app), api_(store, assets, *this, app, translator), server_(tcp, api_) {}
 
 size_t WebService::handleRaw(const uint8_t* request, size_t len, uint32_t now,
                               char* head, size_t headSize,
@@ -54,15 +26,16 @@ size_t WebService::handleRaw(const uint8_t* request, size_t len, uint32_t now,
 }
 
 void WebService::poll(uint32_t now) {
+  // The button of the page asks for Wi-Fi off; it is done after the answer has gone out.
   if (wifiOffRequested_) {
     wifiOffRequested_ = false;
-    wifi_.stop();
+    app_.setWifiMode(WifiMode::Off);
   }
-  wifi_.poll(now);
-
-  const WifiPhase p = wifi_.phase();
-  const bool reachable = p == WifiPhase::Connected || p == WifiPhase::AccessPoint;
-  if (reachable  && !server_.running()) server_.begin();
-  if (!reachable && server_.running())  server_.stop();
+  // The core runs the controller (its idle time, its attempts); the server follows what it says.
+  const WifiController* wifi = app_.wifi();
+  const WifiPhase phase = wifi ? wifi->phase() : WifiPhase::Off;
+  const bool reachable = phase == WifiPhase::Connected || phase == WifiPhase::AccessPoint;
+  if (reachable && !server_.running()) server_.begin();
+  if (!reachable && server_.running()) server_.stop();
   server_.poll(now);
 }

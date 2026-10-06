@@ -615,7 +615,7 @@ void test_wifi_stays_on_while_it_is_used() {
   d.core.markAllRead();
   TEST_ASSERT_TRUE(d.core.setWifiMode(WifiMode::AccessPoint));
   d.run(9 * 60);
-  d.core.noteWifiActivity();
+  d.core.wifiController()->noteActivity(d.clock.uptimeSeconds());   // what the web service does for every authenticated request
   d.run(9 * 60);
   TEST_ASSERT_TRUE(d.core.state().wifiPhase == WifiPhase::AccessPoint);
   TEST_ASSERT_FALSE(d.core.poll(false, 10000).cpuMaySleep);          // running Wi-Fi keeps the processor awake

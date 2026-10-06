@@ -256,6 +256,31 @@ Tests in `test/test_connectivity/`.
 | CON-18 | An unknown battery level does not refuse Wi-Fi | `test_an_unknown_battery_does_not_refuse_wifi` | — | done |
 | CON-19 | poll() keeps the Wi-Fi controller going | `test_poll_keeps_wifi_going` | — | done |
 
+## One Wi-Fi controller and the parents' page
+
+Tests in `test/test_web_api/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| WEB-01 | Every authenticated request restarts the Wi-Fi idle time | `test_every_authenticated_request_restarts_the_idle_time` | — | done |
+| WEB-02 | A request with no or a wrong password does not restart it | `test_a_request_without_the_password_does_not_restart_the_idle_time` | — | done |
+| WEB-03 | The login page does not restart it | `test_the_login_page_does_not_restart_the_idle_time` | — | done |
+| WEB-04 | A locked-out client does not restart it, even with the right password | `test_a_locked_out_client_does_not_restart_the_idle_time_even_with_the_right_password` | — | done |
+| WEB-05 | Without a stored password nothing restarts it | `test_without_a_stored_password_nothing_restarts_the_idle_time` | — | done |
+| WEB-06 | The button keeps Wi-Fi on: behind the password and the header, logged, answers with the time left | `test_the_button_keeps_wifi_on_behind_the_password_and_the_header_and_is_logged` | — | done |
+| WEB-07 | The page's Wi-Fi state is the one controller's state | `test_the_state_is_the_one_controllers_state` | — | done |
+| WEB-08 | A device without Wi-Fi answers and says off | `test_a_device_without_wifi_answers_and_says_off` | — | done |
+
+## The web service on the one controller
+
+Tests in `test/test_runtime/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| WSV-01 | The server runs exactly while the controller says Wi-Fi is up, whoever switched it | `test_the_server_runs_exactly_while_the_one_controller_says_wifi_is_up` | — | done |
+| WSV-02 | Silence switches Wi-Fi and the page off after the idle time | `test_silence_switches_wifi_and_the_page_off_after_the_idle_time` | — | done |
+| WSV-03 | A parent who keeps using the page is never cut off; a stranger cannot keep it on | `test_a_parent_who_keeps_using_the_page_is_never_cut_off_and_a_stranger_cannot_keep_it_on` | — | done |
+
 ## WifiController
 
 Tests in `test/test_wifi_controller/`.
@@ -338,4 +363,4 @@ Tests in `test/test_app_core/`.
 | SC:test_motion_* | The motion sensor is a capability the screen uses directly; the application core does not wrap it. |
 | WF:test_broken_json_is_survivable | WLAN configuration file parsing is the configuration package. |
 | WF:test_cpu_does_not_sleep_while_wifi_runs | Already covered by the power-policy tests; the core only passes the Wi-Fi state in (see Power coordination). |
-| test_web_api, test_web_server | The web code is a later package. |
+| test_web_server | The web code is a later package. |

@@ -1,0 +1,60 @@
+# One Wi-Fi controller: the device switches Wi-Fi on, the parents' page runs while it runs, every use of
+# the page by somebody who knows the password restarts the idle time (ten minutes), silence or a
+# stranger's requests do not, and the button "keep Wi-Fi on" restarts it on purpose. The device's own
+# state (check wifi) and the page's (/api/state) say the same throughout.
+advance 5s
+check wifi off
+web get /api/state
+check web-status 0
+
+# Switched on from the device.
+wifi ap
+advance 2s
+check wifi access-point
+check wifi-seconds-left 598
+web get /api/state
+check web-status 200
+check web-has "state":"access_point"
+check web-has "seconds_left":600
+
+# A parent who keeps using the page is never cut off: 8 minutes, a request, 8 minutes, a request.
+advance 8m
+check wifi access-point
+web get /api/state
+check web-has "state":"access_point"
+check web-has "seconds_left":600
+advance 8m
+check wifi access-point
+web get /api/state
+check web-has "seconds_left":600
+
+# Requests that are not the parent's do not restart it: the login page, no password, a wrong one.
+advance 5m
+web anonymous get /
+check web-status 200
+web anonymous get /api/state
+check web-status 401
+web as wrong-password get /api/state
+check web-status 401
+check wifi access-point
+advance 5m
+check wifi off
+web get /api/state
+check web-status 0
+
+# The button keeps it on on purpose.
+wifi ap
+advance 9m
+web post /api/wifi-extend {}
+check web-status 200
+check web-has "seconds_left":600
+advance 9m
+check wifi access-point
+web get /api/state
+check web-has "state":"access_point"
+
+# Silence, and it goes off by itself, on the page's side and on the device's.
+advance 11m
+check wifi off
+web get /api/state
+check web-status 0

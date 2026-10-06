@@ -161,9 +161,10 @@ public:
   bool setSaveMode(bool on) { return connectivity_.setSaveMode(on); }
   bool probeCellular() { return connectivity_.probeCellular(); }
   bool setWifiMode(WifiMode mode) { return connectivity_.setWifiMode(mode); }
-  // The web server served a page: Wi-Fi stays on for the idle time from now.
-  void noteWifiActivity() { if (wifi_) wifi_->noteActivity(clock_.uptimeSeconds()); }
+  // The one Wi-Fi controller of the device: the screens switch it, the web service tells it about use and
+  // reads its state. Null on a device without Wi-Fi.
   const WifiController* wifi() const { return wifi_.get(); }
+  WifiController* wifiController() { return wifi_.get(); }
   bool requestRadioStart() { return connectivity_.requestRadioStart(); }
   bool takeRadioStartRequest() { return connectivity_.takeRadioStartRequest(); }
   void requestRestart() { connectivity_.requestRestart(); }

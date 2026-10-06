@@ -132,10 +132,8 @@ bool appendJsonStr(char* buf, size_t cap, size_t& pos, const std::string& s) {
 
 }  // namespace
 
-WebApi::WebApi(ConfigStore& store, WebAssets& assets, WebHost& host, AppCore& app,
-               WifiController& wifi, i18n::Translator& translator)
-    : store_(store), assets_(assets), host_(host), app_(app), wifi_(wifi),
-      translator_(translator) {}
+WebApi::WebApi(ConfigStore& store, WebAssets& assets, WebHost& host, AppCore& app, i18n::Translator& translator)
+    : store_(store), assets_(assets), host_(host), app_(app), translator_(translator) {}
 
 // ---------------------------------------------------------------------------
 // Response helpers
@@ -261,7 +259,8 @@ void WebApi::handle(const http::Request& req, http::Response& res, uint32_t now)
 
   // Authenticate before revealing whether a route exists.
   if (!authenticate(req, res, now)) return;
-  wifi_.noteActivity(now);
+  // Somebody who knows the password is using the page: Wi-Fi stays on for the idle time from now.
+  if (WifiController* wifi = app_.wifiController()) wifi->noteActivity(now);
 
   if (!get && strcmp(req.custom, "1") != 0)
     return jsonError(res, 403, "Header X-Phoneplus: 1 missing");
@@ -288,6 +287,15 @@ void WebApi::handle(const http::Request& req, http::Response& res, uint32_t now)
       app_.log("WEB: restart requested");
       host_.requestRestart();
       jsonResp(res, 200, "{\"ok\":true}");
+      return;
+    }
+    if (strcmp(p, "/wifi-extend") == 0) {
+      // The activity above has restarted the idle time already; the button is there to say so on purpose.
+      app_.log("WEB: Wi-Fi kept on");
+      const WifiController* wifi = app_.wifiController();
+      // The body is not copied: it must live in the object, like every other answer.
+      snprintf(resp_, sizeof(resp_), "{\"ok\":true,\"seconds_left\":%u}", wifi ? static_cast<unsigned>(wifi->secondsLeft(now)) : 0u);
+      jsonResp(res, 200, resp_);
       return;
     }
     if (strcmp(p, "/wifi-off") == 0) {
@@ -322,7 +330,8 @@ void WebApi::state(http::Response& res, uint32_t now) {
   }
 
   const AppCore::State s = app_.state();
-  const WifiPhase wp = wifi_.phase();
+  const WifiController* wifi = app_.wifi();
+  const WifiPhase wp = wifi ? wifi->phase() : WifiPhase::Off;
 
   size_t n = 0;
   auto puts = [&](const char* str) { while (*str && n + 1 < sizeof(resp_)) resp_[n++] = *str++; };
@@ -340,8 +349,9 @@ void WebApi::state(http::Response& res, uint32_t now) {
   puts(",\"tz_offset_minutes\":"); putInt(app_.tzOffsetMinutes());
   puts(",\"wifi\":{\"state\":");
   appendJsonStr(resp_, sizeof(resp_), n, wifiPhaseText(wp));
-  puts(",\"ssid\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi_.ssid());
-  puts(",\"seconds_left\":"); putInt(wifi_.secondsLeft(now));
+  puts(",\"ssid\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi ? wifi->ssid() : std::string());
+  puts(",\"address\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi ? const_cast<WifiController*>(wifi)->address() : std::string());
+  puts(",\"seconds_left\":"); putInt(wifi ? wifi->secondsLeft(now) : 0);
   puts("}");
   puts(",\"set\":{\"pin\":"); putBool(pinSet);
   puts(",\"web_password\":"); putBool(pwSet);

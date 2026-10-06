@@ -10,6 +10,7 @@ its behaviour broken proves nothing and is reported. Not part of the CI: it buil
 dozen times. Run it when a scenario is written or changed.
 """
 import os
+import shutil
 import subprocess
 import sys
 
@@ -18,25 +19,37 @@ PIO = os.path.expanduser("~/.platformio/penv/bin/pio")
 if not os.path.exists(PIO):
     PIO = "pio"
 
-# scenario, file, text that is there, what it is replaced with, what is broken
+# scenario, [(file, text that is there, what it is replaced with), ...], what is broken. A scenario may have
+# several rows; a row may change several files.
 MUTATIONS = [
-    ("normal-day", "src/boot/Runtime.cpp", "call == ModemState::RingingIn && !callInterrupt_", "false && !callInterrupt_",
-     "an incoming call no longer takes the screen"),
-    ("school-time", "src/app/SosFlow.h", "kOverrideTaps = 5", "kOverrideTaps = 3", "the SOS in school time needs three taps, not five"),
-    ("remote-query-during-sos", "src/app/SosPing.cpp", "if (!(kind_ == Kind::Query && kind != Kind::Query)) return false;",
-     "if (false) return false;", "a remote query replaces a running emergency"),
-    ("network-drop", "src/app/Messaging.cpp", "void Messaging::flushQueue() {\n  if (outbox_.empty()) return;",
-     "void Messaging::flushQueue() {\n  return;", "the queue is never sent when the network is back"),
-    ("save-mode", "src/app/Connectivity.h", "kProbeSeconds = 180", "kProbeSeconds = 60", "the probe lasts one minute, not three"),
-    ("language-during-emergency", "src/app/Emergency.cpp", "const std::string& language = profile_.smsLanguage;",
-     "const std::string language = translator_.language();", "the SOS text follows the child's screen language"),
-    ("missed-call", "src/ui/screens/MessageListScreen.cpp", "if (words != worded_) {", "if (false) {",
-     "an open entry keeps the words of the language it was opened in"),
-    ("user-catalog", "src/boot/Runtime.cpp", "  config::ConfigLoader::loadUserCatalogs(capabilities.store, translator, diagnostics);", "",
-     "the catalogs on the card are not read"),
-    ("bad-catalog", "src/config/ConfigLoader.cpp", "if (!translator.addUser(text.c_str(), text.size(), &errors)) {", "if (!translator.addUser(text.c_str(), text.size(), &errors) && false) {",
-     "a user catalog that fails is no longer reported"),
+    ('normal-day', [('src/boot/Runtime.cpp', 'call == ModemState::RingingIn && !callInterrupt_', 'false && !callInterrupt_')], 'an incoming call no longer takes the screen'),
+    ('school-time', [('src/app/SosFlow.h', 'kOverrideTaps = 5', 'kOverrideTaps = 3')], 'the SOS in school time needs three taps, not five'),
+    ('remote-query-during-sos', [('src/app/SosPing.cpp', 'if (!(kind_ == Kind::Query && kind != Kind::Query)) return false;', 'if (false) return false;')], 'a remote query replaces a running emergency'),
+    ('network-drop', [('src/app/Messaging.cpp', 'void Messaging::flushQueue() {\n  if (outbox_.empty()) return;', 'void Messaging::flushQueue() {\n  return;')], 'the queue is never sent when the network is back'),
+    ('save-mode', [('src/app/Connectivity.h', 'kProbeSeconds = 180', 'kProbeSeconds = 60')], 'the probe lasts one minute, not three'),
+    ('language-during-emergency', [('src/app/Emergency.cpp', 'const std::string& language = profile_.smsLanguage;', 'const std::string language = translator_.language();')], "the SOS text follows the child's screen language"),
+    ('missed-call', [('src/ui/screens/MessageListScreen.cpp', 'if (words != worded_) {', 'if (false) {')], 'an open entry keeps the words of the language it was opened in'),
+    ('user-catalog', [('src/boot/Runtime.cpp', '  config::ConfigLoader::loadUserCatalogs(capabilities.store, translator, diagnostics);', '')], 'the catalogs on the card are not read'),
+    ('bad-catalog', [('src/config/ConfigLoader.cpp', 'if (!translator.addUser(text.c_str(), text.size(), &errors)) {', 'if (!translator.addUser(text.c_str(), text.size(), &errors) && false) {')], 'a user catalog that fails is no longer reported'),
+    ("wifi-admin-page",
+     [("src/app/AppCore.h", "WifiController* wifiController() { return wifi_.get(); }",
+       "WifiController* wifiController() { return second_.get(); }\n  std::unique_ptr<WifiController> second_;"),
+      ("src/app/AppCore.cpp", "  connectivity_.setWifi(wifi_.get());", "  connectivity_.setWifi(wifi_.get());\n  second_ = std::make_unique<WifiController>(wifi, random);")],
+     "a second Wi-Fi controller is back: the page tells it about use, the device runs another"),
+    ("wifi-admin-page",
+     [("src/web/WebApi.cpp", "  if (!authenticate(req, res, now)) return;\n",
+       "  if (WifiController* early = app_.wifiController()) early->noteActivity(now);\n  if (!authenticate(req, res, now)) return;\n")],
+     "a request without the password restarts the idle time"),
+    ("wifi-admin-page", [("src/web/WebApi.cpp", 'strcmp(p, "/wifi-extend") == 0', 'strcmp(p, "/wifi-extend-x") == 0')],
+     "the button \"keep Wi-Fi on\" is not there"),
 ]
+
+
+def clean():
+    """The build system tells a restored file from a changed one by its time and its content; a file
+    changed and changed back within a second is not always noticed. A broken build is therefore never
+    trusted to be rebuilt: it starts from nothing."""
+    shutil.rmtree(os.path.join(ROOT, ".pio", "build", "sim"), ignore_errors=True)
 
 
 def run(args):
@@ -46,31 +59,42 @@ def run(args):
 def main():
     only = sys.argv[1:]
     failed = []
-    for scenario, path, old, new, what in MUTATIONS:
+    for scenario, edits, what in MUTATIONS:
         if only and scenario not in only:
             continue
-        full = os.path.join(ROOT, path)
-        original = open(full, encoding="utf-8").read()
-        if old not in original:
-            print(f"{scenario}: the text to break is not in {path}: the table is out of date")
-            failed.append(scenario)
-            continue
+        originals = {}
         try:
-            open(full, "w", encoding="utf-8").write(original.replace(old, new, 1))
+            missing = []
+            for path, old, new in edits:
+                full = os.path.join(ROOT, path)
+                originals.setdefault(path, open(full, encoding="utf-8").read())
+                if old not in originals[path]:
+                    missing.append(path)
+            if missing:
+                print(f"{scenario}: the text to break is not in {', '.join(missing)}: the table is out of date")
+                failed.append(scenario)
+                continue
+            for path, old, new in edits:
+                full = os.path.join(ROOT, path)
+                text = open(full, encoding="utf-8").read().replace(old, new, 1)  # read first: opening for writing empties the file
+                open(full, "w", encoding="utf-8").write(text)
+            clean()
             build = run([PIO, "run", "-e", "sim"])
             if build.returncode != 0:
-                print(f"{scenario}: the broken simulator does not build:\n{build.stdout[-800:]}")
+                print(f"{scenario}: the broken simulator does not build ({what}):\n{''.join(l + chr(10) for l in (build.stdout + build.stderr).splitlines() if 'error' in l or 'ndefined' in l or 'symbol' in l)[-1500:]}")
                 failed.append(scenario)
                 continue
             result = run([os.path.join(ROOT, ".pio/build/sim/program"), "--script", f"sim/scripts/{scenario}.txt"])
         finally:
-            open(full, "w", encoding="utf-8").write(original)
+            for path, text in originals.items():
+                open(os.path.join(ROOT, path), "w", encoding="utf-8").write(text)
         if result.returncode == 0:
             print(f"{scenario}: STILL PASSES with {what}")
             failed.append(scenario)
         else:
             reason = [l for l in result.stdout.splitlines() if l.startswith("error")]
             print(f"{scenario}: fails with {what}  ({reason[0] if reason else 'no message'})")
+    clean()
     run([PIO, "run", "-e", "sim"])  # leave a correct simulator behind
     if failed:
         print(f"\n{len(failed)} scenario(s) without a working counter-check: {', '.join(failed)}")

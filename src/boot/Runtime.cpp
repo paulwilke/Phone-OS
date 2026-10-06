@@ -41,14 +41,12 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
       messages_(ui::ScreenContext{core_, translator, stack_, session_}),
       compose_(ui::ScreenContext{core_, translator, stack_, session_}),
       recipient_(ui::ScreenContext{core_, translator, stack_, session_}),
-      web_(capabilities.wifi, capabilities.tcp, capabilities.store, capabilities.assets, core_, translator,
-           capabilities.random),
+      web_(capabilities.tcp, capabilities.store, capabilities.assets, core_, translator),
       lastFrameMs_(nowMs) {
   core_.setFirmware(capabilities.firmware);
   if (capabilities.radio) core_.setRadio(capabilities.radio);
   core_.setWifi(capabilities.wifi, capabilities.random);
   core_.start();
-  web_.begin();
   for (const config::Diagnostic& diagnostic : diagnostics_) core_.log(describe(diagnostic).c_str());
 
   stack_.add(ui::screen::kHome, home_);
