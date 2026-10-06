@@ -40,6 +40,7 @@
 #include "Calls.h"
 #include "Connectivity.h"
 #include "Emergency.h"
+#include "DropLog.h"
 #include "Logger.h"
 #include "MessageStore.h"
 #include "Messaging.h"
@@ -239,6 +240,7 @@ private:
   bool settingsNeedWrite_ = false;
   std::string firmware_;
   Logger logger_;
+  DropLog drops_;
   MessageStore store_;
   Notices notices_;
   SchoolTime school_;

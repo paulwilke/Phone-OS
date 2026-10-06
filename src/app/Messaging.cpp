@@ -19,7 +19,7 @@ const char* outcomeText(CommandOutcome o) {
 }  // namespace
 
 Messaging::Messaging(Clock& clock, Modem& modem, Power& power, MessageStore& store, const Profile& profile,
-                     SchoolTime& school, Notices& notices, Haptic& haptic, Logger& log)
+                     SchoolTime& school, Notices& notices, Haptic& haptic, Logger& log, DropLog& drops)
     : clock_(clock),
       modem_(modem),
       power_(power),
@@ -29,6 +29,7 @@ Messaging::Messaging(Clock& clock, Modem& modem, Power& power, MessageStore& sto
       notices_(notices),
       haptic_(haptic),
       log_(log),
+      drops_(drops),
       command_(*this, SmsCommand::Config()) {}
 
 void Messaging::configure(const std::vector<std::string>& triggers) {
@@ -68,11 +69,11 @@ bool Messaging::poll() {
 void Messaging::handleSms(const SmsMessage& sms) {
   // Only the people of the contact book may write to the child: nobody else is stored, felt or
   // answered, and not even the remote query sees the message (a query comes from an admin, who is
-  // in the book anyway). The log line stays so that parents can see that something knocked; it
-  // names the number only, never the text.
+  // in the book anyway). The log line stays so that parents can see that something knocked, and it
+  // carries the start of the text, so that they can read what the network or the provider sent
+  // (a balance, a tariff, a PIN notice); a flood is one line per sender per ten minutes (DropLog.h).
   if (!profile_.mayReceiveFrom(sms.phone)) {
-    const std::string number = phone::canonical(sms.phone.c_str(), profile_.contacts.countryCode());
-    log_.log("SMS dropped: sender not in the contact book (" + (number.empty() ? std::string("non-numeric sender") : number) + ")");
+    drops_.smsDropped(sms.phone, sms.body, profile_.contacts.countryCode());
     return;
   }
   // A query is recognised first and never stored as a message.
@@ -85,11 +86,21 @@ void Messaging::handleSms(const SmsMessage& sms) {
 
 // A profile without the radio gets no radio messages in the history either: otherwise a
 // simulator that always attaches the radio would behave differently from the device, which starts
-// it only when the profile allows.
+// it only when the profile allows. **Only the configured peer may write** (`[radio] peer`): a message
+// from any other name is dropped like a stranger's text (logged, counted for the summary, never stored
+// and never unread), and with no peer configured no radio message is accepted. The name is compared as
+// the radio reports it, exactly: the radio's name for a sender can be spoofed within range, and that is
+// what this rule trusts (docs/messaging.md).
 void Messaging::handleRadio() {
   if (radio_ == nullptr || !profile_.radioAllowed) return;
   RadioMessage msg;
-  while (radio_->poll(msg)) record(MsgSource::Radio, MsgDir::In, msg.peer, msg.text);
+  while (radio_->poll(msg)) {
+    if (profile_.radioPeer.empty() || msg.peer != profile_.radioPeer) {
+      drops_.radioDropped(msg.peer, msg.text, profile_.radioPeer);
+      continue;
+    }
+    record(MsgSource::Radio, MsgDir::In, msg.peer, msg.text);
+  }
 }
 
 void Messaging::handleSendFailures(bool& activity) {

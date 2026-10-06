@@ -36,6 +36,7 @@
 #include "../hal/Power.h"
 #include "../hal/RadioLink.h"
 #include "Cellular.h"
+#include "DropLog.h"
 #include "Logger.h"
 #include "MessageStore.h"
 #include "Notices.h"
@@ -62,7 +63,7 @@ public:
   };
 
   Messaging(Clock& clock, Modem& modem, Power& power, MessageStore& store, const Profile& profile, SchoolTime& school,
-            Notices& notices, Haptic& haptic, Logger& log);
+            Notices& notices, Haptic& haptic, Logger& log, DropLog& drops);
 
   // The radio is optional. The profile decides whether it may be used.
   void setRadio(RadioLink* radio) { radio_ = radio; }
@@ -131,6 +132,7 @@ private:
   Notices& notices_;
   Haptic& haptic_;
   Logger& log_;
+  DropLog& drops_;
   RadioLink* radio_ = nullptr;
   Hooks* hooks_ = nullptr;
   SmsCommand command_;

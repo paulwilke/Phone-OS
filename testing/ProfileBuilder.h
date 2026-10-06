@@ -52,6 +52,11 @@ public:
     profile_.radioAllowed = allowed;
     return *this;
   }
+  // The one radio node whose messages are accepted (`[radio] peer`).
+  ProfileBuilder& radioPeer(const char* name) {
+    profile_.radioPeer = name;
+    return *this;
+  }
   ProfileBuilder& freeText(bool allowed) {
     profile_.freeText = allowed;
     return *this;

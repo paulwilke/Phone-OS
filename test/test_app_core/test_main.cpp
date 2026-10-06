@@ -116,7 +116,7 @@ size_t receivedTexts(Device& d) {
 }
 
 Profile inSchool() {
-  return ProfileBuilder().childName("Alex").schoolTime("tue", "14:00", "15:00").radio(true).build();
+  return ProfileBuilder().childName("Alex").schoolTime("tue", "14:00", "15:00").radio(true).radioPeer("Node One").build();
 }
 
 }  // namespace

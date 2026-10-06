@@ -21,7 +21,7 @@ struct Rig : CoreFakes {
   Calls calls;
 
   explicit Rig(Profile p = ProfileBuilder().build(), uint32_t startSeconds = 100)
-      : CoreFakes(std::move(p), startSeconds), calls(clock, modem, power, store, profile, school, notices, haptic, logger) {}
+      : CoreFakes(std::move(p), startSeconds), calls(clock, modem, power, store, profile, school, notices, haptic, logger, drops) {}
 
   bool noticeIs(NoticeKind kind) { return notices.current().kind == kind; }
   // The events the modem has produced so far reach the core at the next poll.
@@ -399,6 +399,34 @@ void test_a_stranger_calling_again_is_rejected_again() {
   }
 }
 
+// A flood of calls from one stranger must not fill the card: one line, and one summary when the ten minutes
+// are over; the calls are hung up all the same.
+void test_a_flood_of_calls_from_a_stranger_is_one_line_and_one_summary() {
+  Rig r;
+  for (int i = 0; i < 40; ++i) {
+    r.modem.injectIncomingCall(kStranger);
+    r.poll();
+    r.poll();
+    expectNoTrace(r);
+    r.clock.advanceSeconds(5);
+  }
+  size_t lines = 0;
+  for (const auto& line : r.log.lines()) lines += line.find(kStranger) != std::string::npos ? 1 : 0;
+  TEST_ASSERT_EQUAL(1, lines);
+  r.clock.advanceSeconds(DropLog::kWindowSeconds);
+  r.drops.tick();
+  TEST_ASSERT_TRUE(r.log.contains("(+491709999999) ... (39 more in the last 10 minutes)"));
+  r.modem.injectIncomingCall(kStranger);                                  // the summary is a line: ten minutes from it, not before
+  r.poll();
+  r.poll();
+  TEST_ASSERT_EQUAL(2, r.log.entries().size());
+  r.clock.advanceSeconds(DropLog::kWindowSeconds);
+  r.modem.injectIncomingCall(kStranger);
+  r.poll();
+  r.poll();
+  TEST_ASSERT_EQUAL(4, r.log.entries().size());                           // the summary of the one that was counted, and the new line
+}
+
 void test_a_stranger_does_not_disturb_the_calls_of_contacts() {
   Rig r;
   r.modem.injectIncomingCall(kStranger);
@@ -601,7 +629,7 @@ void test_a_failure_without_a_number_in_the_event_names_the_number_dialled() {
   AnonymousModem anonymous(f.clock);
   anonymous.begin();
   anonymous.setNetwork("Example Mobile", 4);
-  Calls calls(f.clock, anonymous, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger);
+  Calls calls(f.clock, anonymous, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger, f.drops);
   TEST_ASSERT_TRUE(calls.call(kParentOne));
   CallEvent busy;
   busy.type = CallEventType::Busy;
@@ -677,6 +705,7 @@ int main() {
   RUN_TEST(test_a_contact_whose_number_arrives_late_rings_from_then_on);
   RUN_TEST(test_the_target_of_a_call_action_may_call);
   RUN_TEST(test_a_stranger_calling_again_is_rejected_again);
+  RUN_TEST(test_a_flood_of_calls_from_a_stranger_is_one_line_and_one_summary);
   RUN_TEST(test_a_stranger_does_not_disturb_the_calls_of_contacts);
   RUN_TEST(test_a_call_we_dialled_is_not_hidden_by_the_rule);
   RUN_TEST(test_a_busy_line_is_reported);

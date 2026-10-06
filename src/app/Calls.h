@@ -38,6 +38,7 @@
 #include "../hal/Modem.h"
 #include "../hal/Power.h"
 #include "Cellular.h"
+#include "DropLog.h"
 #include "Logger.h"
 #include "MessageStore.h"
 #include "Notices.h"
@@ -54,7 +55,7 @@ public:
   static constexpr int kMaxVolume = 7;
 
   Calls(Clock& clock, Modem& modem, Power& power, MessageStore& store, const Profile& profile, SchoolTime& school,
-        Notices& notices, Haptic& haptic, Logger& log)
+        Notices& notices, Haptic& haptic, Logger& log, DropLog& drops)
       : clock_(clock),
         modem_(modem),
         power_(power),
@@ -63,7 +64,8 @@ public:
         school_(school),
         notices_(notices),
         haptic_(haptic),
-        log_(log) {}
+        log_(log),
+        drops_(drops) {}
 
   // Call events and the ring. True when the modem reported something (it is awake then).
   bool poll();
@@ -100,7 +102,8 @@ private:
   void handleIncoming(const CallEvent& ev);
   void reportFailed(const CallEvent& ev, const char* reason);
   void ring();
-  void rejectUnknown(const std::string& why);
+  // `number` empty: the number never came (withheld).
+  void rejectUnknown(const std::string& number);
   bool callerAllowed() const;
   void clearCall();
   std::string nameOf(const std::string& phone) const;
@@ -114,6 +117,7 @@ private:
   Notices& notices_;
   Haptic& haptic_;
   Logger& log_;
+  DropLog& drops_;
 
   std::string peer_;
   // For the report of a call that did not happen: we dialled, it never connected, and the child

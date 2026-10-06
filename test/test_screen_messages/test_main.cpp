@@ -150,7 +150,7 @@ void test_a_radio_message_says_whether_it_arrived_and_an_sms_says_nothing() {
 }
 
 void test_a_radio_message_that_came_in_is_marked_and_named_by_its_radio_name() {
-  Page page(ProfileBuilder().radio(true).build());
+  Page page(ProfileBuilder().radio(true).radioPeer("Node One").build());
   page.rig.radio.setUp(true);
   page.rig.radio.addPeer("Node One", true, 0);
   page.rig.core.setRadio(&page.rig.radio);
@@ -305,7 +305,7 @@ void test_a_stranger_may_be_answered_only_where_free_recipients_are_allowed() {
 }
 
 void test_a_radio_message_is_answered_over_the_radio() {
-  Page page(ProfileBuilder().radio(true).freeText(true).build());
+  Page page(ProfileBuilder().radio(true).radioPeer("Node One").freeText(true).build());
   page.rig.radio.setUp(true);
   page.rig.radio.addPeer("Node One", true, 0);
   page.rig.core.setRadio(&page.rig.radio);

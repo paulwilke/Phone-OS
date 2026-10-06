@@ -36,7 +36,7 @@ struct Rig : CoreFakes {
   Messaging messaging;
 
   explicit Rig(Profile p = ProfileBuilder().build())
-      : CoreFakes(std::move(p)), messaging(clock, modem, power, store, profile, school, notices, haptic, logger) {
+      : CoreFakes(std::move(p)), messaging(clock, modem, power, store, profile, school, notices, haptic, logger, drops) {
     messaging.setRadio(&radio);
     messaging.setHooks(&hooks);
     messaging.configure({"#WhereAreYou", "#WoBistDu"});
@@ -47,7 +47,7 @@ struct Rig : CoreFakes {
   std::string textOf(size_t i) { return store.at(i).text; }
 };
 
-Profile withRadio() { return ProfileBuilder().radio(true).build(); }
+Profile withRadio() { return ProfileBuilder().radio(true).radioPeer("Node One").build(); }
 Profile inSchool() { return ProfileBuilder().schoolTime("tue", "14:00", "15:00").build(); }
 
 }  // namespace
@@ -199,13 +199,12 @@ void test_an_sms_from_a_stranger_is_dropped_without_a_trace() {
   expectNothingLeft(r);
 }
 
-void test_the_drop_is_logged_with_the_number_and_never_the_text() {
+void test_the_drop_is_logged_with_the_number_and_the_start_of_the_text() {
   Rig r;
   r.receive(kStranger, "Win a prize");
   r.messaging.poll();
-  TEST_ASSERT_TRUE(r.log.contains("SMS dropped: sender not in the contact book (+491709999999)"));
-  TEST_ASSERT_FALSE(r.log.contains("prize"));
-  TEST_ASSERT_TRUE(loglevel::classify("SMS dropped: sender not in the contact book (+491709999999)") ==
+  TEST_ASSERT_TRUE(r.log.contains("SMS dropped: sender not in the contact book (+491709999999): Win a prize"));
+  TEST_ASSERT_TRUE(loglevel::classify("SMS dropped: sender not in the contact book (+491709999999): Win a prize") ==
                    loglevel::Importance::Always);
 }
 
@@ -217,16 +216,49 @@ void test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form() {
   TEST_ASSERT_TRUE(r.log.contains("(+491709999999)"));
 }
 
-void test_a_sender_that_is_no_number_is_dropped() {
+// A sender that is no number is one sender by its text, and the text of what it sent is in the log: a
+// balance, a tariff, a PIN notice (the owner's decision of 2026-10-06, docs/log-level.md).
+void test_a_sender_that_is_no_number_is_dropped_and_logged_by_its_name() {
   Rig r;
   r.receive("Provider", "Your balance is 3.00");
   r.receive("12345", "Premium offer");
   r.receive("", "Nobody sends this");
   r.messaging.poll();
   expectNothingLeft(r);
-  TEST_ASSERT_TRUE(r.log.contains("(non-numeric sender)"));
-  TEST_ASSERT_FALSE(r.log.contains("Provider"));
-  TEST_ASSERT_FALSE(r.log.contains("balance"));
+  TEST_ASSERT_TRUE(r.log.contains("(non-numeric sender Provider): Your balance is 3.00"));
+  TEST_ASSERT_TRUE(r.log.contains("(12345): Premium offer"));                      // a short code is a number: its digits
+  TEST_ASSERT_TRUE(r.log.contains("(non-numeric sender): Nobody sends this"));     // no sender at all
+}
+
+// A flood must not fill the card: the first text of a sender is a line, with the start of its text; the rest
+// is counted, and the count is one more line when the ten minutes are over. Nothing is stored or felt.
+void test_a_flood_of_a_hundred_texts_from_a_stranger_is_one_line_and_one_summary() {
+  Rig r;
+  for (int i = 0; i < 100; ++i) {
+    r.receive(kStranger, "spam " + std::to_string(i));
+    r.messaging.poll();
+    r.clock.advanceSeconds(1);
+  }
+  expectNothingLeft(r);
+  TEST_ASSERT_EQUAL(1, r.log.entries().size());
+  TEST_ASSERT_TRUE(r.log.contains("(+491709999999): spam 0"));
+  r.clock.advanceSeconds(DropLog::kWindowSeconds);
+  r.drops.tick();
+  TEST_ASSERT_EQUAL(2, r.log.entries().size());
+  TEST_ASSERT_TRUE(r.log.contains("(99 more in the last 10 minutes)"));
+}
+
+void test_the_text_of_a_dropped_message_is_in_the_log_cut_clean_and_without_control_characters() {
+  Rig r;
+  r.receive("Provider", "Balance:\n3.00 EUR\tPIN 1234");
+  r.receive(kStranger, std::string(500, 'a'));
+  r.receive("+4917012345678", "");
+  r.messaging.poll();
+  TEST_ASSERT_TRUE(r.log.contains("(non-numeric sender Provider): Balance: 3.00 EUR PIN 1234"));
+  TEST_ASSERT_TRUE(r.log.contains("(+491709999999): " + std::string(120, 'a')));
+  TEST_ASSERT_FALSE(r.log.contains(std::string(121, 'a')));
+  TEST_ASSERT_TRUE(r.log.contains("(+4917012345678)"));
+  for (const auto& e : r.log.entries()) TEST_ASSERT_TRUE(e.line.find("(+4917012345678)") == std::string::npos || e.line.find(':', e.line.find("(+4917012345678)")) == std::string::npos);
 }
 
 void test_an_empty_text_from_a_stranger_is_dropped() {
@@ -436,7 +468,7 @@ void test_a_message_with_a_path_is_pending_work() {
 void test_without_a_radio_everything_works_as_before() {
   CoreFakes f;
   Hooks hooks;
-  Messaging m(f.clock, f.modem, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger);   // no radio attached
+  Messaging m(f.clock, f.modem, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger, f.drops);   // no radio attached
   f.networkLost();
   TEST_ASSERT_FALSE(m.radioUsable());
   TEST_ASSERT_TRUE(m.sendText(kParentOne, "Hello"));
@@ -477,6 +509,77 @@ void test_an_incoming_radio_message_is_stored() {
   TEST_ASSERT_EQUAL_STRING("Node One", r.at(0).peer);
   TEST_ASSERT_EQUAL(1, r.store.unread());
   TEST_ASSERT_EQUAL(0, r.haptic.played().size());               // a radio message does not vibrate (it never did)
+}
+
+// ---- only the configured peer may write over the radio -----------------------------------------------------------
+
+void test_a_radio_message_from_the_configured_peer_is_stored_and_counted_unread() {
+  Rig r(withRadio());
+  r.radioUp("Node One");
+  r.radio.deliver("Node One", "On our way", 0);
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());
+  TEST_ASSERT_EQUAL(1, r.store.unread());
+}
+
+void test_a_radio_message_from_another_name_is_dropped_like_a_strangers_text() {
+  Rig r(withRadio());
+  r.radioUp("Node One");
+  r.radio.addPeer("Node Two", true, 0);
+  r.radio.deliver("Node Two", "Meet me at the gate", 0);
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(0, r.store.count());
+  TEST_ASSERT_EQUAL(0, r.store.unread());
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+  TEST_ASSERT_TRUE(r.log.contains("Radio message dropped: sender not the configured radio peer (Node Two): Meet me at the gate"));
+  TEST_ASSERT_TRUE(loglevel::classify("Radio message dropped: sender not the configured radio peer (Node Two): Meet me at the gate") ==
+                   loglevel::Importance::Always);
+}
+
+void test_with_no_radio_peer_configured_no_radio_message_is_accepted() {
+  Rig r(ProfileBuilder().radio(true).build());
+  r.radioUp("Node One");
+  r.radio.deliver("Node One", "Hello", 0);
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(0, r.store.count());
+  TEST_ASSERT_EQUAL(0, r.store.unread());
+  TEST_ASSERT_TRUE(r.log.contains("no radio peer is configured: Hello"));
+}
+
+void test_a_flood_from_another_radio_name_is_one_line_and_one_summary_and_the_peer_still_gets_through() {
+  Rig r(withRadio());
+  r.radioUp("Node One");
+  r.radio.addPeer("Intruder", true, 0);
+  for (int i = 0; i < 50; ++i) {
+    r.radio.deliver("Intruder", "noise " + std::to_string(i), 0);
+    r.messaging.poll();
+    r.clock.advanceSeconds(2);
+  }
+  r.radio.deliver("Node One", "still here", 0);
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());                                  // the peer's message, and only that
+  TEST_ASSERT_EQUAL_STRING("still here", r.at(0).text);
+  TEST_ASSERT_EQUAL(1, r.log.entries().size());
+  TEST_ASSERT_TRUE(r.log.contains("(Intruder): noise 0"));
+  r.clock.advanceSeconds(DropLog::kWindowSeconds);
+  r.drops.tick();
+  TEST_ASSERT_TRUE(r.log.contains("(Intruder) ... (49 more in the last 10 minutes)"));
+}
+
+// The name is compared as the radio reports it, character for character: the configured name in another
+// case, or with a space, is another sender. (A name can be spoofed within range: docs/messaging.md.)
+void test_the_peer_name_is_compared_exactly_and_the_case_is_the_radios() {
+  Rig r(withRadio());
+  r.radioUp("Node One");
+  for (const char* name : {"node one", "NODE ONE", "Node One ", " Node One", "Node  One", "Node One2", "Node"}) {
+    r.radio.addPeer(name, true, 0);
+    r.radio.deliver(name, "hi", 0);
+    r.messaging.poll();
+  }
+  TEST_ASSERT_EQUAL(0, r.store.count());
+  r.radio.deliver("Node One", "hi", 0);
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());
 }
 
 void test_an_explicit_radio_send() {
@@ -696,7 +799,7 @@ void test_a_message_the_modem_refuses_stays_in_the_queue_while_the_others_go() {
   flaky.begin();
   flaky.setNetwork("Example Mobile", 4);
   Hooks hooks;
-  Messaging m(f.clock, flaky, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger);
+  Messaging m(f.clock, flaky, f.power, f.store, f.profile, f.school, f.notices, f.haptic, f.logger, f.drops);
   flaky.setNetwork("", 0);
   m.sendText(kParentOne, "first");
   m.sendText(kParentOne, "second");
@@ -745,9 +848,11 @@ int main() {
   RUN_TEST(test_after_school_time_everybody_vibrates_again);
   RUN_TEST(test_an_incoming_sms_means_the_modem_is_awake);
   RUN_TEST(test_an_sms_from_a_stranger_is_dropped_without_a_trace);
-  RUN_TEST(test_the_drop_is_logged_with_the_number_and_never_the_text);
+  RUN_TEST(test_the_drop_is_logged_with_the_number_and_the_start_of_the_text);
   RUN_TEST(test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form);
-  RUN_TEST(test_a_sender_that_is_no_number_is_dropped);
+  RUN_TEST(test_a_sender_that_is_no_number_is_dropped_and_logged_by_its_name);
+  RUN_TEST(test_a_flood_of_a_hundred_texts_from_a_stranger_is_one_line_and_one_summary);
+  RUN_TEST(test_the_text_of_a_dropped_message_is_in_the_log_cut_clean_and_without_control_characters);
   RUN_TEST(test_an_empty_text_from_a_stranger_is_dropped);
   RUN_TEST(test_an_empty_text_from_a_contact_is_stored_as_before);
   RUN_TEST(test_every_spelling_of_a_contact_is_let_through);
@@ -771,6 +876,11 @@ int main() {
   RUN_TEST(test_a_profile_without_the_radio_never_sends_by_radio);
   RUN_TEST(test_a_profile_without_the_radio_ignores_incoming_radio_messages);
   RUN_TEST(test_an_incoming_radio_message_is_stored);
+  RUN_TEST(test_a_radio_message_from_the_configured_peer_is_stored_and_counted_unread);
+  RUN_TEST(test_a_radio_message_from_another_name_is_dropped_like_a_strangers_text);
+  RUN_TEST(test_with_no_radio_peer_configured_no_radio_message_is_accepted);
+  RUN_TEST(test_a_flood_from_another_radio_name_is_one_line_and_one_summary_and_the_peer_still_gets_through);
+  RUN_TEST(test_the_peer_name_is_compared_exactly_and_the_case_is_the_radios);
   RUN_TEST(test_an_explicit_radio_send);
   RUN_TEST(test_a_radio_message_is_marked_confirmed);
   RUN_TEST(test_a_radio_message_without_confirmation_says_so);

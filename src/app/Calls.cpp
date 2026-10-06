@@ -25,10 +25,10 @@ bool Calls::active() const {
   return s == ModemState::Dialing || s == ModemState::RingingIn || s == ModemState::InCall;
 }
 
-void Calls::rejectUnknown(const std::string& why) {
+void Calls::rejectUnknown(const std::string& number) {
   rejectedUnknown_ = true;
   peer_.clear();
-  log_.log("Call rejected: " + why);
+  drops_.callRejected(number, profile_.contacts.countryCode());   // one line per caller per ten minutes
   modem_.hangup();
 }
 
@@ -106,8 +106,7 @@ void Calls::handleIncoming(const CallEvent& ev) {
   }
   if (!profile_.mayReceiveFrom(ev.phone)) {
     if (!rejectedUnknown_) {
-      const std::string number = phone::canonical(ev.phone.c_str(), profile_.contacts.countryCode());
-      rejectUnknown("caller not in the contact book (" + (number.empty() ? std::string("non-numeric number") : number) + ")");
+      rejectUnknown(ev.phone);
     }
     return;
   }
@@ -209,7 +208,7 @@ void Calls::ring() {
   // Nobody is known yet: nothing rings. The number never came (caller identification is off or
   // the number is withheld): hang up all the same, or the call would ring on unnoticed.
   if (!callerAllowed()) {
-    if (now - ringStarted_ >= kQuietRejectSeconds && !rejectedUnknown_) rejectUnknown("number withheld");
+    if (now - ringStarted_ >= kQuietRejectSeconds && !rejectedUnknown_) rejectUnknown(std::string());
     return;
   }
   const bool school = school_.active();

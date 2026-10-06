@@ -1,0 +1,38 @@
+# Only the configured peer may write over the radio ([radio] peer = "NodeOne"): its message is stored and
+# unread; the message of any other name is dropped like a stranger's text: logged with its text, counted in
+# one summary, never stored, never unread. The name must be exactly the configured one, case included.
+advance 5s
+radio start
+advance 2s
+radio peer NodeOne
+radio peer Intruder
+advance 1s
+check unread 0
+
+radio msg NodeOne On our way
+advance 1s
+check unread 1
+key inbox
+check screen messages
+say On our way
+key home
+
+radio msg Intruder Come outside, I am at the gate
+radio msg Intruder noise 1
+radio msg Intruder noise 2
+radio msg nodeone lower case is another name
+radio msg NODEONE upper case is another name
+advance 1s
+check unread 1
+check log-has Radio message dropped: sender not the configured radio peer (Intruder): Come outside, I am at the gate
+check log-has Radio message dropped: sender not the configured radio peer (nodeone): lower case is another name
+check log-has Radio message dropped: sender not the configured radio peer (NODEONE): upper case is another name
+fails check log-has noise
+
+# The peer is still heard while the intruder is counted, and the count comes in one line.
+radio msg NodeOne Still here
+advance 1s
+check unread 2
+advance 11m
+check log-has (Intruder) ... (2 more in the last 10 minutes)
+check unread 2

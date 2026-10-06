@@ -6,6 +6,7 @@
 // the radio exists but is down. A test adds the component it tests and changes what differs.
 
 #include <ProfileBuilder.h>
+#include <app/DropLog.h>
 #include <app/Logger.h>
 #include <app/MessageStore.h>
 #include <app/Notices.h>
@@ -33,6 +34,8 @@ struct CoreFakes {
   FakeEventLog log{&clock};
   Profile profile;
   Logger logger{log, profile};
+  // What the device turns away is logged once per sender per ten minutes (DropLog.h); the time is the fake clock's uptime.
+  DropLog drops{logger, [this] { return static_cast<uint32_t>(clock.uptimeMillis() / 1000); }};
   MessageStore store;
   SchoolTime school{clock, profile, logger};
   Notices notices{clock};

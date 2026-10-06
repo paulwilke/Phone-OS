@@ -10,11 +10,12 @@ AppCore::AppCore(Clock& clock, Power& power, Modem& modem, GnssReceiver& gnss, H
       translator_(translator),
       profile_(std::move(profile)),
       logger_(eventLog, profile_),
+      drops_(logger_, [&clock] { return static_cast<uint32_t>(clock.uptimeMillis() / 1000); }),
       notices_(clock),
       school_(clock, profile_, logger_),
       positioning_(clock, power, gnss, logger_),
-      messaging_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_),
-      calls_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_),
+      messaging_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_, drops_),
+      calls_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_, drops_),
       emergency_(clock, positioning_, messaging_, school_, store_, profile_, translator, haptic, logger_),
       powerCoordination_(clock, power, modem, profile_, notices_, logger_),
       connectivity_(clock, power, modem, profile_, notices_, powerCoordination_, logger_) {
@@ -76,6 +77,7 @@ void AppCore::start() {
 
 PowerDecision AppCore::poll(bool displayOn, uint32_t nextRenderInMs) {
   applyTimeZone();
+  drops_.tick();
 
   // Anything the modem reports proves that it is awake.
   bool modemActive = messaging_.poll();

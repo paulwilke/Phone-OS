@@ -147,9 +147,9 @@ Tests in `test/test_messaging/`.
 | MSG-44 | The history text is cut on a character boundary | `test_the_history_text_is_cut_on_a_character_boundary` | — | done |
 | MSG-45 | The failure of a reply the Emergency hook calls silent stays out of the child's sight: logged only | `test_the_failure_of_a_silent_reply_stays_out_of_the_childs_sight` | — | done |
 | MSG-46 | An SMS from a number that is not in the contact book is dropped without a trace: not stored, not unread, no vibration, no notice, no reply | `test_an_sms_from_a_stranger_is_dropped_without_a_trace` | — | done |
-| MSG-47 | The drop is logged with the number and never the text, on an always-kept line | `test_the_drop_is_logged_with_the_number_and_never_the_text` | — | done |
+| MSG-47 | The drop is logged with the number and the start of the text (the owner's decision of 2026-10-06), on an always-kept line | `test_the_drop_is_logged_with_the_number_and_the_start_of_the_text` | — | done |
 | MSG-48 | A stranger in another spelling is logged in the canonical form | `test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form` | — | done |
-| MSG-49 | A sender that is a name, a short code or empty is dropped and logged as a non-numeric sender | `test_a_sender_that_is_no_number_is_dropped` | — | done |
+| MSG-49 | A sender that is a name or empty is dropped and logged as a non-numeric sender with its name and text; a short code is a number | `test_a_sender_that_is_no_number_is_dropped_and_logged_by_its_name` | — | done |
 | MSG-50 | An empty text from a stranger is dropped | `test_an_empty_text_from_a_stranger_is_dropped` | — | done |
 | MSG-51 | An empty text from a contact is stored as before | `test_an_empty_text_from_a_contact_is_stored_as_before` | — | done |
 | MSG-52 | Every spelling of a contact's number is let through | `test_every_spelling_of_a_contact_is_let_through` | — | done |
@@ -158,6 +158,33 @@ Tests in `test/test_messaging/`.
 | MSG-55 | A stranger cannot use the remote query: no answer, no refusal entry, no notice | `test_a_stranger_cannot_use_the_remote_query` | — | done |
 | MSG-56 | A flood of 100 texts from a stranger leaves the history, the unread count and the vibration untouched | `test_a_flood_from_a_stranger_leaves_the_history_untouched` | — | done |
 | MSG-57 | A dropped SMS still proves the modem awake | `test_a_dropped_sms_still_proves_the_modem_awake` | — | done |
+| MSG-58 | A flood of 100 texts from a stranger is one log line and, ten minutes later, one summary | `test_a_flood_of_a_hundred_texts_from_a_stranger_is_one_line_and_one_summary` | — | done |
+| MSG-59 | The text of a dropped message is in the log cut clean at 120 characters, without control characters; an empty text has no text part | `test_the_text_of_a_dropped_message_is_in_the_log_cut_clean_and_without_control_characters` | — | done |
+| MSG-60 | A radio message from the configured peer is stored and counted unread | `test_a_radio_message_from_the_configured_peer_is_stored_and_counted_unread` | — | done |
+| MSG-61 | A radio message from any other name is dropped like a stranger's text: logged with its text, not stored, not unread | `test_a_radio_message_from_another_name_is_dropped_like_a_strangers_text` | — | done |
+| MSG-62 | With no radio peer configured no radio message is accepted | `test_with_no_radio_peer_configured_no_radio_message_is_accepted` | — | done |
+| MSG-63 | A flood from another radio name is one line and one summary, and the peer still gets through | `test_a_flood_from_another_radio_name_is_one_line_and_one_summary_and_the_peer_still_gets_through` | — | done |
+| MSG-64 | The peer name is compared exactly, case and spaces included, as the radio reports it | `test_the_peer_name_is_compared_exactly_and_the_case_is_the_radios` | — | done |
+
+## Dropped lines
+
+Tests in `test/test_drop_log/`. What the device turns away is logged once per sender per ten minutes ([log-level.md](log-level.md)).
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| DRP-01 | A flood of 100 from one number is one line, and one summary when the ten minutes are over, written once | `test_a_flood_of_a_hundred_from_one_number_is_one_line_and_one_summary` | — | done |
+| DRP-02 | Without a tick the next drop writes the summary, then its own line | `test_the_summary_is_written_by_the_next_drop_when_nobody_ticks` | — | done |
+| DRP-03 | Two senders are counted apart | `test_two_senders_are_counted_apart` | — | done |
+| DRP-04 | One number in three spellings is one sender; a name is one sender by its text | `test_one_number_in_three_spellings_is_one_sender_and_a_name_is_one_sender_by_its_text` | — | done |
+| DRP-05 | After more than ten minutes a drop writes a line again, with its text | `test_a_gap_of_more_than_ten_minutes_writes_a_line_again` | — | done |
+| DRP-06 | A clock that jumps back does not stall the log | `test_a_clock_that_jumps_back_does_not_stall_the_log` | — | done |
+| DRP-07 | The table is bounded; a flood of different numbers gets a line each | `test_the_table_is_bounded_and_a_flood_of_numbers_gets_a_line_each` | — | done |
+| DRP-08 | The first line has the text and nothing else of the message | `test_the_first_line_has_the_text_and_nothing_else_of_the_message` | — | done |
+| DRP-09 | A control character in the text is replaced by a space | `test_control_characters_are_replaced_by_a_space` | — | done |
+| DRP-10 | A text of 500 characters is cut at 120, by characters and not by bytes | `test_a_long_text_is_cut_at_a_hundred_and_twenty_characters` | — | done |
+| DRP-11 | An empty text has no text part | `test_an_empty_text_has_no_text_part` | — | done |
+| DRP-12 | A call has no text and shares the window with the texts of the same number; a withheld number is its own line | `test_a_call_has_no_text_and_shares_the_window_with_the_texts_of_the_same_number` | — | done |
+| DRP-13 | No log level drops any of these lines | `test_no_line_is_ever_dropped_by_a_log_level` | — | done |
 
 ## Calls
 
@@ -214,6 +241,7 @@ Tests in `test/test_calls/`.
 | CAL-47 | A stranger calling again is rejected again | `test_a_stranger_calling_again_is_rejected_again` | — | done |
 | CAL-48 | A stranger does not disturb the call of a contact | `test_a_stranger_does_not_disturb_the_calls_of_contacts` | — | done |
 | CAL-49 | A call the child dialled is not hidden by the rule | `test_a_call_we_dialled_is_not_hidden_by_the_rule` | — | done |
+| CAL-50 | A flood of calls from a stranger is one log line and one summary; every call is hung up all the same | `test_a_flood_of_calls_from_a_stranger_is_one_line_and_one_summary` | — | done |
 
 ## Emergency
 

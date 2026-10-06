@@ -1,0 +1,12 @@
+# data: test/data/radio-no-peer
+# The radio is allowed but no peer is configured: no radio message is accepted, whoever it comes from, and
+# each name is logged once with its text and says that no peer is configured.
+advance 5s
+radio start
+advance 2s
+radio peer NodeOne
+advance 1s
+radio msg NodeOne Hello from the node
+advance 1s
+check unread 0
+check log-has Radio message dropped: sender not the configured radio peer (NodeOne), no radio peer is configured: Hello from the node

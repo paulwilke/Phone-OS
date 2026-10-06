@@ -61,7 +61,8 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 
 5. **Config files are validated before writing.** Every PUT to a config route runs the file through `ConfigLoader` first. A file that the device would reject at startup is never stored.
 
-6. **Every change is logged.** All writes go through the application log (`AppCore::log()`): path and byte count only, never the content. Deleting the log itself is allowed but the deletion is logged before the file is removed.
+6. **The log can hold the text of dropped messages, and the page shows the log.** The log tab reads the log file of the card through the file route, with the web password. What the device turns away is logged with the start of its text (the first 120 characters, the first drop of each sender in ten minutes: [log-level.md](log-level.md)), so that the parents can read a balance, a tariff or a PIN notice there; whoever has the password can read it. The log never holds the content of what the page itself writes (next point).
+7. **Every change is logged.** All writes go through the application log (`AppCore::log()`): path and byte count only, never the content. Deleting the log itself is allowed but the deletion is logged before the file is removed.
 
 The trade-off: the API returns `secrets.toml` on `GET /api/secrets` and the raw editor shows it, because the parents asked for real access to every file; the secrets are stored as plain text, there is no hash. Whoever has the web password therefore sees every other secret too, and because the server speaks plain HTTP (there is no HTTPS on this device) the password and the secrets cross the Wi-Fi in clear text. Use the interface on a network you trust and keep the session short; it ends by itself when Wi-Fi switches off. Without the password nothing comes out, and `GET /api/state` only says *whether* a secret is set. The decision was taken on 2026-10-01 and is intentional.
 

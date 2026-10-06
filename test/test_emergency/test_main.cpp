@@ -51,7 +51,7 @@ struct Rig : CoreFakes {
   explicit Rig(Profile p = ProfileBuilder().childName("Alex").build())
       : CoreFakes(std::move(p), 100),
         positioning(clock, power, gnss, logger),
-        messaging(clock, modem, power, store, profile, school, notices, haptic, logger),
+        messaging(clock, modem, power, store, profile, school, notices, haptic, logger, drops),
         emergency((loadCatalogs(translator), clock), positioning, messaging, school, store, profile, translator, haptic, logger) {
     bridge.emergency = &emergency;
     messaging.setHooks(&bridge);

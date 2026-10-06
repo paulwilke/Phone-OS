@@ -1,0 +1,46 @@
+# A flood from a stranger must not fill the card: the first text of a sender is one line with the start of
+# its text, the rest is counted and told in one more line when ten minutes have passed; calls are the same,
+# and two senders are counted apart. Nothing is stored, felt or answered meanwhile.
+advance 5s
+check unread 0
+
+sms +491709999999 Your balance is 3.00 EUR
+sms +491709999999 spam 1
+sms +491709999999 spam 2
+sms +491709999999 spam 3
+sms +491709999999 spam 4
+sms +491709999999 spam 5
+sms +491709999999 spam 6
+sms +491709999999 spam 7
+sms +491709999999 spam 8
+sms +491709999999 spam 9
+call +4917012345678
+advance 2s
+call +4917012345678
+advance 2s
+call +4917012345678
+advance 2s
+check unread 0
+check haptic-message 0
+check haptic-ring 0
+check call idle
+check log-has SMS dropped: sender not in the contact book (+491709999999): Your balance is 3.00 EUR
+fails check log-has spam
+check log-has Call rejected: caller not in the contact book (+4917012345678)
+
+# Ten minutes later each sender has its summary, and nothing else was written.
+advance 11m
+check log-has SMS dropped: sender not in the contact book (+491709999999) ... (9 more in the last 10 minutes)
+check log-has Call rejected: caller not in the contact book (+4917012345678) ... (2 more in the last 10 minutes)
+check unread 0
+
+# After another ten minutes the same sender has a line with its text again.
+advance 11m
+sms +491709999999 Your tariff has changed
+advance 2s
+check log-has (+491709999999): Your tariff has changed
+
+# A contact still gets through.
+sms +491701111111 Hello Alex
+advance 2s
+check unread 1

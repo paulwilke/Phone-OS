@@ -15,15 +15,15 @@ The whitelist decides who may reach the child. Both modules return data and prob
 | a text | dropped before anything else: not stored, not unread, no vibration, no notice, not offered to the remote query; one log line | as always: stored, vibration, remote query when an admin sends the trigger word |
 | a call | hung up at once: no ring, no vibration, no notice, no history entry, no missed call; the screen never changes; one log line | rings; in school time rejected with a notice naming the caller |
 
-The parents can see in the log that something knocked, on every log level, never with the text: `SMS dropped: sender not in the contact book (+491709999999)`, `Call rejected: caller not in the contact book (+491709999999)`, `Call rejected: number withheld` ([log-level.md](log-level.md)). The child is told nothing. Details: [messaging.md](messaging.md), [calls.md](calls.md).
+The parents can see in the log that something knocked, on every log level: `SMS dropped: sender not in the contact book (+491709999999): Your balance is 3.00 EUR`, `Call rejected: caller not in the contact book (+491709999999)`, `Call rejected: number withheld` ([log-level.md](log-level.md)). **The first line of a sender in ten minutes carries the first 120 characters of the text** of a dropped message, so that a balance, a tariff or a PIN notice can be read there; **dropped text can therefore land in the log, and the log is readable through the web page with the web password.** A call has no text. The child is told nothing. Details: [messaging.md](messaging.md), [calls.md](calls.md).
 
 ### What the rule does not do
 
 - **It trusts the sender number the network delivers.** Whoever knows a family number can send from it: a number can be spoofed, and the device cannot tell. The rule keeps out advertising, sales calls, strangers and floods; it is not protection against somebody who knows the family and forges a number.
-- **Texts from the provider are dropped too** (balance, tariff, PIN information). The parents see only the log line, without the text.
+- **Texts from the provider are dropped too** (balance, tariff, PIN information). The parents read them in the log line, which carries the start of the text (see above).
 - **A family member who withholds the number is rejected** like any other hidden call.
-- **A flood is cheap for the child but not for the log:** every dropped text or call writes one line, and these lines are kept on every log level.
-- **The radio is a separate path** with its own rules ([messaging.md](messaging.md)); this rule does not cover it.
+- **A flood is cheap for the child and for the log:** at most one line per sender per ten minutes, then one line that counts the rest ("... (17 more in the last 10 minutes)"), and these lines are kept on every log level ([log-level.md](log-level.md)). Many different numbers still write a line each.
+- **The radio is a separate path** with its own rule: only the configured peer may write ([messaging.md](messaging.md)); this rule does not cover it.
 
 ## Phone numbers
 
