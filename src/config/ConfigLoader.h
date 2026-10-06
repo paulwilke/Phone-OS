@@ -32,7 +32,7 @@ public:
   // Maximum file size read from each config file. Files larger than this are skipped.
   static constexpr size_t kMaxFileBytes = 4096;
   // Maximum size of a user catalog file.
-  static constexpr size_t kMaxCatalogBytes = 16384;
+  static constexpr size_t kMaxCatalogBytes = 32768;
 
   struct Result {
     Profile profile;

@@ -88,6 +88,6 @@ It proves that the application does what it should **given what the capabilities
 - **e-ink behaviour**: no ghosting, no temperature effects, and not the true look of the panel;
 - **the modem and the receiver**: their answers are scripted, so a real operator's surprises, a real SIM and a real sky are not here (the contract suites say what every implementation promises, and a real driver has to pass them);
 - **power and sleep**: the power policy's decisions are checked, not what a board does with them;
-- **a user catalog bigger than the limit** of 16,384 bytes is rejected as on the device ([translating.md](translating.md)).
+- **a user catalog bigger than the limit** of 32,768 bytes is rejected as on the device ([translating.md](translating.md)).
 
 A scenario that passes here and a device that fails are a reason to look at the capability that was assumed.
