@@ -207,6 +207,51 @@ void test_every_registered_page_can_be_reached_from_the_home_screen_by_key_press
   }
 }
 
+// ---- the motion page's sensor, through the runtime's adapter --------------------------------------------------
+
+void test_the_motion_page_runs_the_sensor_only_while_it_is_open_through_the_runtimes_adapter() {
+  World w;
+  everythingOn(w);
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(2);
+  // The motion tile is the eleventh: five of the child's, then network, GPS, clock, options, Wi-Fi.
+  for (int i = 0; i < 10; ++i) w.runtime->input(ui::Input::pressed(ui::Key::Down), w.ms);
+  w.runtime->input(ui::Input::pressed(ui::Key::Select), w.ms);
+  TEST_ASSERT_EQUAL(ui::screen::kMotion, w.runtime->stack().visibleId());
+  TEST_ASSERT_FALSE(w.motion.running());                 // the page says it is starting first
+  w.run(2);
+  TEST_ASSERT_TRUE(w.motion.running());                  // and only then asks the sensor
+  w.runtime->input(ui::Input::pressed(ui::Key::Back), w.ms);
+  TEST_ASSERT_FALSE(w.motion.running());                 // leaving lets it go
+}
+
+void test_the_adapter_hands_the_sensor_on_and_without_a_sensor_says_there_is_none() {
+  FakeMotion sensor;
+  boot::SensorMotionSource source(&sensor);
+  TEST_ASSERT_TRUE(source.available());
+  TEST_ASSERT_FALSE(source.running());
+  ui::Acceleration sample;
+  TEST_ASSERT_FALSE(source.read(sample));                // not running: no value
+  TEST_ASSERT_TRUE(source.start());
+  TEST_ASSERT_TRUE(source.running());
+  sensor.tilt(0.1f, -0.2f, 0.9f);
+  TEST_ASSERT_TRUE(source.read(sample));
+  TEST_ASSERT_TRUE(sample.valid);
+  TEST_ASSERT_EQUAL_FLOAT(0.1f, sample.x);               // in the sensor's own axes, unchanged
+  TEST_ASSERT_EQUAL_FLOAT(-0.2f, sample.y);
+  TEST_ASSERT_EQUAL_FLOAT(0.9f, sample.z);
+  source.stop();
+  TEST_ASSERT_FALSE(source.running());
+
+  boot::SensorMotionSource none(nullptr);
+  TEST_ASSERT_FALSE(none.available());
+  TEST_ASSERT_FALSE(none.start());
+  TEST_ASSERT_FALSE(none.running());
+  TEST_ASSERT_FALSE(none.read(sample));
+  none.stop();                                           // nothing to stop, and no crash
+}
+
 void test_the_frames_go_through_the_refresh_policy() {
   World w;
   sim::SimPanel panel([&] { return w.ms; });
@@ -525,6 +570,8 @@ int main() {
   RUN_TEST(test_it_boots_on_the_fakes_and_shows_the_home_screen_in_the_configured_language);
   RUN_TEST(test_every_screen_id_is_registered_by_the_runtime);
   RUN_TEST(test_every_registered_page_can_be_reached_from_the_home_screen_by_key_presses_alone);
+  RUN_TEST(test_the_motion_page_runs_the_sensor_only_while_it_is_open_through_the_runtimes_adapter);
+  RUN_TEST(test_the_adapter_hands_the_sensor_on_and_without_a_sensor_says_there_is_none);
   RUN_TEST(test_the_frames_go_through_the_refresh_policy);
   RUN_TEST(test_a_card_with_nothing_on_it_boots_with_defaults_and_says_what_is_missing);
   RUN_TEST(test_an_unknown_interface_language_falls_back_to_english_with_a_diagnostic);

@@ -9,6 +9,8 @@ Checks every Markdown file and every source file:
   * no placeholder markers (TODO, FIXME, XXX, TBD, "for now", "legacy", "deprecated",
     "temporary") — open work belongs in the issue tracker, not in the files;
   * VERSION holds one `major.minor.patch` line;
+  * every screen name of src/ui/ScreenIds.h has a docs/screen-<name>.md and every such document names a
+    screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
     `docs/<language-code>/` (translated documentation) and files that carry the marker
     `allow-non-english` in their first lines (test data, examples of other languages) are exempt.
@@ -51,8 +53,28 @@ def version_problem():
     return None
 
 
-def main():
+def screen_problems():
+    """The screen names, their documents and their registration in the runtime agree."""
+    try:
+        ids = open(os.path.join(ROOT, "src", "ui", "ScreenIds.h"), encoding="utf-8").read()
+        runtime = open(os.path.join(ROOT, "src", "boot", "Runtime.cpp"), encoding="utf-8").read()
+    except OSError as error:
+        return [f"{error.filename}: cannot be read"]
+    names = [n for n in re.findall(r"^\s*k([A-Z][A-Za-z]*),", ids, re.M) if n != "Count"]
     problems = []
+    documented = {f[len("screen-"):-3] for f in os.listdir(os.path.join(ROOT, "docs")) if re.fullmatch(r"screen-[a-z]+\.md", f)}
+    for name in names:
+        if name.lower() not in documented:
+            problems.append(f"src/ui/ScreenIds.h: screen k{name} has no docs/screen-{name.lower()}.md")
+        if f"stack_.add(ui::screen::k{name}," not in runtime:
+            problems.append(f"src/boot/Runtime.cpp: screen k{name} is not registered")
+    for doc in sorted(documented - {n.lower() for n in names}):
+        problems.append(f"docs/screen-{doc}.md: no screen of that name in src/ui/ScreenIds.h")
+    return problems
+
+
+def main():
+    problems = screen_problems()
     if version_problem():
         problems.append(version_problem())
     for path in files():

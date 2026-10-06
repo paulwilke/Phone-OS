@@ -10,7 +10,7 @@ Code: `src/ui/screens/SettingsScreen.{h,cpp}` with the widget `src/ui/OptionRows
 | Wi-Fi, on / off | `parentTools` and the core has Wi-Fi (the condition of the Wi-Fi tile) | opens the Wi-Fi page |
 | Language, by its own name | always | opens the language page |
 
-The values are read from the core when the page is drawn and nothing is kept: a volume changed by a call, or a Wi-Fi that switched itself off, shows at the next frame. Message vibration lasts until the next start (the core holds it; writing the configuration back is the configuration's job).
+The values are read from the core when the page is drawn and nothing is kept: a volume changed by a call, or a Wi-Fi that switched itself off, shows at the next frame. Message vibration is held by the core, and the runtime writes it to `settings.toml` on the card, so it lasts ([runtime.md](runtime.md); the scenario `settings-page` checks the file and the restart).
 
 **The focus** stops at both ends, like every list, and the page scrolls with it when a language or a device with more boxes needs it; it opens with the focus on the first box. A tap on a box moves the focus there and changes it.
 

@@ -2,7 +2,7 @@
 
 Code: `src/ui/screens/StatusScreen.{h,cpp}`; tests in `test/test_screen_status/`. What the parents come here for and no more: the battery and how long it lasts, the child's name and the number of contacts, how visible a remote query is, the firmware and the hardware, and the way to switch the device off. The firmware and hardware names are the application's to say (build constants), so it hands them to the page as a `DeviceInfo`; an empty hardware gives no line.
 
-**Remote queries.** Enter steps through silent, in the history, with a notice. The change lasts until the next start, like the other settings the options hold.
+**Remote queries.** Enter steps through silent, in the history, with a notice. The runtime writes the change to `settings.toml` on the card, like the other settings the child changes ([runtime.md](runtime.md)).
 
 **Switching off** is written on the page and takes two presses of x (capital too); any other key takes the first back. The page only asks: the application clears the display and switches off, and with the cable plugged in it cannot, because USB keeps the board alive; it then tells the core (`notePowerOffFailed`), whose notice says so. The page says "unplug USB first" beforehand while the cable is in.
 
