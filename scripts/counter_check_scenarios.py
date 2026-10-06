@@ -26,6 +26,8 @@ MUTATIONS = [
     ('school-time', [('src/app/SosFlow.h', 'kOverrideTaps = 5', 'kOverrideTaps = 3')], 'the SOS in school time needs three taps, not five'),
     ('remote-query-during-sos', [('src/app/SosPing.cpp', 'if (!(kind_ == Kind::Query && kind != Kind::Query)) return false;', 'if (false) return false;')], 'a remote query replaces a running emergency'),
     ('network-drop', [('src/app/Messaging.cpp', 'void Messaging::flushQueue() {\n  if (outbox_.empty()) return;', 'void Messaging::flushQueue() {\n  return;')], 'the queue is never sent when the network is back'),
+    ('contacts-only', [('src/app/Messaging.cpp', 'if (!profile_.mayReceiveFrom(sms.phone)) {', 'if (false) {')], 'a stranger\'s text is stored like any other'),
+    ('contacts-only-calls', [('src/app/Calls.cpp', 'if (!profile_.mayReceiveFrom(ev.phone)) {\n    if (!rejectedUnknown_) {', 'if (false) {\n    if (!rejectedUnknown_) {')], 'a stranger\'s call rings like any other'),
     ('save-mode', [('src/app/Connectivity.h', 'kProbeSeconds = 180', 'kProbeSeconds = 60')], 'the probe lasts one minute, not three'),
     ('language-during-emergency', [('src/app/Emergency.cpp', 'const std::string& language = profile_.smsLanguage;', 'const std::string language = translator_.language();')], "the SOS text follows the child's screen language"),
     ('missed-call', [('src/ui/screens/MessageListScreen.cpp', 'if (words != worded_) {', 'if (false) {')], 'an open entry keeps the words of the language it was opened in'),

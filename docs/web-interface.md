@@ -34,7 +34,7 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 | GET | `/api/settings` | `/config/settings.toml` as JSON |
 | PUT | `/api/settings` | Write `/config/settings.toml` |
 | GET | `/api/contacts` | `/config/contacts.toml` as JSON |
-| PUT | `/api/contacts` | Write `/config/contacts.toml` |
+| PUT | `/api/contacts` | Write `/config/contacts.toml`: this file is also the list of who may write to the device and call it, nobody else ([contacts.md](contacts.md)) |
 | GET | `/api/secrets` | `/config/secrets.toml` as JSON |
 | PUT | `/api/secrets` | Write `/config/secrets.toml` |
 | GET | `/api/files` | Directory listing (query: `path=`) |

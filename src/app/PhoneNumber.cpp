@@ -103,3 +103,12 @@ bool same(const char* a, const char* b, const char* countryCode) {
 }
 
 }  // namespace phone
+
+namespace phone {
+
+std::string canonical(const char* input, const char* countryCode) {
+  char out[kNormalizedSize];
+  return normalize(input, countryCode, out, sizeof out) ? std::string(out) : std::string();
+}
+
+}  // namespace phone

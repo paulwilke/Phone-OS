@@ -4,6 +4,27 @@ Code: `src/app/PhoneNumber.{h,cpp}` and `src/app/ContactBook.{h,cpp}`, tests in 
 
 The whitelist decides who may reach the child. Both modules return data and problem codes, never text; the interface turns a code into a sentence in the parents' language.
 
+## The central promise
+
+**Only the people in the contact book may write to the device and call it. Nobody else.** No advertising, no sales calls, no strangers, no flooding of the child with messages. This is a security rule of the household and the first thing the device promises the parents; it has no switch and no exception.
+
+`Profile::mayReceiveFrom(number)` answers it for both ways in. A number is allowed when it is in the contact book, whatever its role (parent, family, anybody stored), or is the target of a call action, and it is the same number in every spelling (`0170 1111111`, `0049 170 1111111` and `+491701111111` are one person). Everything else is not allowed: a stranger, a provider's name or short code, an empty sender, a withheld number.
+
+| What arrives | From a number that is not allowed | From an allowed number |
+|---|---|---|
+| a text | dropped before anything else: not stored, not unread, no vibration, no notice, not offered to the remote query; one log line | as always: stored, vibration, remote query when an admin sends the trigger word |
+| a call | hung up at once: no ring, no vibration, no notice, no history entry, no missed call; the screen never changes; one log line | rings; in school time rejected with a notice naming the caller |
+
+The parents can see in the log that something knocked, on every log level, never with the text: `SMS dropped: sender not in the contact book (+491709999999)`, `Call rejected: caller not in the contact book (+491709999999)`, `Call rejected: number withheld` ([log-level.md](log-level.md)). The child is told nothing. Details: [messaging.md](messaging.md), [calls.md](calls.md).
+
+### What the rule does not do
+
+- **It trusts the sender number the network delivers.** Whoever knows a family number can send from it: a number can be spoofed, and the device cannot tell. The rule keeps out advertising, sales calls, strangers and floods; it is not protection against somebody who knows the family and forges a number.
+- **Texts from the provider are dropped too** (balance, tariff, PIN information). The parents see only the log line, without the text.
+- **A family member who withholds the number is rejected** like any other hidden call.
+- **A flood is cheap for the child but not for the log:** every dropped text or call writes one line, and these lines are kept on every log level.
+- **The radio is a separate path** with its own rules ([messaging.md](messaging.md)); this rule does not cover it.
+
 ## Phone numbers
 
 The same number arrives as `+491701111111`, `0049 170 1111111` or `0170-1111111`, depending on the network and on who typed it. `phone::normalize()` reduces all of them to one canonical form so that comparing two numbers is a string comparison.

@@ -212,9 +212,6 @@ void test_a_notice_for_a_caller_who_is_not_in_the_book_names_the_number_or_nobod
   Notice stranger{NoticeKind::CallerInSchoolTime, kStranger, -1};
   TEST_ASSERT_EQUAL_STRING((std::string(kStranger) + " is trying to call").c_str(),
                            wording::notice(stranger, contacts, t).c_str());
-  // The core hands over no number when the caller sent none: its own kind says so without a name.
-  Notice anonymous{NoticeKind::CallInSchoolTime, "", -1};
-  TEST_ASSERT_EQUAL_STRING("Call during school time", wording::notice(anonymous, contacts, t).c_str());
   // A kind that names somebody and has nobody to name does not print an empty name.
   Notice nobody{NoticeKind::CallBusy, "", -1};
   TEST_ASSERT_EQUAL_STRING("Unknown: busy", wording::notice(nobody, contacts, t).c_str());

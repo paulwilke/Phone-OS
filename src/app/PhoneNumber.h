@@ -9,6 +9,7 @@
 // digits (E.164), or the bare digits of a short code such as "112".
 
 #include <cstddef>
+#include <string>
 
 namespace phone {
 
@@ -32,6 +33,10 @@ constexpr size_t kNormalizedSize = kMaxDigits + 2;
 // a country code makes every national number unreadable, so a misconfiguration
 // can never turn into a match.
 bool normalize(const char* input, const char* countryCode, char* out, size_t outSize);
+
+// The canonical form of `input`, or an empty string when it is not a phone number: for a log line
+// that may name a number and nothing else about a sender.
+std::string canonical(const char* input, const char* countryCode);
 
 // True when both are phone numbers and denote the same one. Two unreadable
 // inputs are never "the same".

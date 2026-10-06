@@ -10,6 +10,8 @@ bool Profile::mayCall(const std::string& number) const {
   return false;
 }
 
+bool Profile::mayReceiveFrom(const std::string& number) const { return mayCall(number); }
+
 std::string Profile::sosRecipient(const std::string& target) const {
   if (!target.empty()) return target;
   for (const std::string& t : callTargets) {

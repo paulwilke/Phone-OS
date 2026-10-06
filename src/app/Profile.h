@@ -64,6 +64,12 @@ struct Profile {
   // number) or be the target of a call action.
   bool mayCall(const std::string& number) const;
 
+  // May this sender reach the child, by SMS or by call? The household's central rule: only
+  // the contact book and the targets of the call actions. It is the same notion as mayCall
+  // (the same number in any spelling; a name, a short code or nothing at all is never allowed),
+  // kept as one function so that messages and calls cannot drift apart. There is no switch.
+  bool mayReceiveFrom(const std::string& number) const;
+
   // Whom the SOS button reaches: `target` if given, otherwise the first call target; empty when
   // there is nobody, in which case there is no SOS button.
   std::string sosRecipient(const std::string& target) const;

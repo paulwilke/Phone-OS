@@ -2,6 +2,8 @@
 
 This is the inventory of what the application does, taken from the previous code base: the one class that did everything (`EmergencyApp`), its test suite, the application behaviour exercised by the screen tests, and the Wi-Fi controller with its tests. Every row is one observable behaviour, the component that owns it, and the test that pins it. **Every previous test case appears** in the column *Previous* (`EA:` is the application test, `SC:` the screen tests, `WF:` the Wi-Fi tests), or in the list of what is not ported at the end, with the reason.
 
+**One rule stands above the tables:** only the contact book may write to the device and call it (`Profile::mayReceiveFrom`, [contacts.md](contacts.md)); the rows PRO-09, PRO-10, MSG-46 to 57 and CAL-39 to 49 pin it, and every other row about incoming texts and calls is about an allowed number.
+
 The application core is split into small components with one owner each, composed by a thin facade (`AppCore`). The core contains **no sentence**: it produces notices and system entries as codes with arguments (`src/app/Notice.h`, `src/app/SystemEntry.h`), and the interface words them from the catalogs when it draws. The only text the core produces is the body of an SMS that leaves the device, and that wording also comes from the catalogs.
 
 | Component | Owns |
@@ -36,6 +38,8 @@ Tests in `test/test_profile/`.
 | PRO-06 | A level that changes while the core runs is followed | `test_the_log_follows_a_level_that_changes_while_the_core_runs` | — | done |
 | PRO-07 | A call target is compared with the country code of the contact book | `test_a_call_target_is_compared_with_the_country_code_of_the_book` | — | done |
 | PRO-08 | A number may be called when it is in the contact book (any spelling) or a call target of the home actions | `test_who_may_be_called` | EA:test_calls_only_to_known_numbers | done |
+| PRO-09 | A number may reach the child (SMS or call) exactly when it is in the contact book in any spelling or is a call target; a name, a short code and nothing are refused | `test_who_may_reach_the_child` | — | done |
+| PRO-10 | Receiving and calling are one notion: for every number `mayReceiveFrom` and `mayCall` agree | `test_receiving_and_calling_are_one_notion` | — | done |
 
 ## Notices
 
@@ -142,6 +146,18 @@ Tests in `test/test_messaging/`.
 | MSG-43 | A queued message keeps its full text although the history keeps 160 bytes | `test_a_long_queued_message_keeps_its_full_text` | — | done |
 | MSG-44 | The history text is cut on a character boundary | `test_the_history_text_is_cut_on_a_character_boundary` | — | done |
 | MSG-45 | The failure of a reply the Emergency hook calls silent stays out of the child's sight: logged only | `test_the_failure_of_a_silent_reply_stays_out_of_the_childs_sight` | — | done |
+| MSG-46 | An SMS from a number that is not in the contact book is dropped without a trace: not stored, not unread, no vibration, no notice, no reply | `test_an_sms_from_a_stranger_is_dropped_without_a_trace` | — | done |
+| MSG-47 | The drop is logged with the number and never the text, on an always-kept line | `test_the_drop_is_logged_with_the_number_and_never_the_text` | — | done |
+| MSG-48 | A stranger in another spelling is logged in the canonical form | `test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form` | — | done |
+| MSG-49 | A sender that is a name, a short code or empty is dropped and logged as a non-numeric sender | `test_a_sender_that_is_no_number_is_dropped` | — | done |
+| MSG-50 | An empty text from a stranger is dropped | `test_an_empty_text_from_a_stranger_is_dropped` | — | done |
+| MSG-51 | An empty text from a contact is stored as before | `test_an_empty_text_from_a_contact_is_stored_as_before` | — | done |
+| MSG-52 | Every spelling of a contact's number is let through | `test_every_spelling_of_a_contact_is_let_through` | — | done |
+| MSG-53 | The target of a call action may write too | `test_the_target_of_a_call_action_may_write` | — | done |
+| MSG-54 | A stranger in school time leaves nothing either | `test_a_stranger_in_school_time_leaves_nothing_either` | — | done |
+| MSG-55 | A stranger cannot use the remote query: no answer, no refusal entry, no notice | `test_a_stranger_cannot_use_the_remote_query` | — | done |
+| MSG-56 | A flood of 100 texts from a stranger leaves the history, the unread count and the vibration untouched | `test_a_flood_from_a_stranger_leaves_the_history_untouched` | — | done |
+| MSG-57 | A dropped SMS still proves the modem awake | `test_a_dropped_sms_still_proves_the_modem_awake` | — | done |
 
 ## Calls
 
@@ -165,10 +181,10 @@ Tests in `test/test_calls/`.
 | CAL-14 | Every incoming call in school time, parents included, is rejected without ringing; the notice names a known caller | `test_every_call_in_school_time_is_rejected_silently_and_named` | EA:test_every_call_in_school_time_is_rejected_silently_and_named | done |
 | CAL-15 | A call rejected in school time is in the history as a missed call, so the parents see who tried | `test_a_rejected_call_is_in_the_history_as_missed` | — | done |
 | CAL-16 | After school time a call rings and is not rejected | `test_a_call_after_school_time_rings_and_is_not_rejected` | — | done |
-| CAL-17 | An unknown caller in school time gets a notice without a name | `test_an_unknown_caller_gets_a_notice_without_a_name` | — | done |
+| CAL-17 | An unknown caller in school time is rejected silently: no notice, no entry (see CAL-39) | `test_a_stranger_is_rejected_in_school_time_too_and_without_a_notice` | — | done |
 | CAL-18 | Vibration for calls in school time is a setting that defaults to off; switched on it vibrates and still rejects | `test_call_vibration_in_school_time_is_a_setting` | EA:test_call_vibration_settings_and_the_priority_of_school_time | done |
-| CAL-19 | A call without a number is neither rung nor rejected until the number arrives | `test_a_call_without_a_number_yet_is_neither_rung_nor_rejected` | EA:test_call_without_number_yet_is_neither_rung_nor_rejected | done |
-| CAL-20 | A call that never shows a number is rejected after three seconds in school time | `test_a_call_without_a_number_is_rejected_after_three_seconds` | EA:test_call_without_a_number_is_rejected_after_a_short_wait_in_school_time | done |
+| CAL-19 | A contact's call without a number yet is neither rung nor rejected until the number arrives or three seconds pass | `test_a_call_without_a_number_yet_is_neither_rung_nor_rejected` | EA:test_call_without_number_yet_is_neither_rung_nor_rejected | done |
+| CAL-20 | A call that never shows a number is rejected after three seconds, silently, in school time (the same as at any time: CAL-43) | `test_a_call_without_a_number_is_rejected_after_three_seconds` | EA:test_call_without_a_number_is_rejected_after_a_short_wait_in_school_time | done |
 | CAL-21 | The modem reports an incoming call twice; it is rejected once | `test_an_incoming_call_is_rejected_once` | — | done |
 | CAL-22 | A busy line is reported with the callee's name, vibrates the failure pattern and is recorded (call-failed busy) | `test_a_busy_line_is_reported` | EA:test_failed_call_says_why_busy, EA:test_failed_call_vibrates_the_failure_pattern | done |
 | CAL-23 | No answer is reported | `test_no_answer_is_reported` | EA:test_failed_call_says_no_answer | done |
@@ -178,7 +194,7 @@ Tests in `test/test_calls/`.
 | CAL-27 | A call that never connected and ended is a failure, a connected one is not, one the child hung up is not | `test_an_unconnected_end_is_a_failure` | EA:test_unconnected_end_counts_as_failure_but_normal_end_does_not | done |
 | CAL-28 | A failure event without a number names the number that was dialled | `test_a_failure_without_a_number_in_the_event_names_the_number_dialled` | — | done |
 | CAL-29 | A ring that begins at uptime zero is timed from zero | `test_a_ring_at_uptime_zero_is_timed_from_zero` | — | done |
-| CAL-30 | The school-time vibration setting also applies to a ringing call that has no number yet | `test_school_time_vibration_applies_to_a_ringing_call_without_a_number_too` | — | done |
+| CAL-30 | A ringing call without a number does not vibrate, whatever the school-time vibration setting says: nothing rings before the caller is known | `test_a_ringing_call_without_a_number_does_not_vibrate_even_when_school_time_would_allow_it` | — | done |
 | CAL-31 | Two calls in a row in school time are both rejected | `test_two_calls_in_a_row_in_school_time_are_both_rejected` | — | done |
 | CAL-32 | After a failed call the state is clean: a second call works and its normal end reports nothing | `test_the_state_after_a_failed_call_is_clean` | — | done |
 | CAL-33 | The modem's own reason goes to the log with the failure | `test_the_modems_reason_is_logged` | — | done |
@@ -187,6 +203,17 @@ Tests in `test/test_calls/`.
 | CAL-36 | A modem that cannot set the volume reports so | `test_a_modem_without_volume_support` | — | done |
 | CAL-37 | The default volume is set through the modem | `test_the_default_volume_is_set` | SC:test_options_toggle_message_vibration_and_volume | done |
 | CAL-38 | A call counts as active while dialling, ringing or connected | `test_a_call_is_active_while_dialling_ringing_or_connected` | SC:test_no_autolock_during_call | done |
+| CAL-39 | A call from a number that is not in the contact book is hung up at once: no ring, no vibration, no notice, no history entry, no peer, and the device shows no call | `test_a_stranger_is_hung_up_at_once_without_a_trace` | — | done |
+| CAL-40 | The rejection of a stranger is one log line with the number, on an always-kept line; the number withheld likewise | `test_the_rejection_of_a_stranger_is_one_log_line_with_the_number` | — | done |
+| CAL-41 | A stranger does not vibrate even when school-time vibration is on | `test_a_stranger_does_not_vibrate_even_when_school_time_vibration_is_on` | — | done |
+| CAL-42 | A stranger whose number arrives late is rejected when it arrives; nothing rang meanwhile | `test_a_stranger_who_is_announced_late_is_rejected_when_the_number_arrives` | — | done |
+| CAL-43 | A hidden number is rejected after three seconds at any time of day | `test_a_hidden_number_is_rejected_after_three_seconds_at_any_time_of_day` | — | done |
+| CAL-44 | A hidden number is rejected once and leaves no missed call | `test_a_hidden_number_is_rejected_once_and_leaves_no_missed_call` | — | done |
+| CAL-45 | A contact whose number arrives late, in any spelling, rings from then on | `test_a_contact_whose_number_arrives_late_rings_from_then_on` | — | done |
+| CAL-46 | The target of a call action may call the child | `test_the_target_of_a_call_action_may_call` | — | done |
+| CAL-47 | A stranger calling again is rejected again | `test_a_stranger_calling_again_is_rejected_again` | — | done |
+| CAL-48 | A stranger does not disturb the call of a contact | `test_a_stranger_does_not_disturb_the_calls_of_contacts` | — | done |
+| CAL-49 | A call the child dialled is not hidden by the rule | `test_a_call_we_dialled_is_not_hidden_by_the_rule` | — | done |
 
 ## Emergency
 

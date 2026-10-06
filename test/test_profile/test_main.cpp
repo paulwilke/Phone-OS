@@ -83,6 +83,32 @@ void test_who_may_be_called() {
   TEST_ASSERT_FALSE(p.mayCall("Provider"));         // not a number: never "the same" as anything
 }
 
+void test_who_may_reach_the_child() {
+  const Profile p = ProfileBuilder().callTargets({"+491701234567"}).build();
+  TEST_ASSERT_TRUE(p.mayReceiveFrom(kParentOne));
+  TEST_ASSERT_TRUE(p.mayReceiveFrom("0170 1111111"));      // every spelling of a contact
+  TEST_ASSERT_TRUE(p.mayReceiveFrom("0170-1111111"));
+  TEST_ASSERT_TRUE(p.mayReceiveFrom("0049 170 1111111"));
+  TEST_ASSERT_TRUE(p.mayReceiveFrom("+49 170 1111111"));
+  TEST_ASSERT_TRUE(p.mayReceiveFrom(kParentTwo));
+  TEST_ASSERT_TRUE(p.mayReceiveFrom(kGrandma));            // any role
+  TEST_ASSERT_TRUE(p.mayReceiveFrom("0170 1234567"));      // the target of a call action
+  TEST_ASSERT_FALSE(p.mayReceiveFrom(kStranger));
+  TEST_ASSERT_FALSE(p.mayReceiveFrom("0170 9999999"));     // the stranger in another spelling
+  TEST_ASSERT_FALSE(p.mayReceiveFrom(""));                 // nobody
+  TEST_ASSERT_FALSE(p.mayReceiveFrom("Provider"));         // a name
+  TEST_ASSERT_FALSE(p.mayReceiveFrom("12345"));            // a short code
+  TEST_ASSERT_FALSE(p.mayReceiveFrom("0170 11111111"));    // one digit more than a contact
+}
+
+void test_receiving_and_calling_are_one_notion() {
+  // They must never drift apart: every number decides the same for both.
+  const Profile p = ProfileBuilder().callTargets({"+491701234567"}).build();
+  for (const char* n : {"+491701111111", "0170 1111111", "+493012345678", "0170 1234567", "+491709999999", "", "Provider",
+                        "12345", "0049 170 1111111", "+4917"})
+    TEST_ASSERT_EQUAL_MESSAGE(p.mayCall(n), p.mayReceiveFrom(n), n);
+}
+
 void test_a_call_target_is_compared_with_the_country_code_of_the_book() {
   Profile p;
   p.contacts.setCountryCode("+34");
@@ -151,6 +177,8 @@ int main() {
   RUN_TEST(test_school_time_needs_a_known_time);
   RUN_TEST(test_the_sos_recipient_is_the_target_or_the_first_call_contact);
   RUN_TEST(test_who_may_be_called);
+  RUN_TEST(test_who_may_reach_the_child);
+  RUN_TEST(test_receiving_and_calling_are_one_notion);
   RUN_TEST(test_a_call_target_is_compared_with_the_country_code_of_the_book);
   RUN_TEST(test_the_builder_makes_the_usual_contacts_and_can_start_empty);
   RUN_TEST(test_the_country_code_of_the_contact_book_is_readable);

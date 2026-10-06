@@ -10,7 +10,7 @@ Code: `src/ui/screens/CallScreen.{h,cpp}`; tests in `test/test_screen_call/`. It
 | failed | Call failed, with the name and why | Back | |
 | no call | No call | Back | |
 
-**Who:** the name (a contact's, or the number, or "Unknown" when the caller sent none) in the large font. A number is never shortened: when it does not fit the large font it is drawn in the next smaller one, so every digit is there.
+**Who:** the name (a contact's, or the number of a call target that is no contact) in the large font. A stranger or a caller without a number never gets this page: the call is hung up before anything shows ([calls.md](calls.md)). A number is never shortened: when it does not fit the large font it is drawn in the next smaller one, so every digit is there.
 
 **A call that did not happen stays on the page until Back.** The core clears the call and tells why in the notice; the page shows "Call failed", the name and the reason (busy, no answer, no network, network allows SMS only, did not connect) for as long as that notice is up, then reads "No call". The page does not close itself: closing is the host's decision, and it leaves the failure to be read. A call that was only missed is no failure.
 
@@ -22,4 +22,4 @@ Back during dialling, ringing or a call hangs up or rejects and does not leave; 
 
 ## Tests
 
-`test_screen_call`: every phase's words, name and buttons; answer, reject, hang up; a number in no book and a caller without one; the number in the next smaller font; the volume (boxes, both ends, none before the call); every failure reason in three languages; the failure going by with the notice; a missed call; touch on the buttons and the arrows in three languages; the lock; layout in four languages; pictures in English and German.
+`test_screen_call`: every phase's words, name and buttons; answer, reject, hang up; a number that is no contact, and a stranger and a hidden number that are not on the page at all; the number in the next smaller font; the volume (boxes, both ends, none before the call); every failure reason in three languages; the failure going by with the notice; a missed call; touch on the buttons and the arrows in three languages; the lock; layout in four languages; pictures in English and German.

@@ -16,7 +16,6 @@ const NoticeWording kWording[] = {
     {"call.sms-only", true, false},
     {"call.failed", true, false},
     {"notice.caller-in-school-time", true, false},
-    {"notice.call-in-school-time", false, false},
     {"notice.message-waiting", false, false},
     {"notice.message-sent", false, false},
     {"notice.message-sent-radio", false, false},

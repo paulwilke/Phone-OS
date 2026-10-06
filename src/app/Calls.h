@@ -7,13 +7,18 @@
 // call action), with cellular switched on and the device registered. Each refusal is a notice
 // saying which.
 //
-// **Incoming calls in school time are all rejected, parents included, without ringing**
-// (decided 2026-10-02). What the child sees is a notice naming who tried — the name of a
-// contact, or no name for a caller who is not in the contact book or sent no number — and the
-// call is in the history as a missed call. The modem reports a call twice, first without a
-// number and then with it; the decision is taken with the number, so the notice can name the
-// caller, and a call that never shows a number is rejected after kQuietRejectSeconds. Vibration
-// for a call in school time is a setting of its own that defaults to off.
+// **Only the contact book may call the child** (Profile::mayReceiveFrom). A call from any other
+// number, or with no number, is hung up at once: no ring, no vibration, no notice, no history
+// entry, no missed call, and nothing on the screen — until it is over the call does not exist for
+// the rest of the core (state() says Ready and peer() is empty). One log line says that it
+// happened. The modem reports a call twice, first without a number and then with it; the decision
+// is taken with the number, and a call that never shows one is rejected after kQuietRejectSeconds,
+// at every time of day. Nothing rings before the caller is known to be allowed.
+//
+// **Incoming calls from contacts in school time are all rejected, parents included, without
+// ringing** (decided 2026-10-02). What the child sees is a notice naming who tried, and the call
+// is in the history as a missed call. Vibration for a call in school time is a setting of its own
+// that defaults to off.
 //
 // **Outside school time** a ringing call vibrates the ring pattern every kRingIntervalSeconds
 // until it stops: the device is mostly in a pocket and a sound in a lesson is the last thing
@@ -44,7 +49,7 @@ public:
   // A ringing call vibrates every two seconds: more often costs current, less often and the call
   // is overheard.
   static constexpr uint32_t kRingIntervalSeconds = 2;
-  // A call without a number is rejected in school time after this long.
+  // A call without a number is rejected after this long.
   static constexpr uint32_t kQuietRejectSeconds = 3;
   static constexpr int kMaxVolume = 7;
 
@@ -80,9 +85,13 @@ public:
   int volume() const { return modem_.callVolume(); }
   bool volumeAdjustable() const { return modem_.callVolume() >= 0; }
 
-  ModemState state() const { return modem_.state(); }
-  // Dialling, ringing or connected.
+  // What the rest of the device sees: a ringing call that is not (yet) known to come from an
+  // allowed number is not there.
+  ModemState state() const;
+  // Dialling, ringing or connected, as the device shows it.
   bool active() const;
+  // The modem is in a call or ringing, whoever it is: it must stay awake for that.
+  bool modemBusy() const;
   // The other party of the current call, as a number; empty when there is none.
   const std::string& peer() const { return peer_; }
 
@@ -91,6 +100,8 @@ private:
   void handleIncoming(const CallEvent& ev);
   void reportFailed(const CallEvent& ev, const char* reason);
   void ring();
+  void rejectUnknown(const std::string& why);
+  bool callerAllowed() const;
   void clearCall();
   std::string nameOf(const std::string& phone) const;
 
@@ -116,4 +127,5 @@ private:
   bool ringSeen_ = false;     // a call is ringing and ringStarted_ says since when
   uint32_t ringStarted_ = 0;
   bool rejectedInSchool_ = false;
+  bool rejectedUnknown_ = false;  // the ringing call of a stranger or a hidden number was hung up
 };

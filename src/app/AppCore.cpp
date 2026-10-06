@@ -87,7 +87,7 @@ PowerDecision AppCore::poll(bool displayOn, uint32_t nextRenderInMs) {
   connectivity_.poll();
 
   PowerCoordination::Needs needs;
-  needs.callActive = calls_.active();
+  needs.callActive = calls_.modemBusy();
   needs.pendingWork = messaging_.hasWork() || emergency_.ping().active() || emergency_.phase() != SosFlow::Phase::Idle;
   needs.radioUsable = messaging_.radioUsable();
   needs.wifiActive = connectivity_.wifiActive();

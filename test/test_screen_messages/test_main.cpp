@@ -261,7 +261,8 @@ void test_a_long_message_is_scrolled_to_its_end() {
 }
 
 void test_a_long_name_is_shortened_in_the_row_and_in_the_head_and_a_number_never() {
-  Page page(ProfileBuilder().noContacts().contact(kGrandma, "Grandma Elisabeth Maria", false).build());
+  // Only a number the device accepts reaches the history; a call target is one that is no contact.
+  Page page(ProfileBuilder().noContacts().contact(kGrandma, "Grandma Elisabeth Maria", false).callTargets({kStranger}).build());
   page.receive(kGrandma, "Hello");
   page.receive(kStranger, "Who is this");
   FrameBuffer fb;
@@ -289,13 +290,13 @@ void test_reply_goes_to_the_sender_who_is_a_contact_even_without_free_text() {
 }
 
 void test_a_stranger_may_be_answered_only_where_free_recipients_are_allowed() {
-  Page closed;
+  Page closed(ProfileBuilder().childName("Alex").callTargets({kStranger}).build());
   closed.receive(kStranger, "Hi");
   closed.key(Key::Select);
   TEST_ASSERT_TRUE(closed.screen.softKeys().action.empty());
   TEST_ASSERT_FALSE(closed.screen.handle(Input::pressed(Key::Select)));
   TEST_ASSERT_EQUAL(0, closed.rig.nav.calls.size());
-  Page open(ProfileBuilder().freeText(true).build());
+  Page open(ProfileBuilder().freeText(true).callTargets({kStranger}).build());
   open.receive(kStranger, "Hi");
   open.key(Key::Select);
   TEST_ASSERT_EQUAL_STRING("Reply", open.screen.softKeys().action.c_str());
@@ -488,7 +489,7 @@ void test_what_the_font_cannot_show_is_a_box_and_the_rest_of_the_text_is_there()
 
 void test_every_view_is_drawn_inside_the_screen_in_every_language() {
   languages::forEach([](const std::string& language, i18n::Translator&) {
-    DeviceRig rig(ProfileBuilder().noContacts().contact(kGrandma, "Grandma Elisabeth Maria", false).contact(kParentOne, "Parent One", true).radio(true).build());
+    DeviceRig rig(ProfileBuilder().noContacts().contact(kGrandma, "Grandma Elisabeth Maria", false).contact(kParentOne, "Parent One", true).callTargets({kStranger}).radio(true).build());
     rig.language(language);
     rig.run(10);
     rig.modem.injectSms(kGrandma, "A message that is long enough to be shortened in its row because it does not fit one line", 1);

@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
+#include "PhoneNumber.h"
 #include "SystemEntry.h"
 #include "Utf8.h"
 
@@ -65,6 +66,15 @@ bool Messaging::poll() {
 }
 
 void Messaging::handleSms(const SmsMessage& sms) {
+  // Only the people of the contact book may write to the child: nobody else is stored, felt or
+  // answered, and not even the remote query sees the message (a query comes from an admin, who is
+  // in the book anyway). The log line stays so that parents can see that something knocked; it
+  // names the number only, never the text.
+  if (!profile_.mayReceiveFrom(sms.phone)) {
+    const std::string number = phone::canonical(sms.phone.c_str(), profile_.contacts.countryCode());
+    log_.log("SMS dropped: sender not in the contact book (" + (number.empty() ? std::string("non-numeric sender") : number) + ")");
+    return;
+  }
   // A query is recognised first and never stored as a message.
   if (command_.handle(sms.phone, sms.body) == SmsCommand::Result::Handled) return;
   record(MsgSource::Sms, MsgDir::In, sms.phone, sms.body);

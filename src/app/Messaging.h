@@ -2,7 +2,10 @@
 
 // Messages in and out. Owns the routing rule and everything that follows from it.
 //
-// **Incoming.** An SMS is first offered to the remote query (SmsCommand): a query is never
+// **Incoming.** An SMS from a number that is not in the contact book (or a call target), from a
+// sender that is no number at all, or from nobody, is dropped before anything else happens: not
+// stored, not counted, no vibration, no notice, not offered to the remote query; one log line
+// with the number and never the text. Then an SMS is offered to the remote query (SmsCommand): a query is never
 // stored as a message, it is logged, written to the history as a system entry and perhaps shown
 // as a notice, as the profile says, and it never vibrates. Anything else is stored unread and
 // vibrates the message pattern — in school time only for a parent. A radio message is stored only
