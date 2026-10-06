@@ -7,7 +7,8 @@ namespace {
 
 // Lines that must stay on every level. "web:" marks actions on the parents' page.
 const char* const kAlways[] = {"command", "remote query", "sos",      "quiet hours", "restart",
-                               "firmware", "shutdown",     "config",   "web:"};
+                               "firmware", "shutdown",     "config",   "web:",
+                               "not in the contact book"};
 
 const char* const kError[] = {"failed", "rejected",        "not found", "not responding", "error",
                               "not established", "crash", "blocked",   "cannot"};

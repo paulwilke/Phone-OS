@@ -25,6 +25,8 @@ const char* const kAlways[] = {
     "Shutdown requested",
     "Config written",
     "WEB: settings changed",
+    "SMS dropped: sender not in the contact book (+491709999999)",
+    "SMS dropped: sender not in the contact book (non-numeric sender)",
 };
 
 }  // namespace

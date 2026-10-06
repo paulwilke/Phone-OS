@@ -36,6 +36,8 @@ Tests in `test/test_profile/`.
 | PRO-06 | A level that changes while the core runs is followed | `test_the_log_follows_a_level_that_changes_while_the_core_runs` | — | done |
 | PRO-07 | A call target is compared with the country code of the contact book | `test_a_call_target_is_compared_with_the_country_code_of_the_book` | — | done |
 | PRO-08 | A number may be called when it is in the contact book (any spelling) or a call target of the home actions | `test_who_may_be_called` | EA:test_calls_only_to_known_numbers | done |
+| PRO-09 | A number may reach the child (SMS or call) exactly when it is in the contact book in any spelling or is a call target; a name, a short code and nothing are refused | `test_who_may_reach_the_child` | — | done |
+| PRO-10 | Receiving and calling are one notion: for every number `mayReceiveFrom` and `mayCall` agree | `test_receiving_and_calling_are_one_notion` | — | done |
 
 ## Notices
 
@@ -142,6 +144,18 @@ Tests in `test/test_messaging/`.
 | MSG-43 | A queued message keeps its full text although the history keeps 160 bytes | `test_a_long_queued_message_keeps_its_full_text` | — | done |
 | MSG-44 | The history text is cut on a character boundary | `test_the_history_text_is_cut_on_a_character_boundary` | — | done |
 | MSG-45 | The failure of a reply the Emergency hook calls silent stays out of the child's sight: logged only | `test_the_failure_of_a_silent_reply_stays_out_of_the_childs_sight` | — | done |
+| MSG-46 | An SMS from a number that is not in the contact book is dropped without a trace: not stored, not unread, no vibration, no notice, no reply | `test_an_sms_from_a_stranger_is_dropped_without_a_trace` | — | done |
+| MSG-47 | The drop is logged with the number and never the text, on an always-kept line | `test_the_drop_is_logged_with_the_number_and_never_the_text` | — | done |
+| MSG-48 | A stranger in another spelling is logged in the canonical form | `test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form` | — | done |
+| MSG-49 | A sender that is a name, a short code or empty is dropped and logged as a non-numeric sender | `test_a_sender_that_is_no_number_is_dropped` | — | done |
+| MSG-50 | An empty text from a stranger is dropped | `test_an_empty_text_from_a_stranger_is_dropped` | — | done |
+| MSG-51 | An empty text from a contact is stored as before | `test_an_empty_text_from_a_contact_is_stored_as_before` | — | done |
+| MSG-52 | Every spelling of a contact's number is let through | `test_every_spelling_of_a_contact_is_let_through` | — | done |
+| MSG-53 | The target of a call action may write too | `test_the_target_of_a_call_action_may_write` | — | done |
+| MSG-54 | A stranger in school time leaves nothing either | `test_a_stranger_in_school_time_leaves_nothing_either` | — | done |
+| MSG-55 | A stranger cannot use the remote query: no answer, no refusal entry, no notice | `test_a_stranger_cannot_use_the_remote_query` | — | done |
+| MSG-56 | A flood of 100 texts from a stranger leaves the history, the unread count and the vibration untouched | `test_a_flood_from_a_stranger_leaves_the_history_untouched` | — | done |
+| MSG-57 | A dropped SMS still proves the modem awake | `test_a_dropped_sms_still_proves_the_modem_awake` | — | done |
 
 ## Calls
 

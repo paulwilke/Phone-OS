@@ -7,6 +7,7 @@
 
 #include <CoreFakes.h>
 #include <app/Messaging.h>
+#include <app/LogLevel.h>
 #include <app/SystemEntry.h>
 
 using namespace people;
@@ -102,7 +103,7 @@ void test_a_remote_query_is_logged_recorded_and_noticed_as_the_profile_says() {
 void test_a_refused_remote_query_is_recorded() {
   Rig r(ProfileBuilder().commandNotice(CommandNotice::Notify).build());
   r.messaging.configure({"#WhereAreYou"});
-  r.receive(kStranger, "#WhereAreYou");
+  r.receive(kGrandma, "#WhereAreYou");                        // in the book, but no admin
   r.messaging.poll();
   TEST_ASSERT_EQUAL(0, r.hooks.queries.size());              // no search, no reply
   TEST_ASSERT_EQUAL(0, r.modem.sent().size());
@@ -111,7 +112,7 @@ void test_a_refused_remote_query_is_recorded() {
   sysentry::Entry e;
   TEST_ASSERT_TRUE(sysentry::parse(r.at(0), e));
   TEST_ASSERT_EQUAL_STRING(sysentry::kQueryRefused, e.kind.c_str());
-  TEST_ASSERT_EQUAL_STRING(kStranger, r.at(0).peer);
+  TEST_ASSERT_EQUAL_STRING(kGrandma, r.at(0).peer);
   TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::QueryRefused));
 }
 
@@ -176,6 +177,126 @@ void test_an_incoming_sms_means_the_modem_is_awake() {
   r.receive(kParentOne, "Hello");
   TEST_ASSERT_TRUE(r.messaging.poll());
   TEST_ASSERT_FALSE(r.messaging.poll());                       // and it was reported once
+}
+
+// ---- only the contact book may write to the child -----------------------------------------------
+
+// Nothing of a dropped message may be left behind: not in the history, not as unread, not as a
+// vibration, not as a notice, not as a reply.
+void expectNothingLeft(Rig& r) {
+  TEST_ASSERT_EQUAL(0, r.store.count());
+  TEST_ASSERT_EQUAL(0, r.store.unread());
+  TEST_ASSERT_EQUAL(0, r.haptic.played().size());
+  TEST_ASSERT_TRUE(r.notices.current().none());
+  TEST_ASSERT_EQUAL(0, r.modem.sent().size());
+  TEST_ASSERT_EQUAL(0, r.hooks.queries.size());
+}
+
+void test_an_sms_from_a_stranger_is_dropped_without_a_trace() {
+  Rig r;
+  r.receive(kStranger, "Win a prize");
+  r.messaging.poll();
+  expectNothingLeft(r);
+}
+
+void test_the_drop_is_logged_with_the_number_and_never_the_text() {
+  Rig r;
+  r.receive(kStranger, "Win a prize");
+  r.messaging.poll();
+  TEST_ASSERT_TRUE(r.log.contains("SMS dropped: sender not in the contact book (+491709999999)"));
+  TEST_ASSERT_FALSE(r.log.contains("prize"));
+  TEST_ASSERT_TRUE(loglevel::classify("SMS dropped: sender not in the contact book (+491709999999)") ==
+                   loglevel::Importance::Always);
+}
+
+void test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form() {
+  Rig r;
+  r.receive("0170 9999999", "Hello");
+  r.messaging.poll();
+  expectNothingLeft(r);
+  TEST_ASSERT_TRUE(r.log.contains("(+491709999999)"));
+}
+
+void test_a_sender_that_is_no_number_is_dropped() {
+  Rig r;
+  r.receive("Provider", "Your balance is 3.00");
+  r.receive("12345", "Premium offer");
+  r.receive("", "Nobody sends this");
+  r.messaging.poll();
+  expectNothingLeft(r);
+  TEST_ASSERT_TRUE(r.log.contains("(non-numeric sender)"));
+  TEST_ASSERT_FALSE(r.log.contains("Provider"));
+  TEST_ASSERT_FALSE(r.log.contains("balance"));
+}
+
+void test_an_empty_text_from_a_stranger_is_dropped() {
+  Rig r;
+  r.receive(kStranger, "");
+  r.receive("Provider", "");
+  r.messaging.poll();
+  expectNothingLeft(r);
+}
+
+void test_an_empty_text_from_a_contact_is_stored_as_before() {
+  Rig r;
+  r.receive(kGrandma, "");
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());
+  TEST_ASSERT_EQUAL(1, r.store.unread());
+  TEST_ASSERT_EQUAL(1, r.haptic.played().size());
+}
+
+void test_every_spelling_of_a_contact_is_let_through() {
+  Rig r;
+  r.receive("0170 1111111", "a");
+  r.receive("0049 170 1111111", "b");
+  r.receive("+49 170 1111111", "c");
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(3, r.store.count());
+}
+
+void test_the_target_of_a_call_action_may_write() {
+  Rig r(ProfileBuilder().callTargets({"+491701234567"}).build());
+  r.receive("0170 1234567", "Hello");
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());
+}
+
+void test_a_stranger_in_school_time_leaves_nothing_either() {
+  Rig r(inSchool());
+  TEST_ASSERT_TRUE(r.school.active());
+  r.receive(kStranger, "Hello?");
+  r.messaging.poll();
+  expectNothingLeft(r);
+}
+
+void test_a_stranger_cannot_use_the_remote_query() {
+  Rig r(ProfileBuilder().commandNotice(CommandNotice::Notify).build());
+  r.receive(kStranger, "#WhereAreYou");
+  r.receive(kStranger, "#WoBistDu");
+  r.messaging.poll();
+  expectNothingLeft(r);                                       // not even a refusal entry or notice
+  TEST_ASSERT_FALSE(r.log.contains("Remote query"));
+}
+
+void test_a_flood_from_a_stranger_leaves_the_history_untouched() {
+  Rig r;
+  r.receive(kParentOne, "Come home");
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());
+  for (int i = 0; i < 100; ++i) r.receive(kStranger, "Buy now " + std::to_string(i));
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.store.count());                      // the ring holds what it held
+  TEST_ASSERT_EQUAL_STRING("Come home", r.at(0).text);
+  TEST_ASSERT_EQUAL(1, r.store.unread());
+  TEST_ASSERT_EQUAL(1, r.haptic.played().size());              // the parent's message, nothing since
+  TEST_ASSERT_TRUE(r.notices.current().none());
+}
+
+void test_a_dropped_sms_still_proves_the_modem_awake() {
+  Rig r;
+  r.receive(kStranger, "x");
+  TEST_ASSERT_TRUE(r.messaging.poll());
 }
 
 // ---- routing -----------------------------------------------------------------------------------------
@@ -623,6 +744,18 @@ int main() {
   RUN_TEST(test_in_school_time_only_parents_vibrate);
   RUN_TEST(test_after_school_time_everybody_vibrates_again);
   RUN_TEST(test_an_incoming_sms_means_the_modem_is_awake);
+  RUN_TEST(test_an_sms_from_a_stranger_is_dropped_without_a_trace);
+  RUN_TEST(test_the_drop_is_logged_with_the_number_and_never_the_text);
+  RUN_TEST(test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form);
+  RUN_TEST(test_a_sender_that_is_no_number_is_dropped);
+  RUN_TEST(test_an_empty_text_from_a_stranger_is_dropped);
+  RUN_TEST(test_an_empty_text_from_a_contact_is_stored_as_before);
+  RUN_TEST(test_every_spelling_of_a_contact_is_let_through);
+  RUN_TEST(test_the_target_of_a_call_action_may_write);
+  RUN_TEST(test_a_stranger_in_school_time_leaves_nothing_either);
+  RUN_TEST(test_a_stranger_cannot_use_the_remote_query);
+  RUN_TEST(test_a_flood_from_a_stranger_leaves_the_history_untouched);
+  RUN_TEST(test_a_dropped_sms_still_proves_the_modem_awake);
   RUN_TEST(test_a_message_goes_by_cellular);
   RUN_TEST(test_cellular_has_priority_over_the_radio);
   RUN_TEST(test_the_radio_takes_over_when_cellular_is_gone);

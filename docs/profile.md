@@ -22,6 +22,7 @@ The defaults are those of a freshly flashed device that has no settings file: me
 Two questions are answered by the profile itself, because they are rules of the household and not of a component:
 
 - `mayCall(number)`: the number is in the contact book (in any spelling: `0170 1111111` is the contact `+491701111111`) or is the target of a call action. An empty text and anything that is not a phone number is refused.
+- `mayReceiveFrom(number)`: may this sender reach the child, by SMS or by call? The same notion as `mayCall`, kept as its own function so that messages and calls cannot drift apart. A name, a short code or nothing at all is never allowed. There is no setting that changes it.
 - `sosRecipient(target)`: the target when one is given (it needs no list entry), otherwise the first call target; empty when there is nobody, in which case there is no SOS button.
 
 `schoolTime(epoch, offset, &end)` asks the quiet hours and gives the minute school time ends. An unknown time (epoch 0) never locks: the device has no clock of its own, and guessing would be wrong both ways ([quiet-hours.md](quiet-hours.md)). A window that cannot be read is refused by `QuietHours::add` with a reason and leaves no lock behind.

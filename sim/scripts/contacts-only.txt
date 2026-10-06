@@ -1,0 +1,42 @@
+# Only the contact book may write to the child: a stranger's text, a provider's text and a text
+# from a name leave no trace on the device; a contact's text appears. The log keeps a line
+# without the text, so the parents can see that something knocked.
+advance 5s
+check screen home
+check unread 0
+
+# A stranger, a short number of a provider and a name: nothing changes.
+sms +491709999999 Win a prize now
+sms 12345 Your balance is low
+sms Provider Your tariff has changed
+sms +491709999999 #WhereAreYou
+advance 2s
+check unread 0
+check haptic-message 0
+check sms-sent 0
+check screen home
+check log-has SMS dropped: sender not in the contact book (+491709999999)
+check log-has SMS dropped: sender not in the contact book (non-numeric sender)
+fails check log-has prize
+fails check log-has balance
+
+# The same stranger floods the device: still nothing.
+sms +491709999999 spam 1
+sms +491709999999 spam 2
+sms +491709999999 spam 3
+sms +491709999999 spam 4
+advance 2s
+check unread 0
+check haptic-message 0
+
+# A contact writes, in another spelling of the number: it appears and vibrates.
+sms 0170-1111111 Hi Alex, call me
+advance 2s
+check unread 1
+check haptic-message 1
+key inbox
+check screen messages
+say Parent One
+say Hi Alex, call me
+say-not spam
+say-not prize
