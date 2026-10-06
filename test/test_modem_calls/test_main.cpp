@@ -391,16 +391,19 @@ void test_a_new_dial_is_refused_while_the_cancelled_dial_is_still_being_set_up()
 
 // ---- incoming calls ------------------------------------------------------------------------------------------------------
 
-void test_an_incoming_call_is_announced_again_with_its_number_answered_and_ended() {
+void test_an_incoming_call_is_reported_once_with_its_number_answered_and_ended() {
   Ready m;
   m.r.urc("RING");
   TEST_ASSERT_TRUE(m.r.driver.state() == ModemState::RingingIn);
   TEST_ASSERT_TRUE(m.r.t.audioToModem());                          // from the first ring on
+  TEST_ASSERT_TRUE(m.r.events().empty());                          // the number is awaited: one report, with it
   m.r.urc("+CLIP: \"" + ucs2(kNumber) + "\",145,,,,0");
   auto got = m.r.events();
-  TEST_ASSERT_TRUE(types(got, {CallEventType::Incoming, CallEventType::Incoming}));
-  TEST_ASSERT_EQUAL_STRING("", got[0].phone.c_str());
-  TEST_ASSERT_EQUAL_STRING(kNumber.c_str(), got[1].phone.c_str());
+  TEST_ASSERT_TRUE(types(got, {CallEventType::Incoming}));
+  TEST_ASSERT_EQUAL_STRING(kNumber.c_str(), got[0].phone.c_str());
+  m.r.urc("RING");                                                 // the next ring and its CLIP report nothing new
+  m.r.urc("+CLIP: \"" + ucs2(kNumber) + "\",145,,,,0");
+  TEST_ASSERT_TRUE(m.r.events().empty());
 
   TEST_ASSERT_TRUE(m.r.driver.answer());
   TEST_ASSERT_TRUE(m.r.driver.state() == ModemState::RingingIn);   // until the modem says OK to ATA
@@ -424,7 +427,18 @@ void test_a_ring_that_repeats_is_one_incoming_call() {
   m.r.urc("RING");
   m.r.urc("RING");
   m.r.urc("RING");
-  TEST_ASSERT_TRUE(types(m.r.events(), {CallEventType::Incoming}));
+  m.r.run(2000);                                                   // no number came: reported without one
+  const auto got = m.r.events();
+  TEST_ASSERT_TRUE(types(got, {CallEventType::Incoming}));
+  TEST_ASSERT_EQUAL_STRING("", got[0].phone.c_str());
+}
+
+// A ring is reported before its end, so that every call has its Incoming first.
+void test_a_ring_that_ends_before_the_number_came_is_still_reported_as_incoming_and_missed() {
+  Ready m;
+  m.r.urc("RING");
+  m.r.urc("NO CARRIER");
+  TEST_ASSERT_TRUE(types(m.r.events(), {CallEventType::Incoming, CallEventType::Missed}));
 }
 
 void test_a_caller_who_gives_up_is_a_missed_call_and_the_sound_path_goes_back() {
@@ -503,7 +517,7 @@ void test_a_restart_while_ringing_is_a_missed_call() {
   m.r.events();
   m.r.t.restart();
   m.r.run(100);
-  TEST_ASSERT_TRUE(types(m.r.events(), {CallEventType::Missed}));
+  TEST_ASSERT_TRUE(types(m.r.events(), {CallEventType::Incoming, CallEventType::Missed}));
   TEST_ASSERT_FALSE(m.r.t.audioToModem());
 }
 
@@ -625,8 +639,9 @@ int main(int, char**) {
   RUN_TEST(test_a_dial_cancelled_while_the_ims_question_is_out_sends_no_atd);
   RUN_TEST(test_a_dial_cancelled_after_atd_is_hung_up_and_a_late_connection_is_ignored);
   RUN_TEST(test_a_new_dial_is_refused_while_the_cancelled_dial_is_still_being_set_up);
-  RUN_TEST(test_an_incoming_call_is_announced_again_with_its_number_answered_and_ended);
+  RUN_TEST(test_an_incoming_call_is_reported_once_with_its_number_answered_and_ended);
   RUN_TEST(test_a_ring_that_repeats_is_one_incoming_call);
+  RUN_TEST(test_a_ring_that_ends_before_the_number_came_is_still_reported_as_incoming_and_missed);
   RUN_TEST(test_a_caller_who_gives_up_is_a_missed_call_and_the_sound_path_goes_back);
   RUN_TEST(test_a_ringing_call_that_we_refuse_is_missed_and_hung_up);
   RUN_TEST(test_an_answer_that_the_modem_refuses_connects_nothing);

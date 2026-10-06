@@ -16,6 +16,7 @@
 #include <contracts/TcpServerContract.h>
 #include <contracts/WifiContract.h>
 
+#include "DriverRig.h"
 #include "Rigs.h"
 
 void setUp() {}
@@ -27,6 +28,7 @@ int main(int, char**) {
   RUN_POWER_CONTRACT(FakePowerRig);
   RUN_GNSS_CONTRACT(FakeGnssRig);
   RUN_MODEM_CONTRACT(FakeModemRig);
+  RUN_MODEM_CONTRACT(DriverModemRig);
   RUN_EVENT_LOG_CONTRACT(FakeEventLogRig);
   RUN_HAPTIC_CONTRACT(FakeHapticRig);
   RUN_CONFIG_STORE_CONTRACT(FakeConfigStoreRig);

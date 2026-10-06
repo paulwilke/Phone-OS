@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <drivers/A7682EDriver.h>
+#include <drivers/Ucs2.h>
 #include <fakes/FakeAtTransport.h>
 
 namespace modemtest {
@@ -42,6 +43,11 @@ struct Script {
   std::string atdFinal = "OK";
   std::string ataFinal = "OK";
   std::string ceer = "";
+  // Messages. What AT+CMGL="ALL" lists (header and text lines); the numbers a test sends to are answered with
+  // the prompt in both charsets; AT+CMGS ends with the line in `smsFinal` (an error line is a refused sending).
+  std::vector<std::string> inbox;
+  std::vector<std::string> sendTo = {"+491701111111", "+491702222222"};
+  std::string smsFinal = "OK";
   std::string contextsFinal = "OK";   // the final line of AT+CGDCONT?
   bool cpinSilent = false;            // the card is not asked about at all: no answer
   std::string silent;                 // a command that is never answered (the modem hangs on it)
@@ -86,6 +92,22 @@ struct Script {
     if (ceer.empty()) reply("AT+CEER", {});
     else reply("AT+CEER", {"+CEER: " + ceer});
     for (int level = 0; level <= 7; ++level) reply("AT+COUTGAIN=" + std::to_string(level), {});
+    t.replyLines("AT+CMGL=\"ALL\"", inbox);
+    for (int slot = 0; slot < 10; ++slot) reply("AT+CMGD=" + std::to_string(slot), {});
+    reply("AT+CSCLK=1", {});
+    reply("AT+CPOF", {});
+    reply("AT+CSCS=\"GSM\"", {});
+    reply("AT+CSCS=\"UCS2\"", {});
+    reply("AT+CSMP=17,167,0,0", {});
+    t.setDefaultBodyAnswer({"+CMGS: 12"}, smsFinal);
+    for (const std::string& n : sendTo) {
+      char hex[256];
+      text::utf8ToUcs2Hex(n.c_str(), hex, sizeof(hex));
+      for (const std::string& cmd : {"AT+CMGS=\"" + n + "\"", std::string("AT+CMGS=\"") + hex + "\""}) {
+        if (cmd == silent) t.silence(cmd);
+        else t.replyPrompt(cmd);
+      }
+    }
   }
 };
 
@@ -149,6 +171,15 @@ struct Rig {
     for (size_t i = 0; i < t.sent().size(); ++i)
       if (t.sent()[i] == command) return (int)i;
     return -1;
+  }
+  // A message announced by +CMTI and read with AT+CMGR: the modem has it in slot `slot`.
+  void injectSms(int slot, const std::string& phone, const std::string& body, const std::string& scts = "26/09/15,14:32:10+08") {
+    char hexPhone[256], hexBody[2048];
+    text::utf8ToUcs2Hex(phone.c_str(), hexPhone, sizeof(hexPhone));
+    text::utf8ToUcs2Hex(body.c_str(), hexBody, sizeof(hexBody));
+    t.reply("AT+CMGR=" + std::to_string(slot),
+            {std::string("+CMGR: \"REC UNREAD\",\"") + hexPhone + "\",\"\",\"" + scts + "\"", hexBody});
+    urc("+CMTI: \"SM\"," + std::to_string(slot));
   }
   // Feeds a line of the modem (a URC) now and lets the driver read it.
   void urc(const std::string& line, uint32_t thenRunMs = 100) {

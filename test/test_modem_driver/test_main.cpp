@@ -39,7 +39,8 @@ void test_the_whole_start_up_is_one_readable_sequence() {
       "AT+CPIN?",
       "AT+CGDCONT?", kWriteApn, "AT+CFUN=0", "AT+CFUN=1",
       "AT+CREG?", "AT+COPS?", "AT+CCLK?", "AT+CSQ",
-      "AT+CIREG?", "AT+CGDCONT?"};
+      "AT+CIREG?", "AT+CGDCONT?",
+      "AT+CMGL=\"ALL\""};                  // and what lies on the SIM, once the modem is ready
   TEST_ASSERT_EQUAL(expected.size(), r.t.sent().size());
   for (size_t i = 0; i < expected.size(); ++i) TEST_ASSERT_EQUAL_STRING(expected[i].c_str(), r.t.sent()[i].c_str());
   TEST_ASSERT_EQUAL(0, r.t.unexpected().size());

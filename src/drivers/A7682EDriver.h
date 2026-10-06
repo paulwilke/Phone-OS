@@ -21,12 +21,13 @@
 #include <cstdint>
 #include <deque>
 #include <string>
+#include <vector>
 
 #include "AtParser.h"
 #include "AtTransport.h"
 #include "../hal/Modem.h"
 
-class A7682EDriver {
+class A7682EDriver : public Modem {
 public:
   struct Config {
     // The APN of PDP context 1. Empty: the modem's own contexts are left alone (nothing is
@@ -47,6 +48,7 @@ public:
     uint32_t atRetryDelayMs = 1000;
     uint32_t restartSettleMs = 3000;  // after a restart the modem reported, before asking again
     uint32_t commandTimeoutMs = 5000;
+    uint32_t smsSendTimeoutMs = 60000;  // AT+CMGS may take long: it waits for the network
     uint32_t radioTimeoutMs = 30000;  // AT+CFUN switches the radio off and on; each may take seconds
     uint32_t registrationTimeoutMs = 90000;
     uint32_t operatorScanTimeoutMs = 120000;  // AT+COPS=? searches for a long time
@@ -63,6 +65,9 @@ public:
     // a call that did not answer.
     uint32_t dialTimeoutMs = 15000;
     uint32_t callPollMs = 1000;          // AT+CLCC while a call is being set up
+    // An incoming call is reported once, with the caller's number from +CLIP. A number that does not come
+    // (withheld) is waited for this long, and the call is then reported without one.
+    uint32_t incomingNumberWaitMs = 1500;
     uint32_t signalIntervalMs = 30000;   // AT+CSQ, the network, the operator and the IMS
     uint32_t clockIntervalMs = 3600000;  // AT+CCLK
   };
@@ -70,18 +75,41 @@ public:
   explicit A7682EDriver(AtTransport& transport) : A7682EDriver(transport, Config()) {}
   A7682EDriver(AtTransport& transport, const Config& config);
 
+  // ---- the Modem capability ----------------------------------------------------------------------------------------
   // Switches the modem on and starts. A second call changes nothing.
-  void begin();
+  void begin() override;
+  // AT+CPOF, then the supply off. The call that is on ends as the capability says, what was queued but not
+  // sent is reported as failed, and the state is Off when the job is done.
+  void shutdown() override;
+  // Sleeping keeps the modem registered (AT+CSCLK=1, DTR high). It starts when nothing else is to be done,
+  // and the modem is woken by whatever needs it: a message to send, a call, a question, wake().
+  void sleep() override;
+  void wake() override;
+
+  // True means accepted, not delivered: false when the modem is not ready to send (not registered, off or
+  // going off), the number is not a dial string, the text is empty, not valid UTF-8 or longer than
+  // kMaxSmsBytes, or four messages are already waiting. A text that does not fit one SMS (160 characters
+  // in the GSM alphabet, 70 as soon as one character is not in it) goes out as several messages in a row;
+  // there is no concatenation header, so the phone shows them as separate messages.
+  bool sendSms(const std::string& phone, const std::string& body) override;
+  bool pollSms(SmsMessage& out) override;
+  bool pollSendFailure(SmsFailure& out) override;
+
+  // A pure question for the diagnosis: only "AT+<name>?" and "AT+<name>=?" are accepted (see isQuery).
+  bool query(const std::string& command) override;
+  bool pollQueryResult(std::string& out) override;
+  static bool isQuery(const std::string& command);
+
   // From the main loop; never blocks.
   void poll();
 
-  ModemState state() const { return state_; }
-  SimStatus simStatus() const { return simStatus_; }
-  VoiceStatus voiceStatus() const;
+  ModemState state() const override { return state_; }
+  SimStatus simStatus() const override { return simStatus_; }
+  VoiceStatus voiceStatus() const override;
   // 0 … 5; 0 while not registered.
-  int signalBars() const;
+  int signalBars() const override;
   // The short network name; empty while not registered.
-  const std::string& operatorName() const { return operator_; }
+  std::string operatorName() const override { return operator_; }
   // The network time of AT+CCLK; false until the modem has one.
   bool networkTime(at::NetworkTime& out) const;
   // How often the modem restarted by itself since begin() (*ATREADY after it had answered).
@@ -91,13 +119,13 @@ public:
   // Same meaning as in the Modem capability (src/hal/Modem.h). A dial is refused (false, and nothing
   // is sent) unless the modem is Ready, the number is a dial string and voiceStatus() is Ready; before
   // ATD goes out the IMS is asked once more, because the state of 30 seconds ago may be gone.
-  bool dial(const std::string& phone);
-  bool answer();
-  bool hangup();
-  bool pollCallEvent(CallEvent& out);
+  bool dial(const std::string& phone) override;
+  bool answer() override;
+  bool hangup() override;
+  bool pollCallEvent(CallEvent& out) override;
   // Call volume 0 … 7, clamped; takes effect at once, also in the middle of a call.
-  bool setCallVolume(int level);
-  int callVolume() const { return volume_; }
+  bool setCallVolume(int level) override;
+  int callVolume() const override { return volume_; }
 
   // The driver's own log lines (English, technical, no PIN and no number), oldest first, each once.
   // The host writes them through its log, which applies the level; the driver has no log of its
@@ -107,7 +135,8 @@ public:
 private:
   // What the driver is doing. One at a time.
   enum class Job : uint8_t { None, Init, SimCheck, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock,
-                             Dial, Answer, Hangup, CallPoll, CallDiag, Volume };
+                             Dial, Answer, Hangup, CallPoll, CallDiag, Volume,
+                             SendSms, ReadSms, DrainInbox, Query, Sleep, Wake, Shutdown };
 
   void send(const char* command);
   void startJob(Job job);
@@ -136,6 +165,21 @@ private:
   void callEnded(const char* line, uint32_t seconds);
   std::string callFacts() const;
   void onCallLine(const char* line, at::LineType type);
+  void reportIncoming();
+
+  // Messages
+  struct Outgoing {
+    std::string phone;
+    std::vector<std::string> parts;  // UTF-8, each fits one SMS
+    bool ascii = true;               // GSM alphabet (160 per SMS) or UCS2 (70)
+  };
+  bool wantsSomething() const;
+  void noteSendFailure(const std::string& phone, const std::string& reason);
+  void smsFail(const std::string& reason);
+  void smsRestoreCharset();
+  void smsStartPart();
+  void queueSms(const SmsMessage& sms);
+  void finishPowerOff();
 
   AtTransport& transport_;
   Config config_;
@@ -187,6 +231,8 @@ private:
   bool atdSent_ = false;
   bool dialImsSeen_ = false;      // the answer to the IMS question asked just before ATD
   bool answerPending_ = false;
+  bool incomingReported_ = true;  // a ringing call is reported once, when its number is known
+  at::Deadline incomingWait_;
   int chupPending_ = 0;           // AT+CHUP still to be sent, however the call ended for the application
   bool volumePending_ = false;
   int volume_ = 4;                // as the initialisation sets it (AT+COUTGAIN=4)
@@ -198,6 +244,35 @@ private:
   bool diagPending_ = false;      // a failed dial waits for AT+CEER before it is reported
   CallEvent diagEvent_;
   int imsMode_ = 0, imsInfo_ = 0, imsExt_ = -1;  // the last AT+CIREG? answer, for the log of a failure
+
+  // Messages
+  static constexpr size_t kOutboxSize = 4;
+  static constexpr size_t kInboxSize = 6;
+  static constexpr size_t kMaxFailures = 16;
+  std::deque<Outgoing> outbox_;
+  std::deque<SmsMessage> inbox_;
+  std::deque<SmsFailure> failures_;
+  std::deque<int> cmtiPending_;      // storage slots announced by +CMTI, to be read
+  bool drainInboxPending_ = false;   // read what lies on the SIM: after registration and after a message that did not parse
+  at::ParsedSms parsed_[2];
+  at::SmsResponseParser smsParser_;
+  int readingIndex_ = -1;
+  int deleteIndex_[2] = {-1, -1};
+  size_t deleteCount_ = 0;
+  size_t deleteCursor_ = 0;
+  size_t partIndex_ = 0;
+  bool smsFailed_ = false;
+
+  // Questions, sleep, shutdown
+  std::string queryCommand_;
+  std::string queryResult_;
+  bool queryPending_ = false;
+  bool queryDone_ = false;
+  bool asleep_ = false;
+  bool sleepPending_ = false;
+  bool wakePending_ = false;
+  bool shutdownPending_ = false;
+  bool shuttingDown_ = false;
 
   // Network
   bool registered_ = false;

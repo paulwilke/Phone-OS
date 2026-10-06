@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "Ucs2.h"
+
 namespace {
 
 // The initialisation, in a fixed order. ATE0 first, or every command comes back as an echo and
@@ -110,6 +112,7 @@ bool A7682EDriver::networkTime(at::NetworkTime& out) const {
 // blindly: every second start put the modem to sleep, and nobody could call.
 void A7682EDriver::begin() {
   if (state_ != ModemState::Off) return;
+  transport_.setDtr(false);  // low: the modem is awake
   transport_.power(true);
   setState(ModemState::PoweringOn);
   waitUntil_.set(transport_.now(), config_.probeDelayMs);
@@ -129,6 +132,9 @@ void A7682EDriver::begin() {
   simRetry_.clear();
   manualSelectDone_ = false;
   apnNoticeLogged_ = false;
+  asleep_ = sleepPending_ = wakePending_ = shutdownPending_ = shuttingDown_ = false;
+  cmtiPending_.clear();
+  drainInboxPending_ = false;
   log("Modem: switched on");
 }
 
@@ -143,13 +149,33 @@ void A7682EDriver::onRestart() {
   if (callState()) {
     if (state_ == ModemState::Dialing) queueEvent(CallEventType::DialFailed, 0, "*ATREADY | " + callFacts(), DialFailReason::ModemRestarted);
     else if (state_ == ModemState::InCall) queueEvent(CallEventType::Ended, (transport_.now() - connectedAtMs_) / 1000, "");
-    else queueEvent(CallEventType::Missed, 0, "");
+    else {
+      reportIncoming();
+      queueEvent(CallEventType::Missed, 0, "");
+    }
   }
   callPhone_.clear();
   callOutgoing_ = callConnected_ = dialPending_ = atdSent_ = answerPending_ = false;
   chupPending_ = 0;
   diagPending_ = false;
   clccPoll_.clear();
+  // A message that was being sent may or may not have gone out: it is not sent again (a duplicate emergency
+  // message is better than none, but a second copy of every message after every restart is not), and the
+  // application is told. What was only queued waits and goes out after the start has run again.
+  if (job_ == Job::SendSms && !outbox_.empty()) {
+    noteSendFailure(outbox_.front().phone, "modem restarted while sending");
+    outbox_.pop_front();
+  }
+  if (job_ == Job::Query) {
+    queryResult_ = "modem restarted";
+    queryDone_ = true;
+    queryPending_ = false;
+  }
+  // The slots announced before are stale; what lies on the SIM is read again when the modem is ready.
+  cmtiPending_.clear();
+  drainInboxPending_ = false;
+  asleep_ = sleepPending_ = wakePending_ = false;
+  transport_.setDtr(false);
   reader_.reset();
   job_ = Job::None;
   stepIndex_ = 0;
@@ -281,6 +307,7 @@ void A7682EDriver::finishJob(bool ok) {
       setState(ModemState::Ready);
       nextSignal_.set(now, config_.signalIntervalMs);
       nextClock_.set(now, config_.clockIntervalMs);
+      drainInboxPending_ = true;  // what arrived while the modem was away
       break;
 
     case Job::Signal:
@@ -288,6 +315,44 @@ void A7682EDriver::finishJob(bool ok) {
         log("Cellular: network lost, registering again");
         beginRegistering(false);  // no window: a device in the woods is not in error
       }
+      break;
+
+    case Job::SendSms:
+      // Sent or dropped: either way it leaves the queue. A failure was noted where it happened, with the
+      // modem's reason, so that it is reported exactly once.
+      reader_.setPromptMode(false);
+      if (!outbox_.empty()) outbox_.pop_front();
+      break;
+
+    case Job::ReadSms:
+      readingIndex_ = -1;
+      break;
+
+    case Job::DrainInbox:
+      // More on the SIM than fitted into the array: read again at once.
+      if (ok && smsParser_.dropped() > 0) drainInboxPending_ = true;
+      break;
+
+    case Job::Query:
+      queryPending_ = false;
+      queryDone_ = true;
+      break;
+
+    case Job::Sleep:
+      if (ok) {
+        transport_.setDtr(true);  // high: the modem may sleep
+        asleep_ = true;
+        log("Modem: sleeping");
+      }
+      break;
+
+    case Job::Wake:
+      asleep_ = false;
+      nextSignal_.set(now, 0);  // after waking, ask for the network and the operator again
+      break;
+
+    case Job::Shutdown:
+      finishPowerOff();
       break;
 
     case Job::CallDiag:
@@ -708,6 +773,173 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       if (answered) finishJob(true);
       return;
 
+    // -----------------------------------------------------------------------
+    // Sending. A text of plain ASCII goes out in the GSM alphabet (160 characters per SMS), anything with a
+    // character outside it as UCS2 (70); afterwards the charset goes back to UCS2, or incoming texts would
+    // arrive as hex. A text of several parts is sent part by part. Steps: 0 AT+CSCS, 1 AT+CSMP, 2 AT+CMGS
+    // (the part is begun), 3 waiting for the prompt "> ", 4 waiting for the result, 5 AT+CSCS back to UCS2.
+    case Job::SendSms: {
+      if (outbox_.empty()) {
+        finishJob(false);
+        return;
+      }
+      const Outgoing& out = outbox_.front();
+      if (!line) {
+        partIndex_ = 0;
+        smsFailed_ = false;
+        send(out.ascii ? "AT+CSCS=\"GSM\"" : "AT+CSCS=\"UCS2\"");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (!answered && type != at::LineType::Prompt && type != at::LineType::Cmgs) return;
+
+      switch (stepIndex_) {
+        case 0:
+          if (type == at::LineType::Error) {
+            smsFail(line);
+            return;
+          }
+          stepIndex_ = 1;
+          send(out.ascii ? "AT+CSMP=17,167,0,0" : "AT+CSMP=17,167,0,8");
+          expect(config_.commandTimeoutMs);
+          return;
+        case 1:
+          if (type == at::LineType::Error) {
+            smsFail(line);
+            return;
+          }
+          smsStartPart();
+          return;
+        case 3:  // the recipient is out: the modem answers with "> " and waits for the text
+          if (type == at::LineType::Prompt) {
+            reader_.setPromptMode(false);
+            stepIndex_ = 4;
+            if (out.ascii) {
+              transport_.write(out.parts[partIndex_].data(), out.parts[partIndex_].size());
+            } else {
+              char hex[kMaxSmsBytes * 4 + 1];
+              if (text::utf8ToUcs2Hex(out.parts[partIndex_].c_str(), hex, sizeof(hex)) < 0) {
+                transport_.write("\x1B", 1);  // Escape: cancel the sending
+                smsFail("text cannot be coded");
+                return;
+              }
+              transport_.write(hex, strlen(hex));
+            }
+            transport_.write("\x1A", 1);  // Ctrl-Z sends it
+            expect(config_.smsSendTimeoutMs);
+          } else if (type == at::LineType::Error) {
+            smsFail(line);
+          }
+          return;
+        case 4:
+          if (type == at::LineType::Cmgs) return;  // the confirmation; OK follows
+          if (type == at::LineType::Ok) {
+            if (++partIndex_ < out.parts.size()) smsStartPart();
+            else smsRestoreCharset();
+          } else if (type == at::LineType::Error) {
+            // **Keep the reason before it is lost.** Before, a "+CMS ERROR: 304" vanished without a trace and
+            // the interface said "sent", an emergency message included (found 2026-10-01).
+            smsFail(line);
+          }
+          return;
+        default:  // 5: the charset is back
+          if (answered) finishJob(!smsFailed_);
+          return;
+      }
+    }
+
+    // One message announced by +CMTI. It is deleted from the SIM only after it was read and parsed; one that
+    // does not parse stays and is fetched again with the next read of the whole SIM.
+    case Job::ReadSms:
+      if (!line) {
+        smsParser_.reset(at::Charset::Ucs2, parsed_, 1);
+        snprintf(buf, sizeof(buf), "AT+CMGR=%d", readingIndex_);
+        send(buf);
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (!answered) return;
+      if (stepIndex_ == 0) {
+        if (smsParser_.count() > 0 && inbox_.size() < kInboxSize) {
+          queueSms(parsed_[0].msg);
+          stepIndex_ = 1;
+          snprintf(buf, sizeof(buf), "AT+CMGD=%d", readingIndex_);
+          send(buf);
+          expect(config_.commandTimeoutMs);
+          return;
+        }
+        drainInboxPending_ = true;  // not read: it stays on the SIM and is read with the rest
+      }
+      finishJob(true);
+      return;
+
+    // Everything that lies on the SIM, in one go: first the whole answer is evaluated, then deleted (Meck
+    // deleted after the first message and overwrote the buffer). Messages that did not fit are read again.
+    case Job::DrainInbox:
+      if (!line) {
+        smsParser_.reset(at::Charset::Ucs2, parsed_, 2);
+        deleteCount_ = deleteCursor_ = 0;
+        send("AT+CMGL=\"ALL\"");
+        expect(config_.commandTimeoutMs * 2);
+        return;
+      }
+      if (!answered) return;
+      if (stepIndex_ == 0) {
+        stepIndex_ = 1;
+        for (size_t i = 0; i < smsParser_.count() && inbox_.size() < kInboxSize; ++i) {
+          queueSms(parsed_[i].msg);
+          if (parsed_[i].index >= 0 && deleteCount_ < 2) deleteIndex_[deleteCount_++] = parsed_[i].index;
+        }
+      }
+      if (deleteCursor_ < deleteCount_) {
+        snprintf(buf, sizeof(buf), "AT+CMGD=%d", deleteIndex_[deleteCursor_++]);
+        send(buf);
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      finishJob(true);
+      return;
+
+    case Job::Query:
+      if (!line) {
+        send(queryCommand_.c_str());
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (answered) {
+        if (type == at::LineType::Error) queryResult_ += std::string(queryResult_.empty() ? "" : "|") + "ERROR";
+        finishJob(true);
+      }
+      return;
+
+    case Job::Sleep:
+      if (!line) {
+        send("AT+CSCLK=1");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (answered) finishJob(type == at::LineType::Ok);
+      return;
+
+    case Job::Wake:
+      if (!line) {
+        transport_.setDtr(false);  // low wakes the modem
+        send("AT");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (answered) finishJob(true);
+      return;
+
+    case Job::Shutdown:
+      if (!line) {
+        send("AT+CPOF");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (answered) finishJob(true);
+      return;
+
     case Job::None:
       return;
   }
@@ -728,6 +960,11 @@ void A7682EDriver::timedOut() {
     expect(config_.radioTimeoutMs);
     return;
   }
+  if (job_ == Job::SendSms && stepIndex_ != 5 && !outbox_.empty()) {
+    if (stepIndex_ == 3) transport_.write("\x1B", 1);  // leave the prompt
+    smsFail(stepIndex_ == 3 ? "no prompt from the modem" : "no answer from the modem");
+    return;
+  }
   if (job_ == Job::DataBearer) log("Cellular: no answer while setting the data context");
   if (job_ == Job::Dial && state_ == ModemState::Dialing) {
     // No answer to ATD: the call may exist all the same, so it is hung up for safety.
@@ -746,6 +983,22 @@ void A7682EDriver::timedOut() {
 void A7682EDriver::onLine(const char* line) {
   const at::LineType type = at::classify(line);
   if (type == at::LineType::Empty) return;
+
+  // The lines of a question are written down whatever they are (a +CREG: line too, which is otherwise taken
+  // for the driver's own state and goes no further).
+  if (job_ == Job::Query && type != at::LineType::Ok && type != at::LineType::Error && type != at::LineType::AtReady) {
+    queryResult_ += std::string(queryResult_.empty() ? "" : "|") + line;
+  }
+
+  // The answers of the SMS reads belong to their parser, which hands back what is not part of them.
+  if ((job_ == Job::ReadSms || job_ == Job::DrainInbox) && type != at::LineType::AtReady && !smsParser_.finished()) {
+    const at::Feed feed = smsParser_.feedLine(line);
+    if (feed == at::Feed::Consumed) return;
+    if (feed == at::Feed::Done) {
+      step(line, type);
+      return;
+    }
+  }
 
   switch (type) {
     case at::LineType::AtReady:
@@ -803,6 +1056,12 @@ void A7682EDriver::onLine(const char* line) {
       return;
     }
 
+    case at::LineType::Cmti: {
+      int index = -1;
+      if (at::parseCmti(line, &index) && index >= 0 && cmtiPending_.size() < 8) cmtiPending_.push_back(index);
+      return;
+    }
+
     case at::LineType::Cgdcont: {
       at::PdpContext c;
       if (!at::parseCgdcont(line, &c)) return;
@@ -825,15 +1084,18 @@ void A7682EDriver::onLine(const char* line) {
     if (callTrace_.size() < 160) callTrace_ += (callTrace_.empty() ? "" : "/") + std::string(line);
   }
   onCallLine(line, type);
-  if (type == at::LineType::Ok || type == at::LineType::Error || type == at::LineType::Cpin ||
-      type == at::LineType::Other || type == at::LineType::Clcc) {
-    step(line, type);
-  }
+  step(line, type);
 }
 
 void A7682EDriver::pickNextJob() {
-  if (job_ != Job::None || state_ == ModemState::Off || state_ == ModemState::Error || state_ == ModemState::PoweringOn) return;
+  if (job_ != Job::None || state_ == ModemState::Off) return;
   const uint32_t now = transport_.now();
+  if (shutdownPending_) {
+    shutdownPending_ = false;
+    startJob(Job::Shutdown);
+    return;
+  }
+  if (state_ == ModemState::Error || state_ == ModemState::PoweringOn) return;
 
   if (state_ == ModemState::Initializing) {
     if (simRetry_.armed() && simRetry_.expired(now)) {
@@ -856,6 +1118,14 @@ void A7682EDriver::pickNextJob() {
     return;
   }
   if (state_ != ModemState::Ready && !callState()) return;
+
+  // A sleeping modem is woken by whatever needs it: the work waits until it is awake.
+  if (asleep_ && (wakePending_ || wantsSomething())) {
+    wakePending_ = false;
+    startJob(Job::Wake);
+    return;
+  }
+  if (sleepPending_ && wantsSomething()) sleepPending_ = false;  // something came in: not now
 
   // What the application asked for comes before the periodic questions, and a call before everything:
   // the volume is changed in the middle of a call and must take effect at once.
@@ -888,7 +1158,33 @@ void A7682EDriver::pickNextJob() {
     startJob(Job::CallPoll);
     return;
   }
+  if (queryPending_) {
+    startJob(Job::Query);
+    return;
+  }
+  if (drainInboxPending_) {
+    drainInboxPending_ = false;
+    startJob(Job::DrainInbox);
+    return;
+  }
+  if (!cmtiPending_.empty() && inbox_.size() < kInboxSize) {
+    readingIndex_ = cmtiPending_.front();
+    cmtiPending_.pop_front();
+    startJob(Job::ReadSms);
+    return;
+  }
   if (state_ != ModemState::Ready) return;  // the rest waits until the call is over
+
+  if (!outbox_.empty()) {
+    startJob(Job::SendSms);
+    return;
+  }
+  if (sleepPending_) {
+    sleepPending_ = false;
+    startJob(Job::Sleep);
+    return;
+  }
+  if (asleep_) return;  // the periodic questions would only wake the modem for nothing
 
   if (nextSignal_.expired(now)) {
     nextSignal_.set(now, config_.signalIntervalMs);
@@ -914,13 +1210,16 @@ void A7682EDriver::poll() {
     return;
   }
 
-  // 3. A command that hangs ends its job.
+  // 3. A caller whose number does not come is reported without one.
+  if (incomingWait_.expired(transport_.now())) reportIncoming();
+
+  // 4. A command that hangs ends its job.
   if (job_ != Job::None && jobDeadline_.expired(transport_.now())) {
     timedOut();
     return;
   }
 
-  // 4. Choose the next job.
+  // 5. Choose the next job.
   pickNextJob();
 }
 
@@ -959,6 +1258,14 @@ std::string A7682EDriver::callFacts() const {
   return facts;
 }
 
+void A7682EDriver::reportIncoming() {
+  if (incomingReported_ || state_ != ModemState::RingingIn) return;
+  incomingReported_ = true;
+  incomingWait_.clear();
+  queueEvent(CallEventType::Incoming, 0, "");
+  log("Call: incoming");
+}
+
 void A7682EDriver::startCall(ModemState state, const std::string& phone, bool outgoing) {
   callPhone_ = phone;
   callOutgoing_ = outgoing;
@@ -973,6 +1280,8 @@ void A7682EDriver::startCall(ModemState state, const std::string& phone, bool ou
 void A7682EDriver::endCall() {
   callPhone_.clear();
   callOutgoing_ = callConnected_ = dialPending_ = atdSent_ = answerPending_ = false;
+  incomingReported_ = true;
+  incomingWait_.clear();
   clccPoll_.clear();
   clccSeen_ = false;
   ringingLogged_ = false;
@@ -982,6 +1291,7 @@ void A7682EDriver::endCall() {
 
 void A7682EDriver::connectCall() {
   if (callConnected_ || !callState()) return;
+  reportIncoming();
   callConnected_ = true;
   connectedAtMs_ = transport_.now();
   setState(ModemState::InCall);
@@ -1000,6 +1310,7 @@ void A7682EDriver::failDial(DialFailReason why, const std::string& line) {
 // failed one asks the network why before it is reported (see CallDiag).
 void A7682EDriver::callEnded(const char* line, uint32_t seconds) {
   if (state_ == ModemState::RingingIn) {
+    reportIncoming();
     queueEvent(CallEventType::Missed, 0, "");
     endCall();
   } else if (state_ == ModemState::InCall) {
@@ -1025,8 +1336,8 @@ void A7682EDriver::onCallLine(const char* line, at::LineType type) {
       // A ring in any other state is the end of a call waiting or an echo of an old one.
       if (state_ == ModemState::Ready) {
         startCall(ModemState::RingingIn, std::string(), false);
-        queueEvent(CallEventType::Incoming, 0, "");
-        log("Call: incoming");
+        incomingReported_ = false;
+        incomingWait_.set(transport_.now(), config_.incomingNumberWaitMs);
       }
       return;
 
@@ -1034,9 +1345,9 @@ void A7682EDriver::onCallLine(const char* line, at::LineType type) {
       char phone[at::kPhoneSize];
       if (state_ != ModemState::RingingIn) return;
       if (at::parseClip(line, at::Charset::Ucs2, phone, sizeof(phone)) || at::parseClip(line, at::Charset::Gsm, phone, sizeof(phone))) {
-        // The number is known only with +CLIP, after the first ring: the call is reported again with it.
+        // The number is known only with +CLIP, after the first ring: the call is reported now, with it.
         callPhone_ = phone;
-        queueEvent(CallEventType::Incoming, 0, "");
+        reportIncoming();
       }
       return;
     }
@@ -1094,7 +1405,7 @@ void A7682EDriver::onCallLine(const char* line, at::LineType type) {
 bool A7682EDriver::dial(const std::string& phone) {
   // Never without the IMS, and never a call on top of another. A dial that is being set up refuses a
   // second one until its first step is over, so that nothing is sent twice.
-  if (state_ != ModemState::Ready || job_ == Job::Dial) return false;
+  if (shuttingDown_ || state_ != ModemState::Ready || job_ == Job::Dial) return false;
   if (!at::isValidDialString(phone.c_str()) || voiceStatus() != VoiceStatus::Ready) return false;
   startCall(ModemState::Dialing, phone, true);
   dialPending_ = true;
@@ -1113,6 +1424,7 @@ bool A7682EDriver::answer() {
 bool A7682EDriver::hangup() {
   if (!callState()) return false;
   if (state_ == ModemState::RingingIn) {
+    reportIncoming();
     queueEvent(CallEventType::Missed, 0, "");
     ++chupPending_;
   } else if (state_ == ModemState::InCall) {
@@ -1136,4 +1448,242 @@ bool A7682EDriver::setCallVolume(int level) {
     volumePending_ = true;
   }
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// A character of the extension table of the GSM alphabet takes two places in an SMS.
+bool isGsmExtension(char c) {
+  return c == '^' || c == '{' || c == '}' || c == '\\' || c == '[' || c == ']' || c == '~' || c == '|';
+}
+
+// The length of the UTF-8 character at s[i], 0 when it is not valid there.
+size_t utf8Length(const std::string& s, size_t i) {
+  const unsigned char c = (unsigned char)s[i];
+  const size_t n = c < 0x80 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 0;
+  if (n == 0 || i + n > s.size()) return 0;
+  for (size_t k = 1; k < n; ++k)
+    if (((unsigned char)s[i + k] & 0xC0) != 0x80) return 0;
+  return n;
+}
+
+// How many places a character takes in an SMS: in the GSM alphabet one (two for the extension), in UCS2 one
+// unit (two for a character beyond the first plane, an emoji).
+size_t places(const std::string& s, size_t i, size_t n, bool ascii) {
+  if (ascii) return isGsmExtension(s[i]) ? 2 : 1;
+  return n == 4 ? 2 : 1;
+}
+
+size_t placesOf(const std::string& s, bool ascii) {
+  size_t total = 0;
+  for (size_t i = 0; i < s.size();) {
+    const size_t n = utf8Length(s, i);
+    total += places(s, i, n, ascii);
+    i += n;
+  }
+  return total;
+}
+
+// Cuts a text into parts that each fit one SMS (160 places in the GSM alphabet, 70 in UCS2), never inside a
+// character, and where it can after a space. False for invalid UTF-8 or a control character that the
+// modem would take for a command (a text goes out after "> " and ends with Ctrl-Z: 0x1A and 0x1B must
+// not occur in it).
+bool splitSms(const std::string& body, bool& ascii, std::vector<std::string>& parts) {
+  ascii = true;
+  for (size_t i = 0; i < body.size();) {
+    const size_t n = utf8Length(body, i);
+    if (n == 0) return false;
+    const unsigned char c = (unsigned char)body[i];
+    if (c == 0x1A || c == 0x1B || c == 0x00) return false;
+    if (n > 1) ascii = false;
+    i += n;
+  }
+  const size_t limit = ascii ? 160 : 70;
+  std::string cur;
+  size_t used = 0, afterSpace = 0;
+  for (size_t i = 0; i < body.size();) {
+    const size_t n = utf8Length(body, i);
+    const size_t w = places(body, i, n, ascii);
+    if (used + w > limit) {
+      if (afterSpace > 0 && afterSpace >= cur.size() / 2) {
+        parts.push_back(cur.substr(0, afterSpace));
+        cur = cur.substr(afterSpace);
+        used = placesOf(cur, ascii);
+      } else {
+        parts.push_back(cur);
+        cur.clear();
+        used = 0;
+      }
+      afterSpace = 0;
+    }
+    cur += body.substr(i, n);
+    used += w;
+    if (body[i] == ' ' || body[i] == '\n') afterSpace = cur.size();
+    i += n;
+  }
+  if (!cur.empty()) parts.push_back(cur);
+  return !parts.empty();
+}
+
+}  // namespace
+
+bool A7682EDriver::sendSms(const std::string& phone, const std::string& body) {
+  if (shuttingDown_ || (state_ != ModemState::Ready && !callState())) return false;
+  if (!at::isValidDialString(phone.c_str()) || body.empty() || body.size() > kMaxSmsBytes) return false;
+  if (outbox_.size() >= kOutboxSize) return false;
+  Outgoing out;
+  out.phone = phone;
+  if (!splitSms(body, out.ascii, out.parts)) return false;
+  outbox_.push_back(std::move(out));
+  return true;
+}
+
+bool A7682EDriver::pollSms(SmsMessage& out) {
+  if (inbox_.empty()) return false;
+  out = inbox_.front();
+  inbox_.pop_front();
+  return true;
+}
+
+void A7682EDriver::queueSms(const SmsMessage& sms) {
+  if (inbox_.size() < kInboxSize) inbox_.push_back(sms);
+}
+
+void A7682EDriver::noteSendFailure(const std::string& phone, const std::string& reason) {
+  if (failures_.size() >= kMaxFailures) failures_.pop_front();
+  failures_.push_back({phone, reason.empty() ? "no answer from the modem" : reason});
+  log("Messages: sending failed: " + (reason.empty() ? std::string("no reason given") : reason));
+}
+
+bool A7682EDriver::pollSendFailure(SmsFailure& out) {
+  if (failures_.empty()) return false;
+  out = failures_.front();
+  failures_.pop_front();
+  return true;
+}
+
+// The sending failed at the current step: the reason is kept (once, for the whole message), the remaining
+// parts are dropped, and the charset goes back.
+void A7682EDriver::smsFail(const std::string& reason) {
+  if (outbox_.empty()) return;
+  const Outgoing& out = outbox_.front();
+  std::string why = reason;
+  if (out.parts.size() > 1 && stepIndex_ >= 2) why = "part " + std::to_string(partIndex_ + 1) + " of " + std::to_string(out.parts.size()) + ": " + reason;
+  noteSendFailure(out.phone, why);
+  smsFailed_ = true;
+  smsRestoreCharset();
+}
+
+void A7682EDriver::smsRestoreCharset() {
+  reader_.setPromptMode(false);
+  stepIndex_ = 5;
+  send("AT+CSCS=\"UCS2\"");  // back to UCS2, so that incoming texts stay readable
+  expect(config_.commandTimeoutMs);
+}
+
+// The recipient of the next part goes out; the modem then answers "> ".
+void A7682EDriver::smsStartPart() {
+  char cmd[96];
+  const Outgoing& out = outbox_.front();
+  if (!at::buildCmgsCommand(out.phone.c_str(), out.ascii ? at::Charset::Gsm : at::Charset::Ucs2, cmd, sizeof(cmd))) {
+    smsFail("number cannot be used");  // never cut short: a shortened number is someone else's
+    return;
+  }
+  stepIndex_ = 3;
+  reader_.setPromptMode(true);
+  send(cmd);
+  expect(config_.commandTimeoutMs);
+}
+
+// ---------------------------------------------------------------------------
+// Questions, sleep, switching off
+// ---------------------------------------------------------------------------
+
+// Only reading: "AT+<name>?" or "AT+<name>=?" with a name of letters, digits and + ^ $. No semicolon, no line
+// break, no value after the "=", so that nothing can be changed through this way, even if the console
+// on USB were misused. Capitals only, as the interface says.
+bool A7682EDriver::isQuery(const std::string& c) {
+  const size_t n = c.size();
+  if (n < 5 || n > 40 || c.compare(0, 3, "AT+") != 0 || c[n - 1] != '?') return false;
+  for (size_t i = 3; i < n - 1; ++i) {
+    const char ch = c[i];
+    const bool ok = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '+' || ch == '^' ||
+                    ch == '$' || (ch == '=' && i == n - 2);
+    if (!ok) return false;
+  }
+  return true;
+}
+
+bool A7682EDriver::query(const std::string& command) {
+  if (queryPending_ || shuttingDown_ || state_ == ModemState::Off || !isQuery(command)) return false;
+  queryCommand_ = command;
+  queryResult_.clear();
+  queryPending_ = true;
+  queryDone_ = false;
+  return true;
+}
+
+bool A7682EDriver::pollQueryResult(std::string& out) {
+  if (!queryDone_) return false;
+  queryDone_ = false;
+  out = queryResult_.empty() ? "OK" : queryResult_;
+  return true;
+}
+
+bool A7682EDriver::wantsSomething() const {
+  return chupPending_ > 0 || diagPending_ || answerPending_ || volumePending_ || dialPending_ || !outbox_.empty() || queryPending_ ||
+         drainInboxPending_ || !cmtiPending_.empty();
+}
+
+void A7682EDriver::sleep() {
+  if (asleep_ || state_ != ModemState::Ready || shuttingDown_) return;
+  sleepPending_ = true;
+}
+
+void A7682EDriver::wake() {
+  sleepPending_ = false;
+  if (asleep_) wakePending_ = true;
+}
+
+void A7682EDriver::shutdown() {
+  if (state_ == ModemState::Off || shuttingDown_) return;
+  // The call that is on ends as the capability says: connected ends, ringing is missed, one being set up ends
+  // without a duration.
+  if (state_ == ModemState::InCall) queueEvent(CallEventType::Ended, (transport_.now() - connectedAtMs_) / 1000, "");
+  else if (state_ == ModemState::RingingIn) {
+    reportIncoming();
+    queueEvent(CallEventType::Missed, 0, "");
+  } else if (state_ == ModemState::Dialing) {
+    queueEvent(CallEventType::Ended, 0, "");
+  }
+  if (callState()) endCall();
+  // What was accepted but not sent goes nowhere now: the application is told, once each.
+  for (const Outgoing& o : outbox_) noteSendFailure(o.phone, "modem switched off");
+  outbox_.clear();
+  cmtiPending_.clear();
+  drainInboxPending_ = sleepPending_ = wakePending_ = false;
+  chupPending_ = 0;
+  diagPending_ = false;
+  shuttingDown_ = true;
+  shutdownPending_ = true;
+  log("Modem: switching off");
+}
+
+void A7682EDriver::finishPowerOff() {
+  transport_.setDtr(false);
+  transport_.power(false);
+  setState(ModemState::Off);
+  registered_ = smsOnly_ = false;
+  imsKnown_ = false;
+  operator_.clear();
+  asleep_ = shuttingDown_ = false;
+  registerWindow_.clear();
+  nextSignal_.clear();
+  nextClock_.clear();
+  waitUntil_.clear();
+  log("Modem: off");
 }

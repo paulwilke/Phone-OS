@@ -1,7 +1,7 @@
 #pragma once
 
 // The only seam between the modem driver and the UART: bytes in, bytes out, the time and
-// the lines that switch the modem on and the sound path. Everything above it (lines, answers, jobs, calls, messages) is plain C++ and is
+// the lines that switch the modem on, the sound path and the sleep line. Everything above it (lines, answers, jobs, calls, messages) is plain C++ and is
 // tested on the host against FakeAtTransport, a scripted modem. What stands below it
 // (the serial port, the power and key lines of the board) comes with the device drivers.
 
@@ -31,4 +31,7 @@ public:
   // call, from the first dial tone and the first ring, both belong to the modem. The driver knows
   // when; how it is switched, only the implementation knows.
   virtual void setAudioToModem(bool on) = 0;
+
+  // DTR: high lets the modem sleep (after AT+CSCLK=1), low wakes it.
+  virtual void setDtr(bool high) = 0;
 };

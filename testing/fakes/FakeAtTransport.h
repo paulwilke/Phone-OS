@@ -10,12 +10,15 @@
 //                                            (CR LF line CR LF). Several replies to the same
 //                                            command are used in turn; the last one stays, so a
 //                                            poll that repeats keeps getting it.
+//   replyLines(command, vector, final)      the same with the lines in a vector
 //   replyAfter(delayMs, command, …)          the same, but the answer comes after the delay
+//   clearReplies(command)                    forgets the scripted answers of a command (to script new ones)
 //   silence(command)                         no answer at all (a hang, for timeout tests)
 //   replyPrompt(command)                     "\r\n> " without a line end; the text that follows,
 //                                            ended by Ctrl-Z (0x1A), is answered by the next
 //                                            replyToBody(); Esc (0x1B) cancels without an answer
-//   replyToBody(lines, final = "OK")
+//   replyToBody(lines, final = "OK")        queued; one is used for each text that ends in Ctrl-Z
+//   setDefaultBodyAnswer(lines, final)      what a text is answered with when none is queued (default: none)
 // A command nobody scripted is answered "ERROR" and recorded in unexpected(), so a test can say
 // that the driver sent nothing it should not have.
 //
@@ -30,9 +33,10 @@
 // The supply: power(true/false) is recorded (powered()); a pulse on the power key (pwrkeyPulses())
 // wakes a modem that was set cold with setCold(true), which ignores everything until then, as a
 // modem does that has never been started; a pulse on a running modem switches it off, as it does.
-// The sound path: setAudioToModem() is recorded (audioToModem(), audioSwitches()).
+// The sound path: setAudioToModem() is recorded (audioToModem(), audioSwitches()); so is the sleep
+// line (dtr(), true = high = the modem may sleep).
 // Time: advance(ms) moves the clock (setNow() starts it anywhere, to test the wrap).
-// Reading back: powered(), pwrkeyPulses(), audioToModem(), sent() (every command line, without its line end), bodies() (every text sent
+// Reading back: powered(), pwrkeyPulses(), audioToModem(), dtr(), escapes() (Escape bytes received: a cancelled text), sent() (every command line, without its line end), bodies() (every text sent
 // after a prompt, without the Ctrl-Z), unexpected(), pendingOutput() (bytes not read yet).
 
 #include <cstdint>
@@ -61,6 +65,7 @@ public:
   uint32_t now() override { return now_; }
 
   void power(bool on) override { powered_ = on; }
+  void setDtr(bool high) override { dtr_ = high; }
   void setAudioToModem(bool on) override {
     audio_ = on;
     ++audioSwitches_;
@@ -81,6 +86,10 @@ public:
   void reply(const std::string& command, std::initializer_list<std::string> lines, const std::string& final = "OK") {
     queue(command, 0, frame(lines, final), false);
   }
+  // The same with the lines in a vector (an answer whose length the test decides).
+  void replyLines(const std::string& command, const std::vector<std::string>& lines, const std::string& final = "OK") {
+    queue(command, 0, frame(lines, final), false);
+  }
   void replyAfter(uint32_t delayMs, const std::string& command, std::initializer_list<std::string> lines,
                   const std::string& final = "OK") {
     queue(command, delayMs, frame(lines, final), false);
@@ -89,6 +98,9 @@ public:
   void replyPrompt(const std::string& command) { queue(command, 0, "\r\n> ", true); }
   void replyToBody(std::initializer_list<std::string> lines, const std::string& final = "OK") {
     bodyAnswers_.push_back(frame(lines, final));
+  }
+  void setDefaultBodyAnswer(std::initializer_list<std::string> lines, const std::string& final = "OK") {
+    defaultBodyAnswer_ = frame(lines, final);
   }
   void unsolicited(uint32_t atMs, const std::string& line) { timed_.push_back({atMs, "\r\n" + line + "\r\n"}); }
   void restart() {
@@ -99,6 +111,8 @@ public:
     const std::string ready = "\r\n*ATREADY: 1\r\n";
     out_.insert(out_.end(), ready.begin(), ready.end());
   }
+  // Forgets what was scripted for a command, so that a test can change the world while the modem runs.
+  void clearReplies(const std::string& command) { answers_.erase(command); }
   void setEcho(bool on) { echo_ = on; }
   void setCold(bool cold) { cold_ = cold; }
   void advance(uint32_t ms) { now_ += ms; }
@@ -109,7 +123,9 @@ public:
   const std::vector<std::string>& unexpected() const { return unexpected_; }
   size_t pendingOutput() const { return out_.size(); }
   bool powered() const { return powered_; }
+  int escapes() const { return escapes_; }
   bool audioToModem() const { return audio_; }
+  bool dtr() const { return dtr_; }
   int audioSwitches() const { return audioSwitches_; }
   int pwrkeyPulses() const { return pulses_; }
 
@@ -125,6 +141,9 @@ private:
   };
 
   static std::string frame(std::initializer_list<std::string> lines, const std::string& final) {
+    return frame(std::vector<std::string>(lines), final);
+  }
+  static std::string frame(const std::vector<std::string>& lines, const std::string& final) {
     // The lines of one answer follow each other without a gap; the final line has one before it.
     std::string bytes;
     bool first = true;
@@ -157,6 +176,11 @@ private:
 
   void takeByte(char c) {
     if (inBody_) {
+      if (skipLf_ && c == '\n') {
+        skipLf_ = false;
+        return;
+      }
+      skipLf_ = false;
       if (c == 0x1A) {
         bodies_.push_back(line_);
         line_.clear();
@@ -164,13 +188,25 @@ private:
         if (!bodyAnswers_.empty()) {
           out_.insert(out_.end(), bodyAnswers_.front().begin(), bodyAnswers_.front().end());
           bodyAnswers_.pop_front();
+        } else {
+          out_.insert(out_.end(), defaultBodyAnswer_.begin(), defaultBodyAnswer_.end());
         }
       } else if (c == 0x1B) {
+        ++escapes_;
         line_.clear();
         inBody_ = false;
       } else {
         line_ += c;
       }
+      return;
+    }
+    if (c == '\n' && skipLf_) {  // the LF behind the CR of a command line is part of its end
+      skipLf_ = false;
+      return;
+    }
+    skipLf_ = false;
+    if (c == 0x1A || c == 0x1B) {  // Ctrl-Z and Escape mean nothing outside a text, but an Escape is counted
+      if (c == 0x1B) ++escapes_;
       return;
     }
     if (c != '\r' && c != '\n') {
@@ -180,6 +216,7 @@ private:
     if (line_.empty()) return;
     const std::string command = line_;
     line_.clear();
+    skipLf_ = (c == '\r');
     sent_.push_back(command);
     if (cold_ || !powered_) return;   // nobody is listening
     if (echo_) {
@@ -209,12 +246,16 @@ private:
   bool powered_ = true;  // a bench modem is on until the driver says otherwise
   int pulses_ = 0;
   bool audio_ = false;
+  bool dtr_ = false;
+  int escapes_ = 0;
   int audioSwitches_ = 0;
   bool inBody_ = false;
+  bool skipLf_ = false;
   std::string line_;
   std::deque<char> out_;
   std::vector<Timed> timed_;
   std::map<std::string, std::deque<Answer>> answers_;
   std::deque<std::string> bodyAnswers_;
+  std::string defaultBodyAnswer_;
   std::vector<std::string> sent_, bodies_, unexpected_;
 };

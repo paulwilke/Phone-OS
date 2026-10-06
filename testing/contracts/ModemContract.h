@@ -376,7 +376,8 @@ struct ModemContract {
       TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
       const auto got = events(rig);
       expect(got, {CallEventType::DialFailed});
-      TEST_ASSERT_EQUAL_STRING("+CME ERROR: 30", got[0].reason.c_str());
+      // The modem's own line is in the reason (an implementation may add facts of its own behind it).
+      TEST_ASSERT_TRUE(got[0].reason.find("+CME ERROR: 30") != std::string::npos);
       TEST_ASSERT_TRUE(got[0].failReason == DialFailReason::Refused);
     }
   }
