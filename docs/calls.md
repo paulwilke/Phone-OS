@@ -11,7 +11,7 @@ Code: `src/app/Calls.{h,cpp}`; tests in `test/test_calls/`. Pure C++17 on the mo
 3. **cellular** must be switched on (`CellularIsOff`);
 4. the device must be **registered** (`NoNetwork`).
 
-A dial the modem then refuses (for example on a network that allows SMS only) leaves no call behind. `answer()` and `hangup()` go to the modem; hanging up clears the other party.
+A dial the modem then refuses leaves no call behind. The modem refuses when its voice status is `SmsOnly` (the network allows messages only) or `ImsMissing` (registered, but the IMS is not: dialling would hang the modem), and nothing is sent to it then; `call()` turns the status into a notice, `CallSmsOnly` or `CallNotReady`, with the number, so that the child sees why. A refusal is no failed call and writes no history entry. `answer()` and `hangup()` go to the modem; hanging up clears the other party.
 
 ## Only the contact book may call
 
@@ -39,9 +39,13 @@ The child cannot say why a call failed, and the parents find the reason in the h
 | Reason | When |
 |---|---|
 | `busy`, `no-answer` | the modem says so |
-| `no-network` | the modem only says the dial failed, and the device is not registered |
-| `sms-only` | ... and it is registered, but the network allows SMS only |
-| `not-connected` | ... and none of that: plainly did not connect |
+| `telephony-not-ready` | the modem names it (`DialFailReason::NotReady`: the IMS was not registered) |
+| `modem-restarted` | the modem restarted while the call was being set up (`DialFailReason::ModemRestarted`) |
+| `no-network` | the modem names it, or only says the dial failed, and the device is not registered |
+| `sms-only` | the modem names it, or ... it is registered, but the network allows SMS only |
+| `not-connected` | the modem refused (`DialFailReason::Refused`), or ... none of that: plainly did not connect |
+
+Without a code from the modem the reason is derived in this order: no network, SMS only, telephony not ready, not connected. A restart that cuts off a *connected* call is an ordinary end: nothing is reported as failed.
 
 A call that ended without ever being connected counts as a failure of the same kind. A call the child ended while it was still dialling, and a call that was connected and then ended, are not failures.
 

@@ -132,10 +132,47 @@ void test_a_wrong_pin_warns_in_every_language_that_three_tries_lock_the_sim() {
 
 void test_a_network_that_allows_messages_only_is_explained_as_no_fault_of_the_device() {
   Page page;
-  page.rig.modem.setNetwork("Example Mobile", 4, false);
+  page.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);
   page.draw();
   TEST_ASSERT_TRUE(page.says("Status: SMS only"));
   TEST_ASSERT_TRUE(page.saysWrapped("The network allows this SIM messages only, no calls."));
+}
+
+// Registered, but the IMS is not: telephony is not ready. Adults see the IMS line next to the network and
+// an explanation that says it usually passes; it is neither "SMS only" nor "not connected".
+void test_a_network_without_ims_is_told_as_calls_not_ready_and_explained() {
+  Page page;
+  page.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Network: Example"));
+  TEST_ASSERT_TRUE(page.says("IMS: no"));
+  TEST_ASSERT_TRUE(page.says("Status: calls not ready"));
+  TEST_ASSERT_TRUE(page.saysWrapped("The network is there, but calls are not ready yet. This usually passes within a minute. Messages work."));
+  TEST_ASSERT_FALSE(page.saysWrapped("The network allows this SIM messages only, no calls."));
+}
+
+void test_the_ims_line_says_yes_when_it_is_registered_and_nothing_where_it_is_unknown_or_irrelevant() {
+  Page page;
+  TEST_ASSERT_TRUE(page.says("IMS: yes"));
+  page.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);   // a restriction of the network: no word on the IMS
+  page.draw();
+  TEST_ASSERT_FALSE(page.says("IMS:"));
+  Page none;
+  none.rig.modem.setNetwork("", 0);
+  none.draw();
+  TEST_ASSERT_FALSE(none.says("IMS:"));
+}
+
+void test_the_ims_line_is_worded_in_german_and_french() {
+  Page de;
+  de.rig.language("de");
+  de.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  de.draw();
+  TEST_ASSERT_TRUE(de.says("IMS: nein"));
+  Page fr;
+  fr.rig.language("fr");
+  fr.draw();
+  TEST_ASSERT_TRUE(fr.says("IMS : oui"));
 }
 
 void test_no_explanation_where_nothing_is_wrong() {
@@ -185,14 +222,15 @@ void test_back_goes_back_and_there_is_no_action() {
 
 void test_every_state_is_drawn_inside_the_screen_in_every_language() {
   languages::forEach([](const std::string& language, i18n::Translator&) {
-    for (int state = 0; state < 6; ++state) {
+    for (int state = 0; state < 7; ++state) {
       Page page;
       page.rig.language(language);
       if (state == 1) page.rig.modem.setSimStatus(SimStatus::Missing);
       if (state == 2) page.rig.modem.setSimStatus(SimStatus::PinRequired);
       if (state == 3) page.rig.modem.setSimStatus(SimStatus::PinWrong);
       if (state == 4) page.rig.modem.setSimStatus(SimStatus::PukRequired);
-      if (state == 5) page.rig.modem.setNetwork("Example Mobile", 4, false);
+      if (state == 5) page.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);
+      if (state == 6) page.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
       FrameBuffer fb;
       page.draw();
       page.screen.render(fb);
@@ -229,6 +267,9 @@ int main(int, char**) {
   RUN_TEST(test_every_sim_problem_has_its_line_and_its_explanation);
   RUN_TEST(test_a_wrong_pin_warns_in_every_language_that_three_tries_lock_the_sim);
   RUN_TEST(test_a_network_that_allows_messages_only_is_explained_as_no_fault_of_the_device);
+  RUN_TEST(test_a_network_without_ims_is_told_as_calls_not_ready_and_explained);
+  RUN_TEST(test_the_ims_line_says_yes_when_it_is_registered_and_nothing_where_it_is_unknown_or_irrelevant);
+  RUN_TEST(test_the_ims_line_is_worded_in_german_and_french);
   RUN_TEST(test_no_explanation_where_nothing_is_wrong);
   RUN_TEST(test_a_text_longer_than_the_page_scrolls_and_says_so_in_the_soft_keys);
   RUN_TEST(test_the_page_starts_at_the_top_each_time);

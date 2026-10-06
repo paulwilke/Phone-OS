@@ -21,7 +21,13 @@ StatusModel statusModelOf(const AppCore::State& state) {
   }
   model.operatorName = state.network.name;
   model.quietHours = state.schoolTime;
-  model.voiceAvailable = state.voiceAvailable;
+  // No verdict yet is no complaint.
+  switch (state.voice) {
+    case VoiceStatus::Unknown:
+    case VoiceStatus::Ready: model.voice = StatusModel::Voice::Ready; break;
+    case VoiceStatus::SmsOnly: model.voice = StatusModel::Voice::SmsOnly; break;
+    case VoiceStatus::ImsMissing: model.voice = StatusModel::Voice::NotReady; break;
+  }
   model.locating = state.positioningActive;
   model.batteryPercent = state.batteryPercent;
   model.dateKnown = state.wall.known;

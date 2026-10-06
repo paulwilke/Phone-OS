@@ -183,6 +183,15 @@ void test_the_state_offers_what_the_interface_draws() {
 
 // ---- scenarios ----------------------------------------------------------------------------------
 
+void test_the_state_tells_whether_calls_are_possible() {
+  Device d;
+  TEST_ASSERT_TRUE(VoiceStatus::Ready == d.poll().voice);
+  d.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  TEST_ASSERT_TRUE(VoiceStatus::ImsMissing == d.poll().voice);
+  d.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);
+  TEST_ASSERT_TRUE(VoiceStatus::SmsOnly == d.poll().voice);
+}
+
 void test_a_full_day() {
   Device d(inSchool());
   // The start: the receiver looks for the time and a first position, and gives up the receiver
@@ -732,6 +741,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_poll_drains_everything);
   RUN_TEST(test_the_state_offers_what_the_interface_draws);
+  RUN_TEST(test_the_state_tells_whether_calls_are_possible);
   RUN_TEST(test_a_full_day);
   RUN_TEST(test_an_sos_in_school_time_with_the_override);
   RUN_TEST(test_a_remote_query_during_an_sos);

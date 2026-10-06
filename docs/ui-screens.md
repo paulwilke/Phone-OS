@@ -32,7 +32,7 @@ A screen that needs something the core does not hand out as data — the acceler
 | SIM problem | `SimStatus`: missing, PIN required or wrong (`PinWrong` is the same word: the stored PIN was rejected and is never tried again), locked (PUK). "Unknown" is a modem that was not asked yet: it tries anyway, so the bar says nothing |
 | network | the network label as data: operator, radio, radio only, none. A network with **no name** is shown by the general word `status.network` ("Network"), not as "No network": the device is connected |
 | school time | `schoolTime` |
-| "SMS only" | `voiceAvailable` |
+| "SMS only", "No calls yet" | `voice`: `SmsOnly` is a restriction of the network, `ImsMissing` (shown as "No calls yet") is telephony that is not ready and usually passes; `Unknown` says nothing, like an unknown SIM |
 | "GPS" | `positioningActive`: a device that locates in secret is what this one must not be |
 | battery | `batteryPercent`, five bars |
 | date | `wall`: month, day and weekday, or the "unknown" form when the time is not known |

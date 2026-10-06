@@ -21,7 +21,7 @@ A `Notice` is a `NoticeKind`, a `peer` (a phone number, for the kinds that name 
 |---|---|---|
 | `SchoolTimeUntil` | the child tried something school time forbids | time |
 | `CallNotAllowed`, `CellularIsOff`, `NoNetwork` | a call attempt was refused | |
-| `CallBusy`, `CallNoAnswer`, `CallNoNetwork`, `CallSmsOnly`, `CallFailed` | a call did not happen | name |
+| `CallBusy`, `CallNoAnswer`, `CallNoNetwork`, `CallSmsOnly`, `CallNotReady`, `CallModemRestarted`, `CallFailed` | a call did not happen | name |
 | `CallerInSchoolTime` | an incoming call from a contact was rejected in school time | name |
 | `MessageWaiting`, `MessageSent`, `MessageSentRadio`, `QueueFull`, `SmsRejected`, `RadioUnreachable`, `RadioUnconfirmed` | what happened to a message | |
 | `LocationQueried`, `QueryRefused` | a remote query (shown only when the profile says so); `LocationQueried` has the words of the history entry, `QueryRefused` words of its own that are short, because the one who asked is a stranger, shown by number, and a number is never shortened | name |

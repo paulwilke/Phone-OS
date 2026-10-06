@@ -240,7 +240,7 @@ void test_every_system_entry_kind_and_reason_has_words_in_every_shipped_language
   const char* kinds[] = {sysentry::kMissedCall, sysentry::kLocationQueried, sysentry::kQueryRefused,
                          sysentry::kSmsRejected, sysentry::kLocationQueryFailed};
   const char* reasons[] = {sysentry::kBusy, sysentry::kNoAnswer, sysentry::kNoNetwork, sysentry::kSmsOnly,
-                           sysentry::kNotConnected};
+                           sysentry::kTelephonyNotReady, sysentry::kModemRestarted, sysentry::kNotConnected};
   for (const std::string& code : shipped(t)) {
     t.select(code);
     for (const char* kind : kinds)

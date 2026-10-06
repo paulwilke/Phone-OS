@@ -9,7 +9,7 @@ Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one
 | `FakeClock` | `advance(ms)`, `advanceSeconds(s)`; the software sets the epoch and offset through the real setters | the interface |
 | `FakePower` | `setBattery`, `setMinutesRemaining`, `plugIn(Charging\|Full)`, `unplug`, `setChargerAnswers(false)`, `failDomain(domain, true)`, `allowPowerOff(bool)` | `powerOffCalls()`, `switchOnCount(domain)` |
 | `FakeGnss` | scenarios on the power domain and the clock: `fixAfter(seconds, lat, lon, hdop)`, `never()`, `degradeAfter(seconds, hdop)`, `setSatellites` | the interface |
-| `FakeModem` | `setNetwork(operator, bars, voice)`, `setSimStatus`, `injectSms`, `injectIncomingCall`, `announceCaller` (the number arrives after the ring), `remoteAnswer`, `remoteBusy`, `remoteNoAnswer`, `failDial(reason)`, `remoteHangup`, `failNextSms(reason, count)`, `setQueryAnswer`, `setVolumeSupported` | `sent()`, `asleep()`, `callPhone()` |
+| `FakeModem` | `setNetwork(operator, bars, voice)` (`voice` is a `VoiceStatus`: `Ready`, `SmsOnly`, `ImsMissing`), `setSimStatus`, `injectSms`, `injectIncomingCall`, `announceCaller` (the number arrives after the ring), `remoteAnswer`, `remoteBusy`, `remoteNoAnswer`, `failDial(reason, why)` (a `DialFailReason`), `restartDuringCall`, `remoteHangup`, `failNextSms(reason, count)`, `setQueryAnswer`, `setVolumeSupported` | `sent()`, `asleep()`, `callPhone()` |
 | `FakeEventLog` | none | `entries()` (with the epoch the clock knew), `lines()`, `contains()` |
 | `FakeHaptic` | none; it runs the real pattern player on the fake clock | `played()`, `fired()` with times |
 | `FakeConfigStore` | `put`, `failNextWrite()` (half of the data reaches the scratch file, the old file stays), `failAllWrites(bool)` | `scratchFileCount()` |
@@ -22,7 +22,7 @@ Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one
 
 A fake that cheats would let a test pass that the device then fails. They therefore keep the contracts:
 
-- **`FakeModem`** delivers call events in a legal order (see the contract in the `Modem` header), reports a scripted send failure exactly once with the modem's reason, ends a call when it is switched off, accepts only read forms in `query()`, and clamps the volume to 0–7.
+- **`FakeModem`** delivers call events in a legal order (see the contract in the `Modem` header), reports a scripted send failure exactly once with the modem's reason, ends a call when it is switched off, refuses to dial while its voice status is `SmsOnly` or `ImsMissing`, fails or ends a call that a restart cuts off, accepts only read forms in `query()`, and clamps the volume to 0–7.
 - **`FakeConfigStore`** writes through a scratch file; a failed write leaves the old content and the scratch file is invisible to `read`, `fileSize` and `list`. Names are compared without regard to case. Paths go through `SafePath`.
 - **`FakeGnss`** follows the power domain: off gives `false`, and every switch-on (seen or not) starts the scenario again, so a position from an earlier run is never returned.
 - **`FakeClock`** refuses dates before 2020 and offsets outside −12:00 … +14:00, like the interface says.

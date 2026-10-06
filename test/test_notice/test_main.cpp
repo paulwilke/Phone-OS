@@ -71,7 +71,7 @@ void test_every_system_entry_kind_and_call_reason_has_a_text_in_every_shipped_la
       {sysentry::kMissedCall, false}, {sysentry::kCallFailed, true},   {sysentry::kLocationQueried, false},
       {sysentry::kQueryRefused, false}, {sysentry::kSmsRejected, false}, {sysentry::kLocationQueryFailed, false}};
   const char* reasons[] = {sysentry::kBusy, sysentry::kNoAnswer, sysentry::kNoNetwork, sysentry::kSmsOnly,
-                           sysentry::kNotConnected};
+                           sysentry::kTelephonyNotReady, sysentry::kModemRestarted, sysentry::kNotConnected};
   for (const std::string& code : shipped(t)) {
     if (code == i18n::kPseudoCode) continue;
     t.select(code);
@@ -97,6 +97,8 @@ void test_each_reason_and_kind_has_its_own_key() {
   TEST_ASSERT_EQUAL_STRING("call.reason-no-answer", callReasonKey(sysentry::kNoAnswer));
   TEST_ASSERT_EQUAL_STRING("call.reason-no-network", callReasonKey(sysentry::kNoNetwork));
   TEST_ASSERT_EQUAL_STRING("call.reason-sms-only", callReasonKey(sysentry::kSmsOnly));
+  TEST_ASSERT_EQUAL_STRING("call.reason-not-ready", callReasonKey(sysentry::kTelephonyNotReady));
+  TEST_ASSERT_EQUAL_STRING("call.reason-modem-restarted", callReasonKey(sysentry::kModemRestarted));
   TEST_ASSERT_EQUAL_STRING("call.reason-not-connected", callReasonKey(sysentry::kNotConnected));
   TEST_ASSERT_EQUAL_STRING("system.missed-call", systemKey(sysentry::kMissedCall));
   TEST_ASSERT_EQUAL_STRING("system.call-failed", systemKey(sysentry::kCallFailed));

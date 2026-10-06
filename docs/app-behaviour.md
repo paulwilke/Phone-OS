@@ -242,6 +242,13 @@ Tests in `test/test_calls/`.
 | CAL-48 | A stranger does not disturb the call of a contact | `test_a_stranger_does_not_disturb_the_calls_of_contacts` | — | done |
 | CAL-49 | A call the child dialled is not hidden by the rule | `test_a_call_we_dialled_is_not_hidden_by_the_rule` | — | done |
 | CAL-50 | A flood of calls from a stranger is one log line and one summary; every call is hung up all the same | `test_a_flood_of_calls_from_a_stranger_is_one_line_and_one_summary` | — | done |
+| CAL-51 | A dial without IMS is refused with the reason "calls not ready" and starts nothing: no call, no history entry | `test_a_dial_without_ims_is_refused_with_the_reason_and_starts_nothing` | — | done |
+| CAL-52 | A dial on an SMS-only network is refused with that reason | `test_a_dial_on_an_sms_only_network_is_refused_with_that_reason` | — | done |
+| CAL-53 | A dial failure the modem names "not ready" is reported with that reason (notice, history entry) | `test_a_dial_failure_that_the_modem_calls_not_ready_says_so` | — | done |
+| CAL-54 | A dial failure without a code while the IMS is missing says "not ready" | `test_a_dial_failure_without_a_code_while_the_ims_is_missing_says_not_ready` | — | done |
+| CAL-55 | A modem restart while dialling is a failed call with the reason "modem restarted", with the modem's line in the log | `test_a_modem_restart_while_dialling_is_reported_as_such_and_logged` | — | done |
+| CAL-56 | A modem restart in a connected call is an end, not a failure | `test_a_modem_restart_in_a_connected_call_is_an_end_not_a_failure` | — | done |
+| CAL-57 | A dial the modem refuses outright says "did not connect" | `test_a_refused_dial_with_a_code_of_refused_says_not_connected` | — | done |
 
 ## Emergency
 
@@ -413,6 +420,7 @@ Tests in `test/test_app_core/`.
 | APP-23 | The interface language changes at once through one entry point, which refuses a code no catalog has, keeps the code in the profile, and leaves the SMS language alone | `test_the_interface_language_changes_at_once_and_the_sms_language_stays` | — | done |
 | APP-24 | A language in the profile is applied at start | `test_a_language_in_the_profile_is_applied_at_start` | — | done |
 | APP-25 | The state has the Unix time (0 while unknown) and the uptime, to measure ages and idle times against | `test_the_state_has_the_time_to_measure_ages_against_and_what_the_radio_says` | — | done |
+| APP-26 | The state tells whether calls are possible: ready, SMS only, or IMS missing | `test_the_state_tells_whether_calls_are_possible` | — | done |
 
 ## Not ported
 

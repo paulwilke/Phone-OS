@@ -338,7 +338,7 @@ void test_the_left_side_names_the_most_important_thing() {
   TEST_ASSERT_EQUAL_STRING("Example Mobile", left.text.c_str());
   TEST_ASSERT_TRUE(left.isOperatorName);
 
-  m.voiceAvailable = false;                       // connected, but only SMS works
+  m.voice = StatusModel::Voice::SmsOnly;                       // connected, but only SMS works
   TEST_ASSERT_EQUAL_STRING("SMS only", statusLeft(m, t).text.c_str());
   TEST_ASSERT_FALSE(statusLeft(m, t).isOperatorName);
 
@@ -351,6 +351,22 @@ void test_the_left_side_names_the_most_important_thing() {
   TEST_ASSERT_EQUAL_STRING("No SIM", statusLeft(m, t).text.c_str());
   m.sim = StatusModel::Sim::Locked;
   TEST_ASSERT_EQUAL_STRING("SIM locked", statusLeft(m, t).text.c_str());
+}
+
+// A network that is there while the IMS is not: calls come in a minute, which "SMS only" would not say.
+void test_the_left_side_says_when_calls_are_not_ready_yet() {
+  Translator t = languages::loaded();
+  t.select("en");
+  StatusModel m;
+  m.link = StatusModel::Link::Operator;
+  m.operatorName = "Example Mobile";
+  m.voice = StatusModel::Voice::NotReady;
+  TEST_ASSERT_EQUAL_STRING("No calls yet", statusLeft(m, t).text.c_str());
+  TEST_ASSERT_FALSE(statusLeft(m, t).isOperatorName);
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("Noch keine Anrufe", statusLeft(m, t).text.c_str());
+  m.link = StatusModel::Link::Radio;               // it concerns the mobile network only
+  TEST_ASSERT_EQUAL_STRING("Funk", statusLeft(m, t).text.c_str());
 }
 
 void test_the_left_side_without_an_operator() {
@@ -366,9 +382,9 @@ void test_the_left_side_without_an_operator() {
   t.select("fr");
   TEST_ASSERT_EQUAL_STRING("R\xC3\xA9seau", statusLeft(m, t).text.c_str());
   t.select("en");
-  m.voiceAvailable = false;                        // the more important word still wins
+  m.voice = StatusModel::Voice::SmsOnly;                        // the more important word still wins
   TEST_ASSERT_EQUAL_STRING("SMS only", statusLeft(m, t).text.c_str());
-  m.voiceAvailable = true;
+  m.voice = StatusModel::Voice::Ready;
   m.link = StatusModel::Link::Radio;
   TEST_ASSERT_EQUAL_STRING("Radio", statusLeft(m, t).text.c_str());
   m.link = StatusModel::Link::RadioOnly;
@@ -451,8 +467,10 @@ StatusModel model(const char* kind) {
   } else if (k == "unnamed") {
     m.operatorName.clear();
   } else if (k == "sms-only") {
-    m.voiceAvailable = false;
+    m.voice = StatusModel::Voice::SmsOnly;
     m.batteryPercent = 3;
+  } else if (k == "not-ready") {
+    m.voice = StatusModel::Voice::NotReady;
   }
   return m;
 }
@@ -462,7 +480,7 @@ StatusModel model(const char* kind) {
 void test_the_status_bar_fits_its_area_in_every_language() {
   const Rect area = ScreenLayout::standard().status;
   languages::forEach([&](const std::string& language, Translator& t) {
-    for (const char* kind : {"plain", "long-name", "school", "sim-locked", "nothing", "sms-only", "unnamed"}) {
+    for (const char* kind : {"plain", "long-name", "school", "sim-locked", "nothing", "sms-only", "not-ready", "unnamed"}) {
       FrameBuffer fb;
       fb.beginRegion(area);
       drawStatusBar(fb, area, model(kind), t);
@@ -1287,6 +1305,7 @@ int main() {
   RUN_TEST(test_every_standard_soft_key_word_fits_either_button_with_and_without_the_arrows);
   RUN_TEST(test_the_battery_is_five_bars_rounded_up);
   RUN_TEST(test_the_left_side_names_the_most_important_thing);
+  RUN_TEST(test_the_left_side_says_when_calls_are_not_ready_yet);
   RUN_TEST(test_the_left_side_without_an_operator);
   RUN_TEST(test_the_date_is_written_the_way_the_language_writes_it);
   RUN_TEST(test_every_weekday_has_its_own_name_and_the_index_wraps);

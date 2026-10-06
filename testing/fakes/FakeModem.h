@@ -6,16 +6,19 @@
 // there, Registering without a network, Error with a locked or missing SIM.
 //
 // Scripting the network and the SIM:
-//   setNetwork(operatorName, bars, voice = true)   empty name = no network
+//   setNetwork(operatorName, bars, voice = VoiceStatus::Ready)   empty name = no network
 //   setSimStatus(status)
 // Scripting what arrives:
 //   injectSms(phone, body, timestamp)
 //   injectIncomingCall(phone)              false when it cannot ring (not Ready, no voice)
+//   (calls need voice Ready: with SmsOnly or ImsMissing dial() refuses and sends nothing)
 // Scripting the other side of a call (events come in the order a real modem delivers them):
 //   remoteAnswer()    a dialled call connects          -> Connected
 //   remoteBusy()      the number is busy               -> Busy
 //   remoteNoAnswer()  nobody answers                   -> NoAnswer
-//   failDial(reason)  the network refuses the call     -> DialFailed
+//   failDial(reason, why = Unknown)  the call fails    -> DialFailed with the modem's line and a code
+//   restartDuringCall()  the modem restarts            -> DialFailed(ModemRestarted) while dialling,
+//                                                         Ended for a connected call
 //   remoteHangup()    the other side ends: connected -> Ended, ringing -> Missed,
 //                     dialling -> NoAnswer
 // Scripting failures:
@@ -81,7 +84,7 @@ public:
   }
 
   bool dial(const std::string& phone) override {
-    if (state_ != ModemState::Ready || !voice_ || phone.empty()) return false;
+    if (state_ != ModemState::Ready || voice_ != VoiceStatus::Ready || phone.empty()) return false;
     callPhone_ = phone;
     state_ = ModemState::Dialing;
     return true;
@@ -131,12 +134,12 @@ public:
 
   ModemState state() const override { return state_; }
   int signalBars() const override { return registered() ? bars_ : 0; }
-  bool voiceAvailable() const override { return voice_; }
+  VoiceStatus voiceStatus() const override { return registered() ? voice_ : VoiceStatus::Unknown; }
   std::string operatorName() const override { return registered() ? operator_ : ""; }
   SimStatus simStatus() const override { return sim_; }
 
   // Scripting.
-  void setNetwork(const std::string& operatorName, int bars, bool voice = true) {
+  void setNetwork(const std::string& operatorName, int bars, VoiceStatus voice = VoiceStatus::Ready) {
     operator_ = operatorName;
     bars_ = bars;
     voice_ = voice;
@@ -150,7 +153,7 @@ public:
     inbox_.push_back({phone, body, timestamp});
   }
   bool injectIncomingCall(const std::string& phone) {
-    if (state_ != ModemState::Ready || !voice_) return false;
+    if (state_ != ModemState::Ready || voice_ != VoiceStatus::Ready) return false;
     callPhone_ = phone;
     state_ = ModemState::RingingIn;
     push(CallEventType::Incoming, 0, "");
@@ -170,7 +173,16 @@ public:
   }
   void remoteBusy() { endDialled(CallEventType::Busy, ""); }
   void remoteNoAnswer() { endDialled(CallEventType::NoAnswer, ""); }
-  void failDial(const std::string& reason) { endDialled(CallEventType::DialFailed, reason); }
+  void failDial(const std::string& reason, DialFailReason why = DialFailReason::Unknown) {
+    endDialled(CallEventType::DialFailed, reason, why);
+  }
+  // A restart takes the call with it: one that was being set up failed, one that was
+  // connected ended; a ringing one was never ours to answer.
+  void restartDuringCall() {
+    if (state_ == ModemState::Dialing) endDialled(CallEventType::DialFailed, "*ATREADY", DialFailReason::ModemRestarted);
+    else if (state_ == ModemState::InCall) finish(CallEventType::Ended, true);
+    else if (state_ == ModemState::RingingIn) finish(CallEventType::Missed, false);
+  }
   void remoteHangup() {
     if (state_ == ModemState::InCall) finish(CallEventType::Ended, true);
     else if (state_ == ModemState::RingingIn) finish(CallEventType::Missed, false);
@@ -202,8 +214,9 @@ private:
     else if (operator_.empty()) state_ = ModemState::Registering;
     else state_ = ModemState::Ready;
   }
-  void push(CallEventType type, uint32_t duration, const std::string& reason) {
-    events_.push_back({type, callPhone_, duration, reason});
+  void push(CallEventType type, uint32_t duration, const std::string& reason,
+            DialFailReason why = DialFailReason::Unknown) {
+    events_.push_back({type, callPhone_, duration, reason, why});
   }
   void connect() {
     state_ = ModemState::InCall;
@@ -218,9 +231,9 @@ private:
     state_ = ModemState::Ready;
     settle();
   }
-  void endDialled(CallEventType type, const std::string& reason) {
+  void endDialled(CallEventType type, const std::string& reason, DialFailReason why = DialFailReason::Unknown) {
     if (state_ != ModemState::Dialing) return;
-    push(type, 0, reason);
+    push(type, 0, reason, why);
     callPhone_.clear();
     state_ = ModemState::Ready;
     settle();
@@ -231,7 +244,7 @@ private:
   ModemState state_ = ModemState::Off;
   std::string operator_ = "Provider";
   int bars_ = 4;
-  bool voice_ = true;
+  VoiceStatus voice_ = VoiceStatus::Ready;
   SimStatus sim_ = SimStatus::Ready;
   int volume_ = 4;
   bool volumeSupported_ = true;

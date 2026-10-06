@@ -4,11 +4,13 @@
 // situation, and the test is then ignored):
 //   Modem& modem()
 //   void advanceSeconds(uint32_t)
-//   bool setNetwork(operatorName, bars, voice)    empty name = no network
+//   bool setNetwork(operatorName, bars, VoiceStatus)    empty name = no network
 //   bool setSim(SimStatus)
 //   bool injectSms(phone, body, timestamp)
 //   bool injectIncomingCall(phone)
-//   bool remoteAnswer() / remoteBusy() / remoteNoAnswer() / failDial(reason) / remoteHangup()
+//   bool remoteAnswer() / remoteBusy() / remoteNoAnswer() / remoteHangup()
+//   bool failDial(reason, DialFailReason)          the call fails with the modem's line and a code
+//   bool restartDuringCall()                       the modem restarts while a call is on
 //   bool failNextSms(reason)
 //   bool setVolumeSupported(bool)
 // A fresh rig has a modem that is not begun yet, with a network and a usable SIM.
@@ -93,6 +95,7 @@ struct ModemContract {
     TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Off);
     TEST_ASSERT_EQUAL(0, rig.modem().signalBars());
     TEST_ASSERT_EQUAL_STRING("", rig.modem().operatorName().c_str());
+    TEST_ASSERT_TRUE(rig.modem().voiceStatus() == VoiceStatus::Unknown);
   }
 
   static void with_a_network_and_a_sim_it_becomes_ready_with_signal_and_operator() {
@@ -101,6 +104,7 @@ struct ModemContract {
     const int bars = rig.modem().signalBars();
     TEST_ASSERT_TRUE(bars >= 1 && bars <= 5);
     TEST_ASSERT_TRUE(!rig.modem().operatorName().empty());
+    TEST_ASSERT_TRUE(rig.modem().voiceStatus() == VoiceStatus::Ready);
   }
 
   static void starting_it_twice_is_harmless() {
@@ -112,7 +116,7 @@ struct ModemContract {
 
   static void without_a_network_it_keeps_registering_with_no_signal_and_no_operator() {
     Rig rig;
-    CONTRACT_NEEDS(rig.setNetwork("", 0, true));
+    CONTRACT_NEEDS(rig.setNetwork("", 0, VoiceStatus::Ready));
     rig.modem().begin();
     TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Registering);
     TEST_ASSERT_EQUAL(0, rig.modem().signalBars());
@@ -122,9 +126,9 @@ struct ModemContract {
 
   static void a_network_that_appears_later_makes_it_ready() {
     Rig rig;
-    CONTRACT_NEEDS(rig.setNetwork("", 0, true));
+    CONTRACT_NEEDS(rig.setNetwork("", 0, VoiceStatus::Ready));
     rig.modem().begin();
-    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, true));
+    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, VoiceStatus::Ready));
     TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
   }
 
@@ -151,12 +155,36 @@ struct ModemContract {
   // Writing works where calls do not, and the caller can tell.
   static void a_network_for_sms_only_allows_writing_but_no_calls() {
     Rig rig;
-    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, false));
+    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, VoiceStatus::SmsOnly));
     ready(rig);
-    TEST_ASSERT_FALSE(rig.modem().voiceAvailable());
+    TEST_ASSERT_TRUE(rig.modem().voiceStatus() == VoiceStatus::SmsOnly);
     TEST_ASSERT_TRUE(rig.modem().sendSms("+491701111111", "text"));
     TEST_ASSERT_FALSE(rig.modem().dial("+491701111111"));
     TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
+  }
+
+  // Registered, but the IMS is not: dialling would hang the modem, so it is refused and
+  // nothing is started. Messages are not affected.
+  static void a_registered_modem_without_ims_refuses_to_dial_and_still_writes() {
+    Rig rig;
+    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, VoiceStatus::ImsMissing));
+    ready(rig);
+    TEST_ASSERT_TRUE(rig.modem().voiceStatus() == VoiceStatus::ImsMissing);
+    TEST_ASSERT_FALSE(rig.modem().dial("+491701111111"));
+    TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
+    TEST_ASSERT_TRUE(events(rig).empty());
+    TEST_ASSERT_TRUE(rig.modem().sendSms("+491701111111", "text"));
+  }
+
+  // The IMS that registers later opens the telephony without a restart of the modem.
+  static void an_ims_that_registers_later_makes_calls_possible() {
+    Rig rig;
+    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, VoiceStatus::ImsMissing));
+    ready(rig);
+    TEST_ASSERT_FALSE(rig.modem().dial("+491701111111"));
+    CONTRACT_NEEDS(rig.setNetwork("Provider", 3, VoiceStatus::Ready));
+    TEST_ASSERT_TRUE(rig.modem().voiceStatus() == VoiceStatus::Ready);
+    TEST_ASSERT_TRUE(rig.modem().dial("+491701111111"));
   }
 
   static void shutting_down_makes_it_off_and_it_can_be_started_again() {
@@ -344,12 +372,36 @@ struct ModemContract {
       Rig rig;
       ready(rig);
       rig.modem().dial("+491701111111");
-      CONTRACT_NEEDS(rig.failDial("+CME ERROR: 30"));
+      CONTRACT_NEEDS(rig.failDial("+CME ERROR: 30", DialFailReason::Refused));
       TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
       const auto got = events(rig);
       expect(got, {CallEventType::DialFailed});
       TEST_ASSERT_EQUAL_STRING("+CME ERROR: 30", got[0].reason.c_str());
+      TEST_ASSERT_TRUE(got[0].failReason == DialFailReason::Refused);
     }
+  }
+
+  // A restart takes the call with it, and the reason says so: a call being set up failed
+  // because of the restart, a connected one ended (a conversation is not a failure).
+  static void a_modem_restart_while_dialling_fails_the_call_with_that_reason() {
+    Rig rig;
+    ready(rig);
+    TEST_ASSERT_TRUE(rig.modem().dial("+491701111111"));
+    CONTRACT_NEEDS(rig.restartDuringCall());
+    const auto got = events(rig);
+    expect(got, {CallEventType::DialFailed});
+    TEST_ASSERT_TRUE(got[0].failReason == DialFailReason::ModemRestarted);
+    TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
+  }
+
+  static void a_modem_restart_in_a_connected_call_ends_it_once() {
+    Rig rig;
+    ready(rig);
+    rig.modem().dial("+491701111111");
+    CONTRACT_NEEDS(rig.remoteAnswer());
+    CONTRACT_NEEDS(rig.restartDuringCall());
+    expect(events(rig), {CallEventType::Connected, CallEventType::Ended});
+    TEST_ASSERT_TRUE(rig.modem().state() == ModemState::Ready);
   }
 
   static void a_dial_we_cancel_ends_with_ended_and_no_duration() {
@@ -390,7 +442,7 @@ struct ModemContract {
   static void a_call_cannot_be_dialled_while_the_modem_is_not_ready() {
     Rig rig;
     TEST_ASSERT_FALSE(rig.modem().dial("+491701111111"));  // off
-    CONTRACT_NEEDS(rig.setNetwork("", 0, true));
+    CONTRACT_NEEDS(rig.setNetwork("", 0, VoiceStatus::Ready));
     rig.modem().begin();
     TEST_ASSERT_FALSE(rig.modem().dial("+491701111111"));  // still registering
   }
@@ -429,7 +481,7 @@ struct ModemContract {
           case 4: rig.remoteAnswer(); break;
           case 5: rig.remoteBusy(); break;
           case 6: rig.remoteNoAnswer(); break;
-          case 7: rig.failDial("+CME ERROR: 30"); break;
+          case 7: rig.failDial("+CME ERROR: 30", DialFailReason::Refused); break;
           case 8: rig.remoteHangup(); break;
           default: rig.advanceSeconds(next(20)); break;
         }
@@ -502,6 +554,8 @@ struct ModemContract {
   RUN_TEST(ModemContract<Rig>::a_sim_that_wants_its_pin_is_an_error_and_says_so);                                   \
   RUN_TEST(ModemContract<Rig>::a_missing_sim_is_an_error_too);                                                      \
   RUN_TEST(ModemContract<Rig>::a_network_for_sms_only_allows_writing_but_no_calls);                                 \
+  RUN_TEST(ModemContract<Rig>::a_registered_modem_without_ims_refuses_to_dial_and_still_writes);                    \
+  RUN_TEST(ModemContract<Rig>::an_ims_that_registers_later_makes_calls_possible);                                   \
   RUN_TEST(ModemContract<Rig>::shutting_down_makes_it_off_and_it_can_be_started_again);                             \
   RUN_TEST(ModemContract<Rig>::sleeping_and_waking_do_not_change_the_state_or_lose_messages);                       \
   RUN_TEST(ModemContract<Rig>::a_message_is_accepted_when_the_modem_is_ready);                                      \
@@ -517,6 +571,8 @@ struct ModemContract {
   RUN_TEST(ModemContract<Rig>::an_incoming_call_the_caller_gives_up_is_missed);                                     \
   RUN_TEST(ModemContract<Rig>::a_dialled_call_that_is_answered_and_hung_up_by_us);                                  \
   RUN_TEST(ModemContract<Rig>::a_dialled_call_can_end_busy_unanswered_or_failed_each_with_one_final_event);         \
+  RUN_TEST(ModemContract<Rig>::a_modem_restart_while_dialling_fails_the_call_with_that_reason);                     \
+  RUN_TEST(ModemContract<Rig>::a_modem_restart_in_a_connected_call_ends_it_once);                                   \
   RUN_TEST(ModemContract<Rig>::a_dial_we_cancel_ends_with_ended_and_no_duration);                                   \
   RUN_TEST(ModemContract<Rig>::ended_is_delivered_once_whoever_hangs_up);                                           \
   RUN_TEST(ModemContract<Rig>::call_commands_without_a_matching_call_are_refused);                                  \

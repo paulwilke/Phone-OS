@@ -107,7 +107,7 @@ void test_the_rules_are_applied_in_this_order() {
 
 void test_a_refused_dial_leaves_no_call() {
   Rig r;
-  r.modem.setNetwork("Example Mobile", 4, false);                  // registered for SMS only: the modem will not dial
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);                  // registered for SMS only: the modem will not dial
   TEST_ASSERT_FALSE(r.calls.call(kParentOne));
   TEST_ASSERT_EQUAL_STRING("", r.calls.peer().c_str());
   TEST_ASSERT_FALSE(r.calls.active());
@@ -115,6 +115,79 @@ void test_a_refused_dial_leaves_no_call() {
   r.modem.remoteHangup();
   r.poll();
   TEST_ASSERT_EQUAL(0, r.store.count());                           // and nothing is reported as failed
+}
+
+// A modem that is registered but has no IMS would hang after ATD: the dial is refused before it starts,
+// and the child sees why instead of a call that silently did not happen.
+void test_a_dial_without_ims_is_refused_with_the_reason_and_starts_nothing() {
+  Rig r;
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  TEST_ASSERT_FALSE(r.calls.call(kParentOne));
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallNotReady));
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.notices.current().peer.c_str());
+  TEST_ASSERT_EQUAL_STRING("", r.modem.callPhone().c_str());
+  TEST_ASSERT_FALSE(r.calls.active());
+  r.poll();
+  TEST_ASSERT_EQUAL(0, r.store.count());                           // a refusal is no failed call in the history
+}
+
+void test_a_dial_on_an_sms_only_network_is_refused_with_that_reason() {
+  Rig r;
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);
+  TEST_ASSERT_FALSE(r.calls.call(kParentOne));
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallSmsOnly));
+}
+
+void test_a_dial_failure_that_the_modem_calls_not_ready_says_so() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("", DialFailReason::NotReady);
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallNotReady));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kTelephonyNotReady, r.entry(0).argument.c_str());
+}
+
+// Without a code from the modem, a missing IMS at the time of the failure is the best explanation.
+void test_a_dial_failure_without_a_code_while_the_ims_is_missing_says_not_ready() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("NO CARRIER");
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallNotReady));
+}
+
+void test_a_modem_restart_while_dialling_is_reported_as_such_and_logged() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.restartDuringCall();
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallModemRestarted));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kModemRestarted, r.entry(0).argument.c_str());
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Failed));
+  TEST_ASSERT_TRUE(r.log.contains("| modem: *ATREADY"));
+  TEST_ASSERT_FALSE(r.calls.active());
+}
+
+// A conversation that the restart cut off was a conversation: it ends, it is not a failed call.
+void test_a_modem_restart_in_a_connected_call_is_an_end_not_a_failure() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.remoteAnswer();
+  r.modem.restartDuringCall();
+  r.poll();
+  TEST_ASSERT_TRUE(r.notices.current().none());
+  TEST_ASSERT_EQUAL(0, r.store.count());
+  TEST_ASSERT_FALSE(r.calls.active());
+}
+
+void test_a_refused_dial_with_a_code_of_refused_says_not_connected() {
+  Rig r;
+  r.calls.call(kParentOne);
+  r.modem.failDial("+CME ERROR: 30", DialFailReason::Refused);
+  r.poll();
+  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallFailed));
+  TEST_ASSERT_EQUAL_STRING(sysentry::kNotConnected, r.entry(0).argument.c_str());
 }
 
 // ---- incoming ---------------------------------------------------------------------------------------
@@ -477,7 +550,7 @@ void test_a_dial_failure_on_an_sms_only_network_says_so() {
   Rig r;
   r.calls.call(kParentOne);
   r.modem.failDial("NO CARRIER");
-  r.modem.setNetwork("Example Mobile", 4, false);                      // the network allows SMS only
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);                      // the network allows SMS only
   r.poll();
   TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::CallSmsOnly));
   TEST_ASSERT_EQUAL_STRING(sysentry::kSmsOnly, r.entry(0).argument.c_str());
@@ -683,6 +756,13 @@ int main() {
   RUN_TEST(test_dialling_is_refused_without_a_network);
   RUN_TEST(test_the_rules_are_applied_in_this_order);
   RUN_TEST(test_a_refused_dial_leaves_no_call);
+  RUN_TEST(test_a_dial_without_ims_is_refused_with_the_reason_and_starts_nothing);
+  RUN_TEST(test_a_dial_on_an_sms_only_network_is_refused_with_that_reason);
+  RUN_TEST(test_a_dial_failure_that_the_modem_calls_not_ready_says_so);
+  RUN_TEST(test_a_dial_failure_without_a_code_while_the_ims_is_missing_says_not_ready);
+  RUN_TEST(test_a_modem_restart_while_dialling_is_reported_as_such_and_logged);
+  RUN_TEST(test_a_modem_restart_in_a_connected_call_is_an_end_not_a_failure);
+  RUN_TEST(test_a_refused_dial_with_a_code_of_refused_says_not_connected);
   RUN_TEST(test_an_incoming_call_names_the_peer);
   RUN_TEST(test_a_missed_call_is_recorded);
   RUN_TEST(test_answer_and_hang_up);

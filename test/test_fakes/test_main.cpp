@@ -167,9 +167,12 @@ void test_modem_settles_by_network_and_sim() {
   m.setNetwork("", 0);
   TEST_ASSERT_TRUE(m.state() == ModemState::Registering);
   TEST_ASSERT_EQUAL(0, m.signalBars());
-  m.setNetwork("Provider", 3, false);
+  m.setNetwork("Provider", 3, VoiceStatus::SmsOnly);
   TEST_ASSERT_TRUE(m.state() == ModemState::Ready);
-  TEST_ASSERT_FALSE(m.voiceAvailable());
+  TEST_ASSERT_TRUE(m.voiceStatus() == VoiceStatus::SmsOnly);
+  m.setNetwork("Provider", 3, VoiceStatus::ImsMissing);
+  TEST_ASSERT_TRUE(m.voiceStatus() == VoiceStatus::ImsMissing);
+  TEST_ASSERT_FALSE(m.dial("+491701111111"));
   m.setSimStatus(SimStatus::PinRequired);
   TEST_ASSERT_TRUE(m.state() == ModemState::Error);
   m.setSimStatus(SimStatus::Ready);
@@ -276,6 +279,24 @@ void test_modem_dial_failure_carries_the_reason() {
   CallEvent e;
   TEST_ASSERT_TRUE(m.pollCallEvent(e));
   TEST_ASSERT_EQUAL_STRING("+CME ERROR: 30", e.reason.c_str());
+}
+
+void test_modem_dial_failure_carries_the_code_and_a_restart_names_itself() {
+  FakeClock clock;
+  FakeModem m(clock);
+  m.begin();
+  CallEvent e;
+  m.dial("+491701111111");
+  m.failDial("", DialFailReason::NotReady);
+  TEST_ASSERT_TRUE(m.pollCallEvent(e));
+  TEST_ASSERT_TRUE(e.failReason == DialFailReason::NotReady);
+  m.dial("+491701111111");
+  m.restartDuringCall();
+  TEST_ASSERT_TRUE(m.pollCallEvent(e));
+  TEST_ASSERT_TRUE(e.type == CallEventType::DialFailed);
+  TEST_ASSERT_TRUE(e.failReason == DialFailReason::ModemRestarted);
+  TEST_ASSERT_FALSE(m.pollCallEvent(e));
+  TEST_ASSERT_TRUE(m.state() == ModemState::Ready);
 }
 
 void test_modem_shutdown_ends_a_call() {
@@ -470,6 +491,7 @@ int main(int, char**) {
   RUN_TEST(test_modem_refused_and_unanswered_incoming_calls_are_missed);
   RUN_TEST(test_modem_outgoing_call_outcomes);
   RUN_TEST(test_modem_dial_failure_carries_the_reason);
+  RUN_TEST(test_modem_dial_failure_carries_the_code_and_a_restart_names_itself);
   RUN_TEST(test_modem_shutdown_ends_a_call);
   RUN_TEST(test_modem_queries_and_volume);
   RUN_TEST(test_event_log_records_lines_with_the_time_it_knew);

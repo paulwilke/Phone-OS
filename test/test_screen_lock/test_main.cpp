@@ -129,11 +129,17 @@ void test_it_says_what_the_device_is_connected_to_and_how() {
   TEST_ASSERT_TRUE(says(rig.frame, "Example", FontSize::Tile));
   TEST_ASSERT_TRUE(says(rig.frame, "Connected"));
 
-  rig.modem.setNetwork("Example Mobile", 4, false);          // the network allows SMS only
+  rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);          // the network allows SMS only
   rig.poll();
   lock.render(rig.frame);
   TEST_ASSERT_TRUE(says(rig.frame, "Example", FontSize::Tile));
   TEST_ASSERT_TRUE(says(rig.frame, "SMS only"));
+  TEST_ASSERT_FALSE(says(rig.frame, "Connected"));
+
+  rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);       // the network is there, the IMS is not
+  rig.poll();
+  lock.render(rig.frame);
+  TEST_ASSERT_TRUE(says(rig.frame, "No calls yet"));
   TEST_ASSERT_FALSE(says(rig.frame, "Connected"));
 
   rig.modem.setNetwork("", 0);

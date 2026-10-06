@@ -1,6 +1,6 @@
 # Hardware capabilities
 
-Code: `src/hal/`, tests in `test/test_haptic_pattern/` and `test/test_hal_headers/`. Pure C++17 with no Arduino, no platform header and no global state; `scripts/check_layers.py` enforces it.
+Code: `src/hal/`, tests in `test/test_haptic_pattern/` and `test/test_hal_headers/`. Pure C++17 with no Arduino, no platform header and no global state; `scripts/check_layers.py` enforces it, and that a driver under `src/drivers/` includes only `src/hal/` and its own files.
 
 ## The rule
 
@@ -52,7 +52,7 @@ States: `Off`, `PoweringOn`, `Initializing`, `Registering` (searching a network)
 - `Ended`, `Missed`, `Busy`, `NoAnswer` and `DialFailed` are final, and `Ended` is delivered once whoever hangs up;
 - a dial we cancel ourselves ends with `Ended` and duration 0 (no `Connected` before it); a ringing call we refuse is `Missed`.
 
-`voiceAvailable()` is false when the network registered the SIM for SMS only: writing works, calls do not, and the user must see that this is not "no network". `SimStatus` tells a SIM that wants its PIN apart from "no network". Call volume is 0–7, clamped (the modem's codec sets it; -1 when it cannot). `query()` is for the diagnosis over USB and accepts only read forms (`AT+…?`).
+`voiceStatus()` says whether calls are possible: `Unknown` (not asked yet; nothing is shown), `Ready` (registered **and** the IMS is registered), `SmsOnly` (the network registered the SIM for SMS only, a restriction) or `ImsMissing` (registered, but the IMS is not: telephony is not ready, usually for a short time). Writing works in the last two, calls do not, and the user must see which of the two it is and that neither is "no network". The reason is that a modem without IMS hangs two seconds after `ATD` (see [hardware-lessons.md](hardware-lessons.md)): `dial()` therefore refuses in both states and sends nothing. A dialled call that fails carries a `DialFailReason` besides the modem's own line: `NotReady` (the IMS was missing), `ModemRestarted`, `Refused`, `NoNetwork`, `SmsOnly`, or `Unknown` when the driver cannot tell, in which case the application derives the words from the state of the network. `Busy` and `NoAnswer` are events of their own and have no code. A restart of the modem during a call fails a call that was being set up (`DialFailed` with `ModemRestarted`) and ends a connected one (`Ended`, once): a conversation that was cut off is not a failed call. `SimStatus` tells a SIM that wants its PIN apart from "no network". Call volume is 0–7, clamped (the modem's codec sets it; -1 when it cannot). `query()` is for the diagnosis over USB and accepts only read forms (`AT+…?`).
 
 ### Log
 

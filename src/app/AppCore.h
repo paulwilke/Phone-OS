@@ -74,7 +74,7 @@ public:
     bool registered = false;
     int signalBars = 0;
     SimStatus sim = SimStatus::Unknown;
-    bool voiceAvailable = false;
+    VoiceStatus voice = VoiceStatus::Unknown;
     bool cellularEnabled = false;
     bool saveMode = false;
     uint32_t probeSecondsLeft = 0;

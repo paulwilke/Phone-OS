@@ -40,6 +40,8 @@ constexpr const char* kNoAnswer = "no-answer";
 constexpr const char* kNoNetwork = "no-network";
 constexpr const char* kSmsOnly = "sms-only";
 constexpr const char* kNotConnected = "not-connected";
+constexpr const char* kTelephonyNotReady = "telephony-not-ready";  // the IMS was not registered
+constexpr const char* kModemRestarted = "modem-restarted";
 
 struct Entry {
   std::string kind;

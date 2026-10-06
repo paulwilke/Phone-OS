@@ -14,6 +14,8 @@ const NoticeWording kWording[] = {
     {"call.no-answer", true, false},
     {"call.no-network", true, false},
     {"call.sms-only", true, false},
+    {"call.not-ready", true, false},
+    {"call.modem-restarted", true, false},
     {"call.failed", true, false},
     {"notice.caller-in-school-time", true, false},
     {"notice.message-waiting", false, false},
@@ -60,6 +62,8 @@ const char* callReasonKey(const std::string& reason) {
   if (reason == sysentry::kNoAnswer) return "call.reason-no-answer";
   if (reason == sysentry::kNoNetwork) return "call.reason-no-network";
   if (reason == sysentry::kSmsOnly) return "call.reason-sms-only";
+  if (reason == sysentry::kTelephonyNotReady) return "call.reason-not-ready";
+  if (reason == sysentry::kModemRestarted) return "call.reason-modem-restarted";
   if (reason == sysentry::kNotConnected) return "call.reason-not-connected";
   return nullptr;
 }

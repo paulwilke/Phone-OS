@@ -344,7 +344,7 @@ void WebApi::state(http::Response& res, uint32_t now) {
   puts(",\"child\":");       appendJsonStr(resp_, sizeof(resp_), n, app_.profile().childName);
   puts(",\"battery_percent\":"); putInt(s.batteryPercent);
   puts(",\"sim\":");         appendJsonStr(resp_, sizeof(resp_), n, simText(s.sim));
-  puts(",\"voice\":");       putBool(s.voiceAvailable);
+  puts(",\"voice\":");       putBool(s.voice == VoiceStatus::Ready);
   puts(",\"epoch\":");       putInt(app_.epochUtc());
   puts(",\"tz_offset_minutes\":"); putInt(app_.tzOffsetMinutes());
   puts(",\"wifi\":{\"state\":");

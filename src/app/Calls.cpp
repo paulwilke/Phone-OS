@@ -60,6 +60,14 @@ bool Calls::call(const std::string& number) {
   }
   if (!modem_.dial(number)) {
     log_.log("Call to " + nameOf(number) + " refused by the modem");
+    // A modem that refuses to dial says why through its voice status: the child sees the reason
+    // instead of a call that silently did not start.
+    switch (modem_.voiceStatus()) {
+      case VoiceStatus::SmsOnly: notices_.set(NoticeKind::CallSmsOnly, number); break;
+      case VoiceStatus::ImsMissing: notices_.set(NoticeKind::CallNotReady, number); break;
+      case VoiceStatus::Unknown:
+      case VoiceStatus::Ready: break;
+    }
     return false;
   }
   peer_ = number;
@@ -165,13 +173,20 @@ void Calls::handleEvent(const CallEvent& ev) {
   }
 }
 
-// `reason` is the one the event itself names; without one it is derived from the state of the
-// network: first "no network", then "SMS only", then plainly "not connected".
+// `reason` is the one the event itself names (busy, no answer). A failed dial carries a code from
+// the modem; without one it is derived from the state of the network: first "no network", then
+// "SMS only", then "telephony not ready", then plainly "not connected".
 void Calls::reportFailed(const CallEvent& ev, const char* reason) {
   std::string why;
   if (reason) why = reason;
+  else if (ev.failReason == DialFailReason::NotReady) why = sysentry::kTelephonyNotReady;
+  else if (ev.failReason == DialFailReason::ModemRestarted) why = sysentry::kModemRestarted;
+  else if (ev.failReason == DialFailReason::NoNetwork) why = sysentry::kNoNetwork;
+  else if (ev.failReason == DialFailReason::SmsOnly) why = sysentry::kSmsOnly;
+  else if (ev.failReason == DialFailReason::Refused) why = sysentry::kNotConnected;
   else if (!cellular::registered(power_, modem_)) why = sysentry::kNoNetwork;
-  else if (!modem_.voiceAvailable()) why = sysentry::kSmsOnly;
+  else if (modem_.voiceStatus() == VoiceStatus::SmsOnly) why = sysentry::kSmsOnly;
+  else if (modem_.voiceStatus() == VoiceStatus::ImsMissing) why = sysentry::kTelephonyNotReady;
   else why = sysentry::kNotConnected;
 
   const std::string& who = ev.phone.empty() ? peer_ : ev.phone;
@@ -180,6 +195,8 @@ void Calls::reportFailed(const CallEvent& ev, const char* reason) {
   else if (why == sysentry::kNoAnswer) kind = NoticeKind::CallNoAnswer;
   else if (why == sysentry::kNoNetwork) kind = NoticeKind::CallNoNetwork;
   else if (why == sysentry::kSmsOnly) kind = NoticeKind::CallSmsOnly;
+  else if (why == sysentry::kTelephonyNotReady) kind = NoticeKind::CallNotReady;
+  else if (why == sysentry::kModemRestarted) kind = NoticeKind::CallModemRestarted;
   notices_.set(kind, who);
   haptic_.play(HapticPattern::Failed);
   sysentry::record(store_, clock_.epochUtc(), sysentry::kCallFailed, who, why);

@@ -98,6 +98,8 @@ std::string failedCallReason(const Notice& n) {
     case NoticeKind::CallNoAnswer: return sysentry::kNoAnswer;
     case NoticeKind::CallNoNetwork: return sysentry::kNoNetwork;
     case NoticeKind::CallSmsOnly: return sysentry::kSmsOnly;
+    case NoticeKind::CallNotReady: return sysentry::kTelephonyNotReady;
+    case NoticeKind::CallModemRestarted: return sysentry::kModemRestarted;
     case NoticeKind::CallFailed: return sysentry::kNotConnected;
     default: return std::string();
   }

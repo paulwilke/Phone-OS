@@ -66,7 +66,7 @@ struct FakeModemRig {
   FakeModem impl{clockImpl};
   Modem& modem() { return impl; }
   void advanceSeconds(uint32_t s) { clockImpl.advanceSeconds(s); }
-  bool setNetwork(const std::string& op, int bars, bool voice) {
+  bool setNetwork(const std::string& op, int bars, VoiceStatus voice) {
     impl.setNetwork(op, bars, voice);
     return true;
   }
@@ -91,8 +91,12 @@ struct FakeModemRig {
     impl.remoteNoAnswer();
     return true;
   }
-  bool failDial(const std::string& reason) {
-    impl.failDial(reason);
+  bool failDial(const std::string& reason, DialFailReason why) {
+    impl.failDial(reason, why);
+    return true;
+  }
+  bool restartDuringCall() {
+    impl.restartDuringCall();
     return true;
   }
   bool remoteHangup() {

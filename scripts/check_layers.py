@@ -16,6 +16,10 @@ Rules for the layers:
     no src/ui/: the configuration layer does not know the web or the display;
   * src/web/ may include src/web/, src/config/, src/app/, src/hal/ and src/i18n/ — no src/ui/:
     the web layer does not know the display;
+  * src/drivers/ implements the interfaces of src/hal/: it may include src/drivers/ and src/hal/ and
+    nothing else (no application, no UI, no configuration, no web, no catalogs), and no MeshCore. A
+    platform header belongs behind the small transport interface of a driver, which the tests replace
+    with a scripted fake, so the rule above (no platform names under src/) holds for drivers too;
   * src/boot/ is the composition of the device (the runtime both the firmware and the simulator run): it
     may include every other layer of src/, and no other layer includes it;
   * nothing under src/ reaches outside src/: the firmware never includes sim/ or testing/ (the
@@ -100,6 +104,8 @@ def main():
                         problems.append(f"{rel}:{n}: {where or 'src'}/ includes boot/, the composition that includes everything else: {target}")
                     if where == "hal" and inside != "hal":
                         problems.append(f"{rel}:{n}: an interface includes the layer {inside}/: {target}")
+                    if where == "drivers" and inside not in ("drivers", "hal"):
+                        problems.append(f"{rel}:{n}: a driver may include only drivers/ and hal/, not {inside}/: {target}")
                     if where == "i18n" and inside != "i18n":
                         problems.append(f"{rel}:{n}: i18n includes the layer {inside}/: {target}")
                     if where == "config" and inside not in ("config", "app", "hal", "i18n"):

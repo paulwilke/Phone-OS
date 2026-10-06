@@ -31,7 +31,17 @@ std::string NetScreen::words() {
   const std::string network = wording::networkLabel(s.network, t());
   line(t().get("net.operator", {{"name", network.c_str()}}));
   const bool connected = s.network.kind == Connectivity::NetworkLabel::Kind::Operator;
-  const std::string link = t().get(!connected ? "net.not-connected" : s.voiceAvailable ? "net.connected" : "net.sms-only");
+  // The IMS is what telephony needs besides the network, so an adult can see which of the two is missing.
+  // Where the modem has no verdict, or the network allows SMS only, there is nothing to say about it.
+  if (connected && (s.voice == VoiceStatus::Ready || s.voice == VoiceStatus::ImsMissing)) {
+    const std::string ims = t().get(s.voice == VoiceStatus::Ready ? "net.ims-yes" : "net.ims-no");
+    line(t().get("net.ims", {{"state", ims.c_str()}}));
+  }
+  const char* linkKey = !connected                          ? "net.not-connected"
+                        : s.voice == VoiceStatus::SmsOnly   ? "net.sms-only"
+                        : s.voice == VoiceStatus::ImsMissing ? "net.telephony-not-ready"
+                                                             : "net.connected";
+  const std::string link = t().get(linkKey);
   line(t().get("net.state", {{"state", link.c_str()}}));
   line(t().get("net.signal", {{"bars", s.signalBars}}));
   const std::string cellular = onOff(s.cellularEnabled);
@@ -46,9 +56,12 @@ std::string NetScreen::words() {
   if (hint) {
     line(std::string());
     line(t().get(hint));
-  } else if (connected && !s.voiceAvailable) {
+  } else if (connected && s.voice == VoiceStatus::SmsOnly) {
     line(std::string());
     line(t().get("net.hint-sms-only"));
+  } else if (connected && s.voice == VoiceStatus::ImsMissing) {
+    line(std::string());
+    line(t().get("net.hint-ims-missing"));
   }
   return text;
 }

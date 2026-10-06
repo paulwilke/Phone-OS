@@ -57,14 +57,34 @@ enum class ModemState { Off, PoweringOn, Initializing, Registering, Ready, Error
 // during a call ends it the same way.
 enum class CallEventType { Incoming, Connected, Ended, Missed, Busy, NoAnswer, DialFailed };
 
+// Why a dialled call failed, as a code the application words from the catalogs. Busy and
+// NoAnswer are events of their own and have no code here.
+//   Unknown          the modem named nothing the driver can classify; the application
+//                    derives the words from the state of the network
+//   NotReady         the IMS was not registered: telephony was not ready
+//   ModemRestarted   the modem restarted while the call was being set up
+//   Refused          the network or the modem refused the call
+//   NoNetwork        there was no network
+//   SmsOnly          the network registered the SIM for SMS only
+enum class DialFailReason { Unknown, NotReady, ModemRestarted, Refused, NoNetwork, SmsOnly };
+
 // `reason` is the modem's own line when it names one (for example "+CME ERROR: ..."):
-// for the log, not for the child.
+// for the log, not for the child. `failReason` is meaningful for DialFailed only.
 struct CallEvent {
   CallEventType type = CallEventType::Ended;
   std::string phone;  // the other party, empty when the network withholds it
   uint32_t duration = 0;
   std::string reason;
+  DialFailReason failReason = DialFailReason::Unknown;
 };
+
+// Whether calls are possible. Registering for the network is not enough: without the
+// IMS the modem hangs two seconds after ATD, so telephony needs both.
+//   Unknown     not asked yet (no verdict is no complaint: nothing is shown)
+//   Ready       registered, and the IMS is registered: calls work
+//   SmsOnly     registered for SMS only, a restriction of the network
+//   ImsMissing  registered, but the IMS is not: telephony is not ready, usually for a short time
+enum class VoiceStatus { Unknown, Ready, SmsOnly, ImsMissing };
 
 // What the SIM card tells the modem. Without it a SIM with a PIN looked like "no
 // network": the modem does not register until the PIN is entered, and until then
@@ -100,7 +120,8 @@ public:
   // The next failed sending, in the order they failed, each exactly once.
   virtual bool pollSendFailure(SmsFailure& out) = 0;
 
-  // False when no call can be started (not Ready, empty number); the state is unchanged then.
+  // False when no call can be started (not Ready, empty number, or voiceStatus() is
+  // SmsOnly or ImsMissing: nothing is sent to the modem then); the state is unchanged.
   virtual bool dial(const std::string& phone) = 0;
   // Answers a ringing call; false when nothing is ringing.
   virtual bool answer() = 0;
@@ -126,9 +147,9 @@ public:
   virtual ModemState state() const = 0;
   // 0 … 5; 0 when not registered.
   virtual int signalBars() const = 0;
-  // False when the network registered us for SMS only. Writing works then, calls do
-  // not: a difference the user must see, so that "no calls" is not read as "no network".
-  virtual bool voiceAvailable() const = 0;
+  // SmsOnly and ImsMissing: writing works, calls do not, and the user must see which of
+  // the two it is, so that "no calls" is not read as "no network".
+  virtual VoiceStatus voiceStatus() const = 0;
   // The short network name; empty when not registered.
   virtual std::string operatorName() const = 0;
   virtual SimStatus simStatus() const = 0;

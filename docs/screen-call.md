@@ -12,7 +12,7 @@ Code: `src/ui/screens/CallScreen.{h,cpp}`; tests in `test/test_screen_call/`. It
 
 **Who:** the name (a contact's, or the number of a call target that is no contact) in the large font. A stranger or a caller without a number never gets this page: the call is hung up before anything shows ([calls.md](calls.md)). A number is never shortened: when it does not fit the large font it is drawn in the next smaller one, so every digit is there.
 
-**A call that did not happen stays on the page until Back.** The core clears the call and tells why in the notice; the page shows "Call failed", the name and the reason (busy, no answer, no network, network allows SMS only, did not connect) for as long as that notice is up, then reads "No call". The page does not close itself: closing is the host's decision, and it leaves the failure to be read. A call that was only missed is no failure.
+**A call that did not happen stays on the page until Back.** The core clears the call and tells why in the notice; the page shows "Call failed", the name and the reason (busy, no answer, no network, network allows SMS only, calls not ready, modem restarted, did not connect) for as long as that notice is up, then reads "No call". The page does not close itself: closing is the host's decision, and it leaves the failure to be read. A call that was only missed is no failure.
 
 **Volume:** during a connected call, seven boxes, filled up to the level; the arrows change it and stop at both ends (a step that changes nothing is not "used"). Before the call is connected, or with a modem that cannot set the volume, there are no boxes and the arrows do nothing.
 

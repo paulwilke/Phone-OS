@@ -62,7 +62,7 @@ pio test -e native              # host tests of the C++ code
 python3 scripts/check_i18n.py   # the language catalogs against the English reference
 python3 scripts/check_i18n.py --usage # every catalog key is used, no unknown key in the code
 python3 scripts/check_docs.py   # leftovers: broken links, missing files, placeholder markers, non-English text
-python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing
+python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing, drivers include only hal/
 python3 scripts/make_font.py --check # the generated fonts match their sources
 python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.md is ticked and has its test
 pio run -e sim && .pio/build/sim/program --script sim/scripts/smoke.txt # the simulator, headless (docs/simulator.md)

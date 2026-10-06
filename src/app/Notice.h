@@ -26,6 +26,8 @@ enum class NoticeKind : uint8_t {
   CallNoAnswer,
   CallNoNetwork,
   CallSmsOnly,
+  CallNotReady,
+  CallModemRestarted,
   CallFailed,
   // An incoming call from a contact rejected in school time (a stranger is rejected without a notice)
   CallerInSchoolTime,

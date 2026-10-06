@@ -123,7 +123,7 @@ AppCore::State AppCore::state() {
   s.registered = connectivity_.registered();
   s.signalBars = modem_.signalBars();
   s.sim = modem_.simStatus();
-  s.voiceAvailable = modem_.voiceAvailable();
+  s.voice = modem_.voiceStatus();
   s.cellularEnabled = connectivity_.cellularEnabled();
   s.saveMode = connectivity_.saveMode();
   s.probeSecondsLeft = connectivity_.probeSecondsLeft();

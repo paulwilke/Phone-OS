@@ -46,8 +46,10 @@ StatusLeft statusLeft(const StatusModel& model, i18n::Translator& t) {
   }
   if (model.quietHours) {
     left.text = t.get("status.quiet");
-  } else if (model.link == StatusModel::Link::Operator && !model.voiceAvailable) {
+  } else if (model.link == StatusModel::Link::Operator && model.voice == StatusModel::Voice::SmsOnly) {
     left.text = t.get("status.sms-only");
+  } else if (model.link == StatusModel::Link::Operator && model.voice == StatusModel::Voice::NotReady) {
+    left.text = t.get("status.telephony-not-ready");
   } else if (model.link == StatusModel::Link::Operator && !model.operatorName.empty()) {
     left.text = model.operatorName;
     left.isOperatorName = true;

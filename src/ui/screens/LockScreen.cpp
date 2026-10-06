@@ -26,10 +26,11 @@ void LockScreen::draw(Display& display, const Rect& area) {
 
   // The answer to "can they reach me": connected, only by SMS, or not.
   const bool anyNetwork = state().network.kind != Connectivity::NetworkLabel::Kind::None;
+  const bool operatorNet = state().network.kind == Connectivity::NetworkLabel::Kind::Operator;
   const char* reachable = !anyNetwork ? "lock.not-connected"
-                          : (state().network.kind == Connectivity::NetworkLabel::Kind::Operator && !state().voiceAvailable)
-                              ? "status.sms-only"
-                              : "lock.connected";
+                          : (operatorNet && state().voice == VoiceStatus::SmsOnly)    ? "status.sms-only"
+                          : (operatorNet && state().voice == VoiceStatus::ImsMissing) ? "status.telephony-not-ready"
+                                                                                       : "lock.connected";
   text::drawCentered(display, body, area, y, t().get(reachable));
   y += body.lineHeight() + 22;
 

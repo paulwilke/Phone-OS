@@ -28,12 +28,15 @@ struct StatusModel {
   // None: no network at all. Operator: connected to a mobile network named operatorName.
   // Radio: the long-range radio is the way out; RadioOnly: the radio only, to save power.
   enum class Link { None, Operator, Radio, RadioOnly };
+  // What the network allows beyond messages. NotReady is a network that is there while the IMS is
+  // not: a state that usually passes, which "SMS only" (a restriction) does not.
+  enum class Voice { Ready, SmsOnly, NotReady };
 
   Sim sim = Sim::Ready;
   Link link = Link::None;
   std::string operatorName;
   bool quietHours = false;       // school time
-  bool voiceAvailable = true;    // connected, but only SMS works
+  Voice voice = Voice::Ready;    // connected, but only SMS works, or telephony is not ready
   bool locating = false;         // the position is being determined
   int batteryPercent = -1;       // -1 = unknown
 

@@ -82,7 +82,7 @@ void test_the_network_label_is_taken_as_data() {
 void test_school_time_voice_position_battery_and_date_are_taken_over() {
   AppCore::State s;
   s.schoolTime = true;
-  s.voiceAvailable = true;
+  s.voice = VoiceStatus::Ready;
   s.positioningActive = true;
   s.batteryPercent = 42;
   s.wall.known = true;
@@ -91,7 +91,7 @@ void test_school_time_voice_position_battery_and_date_are_taken_over() {
   s.wall.weekday = 2;
   StatusModel m = statusModelOf(s);
   TEST_ASSERT_TRUE(m.quietHours);
-  TEST_ASSERT_TRUE(m.voiceAvailable);
+  TEST_ASSERT_TRUE(m.voice == StatusModel::Voice::Ready);
   TEST_ASSERT_TRUE(m.locating);
   TEST_ASSERT_EQUAL(42, m.batteryPercent);
   TEST_ASSERT_TRUE(m.dateKnown);
@@ -104,6 +104,17 @@ void test_school_time_voice_position_battery_and_date_are_taken_over() {
   TEST_ASSERT_FALSE(m.locating);
   TEST_ASSERT_FALSE(m.dateKnown);
   TEST_ASSERT_EQUAL(-1, m.batteryPercent);
+}
+
+// No verdict yet is no complaint: the bar says nothing about calls until the modem has asked.
+void test_every_voice_status_has_its_place_in_the_bar() {
+  AppCore::State s;
+  s.voice = VoiceStatus::Unknown;
+  TEST_ASSERT_TRUE(statusModelOf(s).voice == StatusModel::Voice::Ready);
+  s.voice = VoiceStatus::SmsOnly;
+  TEST_ASSERT_TRUE(statusModelOf(s).voice == StatusModel::Voice::SmsOnly);
+  s.voice = VoiceStatus::ImsMissing;
+  TEST_ASSERT_TRUE(statusModelOf(s).voice == StatusModel::Voice::NotReady);
 }
 
 void test_the_bar_of_a_running_device_shows_its_state() {
@@ -489,6 +500,7 @@ int main(int, char**) {
   RUN_TEST(test_the_sim_states_become_the_bars_sim_states);
   RUN_TEST(test_the_network_label_is_taken_as_data);
   RUN_TEST(test_school_time_voice_position_battery_and_date_are_taken_over);
+  RUN_TEST(test_every_voice_status_has_its_place_in_the_bar);
   RUN_TEST(test_the_bar_of_a_running_device_shows_its_state);
   RUN_TEST(test_the_frame_draws_the_status_bar_the_notice_and_the_soft_keys_around_the_content);
   RUN_TEST(test_the_notice_line_is_reserved_and_empty_without_a_notice);

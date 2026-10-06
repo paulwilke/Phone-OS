@@ -245,7 +245,9 @@ void test_every_reason_is_told_in_the_language_of_the_moment() {
       {"busy", "call.reason-busy", [](Page& p) { p.rig.modem.remoteBusy(); }},
       {"no answer", "call.reason-no-answer", [](Page& p) { p.rig.modem.remoteNoAnswer(); }},
       {"no network", "call.reason-no-network", [](Page& p) { p.rig.modem.setNetwork("", 0); p.rig.modem.failDial(""); }},
-      {"sms only", "call.reason-sms-only", [](Page& p) { p.rig.modem.setNetwork("Example Mobile", 4, false); p.rig.modem.failDial(""); }},
+      {"sms only", "call.reason-sms-only", [](Page& p) { p.rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly); p.rig.modem.failDial(""); }},
+      {"not ready", "call.reason-not-ready", [](Page& p) { p.rig.modem.failDial("", DialFailReason::NotReady); }},
+      {"modem restarted", "call.reason-modem-restarted", [](Page& p) { p.rig.modem.restartDuringCall(); }},
       {"not connected", "call.reason-not-connected", [](Page& p) { p.rig.modem.failDial("rejected"); }}};
   for (const Case& c : cases) {
     for (const char* language : {"en", "de", "fr"}) {
