@@ -45,6 +45,7 @@ language by writing one text file.
 | Simulator | the application on the fakes, with a console, scripted scenarios, a simulated e-ink panel, the real web page on the loopback address, an optional window | `sim/`, [docs/simulator.md](docs/simulator.md), [docs/simulated-panel.md](docs/simulated-panel.md) |
 | Generated demo | a picture of every state and scene in English, German and French and a click-through page with a language selector, built by CI | `scripts/make_demo.py`, [docs/demo.md](docs/demo.md) |
 | Translating | writing a catalog, the size limit, trying it in the simulator | [docs/translating.md](docs/translating.md) |
+| SOS screen | the choice with its countdown, the five taps in school time, the ping step by step, leaving releases the search | `src/ui/screens/`, [docs/screen-sos.md](docs/screen-sos.md) |
 | Language catalogs | English (the reference), German, French | `lang/` |
 | Configuration schema | the single source of truth for every configuration key; a generator produces the C++ tables, the web form description, the reference documentation, and example files | `config/schema.toml`, `scripts/gen_config.py`, [docs/configuration-reference.md](docs/configuration-reference.md) |
 | Configuration loader and writer | reads the three config files into a Profile with structured diagnostics; writes them back atomically; loads user language catalogs; persists two settings the child may change at run time | `src/config/`, [docs/config-loader.md](docs/config-loader.md) |

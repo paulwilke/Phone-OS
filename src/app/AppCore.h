@@ -93,6 +93,10 @@ public:
     SosPing::Stage pingStage = SosPing::Stage::Idle;
     SosPing::Kind pingKind = SosPing::Kind::Emergency;
     int pingProgress = 0;
+    uint32_t pingElapsedSeconds = 0;  // since the press, while the ping searches
+    bool pingHasFix = false;          // the best position so far is valid
+    unsigned pingAccuracyMeters = 0;  // of that position, by the one rule everywhere
+    std::string pingPeer;             // the number the text goes to
     // school time and positioning
     bool schoolTime = false;
     int schoolTimeEndMinute = 0;

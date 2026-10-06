@@ -135,6 +135,10 @@ AppCore::State AppCore::state() {
   s.pingStage = emergency_.ping().stage();
   s.pingKind = emergency_.ping().kind();
   s.pingProgress = emergency_.ping().progress();
+  s.pingElapsedSeconds = emergency_.ping().elapsed(clock_.uptimeSeconds());
+  s.pingHasFix = emergency_.ping().best().valid;
+  s.pingAccuracyMeters = s.pingHasFix ? SosPing::accuracyMeters(emergency_.ping().best().hdop) : 0;
+  s.pingPeer = emergency_.ping().peer();
   s.schoolTime = school_.active(&s.schoolTimeEndMinute);
   s.positioningActive = positioning_.active();
   s.batteryPercent = powerCoordination_.batteryPercent();

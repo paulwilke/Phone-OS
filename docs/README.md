@@ -35,6 +35,7 @@ The documents describe what exists in this repository — each one is written fr
 | [power-coordination.md](power-coordination.md) | the power policy applied to modem, radio chip and processor; the front light |
 | [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
+| [screen-sos.md](screen-sos.md) | the SOS page: choice, school-time taps, the ping step by step, leaving releases the search |
 | [ui-framework.md](ui-framework.md) | input model, screen stack and its enter/leave rules, the widgets and what each shortens |
 | [ui-screens.md](ui-screens.md) | what a screen may know, the frame every screen shares (status bar, notice line, soft keys), the wording of the core's codes |
 | [screen-home.md](screen-home.md) | the home screen: which tiles exist for which profile, their order, what each does, the badge, school time |
