@@ -419,6 +419,13 @@ void test_cclk_refuses_the_clock_of_a_modem_without_network_time() {
   TEST_ASSERT_TRUE(parseCclk("+CCLK: \"69/12/31,23:59:59+00\"", &n));
 }
 
+void test_a_dial_string_is_digits_star_hash_and_a_leading_plus() {
+  for (const char* good : {"+491701111111", "0170111", "*#06#", "112", "+4917011111111111111111"})   // the last has 23 characters
+    TEST_ASSERT_TRUE_MESSAGE(isValidDialString(good), good);
+  for (const char* bad : {"", "+", "49+170", "0170 1111", "+49-170", "ATD1;", "\"1", "1\r\nAT", "+49170111111111111111111", "\xD9\xA1"})
+    TEST_ASSERT_FALSE_MESSAGE(isValidDialString(bad), bad);
+}
+
 void test_cmgs_command_valid_and_rejected_numbers() {
   char cmd[128];
   TEST_ASSERT_TRUE(buildCmgsCommand("+491701111111", Charset::Gsm, cmd, sizeof(cmd)));
@@ -767,6 +774,7 @@ int main(int, char**) {
   RUN_TEST(test_scts_checks_the_day_against_the_month);
   RUN_TEST(test_cclk_gives_the_time_and_the_zone);
   RUN_TEST(test_cclk_refuses_the_clock_of_a_modem_without_network_time);
+  RUN_TEST(test_a_dial_string_is_digits_star_hash_and_a_leading_plus);
   RUN_TEST(test_cmgs_command_valid_and_rejected_numbers);
   RUN_TEST(test_cmgl_single_message_gsm);
   RUN_TEST(test_cmgl_three_messages_all_parsed_with_indices);

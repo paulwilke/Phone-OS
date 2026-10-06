@@ -209,6 +209,17 @@ void test_the_power_key_switches_a_running_modem_off() {
   TEST_ASSERT_EQUAL_STRING("\r\nOK\r\n", readAll(t).c_str());
 }
 
+void test_the_sound_path_is_recorded() {
+  FakeAtTransport t;
+  TEST_ASSERT_FALSE(t.audioToModem());
+  TEST_ASSERT_EQUAL(0, t.audioSwitches());
+  t.setAudioToModem(true);
+  TEST_ASSERT_TRUE(t.audioToModem());
+  t.setAudioToModem(false);
+  TEST_ASSERT_FALSE(t.audioToModem());
+  TEST_ASSERT_EQUAL(2, t.audioSwitches());
+}
+
 void test_a_modem_without_supply_does_not_answer() {
   FakeAtTransport t;
   t.reply("AT", {});
@@ -255,6 +266,7 @@ int main(int, char**) {
   RUN_TEST(test_the_clock_starts_anywhere_and_wraps);
   RUN_TEST(test_a_cold_modem_ignores_everything_until_the_power_key_wakes_it);
   RUN_TEST(test_the_power_key_switches_a_running_modem_off);
+  RUN_TEST(test_the_sound_path_is_recorded);
   RUN_TEST(test_a_modem_without_supply_does_not_answer);
   RUN_TEST(test_a_scripted_inbox_is_read_through_the_line_reader_and_the_sms_parser);
   return UNITY_END();

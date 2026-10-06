@@ -58,6 +58,11 @@ public:
     // Automatic is the default: LTE covers better, and GSM sending draws up to two amperes, with
     // which the modem restarted once in the middle of a call.
     int networkMode = 2;
+    // ATD normally answers at once. When the IMS is missing the modem hangs for about seven seconds
+    // and then restarts (*ATREADY): the limit must be longer than that, or a restart would be reported as
+    // a call that did not answer.
+    uint32_t dialTimeoutMs = 15000;
+    uint32_t callPollMs = 1000;          // AT+CLCC while a call is being set up
     uint32_t signalIntervalMs = 30000;   // AT+CSQ, the network, the operator and the IMS
     uint32_t clockIntervalMs = 3600000;  // AT+CCLK
   };
@@ -82,6 +87,18 @@ public:
   // How often the modem restarted by itself since begin() (*ATREADY after it had answered).
   int restartCount() const { return restarts_; }
 
+  // ---- calls ---------------------------------------------------------------------------------------------
+  // Same meaning as in the Modem capability (src/hal/Modem.h). A dial is refused (false, and nothing
+  // is sent) unless the modem is Ready, the number is a dial string and voiceStatus() is Ready; before
+  // ATD goes out the IMS is asked once more, because the state of 30 seconds ago may be gone.
+  bool dial(const std::string& phone);
+  bool answer();
+  bool hangup();
+  bool pollCallEvent(CallEvent& out);
+  // Call volume 0 … 7, clamped; takes effect at once, also in the middle of a call.
+  bool setCallVolume(int level);
+  int callVolume() const { return volume_; }
+
   // The driver's own log lines (English, technical, no PIN and no number), oldest first, each once.
   // The host writes them through its log, which applies the level; the driver has no log of its
   // own so that it needs nothing above hal/.
@@ -89,7 +106,8 @@ public:
 
 private:
   // What the driver is doing. One at a time.
-  enum class Job : uint8_t { None, Init, SimCheck, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock };
+  enum class Job : uint8_t { None, Init, SimCheck, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock,
+                             Dial, Answer, Hangup, CallPoll, CallDiag, Volume };
 
   void send(const char* command);
   void startJob(Job job);
@@ -106,6 +124,18 @@ private:
   bool apnUsable() const;
   bool contextOneIsRight() const;
   void logIms();
+
+  // Calls
+  bool callState() const { return state_ == ModemState::Dialing || state_ == ModemState::RingingIn || state_ == ModemState::InCall; }
+  void pushEvent(const CallEvent& e);
+  void queueEvent(CallEventType type, uint32_t duration, const std::string& reason, DialFailReason why = DialFailReason::Unknown);
+  void startCall(ModemState state, const std::string& phone, bool outgoing);
+  void endCall();
+  void connectCall();
+  void failDial(DialFailReason why, const std::string& line);
+  void callEnded(const char* line, uint32_t seconds);
+  std::string callFacts() const;
+  void onCallLine(const char* line, at::LineType type);
 
   AtTransport& transport_;
   Config config_;
@@ -146,6 +176,28 @@ private:
   char pdn8Type_[12] = {};
   bool pdn8Seen_ = false;
   int cfunTries_ = 0;
+
+  // Calls. One at a time; the driver reports each exactly once, in the order of the Modem contract.
+  std::deque<CallEvent> events_;
+  std::string callPhone_;
+  bool callOutgoing_ = false;
+  bool callConnected_ = false;
+  uint32_t connectedAtMs_ = 0;
+  bool dialPending_ = false;      // Dialing, but ATD has not gone out yet
+  bool atdSent_ = false;
+  bool dialImsSeen_ = false;      // the answer to the IMS question asked just before ATD
+  bool answerPending_ = false;
+  int chupPending_ = 0;           // AT+CHUP still to be sent, however the call ended for the application
+  bool volumePending_ = false;
+  int volume_ = 4;                // as the initialisation sets it (AT+COUTGAIN=4)
+  at::Deadline clccPoll_;
+  int clccState_ = -1;            // the state of the call in the last AT+CLCC, -1 when it was not listed
+  bool clccSeen_ = false;         // the call has been listed at least once
+  bool ringingLogged_ = false;
+  std::string callTrace_;         // what the modem said since the call began, for the log of a failure
+  bool diagPending_ = false;      // a failed dial waits for AT+CEER before it is reported
+  CallEvent diagEvent_;
+  int imsMode_ = 0, imsInfo_ = 0, imsExt_ = -1;  // the last AT+CIREG? answer, for the log of a failure
 
   // Network
   bool registered_ = false;

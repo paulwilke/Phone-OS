@@ -11,7 +11,7 @@
 #include <app/LogLevel.h>
 #include <drivers/A7682EDriver.h>
 
-#include "Script.h"
+#include <ModemScript.h>
 
 using namespace modemtest;
 

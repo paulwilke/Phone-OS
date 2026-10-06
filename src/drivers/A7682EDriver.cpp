@@ -70,7 +70,13 @@ bool A7682EDriver::pollLog(std::string& line) {
   return true;
 }
 
-void A7682EDriver::setState(ModemState s) { state_ = s; }
+// While a call runs, the speaker belongs to the modem, from the first dial tone and ring on. Otherwise
+// not, or the amplifier would stay on and draw current. One place, so that no path forgets it.
+void A7682EDriver::setState(ModemState s) {
+  const bool wasCall = callState();
+  state_ = s;
+  if (callState() != wasCall) transport_.setAudioToModem(callState());
+}
 
 void A7682EDriver::send(const char* command) {
   transport_.write(command, strlen(command));
@@ -132,6 +138,18 @@ void A7682EDriver::begin() {
 void A7682EDriver::onRestart() {
   ++restarts_;
   log("Modem restarted by itself (" + std::to_string(restarts_) + " since start)");
+  // A call does not survive it. One being set up failed because of the restart (the real hang: no
+  // answer for about seven seconds after ATD, then *ATREADY); a connected one ended; a ringing one is gone.
+  if (callState()) {
+    if (state_ == ModemState::Dialing) queueEvent(CallEventType::DialFailed, 0, "*ATREADY | " + callFacts(), DialFailReason::ModemRestarted);
+    else if (state_ == ModemState::InCall) queueEvent(CallEventType::Ended, (transport_.now() - connectedAtMs_) / 1000, "");
+    else queueEvent(CallEventType::Missed, 0, "");
+  }
+  callPhone_.clear();
+  callOutgoing_ = callConnected_ = dialPending_ = atdSent_ = answerPending_ = false;
+  chupPending_ = 0;
+  diagPending_ = false;
+  clccPoll_.clear();
   reader_.reset();
   job_ = Job::None;
   stepIndex_ = 0;
@@ -186,6 +204,7 @@ void A7682EDriver::finishJob(bool ok) {
     case Job::Init:
       if (ok) {
         log("Modem: initialised");
+        if (volume_ != 4) volumePending_ = true;  // the initialisation set the default; the child's choice comes back
         startJob(Job::SimCheck);  // the card first, then the network
       } else if (!pwrkeyTried_ && !responded_) {
         // Twice asked in vain: now the power key is worth it. Not the first time: it would switch a
@@ -271,7 +290,18 @@ void A7682EDriver::finishJob(bool ok) {
       }
       break;
 
+    case Job::CallDiag:
+      // The failed dial is reported now, with the network's own reason attached by step().
+      diagPending_ = false;
+      pushEvent(diagEvent_);
+      break;
+
     case Job::Clock:
+    case Job::Dial:
+    case Job::Answer:
+    case Job::Hangup:
+    case Job::CallPoll:
+    case Job::Volume:
     case Job::None:
       break;
   }
@@ -566,6 +596,118 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       if (answered) finishJob(true);
       return;
 
+    // -----------------------------------------------------------------------
+    // Dialling. The IMS is asked once more right before ATD: the state of up to 30 seconds ago may be
+    // gone, and ATD without the IMS hangs the modem (docs/hardware-lessons.md). Only a fresh "registered"
+    // lets the call go out.
+    case Job::Dial:
+      if (!line) {
+        dialImsSeen_ = false;
+        send("AT+CIREG?");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (!answered) return;
+      if (stepIndex_ == 0) {
+        if (state_ != ModemState::Dialing) {  // hangup() came in between: nothing was sent, nothing to undo
+          finishJob(false);
+          return;
+        }
+        if (!dialImsSeen_ || !imsRegistered_) {
+          failDial(DialFailReason::NotReady, dialImsSeen_ ? "IMS not registered, ATD not sent" : "IMS state could not be read, ATD not sent");
+          finishJob(false);
+          return;
+        }
+        stepIndex_ = 1;
+        snprintf(buf, sizeof(buf), "ATD%s;", callPhone_.c_str());
+        atdSent_ = true;
+        send(buf);
+        expect(config_.dialTimeoutMs);
+        return;
+      }
+      if (type == at::LineType::Ok) {
+        clccPoll_.set(transport_.now(), config_.callPollMs);
+        finishJob(true);
+      } else {
+        if (state_ == ModemState::Dialing) failDial(DialFailReason::Refused, line);
+        finishJob(false);
+      }
+      return;
+
+    case Job::Answer:
+      if (!line) {
+        send("ATA");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (!answered) return;
+      if (type == at::LineType::Ok) {
+        if (state_ == ModemState::RingingIn) connectCall();
+      } else {
+        log(std::string("Call: the modem refused to answer (") + line + ")");
+      }
+      finishJob(type == at::LineType::Ok);
+      return;
+
+    case Job::Hangup:
+      if (!line) {
+        send("AT+CHUP");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (answered) finishJob(type == at::LineType::Ok);
+      return;
+
+    case Job::Volume:
+      if (!line) {
+        snprintf(buf, sizeof(buf), "AT+COUTGAIN=%d", volume_);
+        send(buf);
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (answered) finishJob(type == at::LineType::Ok);
+      return;
+
+    // While a call is being set up the call list says how far it is: 2 dialling, 3 ringing at the other
+    // end, 0 active. A state 0 is the connection even when no VOICE CALL: BEGIN comes.
+    case Job::CallPoll:
+      if (!line) {
+        clccState_ = -1;
+        send("AT+CLCC");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (!answered) return;
+      if (type == at::LineType::Ok && state_ == ModemState::Dialing && atdSent_) {
+        if (clccState_ == 0) {
+          connectCall();
+        } else if (clccState_ == 3 && !ringingLogged_) {
+          ringingLogged_ = true;
+          log("Call: ringing at the other end");
+        } else if (clccState_ < 0 && clccSeen_) {
+          callEnded("call no longer in the call list", 0);  // gone without a word
+        }
+      }
+      if (state_ == ModemState::Dialing) clccPoll_.set(transport_.now(), config_.callPollMs);
+      finishJob(true);
+      return;
+
+    // After a failed outgoing call the network is asked why (AT+CEER). The event is reported only
+    // afterwards, so that the reason is in the log: the calls of 2026-10-01 showed only "did not connect".
+    case Job::CallDiag:
+      if (!line) {
+        send("AT+CEER");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (strncmp(line, "+CEER:", 6) == 0) {
+        const char* v = line + 6;
+        while (*v == ' ') ++v;
+        diagEvent_.reason += std::string(" | ") + v;
+      }
+      if (answered) finishJob(true);
+      return;
+
     case Job::None:
       return;
   }
@@ -587,6 +729,11 @@ void A7682EDriver::timedOut() {
     return;
   }
   if (job_ == Job::DataBearer) log("Cellular: no answer while setting the data context");
+  if (job_ == Job::Dial && state_ == ModemState::Dialing) {
+    // No answer to ATD: the call may exist all the same, so it is hung up for safety.
+    if (stepIndex_ == 1) ++chupPending_;
+    failDial(DialFailReason::Unknown, stepIndex_ == 1 ? "no answer to ATD" : "no answer to the IMS question, ATD not sent");
+  }
   finishJob(false);
 }
 
@@ -648,6 +795,10 @@ void A7682EDriver::onLine(const char* line) {
       if (at::parseCireg(line, &r)) {
         imsKnown_ = true;
         imsRegistered_ = r.registered();
+        imsMode_ = r.mode;
+        imsInfo_ = r.info;
+        imsExt_ = r.ext;
+        if (job_ == Job::Dial) dialImsSeen_ = true;
       }
       return;
     }
@@ -668,7 +819,16 @@ void A7682EDriver::onLine(const char* line) {
     default:
       break;
   }
-  if (type == at::LineType::Ok || type == at::LineType::Error || type == at::LineType::Cpin) step(line, type);
+  if (callState() && type != at::LineType::Ok) {
+    // Since the call began, write down what the modem says: on 2026-10-02 calls ended after two seconds
+    // with CEER "0 Unknown", and nobody saw what came before.
+    if (callTrace_.size() < 160) callTrace_ += (callTrace_.empty() ? "" : "/") + std::string(line);
+  }
+  onCallLine(line, type);
+  if (type == at::LineType::Ok || type == at::LineType::Error || type == at::LineType::Cpin ||
+      type == at::LineType::Other || type == at::LineType::Clcc) {
+    step(line, type);
+  }
 }
 
 void A7682EDriver::pickNextJob() {
@@ -695,7 +855,40 @@ void A7682EDriver::pickNextJob() {
     }
     return;
   }
-  if (state_ != ModemState::Ready) return;
+  if (state_ != ModemState::Ready && !callState()) return;
+
+  // What the application asked for comes before the periodic questions, and a call before everything:
+  // the volume is changed in the middle of a call and must take effect at once.
+  if (chupPending_ > 0) {
+    --chupPending_;
+    startJob(Job::Hangup);
+    return;
+  }
+  if (diagPending_) {
+    startJob(Job::CallDiag);
+    return;
+  }
+  if (answerPending_ && state_ == ModemState::RingingIn) {
+    answerPending_ = false;
+    startJob(Job::Answer);
+    return;
+  }
+  if (volumePending_) {
+    volumePending_ = false;
+    startJob(Job::Volume);
+    return;
+  }
+  if (dialPending_ && state_ == ModemState::Dialing) {
+    dialPending_ = false;
+    startJob(Job::Dial);
+    return;
+  }
+  if (state_ == ModemState::Dialing && atdSent_ && clccPoll_.expired(now)) {
+    clccPoll_.clear();
+    startJob(Job::CallPoll);
+    return;
+  }
+  if (state_ != ModemState::Ready) return;  // the rest waits until the call is over
 
   if (nextSignal_.expired(now)) {
     nextSignal_.set(now, config_.signalIntervalMs);
@@ -729,4 +922,218 @@ void A7682EDriver::poll() {
 
   // 4. Choose the next job.
   pickNextJob();
+}
+
+// ---------------------------------------------------------------------------
+// Calls
+// ---------------------------------------------------------------------------
+
+void A7682EDriver::pushEvent(const CallEvent& e) {
+  if (events_.size() >= 16) events_.pop_front();  // the newest are the final ones: they are kept
+  events_.push_back(e);
+}
+
+void A7682EDriver::queueEvent(CallEventType type, uint32_t duration, const std::string& reason, DialFailReason why) {
+  CallEvent e;
+  e.type = type;
+  e.phone = callPhone_;
+  e.duration = duration;
+  e.reason = reason;
+  e.failReason = why;
+  pushEvent(e);
+}
+
+bool A7682EDriver::pollCallEvent(CallEvent& out) {
+  if (events_.empty()) return false;
+  out = events_.front();
+  events_.pop_front();
+  return true;
+}
+
+// What the IMS looked like, for the log of a failed call: the last AT+CIREG? answer and the type of
+// the IMS bearer. Without them a failure like the one of 2026-10-02 is a riddle.
+std::string A7682EDriver::callFacts() const {
+  std::string facts = imsKnown_ ? "CIREG " + std::to_string(imsMode_) + "," + std::to_string(imsInfo_) + (imsExt_ >= 0 ? "," + std::to_string(imsExt_) : "")
+                                : "CIREG unknown";
+  facts += pdn8Seen_ ? std::string(" PDN8 ") + pdn8Type_ : " PDN8 not listed";
+  return facts;
+}
+
+void A7682EDriver::startCall(ModemState state, const std::string& phone, bool outgoing) {
+  callPhone_ = phone;
+  callOutgoing_ = outgoing;
+  callConnected_ = false;
+  atdSent_ = false;
+  clccSeen_ = false;
+  ringingLogged_ = false;
+  callTrace_.clear();
+  setState(state);
+}
+
+void A7682EDriver::endCall() {
+  callPhone_.clear();
+  callOutgoing_ = callConnected_ = dialPending_ = atdSent_ = answerPending_ = false;
+  clccPoll_.clear();
+  clccSeen_ = false;
+  ringingLogged_ = false;
+  callTrace_.clear();
+  setState(ModemState::Ready);
+}
+
+void A7682EDriver::connectCall() {
+  if (callConnected_ || !callState()) return;
+  callConnected_ = true;
+  connectedAtMs_ = transport_.now();
+  setState(ModemState::InCall);
+  queueEvent(CallEventType::Connected, 0, "");
+  log("Call: connected");
+}
+
+void A7682EDriver::failDial(DialFailReason why, const std::string& line) {
+  log("Call: dial failed, " + line);
+  queueEvent(CallEventType::DialFailed, 0, line + " | " + callFacts(), why);
+  endCall();
+}
+
+// NO CARRIER, or "VOICE CALL: END", or the call gone from the list. What it means depends on how far the
+// call had come: a ringing call is missed, a connected one ends, one that never connected failed. The
+// failed one asks the network why before it is reported (see CallDiag).
+void A7682EDriver::callEnded(const char* line, uint32_t seconds) {
+  if (state_ == ModemState::RingingIn) {
+    queueEvent(CallEventType::Missed, 0, "");
+    endCall();
+  } else if (state_ == ModemState::InCall) {
+    const uint32_t measured = (transport_.now() - connectedAtMs_) / 1000;
+    queueEvent(CallEventType::Ended, seconds > 0 ? seconds : measured, "");
+    endCall();
+  } else if (state_ == ModemState::Dialing && atdSent_) {
+    // Never connected: the network refused the call. With the SIM of 2026-09-30 (registration 7, SMS only)
+    // every call ended exactly so; reported as "ended" it looked like a conversation to the child.
+    diagEvent_ = CallEvent();
+    diagEvent_.type = CallEventType::DialFailed;
+    diagEvent_.phone = callPhone_;
+    diagEvent_.reason = std::string(line) + " | lines: " + callTrace_ + " | " + callFacts();
+    diagPending_ = true;
+    log(std::string("Call: dial failed, ") + line);
+    endCall();
+  }
+}
+
+void A7682EDriver::onCallLine(const char* line, at::LineType type) {
+  switch (type) {
+    case at::LineType::Ring:
+      // A ring in any other state is the end of a call waiting or an echo of an old one.
+      if (state_ == ModemState::Ready) {
+        startCall(ModemState::RingingIn, std::string(), false);
+        queueEvent(CallEventType::Incoming, 0, "");
+        log("Call: incoming");
+      }
+      return;
+
+    case at::LineType::Clip: {
+      char phone[at::kPhoneSize];
+      if (state_ != ModemState::RingingIn) return;
+      if (at::parseClip(line, at::Charset::Ucs2, phone, sizeof(phone)) || at::parseClip(line, at::Charset::Gsm, phone, sizeof(phone))) {
+        // The number is known only with +CLIP, after the first ring: the call is reported again with it.
+        callPhone_ = phone;
+        queueEvent(CallEventType::Incoming, 0, "");
+      }
+      return;
+    }
+
+    case at::LineType::Clcc: {
+      at::CallListEntry e;
+      if (state_ == ModemState::Dialing && atdSent_ && at::parseClcc(line, at::Charset::Ucs2, &e) && e.direction == 0) {
+        clccState_ = e.state;
+        clccSeen_ = true;
+      }
+      return;
+    }
+
+    case at::LineType::VoiceCallBegin:
+      // Connected only when a call exists that is waiting for it: one we dialled (ATD went out, which only
+      // happens with a fresh "IMS registered") or one we are answering. Without the IMS the modem sometimes
+      // reports BEGIN at once instead of failing, and the product showed "in a call" while nothing was dialled.
+      if (state_ == ModemState::Dialing && atdSent_) connectCall();
+      else if (state_ == ModemState::RingingIn && job_ == Job::Answer) connectCall();
+      else if (state_ != ModemState::InCall) log("Call: VOICE CALL BEGIN without a call, ignored");
+      return;
+
+    case at::LineType::VoiceCallEnd: {
+      uint32_t seconds = 0;
+      at::parseVoiceCallEnd(line, &seconds);
+      if (callState()) callEnded(line, seconds);
+      return;
+    }
+
+    case at::LineType::NoCarrier:
+      if (callState()) callEnded(line, 0);
+      return;
+
+    case at::LineType::Busy:
+      if (state_ == ModemState::Dialing && atdSent_) {
+        queueEvent(CallEventType::Busy, 0, "");
+        endCall();
+      }
+      return;
+
+    case at::LineType::NoAnswer:
+      if (state_ == ModemState::Dialing && atdSent_) {
+        queueEvent(CallEventType::NoAnswer, 0, "");
+        endCall();
+      }
+      return;
+
+    default:
+      return;
+  }
+}
+
+// ---- from the application -----------------------------------------------------------------------------------
+
+bool A7682EDriver::dial(const std::string& phone) {
+  // Never without the IMS, and never a call on top of another. A dial that is being set up refuses a
+  // second one until its first step is over, so that nothing is sent twice.
+  if (state_ != ModemState::Ready || job_ == Job::Dial) return false;
+  if (!at::isValidDialString(phone.c_str()) || voiceStatus() != VoiceStatus::Ready) return false;
+  startCall(ModemState::Dialing, phone, true);
+  dialPending_ = true;
+  log("Call: dialling");
+  return true;
+}
+
+bool A7682EDriver::answer() {
+  if (state_ != ModemState::RingingIn || answerPending_) return false;
+  answerPending_ = true;
+  return true;
+}
+
+// Ends the call for the application at once; the modem is told afterwards (AT+CHUP), which may wait for
+// a job that is running. What the modem then says about the call (NO CARRIER, END) finds no call and is ignored.
+bool A7682EDriver::hangup() {
+  if (!callState()) return false;
+  if (state_ == ModemState::RingingIn) {
+    queueEvent(CallEventType::Missed, 0, "");
+    ++chupPending_;
+  } else if (state_ == ModemState::InCall) {
+    queueEvent(CallEventType::Ended, (transport_.now() - connectedAtMs_) / 1000, "");
+    ++chupPending_;
+  } else {
+    // A dial we cancel ends with Ended and no duration. If ATD has not gone out, nothing was sent and there
+    // is nothing to hang up.
+    queueEvent(CallEventType::Ended, 0, "");
+    if (atdSent_) ++chupPending_;
+  }
+  endCall();
+  return true;
+}
+
+bool A7682EDriver::setCallVolume(int level) {
+  if (level < 0) level = 0;
+  if (level > 7) level = 7;
+  if (level != volume_) {
+    volume_ = level;
+    volumePending_ = true;
+  }
+  return true;
 }

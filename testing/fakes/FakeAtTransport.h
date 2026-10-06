@@ -30,8 +30,9 @@
 // The supply: power(true/false) is recorded (powered()); a pulse on the power key (pwrkeyPulses())
 // wakes a modem that was set cold with setCold(true), which ignores everything until then, as a
 // modem does that has never been started; a pulse on a running modem switches it off, as it does.
+// The sound path: setAudioToModem() is recorded (audioToModem(), audioSwitches()).
 // Time: advance(ms) moves the clock (setNow() starts it anywhere, to test the wrap).
-// Reading back: powered(), pwrkeyPulses(), sent() (every command line, without its line end), bodies() (every text sent
+// Reading back: powered(), pwrkeyPulses(), audioToModem(), sent() (every command line, without its line end), bodies() (every text sent
 // after a prompt, without the Ctrl-Z), unexpected(), pendingOutput() (bytes not read yet).
 
 #include <cstdint>
@@ -60,6 +61,10 @@ public:
   uint32_t now() override { return now_; }
 
   void power(bool on) override { powered_ = on; }
+  void setAudioToModem(bool on) override {
+    audio_ = on;
+    ++audioSwitches_;
+  }
   void pwrkeyPulse() override {
     ++pulses_;
     if (cold_) {
@@ -104,6 +109,8 @@ public:
   const std::vector<std::string>& unexpected() const { return unexpected_; }
   size_t pendingOutput() const { return out_.size(); }
   bool powered() const { return powered_; }
+  bool audioToModem() const { return audio_; }
+  int audioSwitches() const { return audioSwitches_; }
   int pwrkeyPulses() const { return pulses_; }
 
 private:
@@ -201,6 +208,8 @@ private:
   bool cold_ = false;
   bool powered_ = true;  // a bench modem is on until the driver says otherwise
   int pulses_ = 0;
+  bool audio_ = false;
+  int audioSwitches_ = 0;
   bool inBody_ = false;
   std::string line_;
   std::deque<char> out_;

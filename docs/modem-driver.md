@@ -1,8 +1,8 @@
 # The modem driver
 
-Code: `src/drivers/A7682EDriver.{h,cpp}` on the AT layer ([at-layer.md](at-layer.md)); tests in `test/test_modem_driver/` against the scripted modem `testing/fakes/FakeAtTransport.h`. **Nothing here has been run against the real modem.** This document covers start-up, the SIM, the data bearer for the IMS, registration, the periodic questions and restarts; calls and messages follow with the next parts of the work package.
+Code: `src/drivers/A7682EDriver.{h,cpp}` on the AT layer ([at-layer.md](at-layer.md)); tests in `test/test_modem_driver/` against the scripted modem `testing/fakes/FakeAtTransport.h`. **Nothing here has been run against the real modem.** This document covers start-up, the SIM, the data bearer for the IMS, registration, the periodic questions, restarts and calls; messages follow with the next part of the work package.
 
-The driver is a state machine: `poll()` is called from the main loop and never blocks, one **job** runs at a time (`Init`, `SimCheck`, `DataBearer`, `Register`, `ScanOperators`, `SelectOperator`, `Ims`, `Signal`, `Clock`), and a job that gets no answer in time ends itself, not the device. It includes nothing above `hal/`; its log lines are handed out through `pollLog()` and the host writes them through its log, which applies the level.
+The driver is a state machine: `poll()` is called from the main loop and never blocks, one **job** runs at a time (`Init`, `SimCheck`, `DataBearer`, `Register`, `ScanOperators`, `SelectOperator`, `Ims`, `Signal`, `Clock`, and for calls `Dial`, `Answer`, `Hangup`, `CallPoll`, `CallDiag`, `Volume`), and a job that gets no answer in time ends itself, not the device. It includes nothing above `hal/`; its log lines are handed out through `pollLog()` and the host writes them through its log, which applies the level.
 
 ## Start-up, in order
 
@@ -44,6 +44,26 @@ AT+CFUN=1                            the network builds the IMS bearer from cont
 
 `*ATREADY` after the modem had answered means it restarted by itself (a bad SIM contact, a supply that dips under the current of a transmission). The driver counts it (`restartCount()`), writes `Modem restarted by itself (n since start)` (the word "restart" keeps the line on every log level), forgets what it knew, waits three seconds and starts again from `Init`; the bearer is read and not rewritten, and a PIN that was accepted before is sent once more (one try per start of the modem, never after a rejection). The `*ATREADY` of the boot after power-on is no restart.
 
+## Calls
+
+Code and tests: `A7682EDriver::dial/answer/hangup/pollCallEvent/setCallVolume`, `test/test_modem_calls/`. The events and their legal order are those of the `Modem` capability ([hardware-capabilities.md](hardware-capabilities.md)).
+
+**Dialling.** `dial()` is refused, and nothing is sent, unless the modem is `Ready`, the number is a dial string (`at::isValidDialString`: 1 … 23 characters of 0-9 * # and a leading +) and `voiceStatus()` is `Ready`. It takes effect at once (the state is `Dialing` and the sound path switches to the modem), and the job then **asks the IMS once more** (`AT+CIREG?`) before it sends `ATD<number>;`: the state of up to 30 seconds ago may be gone, and ATD without the IMS hangs the modem. A fresh "not registered" (or no answer) is a `DialFailed` with the code `NotReady` and no ATD. The limit for the answer to ATD is 15 seconds, longer than the seven seconds of the real hang, so that the restart that follows it is recognised as one.
+
+**Connected is believed only with a call behind it.** `VOICE CALL: BEGIN` counts when ATD has gone out (which happens only with a fresh "IMS registered") or an answer to a ringing call is on its way; with no call it is a **phantom** and is ignored with a log line. While the call is being set up `AT+CLCC` is asked every second: state 2 (dialling), 3 (ringing at the other end: one log line, no event, because the capability has no event for it), 0 (active: connected, also without a BEGIN). A call that was listed and then is gone from the list, with no NO CARRIER, is over.
+
+**How it ends.** `BUSY` → `Busy`, `NO ANSWER` → `NoAnswer`; `NO CARRIER` or `VOICE CALL: END` with a call: ringing → `Missed`, connected → `Ended` with its length (from the modem, else measured), **never connected → `DialFailed`**, because the network refused it (with the SIM of 2026-09-30, registration 7, every call ended so, and as "ended" it looked like a conversation). A failed dial is reported only after `AT+CEER` has been asked, so that the network's reason is in the event; its `reason` is the modem's line, then `lines:` (what the modem said since the call began) and the IMS facts (`CIREG <mode>,<info>,<ext>`, `PDN8 <type of context 8>`), for the log. A line of the modem with no call behind it (BUSY, NO CARRIER, END in `Ready`) is nothing.
+
+**Incoming.** `RING` in `Ready` → `RingingIn`, `Incoming` with no number, and the sound path switches at the first ring; `+CLIP` brings the same event again with the number (the number is known only after the first ring). A repeated RING is the same call; a RING in any other state changes nothing. `answer()` is **not** immediate: the state changes with the modem's OK to `ATA`, and a refusal leaves the call ringing and says so in the log.
+
+**Hanging up** ends the call for the application at once (`Ended` for a dial or a connected call, `Missed` for a ringing one) and then tells the modem (`AT+CHUP`) when its job allows; a dial cancelled before ATD went out sends nothing at all. What the modem says afterwards (NO CARRIER, a late BEGIN) finds no call and is ignored. A new `dial()` is refused while the cancelled dial's first step is still out.
+
+**A restart in a call** (`*ATREADY`): a call being set up failed (`DialFailed`, code `ModemRestarted`), a connected one ended (`Ended`), a ringing one is missed, each once; the sound path goes back, and the start-up begins again.
+
+**Volume.** `setCallVolume(0 … 7)` is clamped and sent as `AT+COUTGAIN=<n>` (the A76XX series has no `AT+CLVL`) at once, also in the middle of a call; the same value is not sent again; after a restart, which puts the modem back to 4, the child's choice is sent again.
+
+**The sound path.** `AtTransport::setAudioToModem()` is switched in one place, when the state enters or leaves `Dialing`, `RingingIn` and `InCall`: on for the first dial tone and ring, off when the call is over, whichever way, or the amplifier would stay on and draw current.
+
 ## Log lines
 
-English, technical, no PIN, no number, no APN. They carry the words the log level looks for ([log-level.md](log-level.md)): `Cellular:` (an event), `SIM:` (an event), `failed`, `cannot` (errors), `restarted` (always kept).
+English, technical, no PIN, no number, no APN. They carry the words the log level looks for ([log-level.md](log-level.md)): `Cellular:` (an event), `SIM:` (an event), `Call:` (an event), `failed`, `cannot` (errors), `restarted` (always kept).

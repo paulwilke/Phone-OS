@@ -6,7 +6,7 @@ Code: `src/drivers/AtTransport.h`, `AtParser.{h,cpp}`, `Ucs2.{h,cpp}`; tests in 
 
 ## The seam
 
-`AtTransport` has three functions: `write(bytes)`, `read()` (the next byte or -1, never blocking) and `now()` (milliseconds, wrapping after about 49 days). `at::Deadline` compares differences, so a limit set just before the wrap neither fires at once nor never.
+`AtTransport` has the three functions of the byte pipe: `write(bytes)`, `read()` (the next byte or -1, never blocking) and `now()` (milliseconds, wrapping after about 49 days); and three for the board: `power()` and `pwrkeyPulse()` for the modem's supply and power key, `setAudioToModem()` for the sound path. `at::Deadline` compares differences, so a limit set just before the wrap neither fires at once nor never.
 
 ## Lines
 
@@ -20,6 +20,7 @@ Code: `src/drivers/AtTransport.h`, `AtParser.{h,cpp}`, `Ucs2.{h,cpp}`; tests in 
 |---|---|---|
 | `+CLIP: "<number>",…` | `parseClip` | the caller's number |
 | `+CMTI: "SM",<n>` | `parseCmti` | the storage slot |
+| (a dial string) | `isValidDialString` | the only numbers that reach a command line: 1 … 23 characters of 0-9 * # and a leading + |
 | `VOICE CALL: END[: d]` | `parseVoiceCallEnd` | seconds, from `m:ss`, `h:mm:ss` or `hhmmss` (the last from the manual, not seen on the device); 0 when absent or unreadable |
 | `+CSQ: <rssi>,<ber>` | `parseCsq`, `csqToBars` | 0 … 5 bars |
 | `+CREG: <n>,<stat>` | `parseCreg` | `registered()` (1, 5, 6, 7) and `smsOnly()` (6, 7) |

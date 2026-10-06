@@ -35,6 +35,13 @@ struct Script {
   std::vector<std::string> cireg = {"+CIREG: 1,1,15"};  // answers in turn (the last stays)
   std::string ciregFinal = "OK";
   int networkMode = 2;
+  // Calls. The number the test dials; the answers of AT+CLCC in turn ("" is an empty list; the last stays);
+  // what ATD and ATA answer; the network's reason for AT+CEER ("" = none).
+  std::string number = "+491701111111";
+  std::vector<std::string> clcc = {""};
+  std::string atdFinal = "OK";
+  std::string ataFinal = "OK";
+  std::string ceer = "";
   std::string contextsFinal = "OK";   // the final line of AT+CGDCONT?
   bool cpinSilent = false;            // the card is not asked about at all: no answer
   std::string silent;                 // a command that is never answered (the modem hangs on it)
@@ -69,6 +76,16 @@ struct Script {
     reply("AT+CCLK?", {cclk});
     reply("AT+CSQ", {csq});
     for (const std::string& c : cireg) reply("AT+CIREG?", {c}, ciregFinal);
+    reply("ATD" + number + ";", {}, atdFinal);
+    reply("ATA", {}, ataFinal);
+    reply("AT+CHUP", {});
+    for (const std::string& c : clcc) {
+      if (c.empty()) reply("AT+CLCC", {});
+      else reply("AT+CLCC", {c});
+    }
+    if (ceer.empty()) reply("AT+CEER", {});
+    else reply("AT+CEER", {"+CEER: " + ceer});
+    for (int level = 0; level <= 7; ++level) reply("AT+COUTGAIN=" + std::to_string(level), {});
   }
 };
 
@@ -132,6 +149,17 @@ struct Rig {
     for (size_t i = 0; i < t.sent().size(); ++i)
       if (t.sent()[i] == command) return (int)i;
     return -1;
+  }
+  // Feeds a line of the modem (a URC) now and lets the driver read it.
+  void urc(const std::string& line, uint32_t thenRunMs = 100) {
+    t.unsolicited(t.now(), line);
+    run(thenRunMs);
+  }
+  std::vector<CallEvent> events() {
+    std::vector<CallEvent> out;
+    CallEvent e;
+    while (driver.pollCallEvent(e)) out.push_back(e);
+    return out;
   }
   bool logged(const std::string& part) const {
     for (const std::string& l : logs)

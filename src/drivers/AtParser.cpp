@@ -96,17 +96,6 @@ bool decodeAddress(const char* field, Charset cs, char* out, size_t outSize) {
   return true;
 }
 
-bool isValidDialString(const char* phone) {
-  const size_t len = strlen(phone);
-  if (len == 0 || len > kMaxPhoneChars) return false;
-  for (size_t i = 0; i < len; ++i) {
-    const char c = phone[i];
-    const bool ok = (c >= '0' && c <= '9') || c == '*' || c == '#' || (c == '+' && i == 0);
-    if (!ok) return false;
-  }
-  return !(len == 1 && phone[0] == '+');
-}
-
 int64_t daysFromCivil(int y, int m, int d) {
   y -= m <= 2;
   const int era = (y >= 0 ? y : y - 399) / 400;
@@ -449,6 +438,17 @@ bool parseCclk(const char* line, NetworkTime* out) {
 // ---------------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------------
+
+bool isValidDialString(const char* phone) {
+  const size_t len = strlen(phone);
+  if (len == 0 || len > kMaxPhoneChars) return false;
+  for (size_t i = 0; i < len; ++i) {
+    const char c = phone[i];
+    const bool ok = (c >= '0' && c <= '9') || c == '*' || c == '#' || (c == '+' && i == 0);
+    if (!ok) return false;
+  }
+  return !(len == 1 && phone[0] == '+');
+}
 
 bool buildCmgsCommand(const char* phone, Charset cs, char* out, size_t outSize) {
   if (outSize == 0) return false;
