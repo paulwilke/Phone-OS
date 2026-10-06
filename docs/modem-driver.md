@@ -1,6 +1,10 @@
 # The modem driver
 
-Code: `src/drivers/A7682EDriver.{h,cpp}` on the AT layer ([at-layer.md](at-layer.md)); tests in `test/test_modem_driver/` against the scripted modem `testing/fakes/FakeAtTransport.h`. **Nothing here has been run against the real modem.** This document covers start-up, the SIM, the data bearer for the IMS, registration, the periodic questions, restarts and calls; messages, sleeping, switching off and the diagnostic questions.
+Code: `src/drivers/A7682EDriver.{h,cpp}` on the AT layer ([at-layer.md](at-layer.md)); tests in `test/test_modem_driver/` (start-up), `test/test_modem_calls/`, `test/test_modem_sms/` and the contract suite in `test/test_hardware_contracts/`, all against the scripted modem `testing/fakes/FakeAtTransport.h`.
+
+**What is verified, and what is not.** Everything in this document is verified **on the host, against a script that was written from the manual and from what the previous driver met on the device**: the order of the AT commands, the state machine, the edge cases, the log lines. **Nothing has been run against the real modem**, so no answer format, no timing and no behaviour of the network is confirmed by these tests. What the VoLTE rule rests on, and what is still open, is in [volte.md](volte.md), with the checklist the owner runs on the device.
+
+This document covers start-up, the SIM, the data bearer for the IMS, registration, the periodic questions, restarts, calls, messages, sleeping, switching off and the diagnostic questions, and at the end why each quirk is there.
 
 The driver implements the `Modem` capability and passes its contract suite ([hardware-capabilities.md](hardware-capabilities.md)). It is a state machine: `poll()` is called from the main loop and never blocks, one **job** runs at a time (`Init`, `SimCheck`, `DataBearer`, `Register`, `ScanOperators`, `SelectOperator`, `Ims`, `Signal`, `Clock`, and for calls `Dial`, `Answer`, `Hangup`, `CallPoll`, `CallDiag`, `Volume`, and for messages `SendSms`, `ReadSms`, `DrainInbox`, and `Query`, `Sleep`, `Wake`, `Shutdown`), and a job that gets no answer in time ends itself, not the device. It includes nothing above `hal/`; its log lines are handed out through `pollLog()` and the host writes them through its log, which applies the level.
 
@@ -83,6 +87,36 @@ Code and tests: `A7682EDriver::sendSms/pollSms/pollSendFailure`, `test/test_mode
 **Switching off.** `shutdown()` ends a call as the capability says (connected: `Ended`; ringing: `Missed`; being set up: `Ended`, no duration), reports what was queued and refuses new work at once, sends `AT+CPOF` and then cuts the supply; the state is `Off` when that job is done, also when the modem does not answer. The modem can be started again with `begin()`.
 
 **Questions.** `query()` accepts only `AT+<name>?` and `AT+<name>=?` with a name of capital letters, digits and `+ ^ $`: no semicolon, no line break, no value, so that nothing can be changed this way. The answer lines are joined with `|` (and `ERROR` when the modem refused); lines that the driver reads for its own state (`+CREG:` …) are part of the answer as well. One question at a time.
+
+## The configuration
+
+`A7682EDriver::Config` is what the host hands over; the driver reads no file. `apn` comes from `[modem] apn` ([config-loader.md](config-loader.md)), `simPin` from `secrets.toml`, `networkMode` from the settings (2 automatic by default). The timings are the ones the device taught: `powerOnDelayMs` 6000 (three seconds were not enough), `commandTimeoutMs` 5000, `radioTimeoutMs` 30000 (`AT+CFUN` takes seconds), `dialTimeoutMs` 15000 (longer than the seven seconds of the real hang), `smsSendTimeoutMs` 60000, `registrationTimeoutMs` 90000, `operatorScanTimeoutMs` 120000, `signalIntervalMs` 30000, `clockIntervalMs` one hour. The transport (`AtTransport`) is the one seam to the board: bytes, time, the supply, the power key, DTR and the sound path; its implementation for the ESP32 and the pin map come with the other device drivers and are **not part of this work package**.
+
+## Why each quirk is there
+
+Nothing below was invented for the tests; each line is something the device or the manual taught, and the tests pin it.
+
+| Quirk | Why |
+|---|---|
+| Ask `AT` before pressing the power key, and never press after the modem answered | a pulse on a running modem switches it off, and after a reset of the processor the modem still runs |
+| `ATE0` first | otherwise every command comes back as an echo and confuses the line reading |
+| `AT+COUTGAIN`, no `AT+CLVL` | the A76XX series has no `AT+CLVL` (`AT+CLVL=?` answers `ERROR` on the device) |
+| `AT+CMEE=2` | `1` gives bare numbers; the reason of a failure should be words |
+| Charset UCS2, back to UCS2 after every GSM sending | umlauts and emoji unharmed, and a hex text line can never be mistaken for a URC |
+| `SIM failure` is asked again | the modem answers it in the first seconds and then `+CPIN: READY` |
+| PIN once per start, never after a rejection | the card counts wrong tries and locks after three |
+| Registration 6 and 7 count as registered | the device's job is messages; a SIM at 7 sent its SMS on 2026-09-30 |
+| Manual choice of the network after eight rounds, and a longer window for it | a foreign SIM found no network in Germany automatically; the search once outlasted the window and the modem went to `Error` |
+| The operator and the network are asked every 30 seconds | abroad the device kept showing the home operator for lack of a question (2026-10-03) |
+| A code in place of an operator name becomes a name | some networks answer `AT+COPS?` with `26201` although the text was asked |
+| `*ATREADY` after an answer is a restart | a bad SIM contact restarts the modem every 30 to 60 seconds |
+| The IMS is asked right before `ATD` | the state of 30 seconds ago may be gone, and `ATD` without the IMS hangs the modem |
+| A failed dial waits for `AT+CEER` | calls ended after two seconds with only "did not connect" and nobody saw why |
+| `NO CARRIER` before a connection is a failed dial, not an end | a SIM for SMS only ended every call so, and it looked like a conversation |
+| `AT+CHUP` after the application has hung up | the modem must be told, but the application must not wait for it |
+| A message is deleted only after it was read and parsed | Meck deleted after the first message and overwrote the buffer |
+| A refused sending is reported with the modem's reason | an emergency message vanished silently with `+CMS ERROR: 304` (2026-10-01) |
+| A message queued before a restart goes out after the radio cycle | `AT+CFUN=0/1` drops a message in flight |
 
 ## Log lines
 

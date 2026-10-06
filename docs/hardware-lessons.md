@@ -18,7 +18,7 @@ Things that went wrong on the real device, why, and the rule that keeps them fro
 
 ## The IMS bearer needs a default context of type IPV4V6
 
-Outgoing calls hung the modem two seconds after dialling when the IMS was not registered. Defining PDP context 1 as IPV4V6 and restarting the radio fixed it. The modem driver sets this up itself at start (read the contexts first, write only when they differ) and refuses to dial while the IMS is not registered.
+Outgoing calls hung the modem two seconds after dialling when the IMS was not registered. Defining PDP context 1 as IPV4V6 and restarting the radio fixed it. The modem driver sets this up itself at start (read the contexts first, write only when they differ) and refuses to dial while the IMS is not registered. How, what is proven and the owner's checklist for the device: [volte.md](volte.md).
 
 ## Smaller facts that cost time
 
