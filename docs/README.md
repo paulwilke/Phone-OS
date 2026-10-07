@@ -7,6 +7,7 @@ The documents describe what exists in this repository — each one is written fr
 | [user-guide.md](user-guide.md) | the guide for the parents: the device, school time, SOS, the parents' page, settings, battery, what to do without network or SIM or with a blank screen |
 | [de/benutzerhandbuch.md](de/benutzerhandbuch.md) | the same guide in German, with the same headings |
 | [fr/guide-utilisateur.md](fr/guide-utilisateur.md) | the same guide in French, with the same headings |
+| [open-points.md](open-points.md) | the one list of open work, with the owner of every item |
 | [i18n.md](i18n.md) | translation library, catalog format, plural rules, user catalogs |
 | [contacts.md](contacts.md) | phone number normalisation, the whitelist and its file format |
 | [quiet-hours.md](quiet-hours.md) | school-time windows, midnight crossing, behaviour without a clock |
@@ -79,6 +80,10 @@ The documents describe what exists in this repository — each one is written fr
 | [demo.md](demo.md) | the generated pictures and the click-through demo: the walk, the scenes, the page, what the generator checks |
 | [translating.md](translating.md) | writing a catalog, the size limit, trying it in the simulator |
 | [simulated-panel.md](simulated-panel.md) | the e-ink panel without a window: the real refresh policy, the visible delay, a PNG of what is shown |
+| [configuration-reference.md](configuration-reference.md) | every configuration key, generated from the schema: type, default, limits, meaning |
+| [web-interface.md](web-interface.md) | the parents' page and its API: the HTTP layer, the routes, the security model, the page, the service |
 | [config-loader.md](config-loader.md) | loading the three config files into a Profile with diagnostics; writing them back; user catalogs; the settings-changed flag |
+
+What is not verified on the device is stated where the code is described, and what has to be done about it, with the person who has to do it, is only in [open-points.md](open-points.md).
 
 The rules for contributing are in [CONTRIBUTING.md](../CONTRIBUTING.md); third-party material is listed in [THIRD_PARTY.md](../THIRD_PARTY.md).

@@ -81,6 +81,9 @@ jobs:
       - name: Generated configuration files
         run: python3 scripts/gen_config.py --check
 
+      - name: Generator tests
+        run: python3 test/test_schema_gen/test_gen.py
+
       - name: Generated device assets
         run: python3 scripts/gen_device_assets.py --check
 

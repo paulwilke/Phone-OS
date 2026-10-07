@@ -42,15 +42,6 @@ The six test cases of the proposal exist, with counter-checks (the bug put back,
 - **The modem firmware** (`A7682M7_B15V01_241119`) may have a fault in the call setup path: it hangs without the IMS. No update package is published; that is a question for the vendor, not for this change. The driver's answer is to never dial without the IMS and to recognise the restart when it comes.
 - **The registration of the IMS takes time.** After the radio cycle the IMS may need a minute; until then the voice status is `ImsMissing` and the screens say "calls not ready". The text on the network page names no duration, because none was measured.
 
-## The owner's checklist on the device
+## The check on the device
 
-Done with a tool on the real modem, not by the software. Date each step and write the result into [hardware-lessons.md](hardware-lessons.md).
-
-| # | Step | Expected | Date | Result |
-|---|---|---|---|---|
-| 1 | Reproduce the broken state: `AT+CGDCONT=1`, `AT+CFUN=0`, `AT+CFUN=1` | `+CIREG: 1,0,0`; context 8 as `"IP"` | | |
-| 2 | Flash the new firmware | context 1 `IPV4V6`; `+CIREG: 1,1,15` | | |
-| 3 | Dial from the device | `+CLCC` 2, 3, 0; the call rings and connects | | |
-| 4 | Cold start of the modem, repeat 2 and 3 | the same | | |
-
-Until these four fields are filled, the honest sentence about calls is: **the driver is written and tested against a script; the device has not confirmed it.**
+The four steps that settle the question are rows 25 to 28 of [bring-up.md](bring-up.md); write the result of each into [hardware-lessons.md](hardware-lessons.md). Until they are done, the honest sentence about calls is: **the driver is written and tested against a script; the device has not confirmed it.** The open point is listed in [open-points.md](open-points.md).

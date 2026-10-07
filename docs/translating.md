@@ -13,7 +13,7 @@ A language does not have to be shipped to be used: a catalog with a new code on 
 
 ## The limit
 
-**A catalog on the card may be at most 32,768 bytes** (`ConfigLoader::kMaxCatalogBytes`), **each file for itself** (the device's and the page's are not added up); a larger file is skipped with an `OversizedFile` diagnostic. The device must not load unlimited text from the card into a small memory. The limit is the owner's decision, to be looked at again with real memory numbers.
+**A catalog on the card may be at most 32,768 bytes** (`ConfigLoader::kMaxCatalogBytes`), **each file for itself** (the device's and the page's are not added up); a larger file is skipped with an `OversizedFile` diagnostic. The device must not load unlimited text from the card into a small memory. The limit is the owner's decision ([open-points.md](open-points.md)).
 
 What that means today (bytes, `scripts/check_i18n.py` prints them):
 

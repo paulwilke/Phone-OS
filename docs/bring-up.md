@@ -32,5 +32,9 @@ Before the first start: format the card FAT32 **with an MBR partition table** (m
 | 22 | Switch off | on battery: the switch-off asks the modem to say goodbye, then the device is off; on the cable it refuses and says so | | |
 | 23 | The motion page | the sensor starts (about 11 s), flat on the table z reads about −0.95, the ball rolls to the lower side | | |
 | 24 | Refreshing | the first frame is a full refresh, complete; a small change (move the tile selection) is a partial refresh that **changes only the changed area** and does not flash; no inversion in either kind; every tenth change is a full refresh and clears the ghosts; ten partial refreshes in a row leave no unreadable ghosting (the datasheet advises a full one after five: report what you see); a picture left alone for 4 hours is refreshed in full once; the refresh times (note them); the picture also looks right when the device is cold | | |
+| 25 | Voice over LTE, the broken state: with a tool on the modem, `AT+CGDCONT=1`, `AT+CFUN=0`, `AT+CFUN=1` | `+CIREG: 1,0,0`; context 8 as `"IP"` | | |
+| 26 | Voice over LTE, the fix: flash the firmware | context 1 `IPV4V6`; `+CIREG: 1,1,15` | | |
+| 27 | Dial from the device | `+CLCC` 2, 3, 0; the call rings and connects | | |
+| 28 | Cold start of the modem, repeat 26 and 27 | the same | | |
 
-Report back **what differs**, with the console lines. A failed step is a finding for the next session; the driver that matches it is in [hardware-drivers.md](hardware-drivers.md).
+Report back **what differs**, with the console lines. A failed step is a finding; the driver that matches it is in [hardware-drivers.md](hardware-drivers.md). The other open points of the project are in [open-points.md](open-points.md).
