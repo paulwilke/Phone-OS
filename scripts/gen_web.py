@@ -178,7 +178,19 @@ pre{background:#222;color:#eee;padding:1rem;border-radius:6px;overflow:auto;
     js = f"""\
 'use strict';
 var SCHEMA = {form_json};
-var T = {{}};
+// Every /api/ route, the catalogs included, needs the password, so before the login there is no
+// catalog: the login overlay and its messages use these English words, and the real catalog is
+// fetched only after a successful login.
+var FALLBACK = {{
+  'web.title': 'PhonePlus',
+  'web.auth.title': 'Password',
+  'web.auth.password': 'Web password',
+  'web.auth.enter': 'Enter',
+  'web.auth.wrong': 'Wrong password.',
+  'web.auth.locked': 'Too many attempts, wait one minute.',
+  'web.form.error': 'Error'
+}};
+var T = FALLBACK;
 var authHeader = '';
 var currentLang = '';
 
@@ -580,9 +592,14 @@ document.getElementById('backup-restore').addEventListener('click', function() {
 }});
 
 // ---------- Language ----------
+// An answer that is not ok (401, 404, 429) is an error object, never a catalog; a language the
+// device does not have falls back to English.
 function loadLang(code) {{
-  return api('GET', '/api/lang/' + code).then(function(r) {{ return r.json(); }})
-    .then(function(d) {{ T = d; currentLang = code; applyTranslations(); }});
+  return api('GET', '/api/lang/' + code).then(function(r) {{
+    if (r.status === 404 && code !== 'en') return loadLang('en');
+    if (!r.ok) throw new Error('lang ' + r.status);
+    return r.json().then(function(d) {{ T = d; currentLang = code; applyTranslations(); }});
+  }});
 }}
 
 function populateLangSelect(langs) {{
@@ -630,8 +647,13 @@ document.getElementById('auth-form').addEventListener('submit', function(e) {{
 }});
 
 // ---------- Init ----------
+// Runs once the password has been accepted, from the login form and from the stored credential.
 function init() {{
-  api('GET', '/api/languages').then(function(r) {{ return r.json(); }}).then(function(langs) {{
+  var code = localStorage.getItem('pp_lang')
+    || (navigator.language || '').split('-')[0] || 'en';
+  loadLang(code).catch(function() {{}}).then(function() {{
+    return api('GET', '/api/languages').then(function(r) {{ return r.json(); }});
+  }}).then(function(langs) {{
     window._langs = langs;
     populateLangSelect(langs);
     showPanel('status');
@@ -639,24 +661,19 @@ function init() {{
 }}
 
 (function() {{
-  var storedLang = localStorage.getItem('pp_lang')
-    || (navigator.language || '').split('-')[0] || 'en';
+  applyTranslations();
   var storedAuth = localStorage.getItem('pp_auth');
-  var firstLang = storedLang;
-  loadLang(firstLang).then(function() {{
-    if (storedAuth) {{
-      authHeader = storedAuth;
-      api('GET', '/api/state').then(function(r) {{
-        if (r.ok) {{
-          document.getElementById('auth-overlay').style.display = 'none';
-          document.getElementById('app').style.display = 'flex';
-          init();
-        }} else {{
-          localStorage.removeItem('pp_auth');
-        }}
-      }}).catch(function() {{}});
+  if (!storedAuth) return;
+  authHeader = storedAuth;
+  api('GET', '/api/state').then(function(r) {{
+    if (r.ok) {{
+      document.getElementById('auth-overlay').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      init();
+    }} else {{
+      localStorage.removeItem('pp_auth');
     }}
-  }});
+  }}).catch(function() {{}});
 }})();
 """
 

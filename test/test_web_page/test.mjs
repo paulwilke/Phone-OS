@@ -12,6 +12,7 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
+import vm from 'vm';
 import { fileURLToPath } from 'url';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -185,6 +186,128 @@ assert(/id="wifi-extend-btn"[^>]*\s+data-t="web\.status\.wifi-extend-btn"/.test(
 assert(html.includes("api('POST', '/api/wifi-extend'") && html.includes("api('POST', '/api/wifi-off'"), 'the two buttons call their routes');
 assert(html.includes("LOG_PATH = '/system.log'") && html.includes("'/api/file?path=' + LOG_PATH") && !html.includes('/api/log'), 'the log tab reads and clears /system.log through the file route');
 assert(html.includes('w.seconds_left') && html.includes('w.state') && !html.includes('d.wifi_mode'), 'the status reads the fields the API sends');
+
+// ---------- test 9: the page runs against a device with a web password ----------
+// Every /api/ route needs the password, the catalogs too, so the page must fetch its language only
+// after the login. The old page fetched it at load, got 401, stored the error object as its catalog
+// and showed raw keys ("web.tab.settings") for the whole session.
+console.log('\nTest: with a web password the login screen is English and the language comes after the login');
+const PASSWORD = 'test-password-1';
+const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+
+function fakeElement(id) {
+  const el = {
+    id, textContent: '', value: '', hidden: false, style: {}, children: [],
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    files: [], listeners: {}, attrs: {},
+    addEventListener(type, fn) { this.listeners[type] = fn; },
+    getAttribute(n) { return this.attrs[n] ?? null; },
+    setAttribute(n, v) { this.attrs[n] = v; },
+    appendChild(c) { this.children.push(c); return c; },
+    querySelector: () => fakeElement('q'), querySelectorAll: () => [],
+    focus() {}, click() {}, remove() {},
+  };
+  return el;
+}
+
+async function runPage({ storedAuth, storedLang, browserLang, catalogs, wrongFirst }) {
+  const store = {};
+  if (storedAuth) store.pp_auth = storedAuth;
+  if (storedLang) store.pp_lang = storedLang;
+  const els = {};
+  const dataT = [];
+  // data-t elements of the markup, with the id they carry (for the tabs and the overlay)
+  for (const m of html.matchAll(/<(\w+)([^>]*?)data-t="([^"]+)"([^>]*)>/g)) {
+    const el = fakeElement((m[2] + m[4]).match(/id="([^"]+)"/)?.[1] || '');
+    el.attrs['data-t'] = m[3];
+    el.attrs['data-tab'] = (m[2] + m[4]).match(/data-tab="([^"]+)"/)?.[1];
+    dataT.push(el);
+  }
+  const document = {
+    getElementById(id) { return els[id] ??= fakeElement(id); },
+    querySelectorAll(sel) { return sel === '[data-t]' ? dataT : []; },
+    createElement: (tag) => fakeElement(tag),
+    title: '', body: fakeElement('body'),
+  };
+  const calls = [];
+  const fetchFn = async (path, opts = {}) => {
+    const authed = opts.headers && opts.headers.Authorization === 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+    calls.push({ path, authed });
+    const reply = (status, body) => ({ ok: status < 400, status, json: async () => body });
+    if (!authed) return reply(401, { error: 'Unauthorized' });
+    if (path === '/api/state') return reply(200, {});
+    if (path === '/api/languages') return reply(200, Object.keys(catalogs).map((c) => ({ code: c, name: c, native: c })));
+    const l = path.match(/^\/api\/lang\/(.+)$/);
+    if (l) return catalogs[l[1]] ? reply(200, catalogs[l[1]]) : reply(404, { error: 'Unknown language' });
+    return reply(200, {});
+  };
+  const context = {
+    document, fetch: fetchFn, btoa: (x) => Buffer.from(x).toString('base64'), console,
+    navigator: { language: browserLang || 'en-US' },
+    localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+    setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, FileReader: function () {}, Blob: function () {},
+    URL: { createObjectURL: () => '' }, confirm: () => true, alert() {},
+  };
+  context.window = context;
+  vm.createContext(context);
+  vm.runInContext(script, context);
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+  await settle();
+  const shown = () => dataT.map((e) => e.textContent);
+  return { els, dataT, calls, store, settle, shown, document, context };
+}
+
+const catalogs = { en, de };
+const rawKey = (arr) => arr.filter((x) => /^web\./.test(x));
+// what the parent sees on the login screen: the overlay's words (the panels behind it are hidden)
+const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith('web.auth.')).map((e) => e.textContent);
+
+// (a) not logged in: English words on the login screen, no key, and no request that would fail
+{
+  const pg = await runPage({ browserLang: 'de-DE', catalogs });
+  const overlay = pg.dataT.filter((e) => e.attrs['data-t'].startsWith('web.auth.')).map((e) => e.textContent);
+  assert(overlay.join('|') === 'Password|Web password|Enter', 'login overlay shows the English fallback words: ' + overlay.join('|'));
+  assert(rawKey(overlayWords(pg)).length === 0, 'no raw web.* key is shown on the login screen');
+  assert(pg.calls.length === 0, 'the page makes no request before the login');
+
+  // (b) wrong password: English fallback message
+  pg.els['auth-pw'] = Object.assign(fakeElement('auth-pw'), { value: 'wrong-password' });
+  await pg.els['auth-form'].listeners.submit({ preventDefault() {} });
+  await pg.settle();
+  assert(pg.els['auth-error'].textContent === 'Wrong password.' && pg.els['auth-error'].hidden === false,
+    'a wrong password shows the English fallback message: ' + pg.els['auth-error'].textContent);
+
+  // (c) right password: the browser language (German) is loaded after the login
+  pg.els['auth-pw'].value = PASSWORD;
+  await pg.els['auth-form'].listeners.submit({ preventDefault() {} });
+  await pg.settle();
+  const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
+  assert(tabs.includes('Einstellungen'), 'after the login the tabs are German: ' + tabs.join('|'));
+  assert(rawKey(pg.shown()).length === 0, 'no raw web.* key is shown after the login');
+  assert(pg.calls.filter((c) => c.path !== '/api/state' && !c.authed).length === 0, 'the catalog and every later request carry the password');
+}
+
+// (d) stored credential and stored language: no login, German at once
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const pg = await runPage({ storedAuth: auth, storedLang: 'de', browserLang: 'en-US', catalogs });
+  const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
+  assert(tabs.includes('Einstellungen') && rawKey(pg.shown()).length === 0, 'stored credential: the stored language is shown: ' + tabs.join('|'));
+}
+
+// (e) a language the device does not have falls back to English
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const pg = await runPage({ storedAuth: auth, browserLang: 'xx-XX', catalogs });
+  const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
+  assert(tabs.includes('Settings') && rawKey(pg.shown()).length === 0, 'unknown language: English words: ' + tabs.join('|'));
+}
+
+// (f) a stored credential that is no longer right: back to the login screen, English words
+{
+  const pg = await runPage({ storedAuth: 'Basic ' + Buffer.from(':changed').toString('base64'), storedLang: 'de', catalogs });
+  assert(pg.store.pp_auth === undefined && rawKey(overlayWords(pg)).length === 0, 'a stale credential is dropped and the login screen stays English');
+}
 
 // ---------- summary ----------
 console.log(`\n${pass + fail} checks: ${pass} passed, ${fail} failed.`);
