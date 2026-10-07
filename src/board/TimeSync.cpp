@@ -9,9 +9,19 @@ int64_t seconds(uint32_t later, uint32_t earlier) { return (int64_t)later - (int
 int64_t absolute(int64_t v) { return v < 0 ? -v : v; }
 }  // namespace
 
-void TimeSync::adopt(uint32_t epoch, Source source, const char* why) {
+// The zone the clock has from now on: the network's when it offered one, else the one it has, and the host's
+// named zone before both. Called with the new time already set, because a named zone depends on the date
+// (summer time).
+void TimeSync::applyZone(const int* networkZone) {
+  int offset = networkZone ? *networkZone : clock_.tzOffsetMinutes();
+  if (zone_) offset = zone_(clock_.epochUtc(), offset);
+  clock_.setTzOffsetMinutes(offset);
+}
+
+void TimeSync::adopt(uint32_t epoch, Source source, const char* why, const int* networkZone) {
   const uint32_t before = clock_.epochUtc();
   if (!clock_.setEpochUtc(epoch)) return;
+  applyZone(networkZone);  // before the line: it is stamped with the local time
   source_ = source;
   if (source == Source::Satellite) satelliteAtMs_ = clock_.uptimeMillis();
   std::string line = std::string("Clock: set from the ") + (source == Source::Satellite ? "satellites" : "network");
@@ -56,8 +66,7 @@ void TimeSync::offerNetwork(uint32_t epoch, int tz) {
   const uint32_t now = clock_.epochUtc();
 
   if (now == 0) {
-    adopt(epoch, Source::Network, "first time");
-    clock_.setTzOffsetMinutes(tz);
+    adopt(epoch, Source::Network, "first time", &tz);
     return;
   }
   if (source_ == Source::Satellite && uptime - satelliteAtMs_ < kSatellitePrecedenceMs) return;
@@ -75,9 +84,9 @@ void TimeSync::offerNetwork(uint32_t epoch, int tz) {
   }
   if (take) {
     held_ = false;
-    if (absolute(off) > (int64_t)kSatelliteStepSeconds) adopt(epoch, Source::Network, why);
+    if (absolute(off) > (int64_t)kSatelliteStepSeconds) adopt(epoch, Source::Network, why, &tz);
     else if (source_ == Source::None) source_ = Source::Network;
-    clock_.setTzOffsetMinutes(tz);
+    applyZone(&tz);
     return;
   }
   held_ = true;

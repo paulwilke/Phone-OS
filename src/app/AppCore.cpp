@@ -60,11 +60,15 @@ bool AppCore::setInterfaceLanguage(const std::string& code) {
   return true;
 }
 
+int AppCore::zoneOffsetMinutes(uint32_t epochUtc, int fallbackMinutes) const {
+  if (!profile_.timeZone || epochUtc == 0) return fallbackMinutes;
+  return tz::offsetMinutes(*profile_.timeZone, epochUtc);
+}
+
 void AppCore::applyTimeZone() {
   const uint32_t epoch = clock_.epochUtc();
   if (!profile_.timeZone || epoch == 0) return;
-  const int offset = tz::offsetMinutes(*profile_.timeZone, epoch);
-  clock_.setTzOffsetMinutes(offset);
+  clock_.setTzOffsetMinutes(zoneOffsetMinutes(epoch, clock_.tzOffsetMinutes()));
 }
 
 void AppCore::start() {

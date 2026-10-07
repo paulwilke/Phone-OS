@@ -3,6 +3,7 @@
 
 #include <unity.h>
 
+#include <BoardStorageRigs.h>
 #include <board/DeviceClock.h>
 #include <board/TimeSync.h>
 #include <fakes/FakeEventLog.h>
@@ -219,9 +220,72 @@ void test_every_change_of_the_clock_is_one_line_in_the_log() {
   TEST_ASSERT_TRUE(r.log.contains("set from the satellites, 3600 s from the time before"));
 }
 
+// --- the line about the change is in local time ---------------------------------------------------
+//
+// The log stamps a line with the local time of day. The line "Clock: set from ..." was written before the zone
+// was applied, so on a device that had just started (zone unknown: 0) it showed UTC, two hours behind the
+// lines around it in summer in Germany.
+
+namespace {
+// The log on the SD card, written by the real SdEventLog, over the real DeviceClock.
+struct LogRig {
+  SdStack stack;
+  FakeMillis ms;
+  DeviceClock clock{ms};
+  SdEventLog log{stack.card, clock};
+  TimeSync sync{clock, log};
+  // "<epoch> <HH:MM> <text>" of the first line
+  std::string first() {
+    const std::string text = stack.volume.file(kSystemLogPath);
+    return text.substr(0, text.find('\n'));
+  }
+  static std::string at(uint32_t epoch, int offsetMinutes) {
+    const int64_t second = (((int64_t)epoch + offsetMinutes * 60) % 86400 + 86400) % 86400;
+    char out[32];
+    snprintf(out, sizeof(out), "%u %02d:%02d ", (unsigned)epoch, (int)(second / 3600), (int)(second / 60 % 60));
+    return out;
+  }
+};
+}  // namespace
+
+void test_the_line_about_the_first_network_time_has_the_networks_zone() {
+  LogRig r;
+  r.sync.offerNetwork(kNoon, 120);
+  TEST_ASSERT_TRUE(r.first().rfind(LogRig::at(kNoon, 120) + "Clock: set from the network", 0) == 0);
+}
+
+void test_the_line_about_a_time_from_the_satellites_has_the_named_zone() {
+  LogRig r;
+  r.sync.setZoneRule([](uint32_t, int) { return 120; });  // Europe/Berlin in summer: the host's named zone
+  r.sync.offerSatellite(kNoon);
+  TEST_ASSERT_TRUE(r.first().rfind(LogRig::at(kNoon, 120) + "Clock: set from the satellites", 0) == 0);
+  TEST_ASSERT_EQUAL(120, r.clock.tzOffsetMinutes());
+}
+
+void test_a_named_zone_has_precedence_over_the_zone_of_the_network_in_that_line_too() {
+  LogRig r;
+  r.sync.setZoneRule([](uint32_t, int) { return 60; });   // the named zone says one hour
+  r.sync.offerNetwork(kNoon, 120);                         // the network says two
+  TEST_ASSERT_TRUE(r.first().rfind(LogRig::at(kNoon, 60) + "Clock: set from the network", 0) == 0);
+  TEST_ASSERT_EQUAL(60, r.clock.tzOffsetMinutes());
+}
+
+void test_the_zone_rule_is_asked_with_the_new_time() {
+  // summer time depends on the date: the rule must see the time that was just set, not the old one
+  LogRig r;
+  uint32_t asked = 0;
+  r.sync.setZoneRule([&asked](uint32_t epoch, int fallback) { asked = epoch; return fallback; });
+  r.sync.offerSatellite(kNoon);
+  TEST_ASSERT_EQUAL_UINT32(kNoon, asked);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_the_first_time_from_the_network_is_taken_with_its_zone);
+  RUN_TEST(test_the_line_about_the_first_network_time_has_the_networks_zone);
+  RUN_TEST(test_the_line_about_a_time_from_the_satellites_has_the_named_zone);
+  RUN_TEST(test_a_named_zone_has_precedence_over_the_zone_of_the_network_in_that_line_too);
+  RUN_TEST(test_the_zone_rule_is_asked_with_the_new_time);
   RUN_TEST(test_the_first_time_from_the_satellites_is_taken);
   RUN_TEST(test_a_time_before_2020_or_from_2070_on_is_ignored_and_said_once);
   RUN_TEST(test_the_last_second_before_2070_is_a_time);

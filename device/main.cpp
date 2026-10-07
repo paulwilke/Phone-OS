@@ -225,6 +225,8 @@ void setup() {
       boot::Capabilities{deviceClock, *power, *modem, *gnss, haptic, eventLog, configStore, wifi, tcpServer, flashAssets, display,
                          [] { return (uint32_t)esp_random(); }, firmwareVersion.c_str(), nullptr, &motion, "T-Deck Pro MAX", &messageLog},
       translator, millis()));
+  // The named zone of settings.toml is in force when the time sync writes its line about a new time.
+  timeSync.setZoneRule([](uint32_t epoch, int fallback) { return runtime ? runtime->core().zoneOffsetMinutes(epoch, fallback) : fallback; });
   power->setEnabled(PowerDomain::Cellular, true);
   eventLog.log("Boot: the runtime runs, firmware " + firmwareVersion);
 }

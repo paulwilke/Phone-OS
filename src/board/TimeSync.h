@@ -18,9 +18,16 @@
 //      the two readings predicts. A source that lies once does not move the clock; one that is right twice does.
 //   6. The zone offset of the network follows the time: it is taken when the time is taken or agrees.
 //
+//   7. The zone is in force before the line about a change is written. The log stamps a line with the
+//      local time of day, so a line written between "the time is set" and "the zone follows" would show
+//      the time of the old zone (UTC on a device that has just started: two hours behind the other lines
+//      in summer in Germany). The zone is the network's, or, when the host has a named zone configured
+//      (setZoneRule), that one, which has precedence.
+//
 // Every change of the clock is one line in the log; a time that is refused is said once for each reason.
 
 #include <cstdint>
+#include <functional>
 
 #include "../hal/Clock.h"
 #include "../hal/EventLog.h"
@@ -37,6 +44,11 @@ public:
 
   TimeSync(Clock& clock, EventLog& log) : clock_(clock), log_(log) {}
 
+  // The offset in force at `epochUtc` when the zone the clock would take is `fallbackMinutes`: the host's named
+  // zone if it has one, else the fallback. Without a rule the fallback is used.
+  using ZoneRule = std::function<int(uint32_t epochUtc, int fallbackMinutes)>;
+  void setZoneRule(ZoneRule rule) { zone_ = std::move(rule); }
+
   void offerNetwork(uint32_t epochUtc, int tzOffsetMinutes);
   void offerSatellite(uint32_t epochUtc);
 
@@ -45,10 +57,12 @@ public:
 
 private:
   bool plausible(uint32_t epoch) const { return epoch >= Clock::kEarliestEpoch && epoch < Clock::kLatestEpoch; }
-  void adopt(uint32_t epoch, Source source, const char* why);
+  void adopt(uint32_t epoch, Source source, const char* why, const int* networkZone = nullptr);
+  void applyZone(const int* networkZone);
 
   Clock& clock_;
   EventLog& log_;
+  ZoneRule zone_;
   Source source_ = Source::None;
   uint64_t satelliteAtMs_ = 0;
 

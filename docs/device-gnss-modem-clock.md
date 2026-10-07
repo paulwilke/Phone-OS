@@ -34,7 +34,7 @@ The board has no real-time clock. `DeviceClock` makes the 64-bit uptime of the `
 3. While the clock is unknown, any time is taken.
 4. A time from the satellites corrects the clock when it differs by more than 2 s, and a clock set from them is not overruled by the network for 24 hours.
 5. A network time within 30 s of the clock is taken (a drift, a small step back); one further away, **ahead or behind (a jump back)**, is held back as suspect and taken only when the next, different network reading agrees with it as much as the time between them predicts. A source that lies once does not move the clock; one that is right twice does. The zone offset is held back with the time.
-6. Every change of the clock is one line in the log.
+6. Every change of the clock is one line in the log, **written with the zone already in force**. The log stamps a line with the local time of day; the line used to be written between "the time is set" and "the zone follows", so on a device that had just started it showed UTC (seen 2026-10-07: `16:07` among `18:07` lines in Germany in summer). The zone is the network's, or the named zone of `settings.toml` when there is one (it has precedence, and depends on the date: summer time); the host hands the named zone to `TimeSync::setZoneRule`, answered by `AppCore::zoneOffsetMinutes`. Not verified on the device.
 
 ## Not verified on the device
 

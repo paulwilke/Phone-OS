@@ -225,6 +225,10 @@ public:
   // Clock values for the state response.
   uint32_t epochUtc() { return clock_.epochUtc(); }
   int tzOffsetMinutes() { return clock_.tzOffsetMinutes(); }
+  // The offset in force at `epochUtc`: the named zone of settings.toml when there is one (it has precedence over
+  // the network's), else `fallbackMinutes`. The time sync asks this when it sets the clock, so that the line it
+  // logs about it is already in local time.
+  int zoneOffsetMinutes(uint32_t epochUtc, int fallbackMinutes) const;
 
 private:
   // Messaging::Hooks
