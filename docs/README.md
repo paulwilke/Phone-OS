@@ -4,6 +4,9 @@ The documents describe what exists in this repository — each one is written fr
 
 | Document | Covers |
 |---|---|
+| [user-guide.md](user-guide.md) | the guide for the parents: the device, school time, SOS, the parents' page, settings, battery, what to do without network or SIM or with a blank screen |
+| [de/benutzerhandbuch.md](de/benutzerhandbuch.md) | the same guide in German, with the same headings |
+| [fr/guide-utilisateur.md](fr/guide-utilisateur.md) | the same guide in French, with the same headings |
 | [i18n.md](i18n.md) | translation library, catalog format, plural rules, user catalogs |
 | [contacts.md](contacts.md) | phone number normalisation, the whitelist and its file format |
 | [quiet-hours.md](quiet-hours.md) | school-time windows, midnight crossing, behaviour without a clock |

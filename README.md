@@ -4,7 +4,9 @@ A distraction-free emergency phone for children, built for the LilyGO T-Deck Pro
 (ESP32-S3, e-ink display, 4G modem, LoRa radio, GPS): call the parents, read and write
 SMS, send the position at the press of a button, and nothing else. The user interface
 is multilingual — English, German and French ship with it, and anyone can add a
-language by writing one text file.
+language by writing one text file. Parents start with the user's guide:
+[English](docs/user-guide.md), [Deutsch](docs/de/benutzerhandbuch.md),
+[Français](docs/fr/guide-utilisateur.md).
 
 > **Status: being rebuilt from the ground up.** This repository grows module by module;
 > each module arrives only when it is finished, tested and documented. What exists today
