@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Counter-checks of two rules of scripts/check_docs.py: the user's guide and its two translations must have the
-same headings in the same order, and every document of docs/ must be linked from docs/README.md (with the list of open
-work, docs/open-points.md, among them). The check must say so when a rule is broken. Runs the script on small trees
+"""Counter-checks of three rules of scripts/check_docs.py: the user's guide and its two translations must have the
+same headings in the same order, every document of docs/ must be linked from docs/README.md (with the list of open
+work, docs/open-points.md, among them), and VERSION, the newest heading of CHANGELOG.md and the release notes
+docs/release-<major>.<minor>.md must agree. The check must say so when a rule is broken. Runs the script on small trees
 built on the fly (--root); the other rules of the script report on those trees too, so the cases look only for the
 findings of the rule they test.
 
@@ -64,8 +65,45 @@ INDEX_CASES = [
 ]
 
 
+def run_release(files):
+    with tempfile.TemporaryDirectory() as root:
+        for rel, text in files.items():
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        p = subprocess.run([sys.executable, SCRIPT, "--root", root], capture_output=True, text=True)
+        return [l for l in p.stdout.split("\n") if l.startswith(("CHANGELOG.md", "docs/release-"))]
+
+
+RELEASE_OK = {"VERSION": "4.0.0\n", "CHANGELOG.md": "# Changelog\n\n## 4.0.0 - the release\n\ntext\n\n## 3.2\n",
+              "docs/release-4.0.md": "# Release 4.0\n\nVersion 4.0.0.\n"}
+
+RELEASE_CASES = [
+    ("a version with its changelog heading and release notes passes", RELEASE_OK, []),
+    ("a version that the changelog does not name first is found", {**RELEASE_OK, "VERSION": "4.0.1\n", "docs/release-4.0.md": "4.0.1\n"},
+     ["CHANGELOG.md: the newest heading is 4.0.0, VERSION says 4.0.1"]),
+    ("a missing changelog is found", {k: v for k, v in RELEASE_OK.items() if k != "CHANGELOG.md"}, ["CHANGELOG.md: the changelog does not exist"]),
+    ("a changelog without a release heading is found", {**RELEASE_OK, "CHANGELOG.md": "# Changelog\n"},
+     ["CHANGELOG.md: the newest heading is missing"]),
+    ("missing release notes are found", {k: v for k, v in RELEASE_OK.items() if k != "docs/release-4.0.md"},
+     ["docs/release-4.0.md: the release notes of VERSION 4.0.0 do not exist"]),
+    ("release notes of another version are found", {**RELEASE_OK, "docs/release-4.0.md": "# Release 4.0\n\nVersion 4.0.9.\n"},
+     ["docs/release-4.0.md: does not name the version 4.0.0"]),
+    ("a patch release is read against the notes of its minor version",
+     {"VERSION": "4.0.1\n", "CHANGELOG.md": "## 4.0.1\n", "docs/release-4.0.md": "4.0.1\n"}, []),
+]
+
+
 def main():
     failed = 0
+    for name, files, needles in RELEASE_CASES:
+        got = run_release(files)
+        ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)
+        print(("ok   " if ok else "FAIL ") + name)
+        if not ok:
+            failed += 1
+            print("\n".join(got))
     for name, files, needles in INDEX_CASES:
         got = run_index(files)
         ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)

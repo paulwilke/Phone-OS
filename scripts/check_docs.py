@@ -9,7 +9,8 @@ Checks every Markdown file and every source file:
   * `paths/in/backticks` that look like repository files exist;
   * no placeholder markers (TODO, FIXME, XXX, TBD, "for now", "legacy", "deprecated",
     "temporary", "decision to confirm") — open work belongs in docs/open-points.md, not scattered over the files;
-  * VERSION holds one `major.minor.patch` line;
+  * VERSION holds one `major.minor.patch` line, the newest heading of CHANGELOG.md names that version, and
+    docs/release-<major>.<minor>.md exists and names it, so that a version is never raised without its notes;
   * every screen name of src/ui/ScreenIds.h has a docs/screen-<name>.md and every such document names a
     screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
   * every Markdown file under docs/ is linked from docs/README.md, so that no document is a stranger, and
@@ -58,6 +59,34 @@ def version_problem():
     if not re.fullmatch(r"\d+\.\d+\.\d+\n?", text):
         return f"VERSION: expected `major.minor.patch`, found {text.strip()!r}"
     return None
+
+
+def release_problems():
+    """The version, the changelog and the release notes agree. Skipped while VERSION itself is broken."""
+    try:
+        version = open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip()
+    except OSError:
+        return []
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        return []
+    problems = []
+    try:
+        changelog = open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8").read()
+    except OSError:
+        problems.append("CHANGELOG.md: the changelog does not exist")
+    else:
+        newest = re.search(r"^## (\S+)", changelog, re.M)
+        if not newest or newest.group(1) != version:
+            problems.append(f"CHANGELOG.md: the newest heading is {newest.group(1) if newest else 'missing'}, VERSION says {version}")
+    notes = "docs/release-" + ".".join(version.split(".")[:2]) + ".md"
+    try:
+        text = open(os.path.join(ROOT, notes), encoding="utf-8").read()
+    except OSError:
+        problems.append(f"{notes}: the release notes of VERSION {version} do not exist")
+    else:
+        if version not in text:
+            problems.append(f"{notes}: does not name the version {version}")
+    return problems
 
 
 def screen_problems():
@@ -134,7 +163,7 @@ def index_problems():
 
 
 def main():
-    problems = screen_problems() + guide_problems() + index_problems()
+    problems = screen_problems() + guide_problems() + index_problems() + release_problems()
     if version_problem():
         problems.append(version_problem())
     for path in files():

@@ -28,8 +28,8 @@ node test/test_demo_page/test.mjs # the demo page
 python3 scripts/check_i18n.py   # language catalogs against the English reference
 python3 scripts/check_i18n.py --usage # every catalog key is used by code or a test of its own set; no unknown key in the code; no sentence as a literal in src/ui/
 python3 test/test_check_i18n/test_check.py # the catalog check itself (wrong set, both sets, a missing file, the limit, a sentence in a screen)
-python3 scripts/check_docs.py   # broken links, missing files, placeholder markers, non-English text, VERSION, screen names against their documents and the runtime, every document in docs/README.md, the three guides with the same headings
-python3 test/test_check_docs/test_check.py # the guide rule and the index rule fire when they are broken
+python3 scripts/check_docs.py   # broken links, missing files, placeholder markers, non-English text, VERSION with the changelog and the release notes, screen names against their documents and the runtime, every document in docs/README.md, the three guides with the same headings
+python3 test/test_check_docs/test_check.py # the guide rule, the index rule and the release rule fire when they are broken
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing, drivers include only hal/
 python3 test/test_check_layers/test_check.py # the layer rules fire on trees that break them
 python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.md is ticked and has its test
@@ -51,4 +51,4 @@ python3 scripts/privacy_check.py
 - Keep a pull request to one subject, and commits small, each with a message that says what changed and why.
 - A pull request description lists what it adds, what it deliberately leaves out and why, and anything that was unclear.
 - A new module arrives complete: header, implementation, tests, and a section in `docs/` written from the code that describes what it does, its rules and its edge cases.
-- Keep the version in [`VERSION`](VERSION) as `major.minor.patch`.
+- Keep the version in [`VERSION`](VERSION) as `major.minor.patch`. Raising it takes a heading of that version at the top of [CHANGELOG.md](CHANGELOG.md), the notes `docs/release-<major>.<minor>.md` and `python3 scripts/gen_device_assets.py`, which carries it into the firmware; `scripts/check_docs.py` and `gen_device_assets.py --check` fail when one of them is missing.

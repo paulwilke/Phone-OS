@@ -21,7 +21,7 @@ const char* const kAlways[] = {
     "SOS ping (emergency) started to Parent One",
     "Quiet hours lifted by emergency until 12:30",
     "Restart requested from the web page",
-    "Firmware 0.1.0 started",
+    "Firmware 4.0.0 started",
     "Shutdown requested",
     "Config written",
     "WEB: settings changed",

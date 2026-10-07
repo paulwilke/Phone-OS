@@ -28,6 +28,7 @@ The documents describe what exists in this repository — each one is written fr
 | [device-gnss-modem-clock.md](device-gnss-modem-clock.md) | the NMEA reader and its rules, the receiver and the modem's lines on the board, the clock and which time to believe |
 | [device-storage-network.md](device-storage-network.md) | the card (mounting, the safe write, power loss, the logs), Wi-Fi, the TCP server and the page in the firmware |
 | [hardware-drivers.md](hardware-drivers.md) | every driver: what it does, from what, what is tested on the host, what is not verified; the rules of the lessons and their tests |
+| [release-4.0.md](release-4.0.md) | what release 4.0 is and is not, what was checked and where, the owner's checklist state, the decisions that belong to the owner |
 | [bring-up.md](bring-up.md) | the owner's checklist for the first start, with empty date columns |
 | [device-console.md](device-console.md) | the firmware's wiring and loop, the USB console and the two host tools |
 | [device-display.md](device-display.md) | the e-ink pipeline (frame buffer, dirty rectangle, refresh sequences) and what is not built: the panel's own values |
