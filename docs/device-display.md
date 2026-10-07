@@ -27,4 +27,4 @@ Everything that is not the wire:
 
 ## Unverified, and cannot be verified without the panel
 
-Every value of a profile; that the old/new data registers (0x10 and 0x13) behave as the pipeline assumes for this panel's partial waveform; the partial window format; the polarity of the data; the refresh times (measured on the device earlier with another library: about 430 to 480 ms partial, 1.1 s full); the first picture. The owner's checklist (the bring-up list of the last part of the work) starts with them.
+Every value of a profile; that the old/new data registers (0x10 and 0x13) behave as the pipeline assumes for this panel's partial waveform; the partial window format; the polarity of the data; the refresh times (measured on the device earlier with another library: about 430 to 480 ms partial, 1.1 s full); the first picture. The owner's checklist ([bring-up.md](bring-up.md)) lists them.

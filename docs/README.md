@@ -23,6 +23,8 @@ The documents describe what exists in this repository — each one is written fr
 | [device.md](device.md) | the firmware's platform code: where what lives, the pin map, the seams and their fakes, the start-up order, how to build |
 | [device-gnss-modem-clock.md](device-gnss-modem-clock.md) | the NMEA reader and its rules, the receiver and the modem's lines on the board, the clock and which time to believe |
 | [device-storage-network.md](device-storage-network.md) | the card (mounting, the safe write, power loss, the logs), Wi-Fi, the TCP server and the page in the firmware |
+| [hardware-drivers.md](hardware-drivers.md) | every driver: what it does, from what, what is tested on the host, what is not verified; the rules of the lessons and their tests |
+| [bring-up.md](bring-up.md) | the owner's checklist for the first start, with empty date columns |
 | [device-console.md](device-console.md) | the firmware's wiring and loop, the USB console and the two host tools |
 | [device-display.md](device-display.md) | the e-ink pipeline (frame buffer, dirty rectangle, refresh sequences) and what is not built: the panel's own values |
 | [device-input.md](device-input.md) | keyboard, touch and the three keys under the screen, vibration and the motion sensor on the board: the decoding, the layout, what is host-tested |

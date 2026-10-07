@@ -1,6 +1,6 @@
 # Hardware lessons: the T-Deck Pro MAX
 
-Things that went wrong on the real device, why, and the rule that keeps them from coming back. Each entry says what was measured, not what was assumed. The device drivers (a later work package) must implement every rule marked **Driver rule**; the host tests cannot prove them, so each rule also names how the owner checks it on the device.
+Things that went wrong on the real device, why, and the rule that keeps them from coming back. Each entry says what was measured, not what was assumed. The device drivers implement every rule marked **Driver rule** ([hardware-drivers.md](hardware-drivers.md) names the test of each); the host tests cannot prove them on the device, so each rule also names how the owner checks it there ([bring-up.md](bring-up.md)).
 
 ## The fuel gauge ships with the wrong battery size
 

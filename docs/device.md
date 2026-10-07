@@ -35,7 +35,7 @@ The rule behind the split: **a bug found on the device gets a host test.** The h
 pio run -e device      # the firmware, compile-only; CI does the same
 ```
 
-The board description is `boards/t-deck_pro_max.json` (ESP32-S3, 16 MB flash, 8 MB PSRAM, USB serial on the processor's own port). **A build is not a test, and a test on the host is not a test on the device:** everything about behaviour on the device stays "not verified" until the owner's checklist (the bring-up list of the last part of the work) says otherwise. Flashing is the owner's decision.
+The board description is `boards/t-deck_pro_max.json` (ESP32-S3, 16 MB flash, 8 MB PSRAM, USB serial on the processor's own port). **A build is not a test, and a test on the host is not a test on the device:** everything about behaviour on the device stays "not verified" until the owner's checklist ([bring-up.md](bring-up.md)) says otherwise. Flashing is the owner's decision.
 
 ## The console and the serial port
 
