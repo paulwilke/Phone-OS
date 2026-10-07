@@ -48,7 +48,7 @@ config.features.free_text.help = "Allow the child to write free-text messages an
 config.features.radio.label = "Radio"
 config.features.radio.help = "Allow the long-range radio (it still starts only on request)."
 config.features.parent_tools.label = "Parent tools"
-config.features.parent_tools.help = "Show the settings and Wi-Fi pages on the device."
+config.features.parent_tools.help = "Show the Wi-Fi and Status pages on the device."
 config.features.message_vibration.label = "Message vibration"
 config.features.message_vibration.help = "Vibrate when an SMS arrives."
 config.features.call_vibration.label = "Call vibration"
@@ -60,7 +60,7 @@ config.features.modem_sleep.help = "Allow the modem to sleep when idle to save b
 
 config.remote_queries.label = "Remote queries"
 config.remote_queries.notice.label = "Query notice"
-config.remote_queries.notice.help = "How visible a remote location query is on the device: silent (log only), history, or history and a notice."
+config.remote_queries.notice.help = "How visible a remote location query is on the device: silent (log only), history (also in the message history), or notify (history and a notice)."
 
 config.time.label = "Time"
 config.time.timezone.label = "Time zone"
@@ -116,7 +116,7 @@ config.contact.number.help = "Phone number in E.164 format (e.g. +491701111111).
 config.contact.name.label = "Name"
 config.contact.name.help = "Name shown on the device."
 config.contact.role.label = "Role"
-config.contact.role.help = "parent: may query the device by SMS and gets through in school time. family: may call and write."
+config.contact.role.help = "parent: may query the device by SMS; in school time only a text from a parent makes the device vibrate, and every call is rejected. family: may call and write."
 
 config.sim_pin.label = "SIM PIN"
 config.sim_pin.help = "4-8 digit PIN for the SIM card. Tried once per start. Leave empty if the PIN is disabled."

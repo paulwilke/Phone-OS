@@ -7,6 +7,7 @@
 #include <DeviceRig.h>
 #include <RefreshRig.h>
 #include <Shows.h>
+#include <app/Utf8.h>
 #include <ui/Fonts.h>
 #include <ui/Text.h>
 #include <ui/screens/ComposeScreen.h>
@@ -325,13 +326,15 @@ void test_a_tap_on_a_ready_made_message_sends_it_and_back_goes_back() {
 }
 
 void test_the_ready_made_messages_are_all_plain_sms_text_in_every_shipped_language() {
-  // They go out as SMS: nothing outside the 7-bit alphabet, or one message costs two.
+  // They go out as one SMS: a text with an accent is sent as UCS-2, which holds 70 characters, so each must fit
+  // in 70 and be made of printable characters. (A word like "später" is right German; plain ASCII is not asked for.)
   i18n::Translator t = languages::loaded();
   for (const std::string& code : {std::string("en"), std::string("de"), std::string("fr")}) {
     for (const char* key : {"sms.canned.on-my-way", "sms.canned.arrived", "sms.canned.call-me", "sms.canned.late", "sms.canned.ok", "sms.canned.thanks"}) {
       const std::string text = t.getIn(code, key);
       TEST_ASSERT_TRUE_MESSAGE(!text.empty() && text != key, (code + " " + key).c_str());
-      for (unsigned char c : text) TEST_ASSERT_TRUE_MESSAGE(c >= 0x20 && c < 0x7F, (code + " " + key).c_str());
+      TEST_ASSERT_TRUE_MESSAGE(utf8::count(text.c_str(), text.size()) <= 70, (code + " " + key).c_str());
+      for (unsigned char c : text) TEST_ASSERT_TRUE_MESSAGE(c >= 0x20 && c != 0x7F, (code + " " + key).c_str());
     }
   }
 }

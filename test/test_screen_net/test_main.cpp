@@ -127,7 +127,7 @@ void test_a_wrong_pin_warns_in_every_language_that_three_tries_lock_the_sim() {
   fr.rig.language("fr");
   fr.rig.modem.setSimStatus(SimStatus::PinWrong);
   fr.draw();
-  TEST_ASSERT_TRUE(fr.saysWrapped("Le PIN \xC3\xA9tait faux. Ne pas red\xC3\xA9marrer avant qu'il soit juste : trois essais rat\xC3\xA9s bloquent la SIM."));
+  TEST_ASSERT_TRUE(fr.saysWrapped("Le PIN \xC3\xA9tait faux. Ne pas red\xC3\xA9marrer avant d'avoir le bon : trois essais rat\xC3\xA9s bloquent la SIM."));
 }
 
 void test_a_network_that_allows_messages_only_is_explained_as_no_fault_of_the_device() {
