@@ -15,6 +15,8 @@ Checks every Markdown file and every source file:
     screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
   * every Markdown file under docs/ is linked from docs/README.md, so that no document is a stranger, and
     docs/open-points.md exists: open work is listed in that one place and nowhere else;
+  * a test directory of Python or Node (no C++ file) is in `test_ignore` of both host environments of
+    platformio.ini, otherwise `pio test` reports it as an error;
   * every Python file compiles, so that a script nobody runs is not left broken (one once was);
   * the user's guide and its translations have the same headings in the same order (level for level), so
     that a section added to one is added to all;
@@ -60,6 +62,28 @@ def version_problem():
     if not re.fullmatch(r"\d+\.\d+\.\d+\n?", text):
         return f"VERSION: expected `major.minor.patch`, found {text.strip()!r}"
     return None
+
+
+def test_ignore_problems():
+    """`pio test` takes every directory under test/ for a C++ test; a Python or Node test must be listed to be skipped."""
+    base = os.path.join(ROOT, "test")
+    try:
+        ini = open(os.path.join(ROOT, "platformio.ini"), encoding="utf-8").read()
+        names = sorted(os.listdir(base))
+    except OSError:
+        return []
+    foreign = [n for n in names if os.path.isdir(os.path.join(base, n)) and n.startswith("test_")
+               and not any(f.endswith(".cpp") for f in os.listdir(os.path.join(base, n)))
+               and any(f.endswith((".py", ".mjs")) for f in os.listdir(os.path.join(base, n)))]
+    problems = []
+    for env in ("native", "native-asan"):
+        section = re.search(r"^\[env:" + re.escape(env) + r"\]\n(.*?)(?=^\[|\Z)", ini, re.M | re.S)
+        ignored = re.search(r"test_ignore =\n((?:[ \t]+\w+\n)*)", section.group(1)) if section else None
+        listed = set(ignored.group(1).split()) if ignored else set()
+        for name in foreign:
+            if name not in listed:
+                problems.append(f"platformio.ini: test/{name} has no C++ test and is not in test_ignore of env:{env}")
+    return problems
 
 
 def python_problems():
@@ -177,7 +201,7 @@ def index_problems():
 
 
 def main():
-    problems = screen_problems() + guide_problems() + index_problems() + release_problems() + python_problems()
+    problems = screen_problems() + guide_problems() + index_problems() + release_problems() + python_problems() + test_ignore_problems()
     if version_problem():
         problems.append(version_problem())
     for path in files():

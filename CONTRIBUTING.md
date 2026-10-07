@@ -28,8 +28,8 @@ node test/test_demo_page/test.mjs # the demo page
 python3 scripts/check_i18n.py   # language catalogs against the English reference
 python3 scripts/check_i18n.py --usage # every catalog key is used by code or a test of its own set; no unknown key in the code; no sentence as a literal in src/ui/
 python3 test/test_check_i18n/test_check.py # the catalog check itself (wrong set, both sets, a missing file, the limit, a sentence in a screen)
-python3 scripts/check_docs.py   # broken links, missing files, placeholder markers, non-English text, VERSION with the changelog and the release notes, screen names against their documents and the runtime, every document in docs/README.md, every Python file compiles, the three guides with the same headings
-python3 test/test_check_docs/test_check.py # the guide rule, the index rule, the release rule and the compile rule fire when they are broken
+python3 scripts/check_docs.py   # broken links, missing files, placeholder markers, non-English text, VERSION with the changelog and the release notes, screen names against their documents and the runtime, every document in docs/README.md, every Python file compiles, a Python or Node test is in `test_ignore` of platformio.ini (a new one is listed in both host environments, or `pio test` reports it as an error), the three guides with the same headings
+python3 test/test_check_docs/test_check.py # the guide rule, the index rule, the release rule, the compile rule and the test-ignore rule fire when they are broken
 python3 scripts/check_layers.py # no platform headers in src/, interfaces depend on nothing, drivers include only hal/
 python3 test/test_check_layers/test_check.py # the layer rules fire on trees that break them
 python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.md is ticked and has its test
