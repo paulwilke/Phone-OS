@@ -47,7 +47,8 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 | PUT, POST | `/api/wifi-off` | Ask Wi-Fi to switch off (done after the answer has gone out) |
 | PUT, POST | `/api/wifi-extend` | Keep Wi-Fi on: restarts the idle time on purpose; answers with `seconds_left`; logged like every change |
 | GET | `/api/languages` | Installed language catalog list |
-| GET | `/api/lang/<code>` | `web.*` and `config.*` translation keys for the page, from the web set (`lang/web/<code>.toml` layered with `/lang/web/<code>.toml` of the card; English where a language has no web catalog) |
+| GET | `/api/lang/<code>` | `web.*` keys and the `config.*.label` keys of the form, from the web set (`lang/web/<code>.toml` layered with `/lang/web/<code>.toml` of the card; English where a language has no web catalog) |
+| GET | `/api/lang/<code>/help` | The `config.*.help` keys of the form: a second answer, because the whole set of a language does not fit one response buffer with room to spare (`kResponseMax` 12288 bytes; shipped sets: French 10.2 KB, German 9.7 KB, English 9.0 KB together; split, the larger answer is 5.4 KB). The page asks for it right after the first one; if it fails, the fields simply have no hint (the page never shows a catalog key as text) |
 
 ### Security model
 

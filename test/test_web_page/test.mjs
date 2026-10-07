@@ -210,7 +210,7 @@ function fakeElement(id) {
   return el;
 }
 
-async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang }) {
+async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false }) {
   const store = {};
   if (storedAuth) store.pp_auth = storedAuth;
   if (storedLang) store.pp_lang = storedLang;
@@ -225,7 +225,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
   }
   const document = {
     getElementById(id) { return els[id] ??= fakeElement(id); },
-    querySelectorAll(sel) { return sel === '[data-t]' ? dataT : []; },
+    querySelectorAll(sel) { return sel === '[data-t]' ? dataT : sel === '#tabs button' ? dataT.filter((e) => e.attrs['data-tab']) : []; },
     createElement: (tag) => fakeElement(tag), querySelector: () => null,
     title: '', body: fakeElement('body'),
   };
@@ -233,12 +233,16 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
   const fetchFn = async (path, opts = {}) => {
     const authed = opts.headers && opts.headers.Authorization === 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
     calls.push({ path, authed });
-    const reply = (status, body) => ({ ok: status < 400, status, json: async () => body });
+    const reply = (status, body) => ({ ok: status < 400, status, json: async () => structuredClone(body) });
     if (!authed) return reply(401, { error: 'Unauthorized' });
     if (path === '/api/state') return reply(200, deviceLang ? { language: deviceLang } : {});
     if (path === '/api/languages') return reply(200, Object.keys(catalogs).map((c) => ({ code: c, name: c, native: c })));
     const l = path.match(/^\/api\/lang\/(.+)$/);
-    if (l) return catalogs[l[1]] ? reply(200, catalogs[l[1]]) : reply(404, { error: 'Unknown language' });
+    const h = path.match(/^\/api\/lang\/(.+)\/help$/);
+    if (h && helpFails) return reply(500, { error: 'Response too large' });
+    if (h) return catalogs[h[1]] ? reply(200, helps[h[1]] || {}) : reply(404, { error: 'Unknown language' });
+    if (l && !h) return catalogs[l[1]] ? reply(200, catalogs[l[1]]) : reply(404, { error: 'Unknown language' });
+    if (path === '/api/contacts') return reply(200, { contact: [{ number: '+491701111111', name: 'Parent One', role: 'parent' }] });
     return reply(200, {});
   };
   const context = {
@@ -254,7 +258,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
   const settle = () => new Promise((r) => setTimeout(r, 30));
   await settle();
   const shown = () => dataT.map((e) => e.textContent);
-  return { els, dataT, calls, store, settle, shown, document, context };
+  return { els, dataT, calls, store, settle, shown, document, context, T: () => vm.runInContext('T', context) };
 }
 
 const catalogs = { en, de };
@@ -341,6 +345,53 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   // a device language the page has no catalog for: English
   pg = await runPage({ storedAuth: auth, browserLang: 'de-DE', deviceLang: 'xx', catalogs });
   assert(tabsOf(pg).includes('Settings'), 'device language without a catalog: English');
+}
+
+// (h) the help texts under the form fields are a second request; a raw key is never shown
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  // the device sends the words and labels in one answer and the help texts in another
+  const split = (cat) => ({
+    main: Object.fromEntries(Object.entries(cat).filter(([k]) => !k.endsWith('.help') || !k.startsWith('config.'))),
+    help: Object.fromEntries(Object.entries(cat).filter(([k]) => k.startsWith('config.') && k.endsWith('.help'))),
+  });
+  const sEn = split(en), sDe = split(de);
+  const catalogsH = { en: sEn.main, de: sDe.main };
+  const helps = { en: sEn.help, de: sDe.help };
+  assert(Object.keys(helps.de).length >= 3, 'the German catalog has help texts to test with');
+  // open the contacts tab the way the parent does and collect what the form shows under its fields
+  const walk = (el, out) => { for (const c of el.children || []) { out.push(c); walk(c, out); } return out; };
+  const hintsOf = async (pg) => {
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'contacts').listeners.click();
+    await pg.settle();
+    return walk(pg.els['form-contacts'], []).filter((c) => c.className === 'hint').map((c) => c.textContent);
+  };
+  let pg = await runPage({ storedAuth: auth, storedLang: 'de', catalogs: catalogsH, helps });
+  let hints = await hintsOf(pg);
+  assert(hints.length === 3 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')),
+    'every field of a contact has its German help text under it: ' + hints.join(' | '));
+  assert(!hints.some((x) => /^config\./.test(x)), 'no raw help key under a field');
+  assert(pg.calls.some((c) => c.path === '/api/lang/de/help' && c.authed), 'the help texts are asked for after the login, with the password');
+
+  // the secrets tab: its first group has no section and so no heading; it used to be headed by the key "config..label"
+  pg.dataT.find((e) => e.attrs['data-tab'] === 'secrets').listeners.click();
+  await pg.settle();
+  const secretsText = walk(pg.els['form-secrets'], []).map((c) => c.textContent).filter((x) => typeof x === 'string' && x);
+  assert(secretsText.length > 0 && !secretsText.some((x) => /^config\./.test(x)), 'the secrets form shows no raw key: ' + secretsText.join(' | '));
+
+  // the help request fails (older firmware, answer too large): the words still load and the hints are left out, not shown as keys
+  pg = await runPage({ storedAuth: auth, storedLang: 'de', catalogs: catalogsH, helps, helpFails: true });
+  assert(pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent).includes('Einstellungen'), 'a failing help request leaves the language loaded');
+  hints = await hintsOf(pg);
+  assert(hints.length === 0, 'a help text that did not arrive is left out, not shown as its key: ' + hints.join(' | '));
+
+  // a language chosen in the menu brings its help texts too
+  pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: catalogsH, helps });
+  pg.els['lang-select'].value = 'de';
+  await pg.els['lang-select'].listeners.change.call(pg.els['lang-select']);
+  await pg.settle();
+  hints = await hintsOf(pg);
+  assert(hints.length === 3 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')), 'after a change in the menu the hints are in the new language');
 }
 
 // ---------- summary ----------

@@ -241,7 +241,9 @@ def generate_form_json(files, sections, keys):
             sd = section_set.get((fid, sec))
             sec_obj = {
                 "id":    sec,
-                "label": sd["label"] if sd else f"config.{sec}.label",
+                # The keys at the top of a file (secrets.toml) have no section and no heading: an empty
+                # label, not the catalog key "config..label" that no catalog has.
+                "label": sd["label"] if sd else (f"config.{sec}.label" if sec else ""),
                 "help":  sd["help"]  if sd else "",
                 "list":  sd["list"]  if sd else False,
                 "field": sd["field"] if sd else "",

@@ -65,7 +65,8 @@ private:
   void getConfigJson(const char* path, http::Response& res);
   void putConfigJson(const char* path, const http::Request& req, http::Response& res);
   void languages(http::Response& res);
-  void langCatalog(const char* code, http::Response& res);
+  // help = false: the words and labels of the page; true: the help texts of the form (a second answer)
+  void langCatalog(const char* code, http::Response& res, bool help);
   void listFiles(const http::Request& req, http::Response& res);
   void getFile(const http::Request& req, http::Response& res);
   void putFile(const http::Request& req, http::Response& res);

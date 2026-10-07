@@ -338,7 +338,8 @@ function buildField(key, value, namePrefix) {{
     if (key.max_val) input.maxLength = key.max_val;
   }}
   lbl.appendChild(input);
-  if (key.help) {{
+  // A hint whose text did not arrive is left out; a raw key is never shown to the parent.
+  if (key.help && T[key.help] !== undefined) {{
     var hint = document.createElement('div'); hint.className = 'hint';
     hint.textContent = t(key.help);
     wrap.appendChild(hint);
@@ -356,7 +357,7 @@ function buildSection(section, sectionData, fileId) {{
   var fs = document.createElement('fieldset');
   var leg = document.createElement('legend');
   leg.textContent = t(section.label);
-  fs.appendChild(leg);
+  if (section.label) fs.appendChild(leg);
   if (section.list) {{
     var entries = Array.isArray(sectionData) ? sectionData : [];
     var container = document.createElement('div');
@@ -598,7 +599,16 @@ function loadLang(code) {{
   return api('GET', '/api/lang/' + code).then(function(r) {{
     if (r.status === 404 && code !== 'en') return loadLang('en');
     if (!r.ok) throw new Error('lang ' + r.status);
-    return r.json().then(function(d) {{ T = d; currentLang = code; applyTranslations(); }});
+    return r.json().then(function(d) {{
+      // The help texts under the form fields are a second answer: all of a language does not fit one
+      // response buffer on the device. Without them the page works, the fields only have no hint.
+      return api('GET', '/api/lang/' + code + '/help').then(function(h) {{
+        return h.ok ? h.json() : {{}};
+      }}).catch(function() {{ return {{}}; }}).then(function(help) {{
+        for (var k in help) d[k] = help[k];
+        T = d; currentLang = code; applyTranslations();
+      }});
+    }});
   }});
 }}
 

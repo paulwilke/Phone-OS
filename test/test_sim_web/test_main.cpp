@@ -182,6 +182,45 @@ void test_the_page_can_be_had_in_every_shipped_language() {
   TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz").status);
 }
 
+// The form asks for the label and the help text of every field. The help texts come as a second answer
+// (/api/lang/<code>/help) because all of a language in one answer is too tight for the response buffer;
+// both answers must fit it with room for a longer user catalog, and between them they carry every key
+// the form uses, so that the page never shows a raw key.
+void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare() {
+  std::ifstream in("config/form_generated.json");
+  std::stringstream form;
+  form << in.rdbuf();
+  const std::string text = form.str();
+  std::vector<std::string> keys;
+  for (size_t at = text.find("\"config."); at != std::string::npos; at = text.find("\"config.", at + 1)) {
+    const size_t end = text.find('"', at + 1);
+    keys.push_back(text.substr(at, end - at + 1));
+  }
+  TEST_ASSERT_TRUE(keys.size() > 80);
+  Web w;
+  for (const char* code : {"en", "de", "fr"}) {
+    const Reply main = w.get(std::string("/api/lang/") + code);
+    const Reply help = w.get(std::string("/api/lang/") + code + "/help");
+    TEST_ASSERT_EQUAL(200, main.status);
+    TEST_ASSERT_EQUAL(200, help.status);
+    // Each answer uses at most 6000 of the 12288 bytes of the buffer: twice the room for a catalog whose
+    // sentences are longer, which a single answer (about 10.2 KB in French) would not have.
+    TEST_ASSERT_TRUE_MESSAGE(main.body.size() < 6000, code);
+    TEST_ASSERT_TRUE_MESSAGE(help.body.size() < 6000, code);
+    for (const std::string& key : keys) {
+      const bool isHelp = key.size() > 6 && key.compare(key.size() - 6, 6, ".help\"") == 0;
+      TEST_ASSERT_TRUE_MESSAGE((isHelp ? help : main).has(key + ":"), (std::string(code) + " " + key).c_str());
+    }
+  }
+}
+
+// Help texts are behind the password like every other route, and an unknown language has none.
+void test_the_help_texts_need_the_password_and_a_known_language() {
+  Web w;
+  TEST_ASSERT_EQUAL(401, w.get("/api/lang/en/help", "").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz/help").status);
+}
+
 // The page's words are in memory while the page can be reached and let go when Wi-Fi goes off.
 void test_the_page_catalogs_are_loaded_by_the_page_and_let_go_when_wifi_is_off() {
   Web w;
@@ -388,6 +427,8 @@ int main() {
   RUN_TEST(test_the_real_page_is_served_without_a_password);
   RUN_TEST(test_the_state_needs_the_password);
   RUN_TEST(test_the_page_can_be_had_in_every_shipped_language);
+  RUN_TEST(test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare);
+  RUN_TEST(test_the_help_texts_need_the_password_and_a_known_language);
   RUN_TEST(test_the_page_catalogs_are_loaded_by_the_page_and_let_go_when_wifi_is_off);
   RUN_TEST(test_a_user_catalog_for_the_page_changes_the_page_and_not_the_device);
   RUN_TEST(test_a_user_catalog_on_the_card_is_offered_by_the_page);
