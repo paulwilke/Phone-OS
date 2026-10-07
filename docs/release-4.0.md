@@ -8,7 +8,7 @@ The firmware of `pio run -e device`, built from this repository at the commit th
 
 ## What the release is not
 
-- **It has no radio.** The LoRa radio is not part of 4.0. The interface and the pages exist and are tested against a fake, but nothing drives the chip; the feature is off and a request to start the radio is answered with "not available". The decision to leave it out is the owner's and is open point 9.
+- **It has no radio.** The LoRa radio is not part of 4.0. The interface and the pages exist and are tested against a fake, but nothing drives the chip; the feature is off and a request to start the radio is answered with "not available". The owner decided to leave it out of 4.0; it is planned for a later release (open point 9).
 - **It is not verified on the device.** It was compiled, tested on the host and run in the simulator. The checklist below is empty because the owner has not been through it, not because it passed.
 - **It is not a published binary.** The firmware contains a sensor image whose redistribution terms are not verified and LGPL code whose conditions have not been assessed, so a binary is for the owner's own device ([../THIRD_PARTY.md](../THIRD_PARTY.md), open points 13 and 14).
 
@@ -43,7 +43,7 @@ Each one is in [open-points.md](open-points.md) with the question and a recommen
 
 | Item | Decision | Recommendation |
 |---|---|---|
-| 9 | whether 4.0 has a radio | leave it out; this release is written that way |
+| 9 | the radio | decided: not in 4.0, in a later release |
 | 13 | Meck's licence file for the copied board description | compare it and add it, or replace the board file |
 | 14 | handing out a firmware binary | do not, until the sensor image's terms are verified |
 | 16 | the tag, the repository's visibility, what happens to the old repositories | the owner's, after the checklist |

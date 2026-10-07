@@ -22,7 +22,7 @@ The owner is the person who owns the device and the repository. Software work th
 
 | # | Decision | The question | Recommendation | Owner | Described in |
 |---|---|---|---|---|---|
-| 9 | The LoRa radio | The interface, the radio page, the settings and the message path exist and are tested against a fake. There is no implementation for the chip: it needs a driver (RadioLib) and a protocol of our own, because MeshCore is not used. Decide whether version 4.0 has a radio. | Leave the radio out of 4.0: the feature is off by default. | owner | [device.md](device.md), [messaging.md](messaging.md), [screen-radio.md](screen-radio.md) |
+| 9 | The LoRa radio | The interface, the radio page, the settings and the message path exist and are tested against a fake. There is no implementation for the chip: it needs a driver (RadioLib) and a protocol of our own, because MeshCore is not used. Decided by the owner: not in 4.0, in a later release. | Build it for a later release: driver, protocol, then the trial on the device. | owner | [device.md](device.md), [messaging.md](messaging.md), [screen-radio.md](screen-radio.md) |
 | 10 | A table of APNs by operator | A built-in table by MCC and MNC, or an empty APN with an `IPV4V6` context, would let the modem register the IMS without a configured APN. Both are not built. A table is silently wrong for operators not in it. | Keep the explicit APN in the configuration. | owner | [volte.md](volte.md) |
 | 11 | The size limit of a catalog on the card | 32,768 bytes for each file. It is a security limit and was set by the owner; look at it again with real memory numbers from the device. | Keep. | owner | [translating.md](translating.md), [i18n.md](i18n.md) |
 | 12 | The self-test words | The words of the self-test page are in the device catalog although only a parent sees that page. | Keep them there: the page runs on the device and needs them without the card. | owner | [screen-selftest.md](screen-selftest.md) |
@@ -44,7 +44,6 @@ Where a word was chosen because a better one does not fit, or where two good one
 | Language | Place | Choice | Alternative |
 |---|---|---|---|
 | German | tile `home.settings` | "Option" (singular), because "Optionen" is 71 pixels | "Optionen" on a wider tile |
-| German | tile `home.motion` | "Beweg." (the page itself is "Bewegung"); "Bewegung" is 79 pixels | "Lage" |
 | German | `messages.call-back` (soft key) | "Rückruf" | "Zurückrufen" does not fit |
 | German | the words for the access point and the parents' tools | "Zugangspunkt", "Elternwerkzeuge", "Zugangsdaten" for the tab of `secrets.toml` | "Hotspot", "Elternfunktionen" |
 | German | `notice.message-sent` | "Nachricht ist raus" (colloquial) | "Nachricht gesendet" |
