@@ -101,3 +101,6 @@ jobs:
 
       - name: Privacy
         run: python3 scripts/privacy_check.py
+
+      - name: Privacy check tests
+        run: python3 test/test_privacy_check/test_history.py

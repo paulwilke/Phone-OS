@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Counter-checks of three rules of scripts/check_docs.py: the user's guide and its two translations must have the
+"""Counter-checks of four rules of scripts/check_docs.py: the user's guide and its two translations must have the
 same headings in the same order, every document of docs/ must be linked from docs/README.md (with the list of open
-work, docs/open-points.md, among them), and VERSION, the newest heading of CHANGELOG.md and the release notes
-docs/release-<major>.<minor>.md must agree. The check must say so when a rule is broken. Runs the script on small trees
-built on the fly (--root); the other rules of the script report on those trees too, so the cases look only for the
-findings of the rule they test.
+work, docs/open-points.md, among them), VERSION, the newest heading of CHANGELOG.md and the release notes
+docs/release-<major>.<minor>.md must agree, and every Python file must compile. The check must say so when a rule is
+broken. Runs the script on small trees built on the fly (--root); the other rules of the script report on those trees
+too, so the cases look only for the findings of the rule they test.
 
     python3 test/test_check_docs/test_check.py
 """
@@ -95,8 +95,34 @@ RELEASE_CASES = [
 ]
 
 
+def run_python(files):
+    with tempfile.TemporaryDirectory() as root:
+        for rel, text in files.items():
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        p = subprocess.run([sys.executable, SCRIPT, "--root", root], capture_output=True, text=True)
+        return [l for l in p.stdout.split("\n") if "does not compile" in l]
+
+
+PYTHON_CASES = [
+    ("a script that compiles passes", {"scripts/ok.py": "import os\nprint(os.name)\n"}, []),
+    ("a script that does not compile is found", {"scripts/broken.py": "import os\nimport tomli_w if False else None\n"},
+     ["scripts/broken.py:2: does not compile"]),
+    ("a broken test script is found too", {"test/x/test.py": "def f(:\n"}, ["test/x/test.py:1: does not compile"]),
+]
+
+
 def main():
     failed = 0
+    for name, files, needles in PYTHON_CASES:
+        got = run_python(files)
+        ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)
+        print(("ok   " if ok else "FAIL ") + name)
+        if not ok:
+            failed += 1
+            print("\n".join(got))
     for name, files, needles in RELEASE_CASES:
         got = run_release(files)
         ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)

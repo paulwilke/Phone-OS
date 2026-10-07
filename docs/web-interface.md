@@ -76,7 +76,7 @@ Every string the page shows is looked up through a `t(key)` function that reads 
 
 Form fields come from the embedded `FORM_SCHEMA` (a copy of `form_generated.json`). Field labels and help texts are catalog keys; the page fetches the translations and applies them when the language is set or changed. List sections (contacts, home networks, school times, call buttons) support adding and removing entries inline.
 
-`scripts/web_preview.py` serves the page locally against `config/*.toml` without a real device. `test/test_web_page/test.mjs` checks key coverage, data attribute validity, and that no device content goes through `innerHTML`.
+The page can be tried without a device in two ways: the simulator serves the same page and API on `http://127.0.0.1:8080/` after `wifi ap` ([simulator.md](simulator.md)), and `scripts/webbridge.py` shows the real device's page over the USB cable ([device-console.md](device-console.md)). `test/test_web_page/test.mjs` checks key coverage, data attribute validity, and that no device content goes through `innerHTML`.
 
 ## Service
 

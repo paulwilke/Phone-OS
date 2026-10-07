@@ -6,6 +6,9 @@ The repository is under the MIT licence, copyright "PhonePlus contributors" ([LI
 |---|---|---|
 | [PlatformIO Core](https://platformio.org/) | Apache-2.0 | building and running the host tests (`pio test -e native`) |
 | [Unity](https://github.com/ThrowTheSwitch/Unity) | MIT | the test framework; PlatformIO downloads it when the tests run and nothing of it is stored here |
+| [SDL2](https://www.libsdl.org/) | zlib | the window of the simulator (`pio run -e sim-sdl`, optional: `brew install sdl2`); CI and the other simulator build do not use it and nothing of it is stored here |
+| [pyserial](https://github.com/pyserial/pyserial) | BSD-3-Clause | `scripts/deviceconfig.py` and `scripts/webbridge.py` talk to the device through it; PlatformIO brings it along (`~/.platformio/penv/bin/python`) and nothing of it is stored here |
+| [Node.js](https://nodejs.org/) | MIT | runs `test/test_web_page/test.mjs` and `test/test_demo_page/test.mjs`; they import only its built-in modules |
 
 ### Stored in the repository
 
@@ -71,6 +74,6 @@ The documents were fetched by the owner's permission and are not in the reposito
 
 ### Tools
 
-The Python scripts in `scripts/` use only the standard library.
+The Python scripts in `scripts/` use only the standard library, except the two USB tools, which need pyserial (above).
 
 Anything that is copied, derived or linked into the repository later is added to this list in the same commit that adds it, with its licence.

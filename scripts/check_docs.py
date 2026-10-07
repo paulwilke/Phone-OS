@@ -15,6 +15,7 @@ Checks every Markdown file and every source file:
     screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
   * every Markdown file under docs/ is linked from docs/README.md, so that no document is a stranger, and
     docs/open-points.md exists: open work is listed in that one place and nowhere else;
+  * every Python file compiles, so that a script nobody runs is not left broken (one once was);
   * the user's guide and its translations have the same headings in the same order (level for level), so
     that a section added to one is added to all;
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
@@ -59,6 +60,19 @@ def version_problem():
     if not re.fullmatch(r"\d+\.\d+\.\d+\n?", text):
         return f"VERSION: expected `major.minor.patch`, found {text.strip()!r}"
     return None
+
+
+def python_problems():
+    """A Python file that does not even compile is a leftover: nothing runs it, and a document may still point to it."""
+    problems = []
+    for path in files():
+        if not path.endswith(".py"):
+            continue
+        try:
+            compile(open(path, encoding="utf-8").read(), path, "exec")
+        except SyntaxError as error:
+            problems.append(f"{os.path.relpath(path, ROOT)}:{error.lineno}: does not compile: {error.msg}")
+    return problems
 
 
 def release_problems():
@@ -163,7 +177,7 @@ def index_problems():
 
 
 def main():
-    problems = screen_problems() + guide_problems() + index_problems() + release_problems()
+    problems = screen_problems() + guide_problems() + index_problems() + release_problems() + python_problems()
     if version_problem():
         problems.append(version_problem())
     for path in files():

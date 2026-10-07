@@ -17,7 +17,8 @@ Two sources of findings:
    a regular expression) naming real numbers, names, places and passwords that must
    never be published. It is never part of the repository; pass it with `--denylist`,
    set `PRIVACY_DENYLIST`, or keep it as `.privacy-denylist` in the repository root
-   (which `.gitignore` excludes). Template: `.privacy-denylist.example`.
+   (which `.gitignore` excludes). A line starting with `#` is a comment; a literal is matched
+   without regard to case, a `re:` pattern as written.
 
 Exits with 1 when anything is found. Run it before every promotion to the public
 repository; CI runs the general rules.
@@ -123,6 +124,23 @@ def scan_history():
         if not line.startswith("+") or line.startswith("+++"):
             continue
         scan_text(f"commit {commit}", line[1:], deny, hits)
+    hits += scan_commit_texts(deny)
+    return hits
+
+
+def scan_commit_texts(deny):
+    """What a commit says about itself: the message, and the committer next to the author. Both go public with the
+    history, and the scan of the changed lines does not see them."""
+    hits = []
+    # NUL ends a field and the byte 0x01 ends a commit; neither occurs in a message.
+    log = subprocess.run(["git", "log", "--all", "--format=%h%x00%cn <%ce>%x00%B%x01"],
+                         cwd=ROOT, capture_output=True, text=True, errors="replace").stdout
+    for entry in log.split("\x01"):
+        if not entry.strip():
+            continue
+        short, committer, message = entry.strip("\n").split("\0", 2)
+        scan_text(f"message of commit {short}", message, deny, hits)
+        scan_text(f"committer of commit {short}", committer, deny, hits)
     return hits
 
 

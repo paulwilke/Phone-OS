@@ -8,3 +8,5 @@ ci-report/
 .publish/
 private/
 out/
+.claude/
+.DS_Store
