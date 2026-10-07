@@ -144,7 +144,7 @@ public:
 };
 Host consoleHost;
 Esp32UsbPort usbPort;
-board::Console console(usbPort, configStore, consoleHost, millisSource);
+board::Console console(usbPort, configStore, consoleHost, millisSource, delays);
 
 void drainModemLog() {
   std::string line;
@@ -185,6 +185,9 @@ void powerOff() {
 }  // namespace
 
 void setup() {
+  // The default transmit buffer (256 bytes) is what a long console answer runs into; a larger one lets most
+  // answers go out in one piece. Must come before begin(), which only creates the default one when none exists.
+  Serial.setTxBufferSize(4096);
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);  // never wait for a computer to read the console
   Wire.begin(board::pin::kI2cSda, board::pin::kI2cScl);

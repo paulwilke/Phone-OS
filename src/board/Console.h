@@ -22,7 +22,8 @@
 //
 // The console never blocks: poll() takes what has arrived and returns. Raw bytes of a write or a request
 // are collected over several polls and given up after ten seconds. Output never needs anybody to read it:
-// the port drops what nobody takes. **Opening the serial port from a computer resets the ESP32**, which is why
+// with no computer attached the port drops it at once; with one attached, say() waits for it to take the bytes
+// (a long answer is longer than the transmit buffer) but gives up after kConsoleWriteStallMs without progress. **Opening the serial port from a computer resets the ESP32**, which is why
 // a tool that reads the logs restarts the device; the console needs no port to be opened to work.
 
 #include <cstdint>
@@ -30,6 +31,7 @@
 #include <vector>
 
 #include "../hal/ConfigStore.h"
+#include "Delay.h"
 #include "MillisSource.h"
 #include "UartPort.h"
 
@@ -39,6 +41,12 @@ constexpr size_t kConsoleLineMax = 320;
 constexpr uint32_t kConsoleMaxFile = 8192;
 constexpr uint32_t kConsoleMaxRequest = 9300;  // the head and the largest body the web parser accepts
 constexpr uint32_t kConsoleRawTimeoutMs = 10000;
+// How long say() waits for a connected computer to take output before it gives up: the time without any progress,
+// so every accepted byte starts it anew. The USB transmit buffer is small and drains in milliseconds, so a reading
+// computer is never near this; 300 ms is far above that and still short enough that a computer which stopped
+// reading (a terminal paused, a tool that crashed) delays one loop pass by a third of a second, not for good.
+constexpr uint32_t kConsoleWriteStallMs = 300;
+constexpr uint32_t kConsoleWritePauseMs = 2;  // between two tries, so the wait does not spin
 
 struct ConsoleCommand {
   enum class Kind : uint8_t { None, List, Read, Write, Restart, Web, Battery, Sms, Unknown };
@@ -68,8 +76,8 @@ public:
 
 class Console {
 public:
-  Console(UartPort& port, ConfigStore& store, ConsoleHost& host, MillisSource& millis)
-      : port_(port), store_(store), host_(host), millis_(millis) {}
+  Console(UartPort& port, ConfigStore& store, ConsoleHost& host, MillisSource& millis, Delay& delay)
+      : port_(port), store_(store), host_(host), millis_(millis), delay_(delay) {}
 
   void poll();
 
@@ -83,6 +91,7 @@ private:
   ConfigStore& store_;
   ConsoleHost& host_;
   MillisSource& millis_;
+  Delay& delay_;
 
   std::string line_;
   bool discarding_ = false;  // a line that was too long: its rest is not a command

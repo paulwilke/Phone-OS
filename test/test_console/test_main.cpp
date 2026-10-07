@@ -1,10 +1,13 @@
 // The USB console: how a line is understood, which files the cable reaches, the framing of a write and of a web
 // request, and that nothing blocks.
 
+#include <deque>
+
 #include <unity.h>
 
 #include <board/Console.h>
 #include <fakes/FakeConfigStore.h>
+#include <board/Delay.h>
 #include <fakes/FakeMillis.h>
 #include <fakes/FakeUartPort.h>
 
@@ -20,6 +23,7 @@ struct Host : ConsoleHost {
   std::string lastPhone, lastText;
   bool accept = true;
   bool web = true;
+  std::string webResponse = "HTTP/1.1 200 OK\r\n\r\nhello";
   std::vector<uint8_t> lastRequest;
   void restart() override { ++restarts; }
   bool sendText(const std::string& phone, const std::string& text) override {
@@ -29,10 +33,55 @@ struct Host : ConsoleHost {
   }
   bool handleWeb(const std::vector<uint8_t>& request, std::string& response) override {
     lastRequest = request;
-    response = "HTTP/1.1 200 OK\r\n\r\nhello";
+    response = webResponse;
     return web;
   }
   std::vector<std::string> batteryReport() override { return {"gauge: voltage 4118 mV", "charger: SY6970 at 0x6A"}; }
+};
+
+// A pause that lets the clock run, so a wait in the code under test ends (FakeDelay only counts).
+struct TickingDelay : Delay {
+  explicit TickingDelay(FakeMillis& m) : m_(m) {}
+  void delayMs(uint32_t ms) override { m_.advance(ms); }
+  void delayUs(uint32_t) override {}
+  FakeMillis& m_;
+};
+
+// A USB port as the device shows it: takes at most `chunk` bytes per call, and after each accepted chunk answers 0
+// for `stalls` calls in a row (the transmit buffer is full; the bus drains it while time passes). `drainMs` is the
+// time one zero-length call is worth, so the stalls are not instantaneous. `reading` false: nobody drains any more.
+struct UsbLikePort : UartPort {
+  UsbLikePort(FakeMillis& m) : m_(m) {}
+  size_t write(const uint8_t* data, size_t len) override {
+    if (!connected) return 0;
+    if (!reading) return 0;
+    if (zeros_ < stalls) {
+      ++zeros_;
+      return 0;
+    }
+    zeros_ = 0;
+    const size_t n = len < chunk ? len : chunk;
+    got.append((const char*)data, n);
+    return n;
+  }
+  int read() override {
+    if (in_.empty()) return -1;
+    const uint8_t b = in_.front();
+    in_.pop_front();
+    return b;
+  }
+  bool hostConnected() override { return connected; }
+  void feed(const std::string& s) { for (char c : s) in_.push_back((uint8_t)c); }
+  FakeMillis& m_;
+  size_t chunk = 64;
+  int stalls = 20;
+  bool connected = true;
+  bool reading = true;
+  std::string got;
+
+private:
+  int zeros_ = 0;
+  std::deque<uint8_t> in_;
 };
 
 struct Rig {
@@ -40,7 +89,8 @@ struct Rig {
   FakeConfigStore store;
   Host host;
   FakeMillis millis;
-  Console console{port, store, host, millis};
+  TickingDelay delay{millis};
+  Console console{port, store, host, millis, delay};
   void type(const std::string& text) {
     port.feed(text);
     console.poll();
@@ -293,6 +343,65 @@ void test_a_port_that_takes_nothing_does_not_hang_the_console() {
   TEST_ASSERT_EQUAL_STRING("", r.answer().c_str());
 }
 
+namespace {
+struct UsbRig {
+  FakeMillis millis;
+  UsbLikePort port{millis};
+  FakeConfigStore store;
+  Host host;
+  TickingDelay delay{millis};
+  Console console{port, store, host, millis, delay};
+  void ask(const std::string& web) {
+    host.webResponse = web;
+    port.feed("CONFIG WEB 4\n");
+    console.poll();
+    port.got.clear();  // the "CONFIG READY" line is not what is under test
+    port.feed("GET ");
+    console.poll();
+  }
+};
+}  // namespace
+
+void test_a_long_answer_arrives_whole_although_the_port_stalls_between_chunks() {
+  UsbRig r;
+  const std::string body(32 * 1024, 'x');
+  r.ask(body);
+  const std::string expect = "CONFIG WEB " + std::to_string(body.size()) + "\n" + body + "\n";
+  TEST_ASSERT_EQUAL(expect.size(), r.port.got.size());
+  TEST_ASSERT_TRUE(r.port.got == expect);
+}
+
+void test_with_no_computer_connected_nothing_waits() {
+  UsbRig r;
+  r.port.connected = false;
+  const uint32_t before = r.millis.millis32();
+  r.ask(std::string(32 * 1024, 'x'));
+  TEST_ASSERT_EQUAL_UINT32(before, r.millis.millis32());
+  TEST_ASSERT_EQUAL(0, r.port.got.size());
+}
+
+void test_a_computer_that_stopped_reading_makes_say_give_up_after_the_bound() {
+  UsbRig r;
+  r.port.feed("CONFIG WEB 4\n");
+  r.console.poll();
+  r.port.reading = false;  // the computer stops here; the answer is three writes (header, body, line end)
+  const uint32_t before = r.millis.millis32();
+  r.port.feed("GET ");
+  r.console.poll();
+  const uint32_t waited = r.millis.millis32() - before;
+  TEST_ASSERT_TRUE(waited >= kConsoleWriteStallMs);
+  TEST_ASSERT_TRUE(waited <= 3 * (kConsoleWriteStallMs + kConsoleWritePauseMs));
+}
+
+void test_progress_resets_the_budget_so_a_slow_but_reading_computer_gets_everything() {
+  UsbRig r;
+  r.port.chunk = 16;
+  r.port.stalls = 100;  // 200 ms of pauses per chunk: under the bound each time, far over it in total
+  const std::string body(2048, 'y');
+  r.ask(body);
+  TEST_ASSERT_EQUAL(body.size() + std::string("CONFIG WEB 2048\n\n").size(), r.port.got.size());
+}
+
 void test_poll_without_input_does_nothing() {
   Rig r;
   r.console.poll();
@@ -326,6 +435,10 @@ int main(int, char**) {
   RUN_TEST(test_log_lines_between_commands_do_not_disturb_it_and_carriage_returns_are_ignored);
   RUN_TEST(test_an_overlong_line_is_refused_once_and_its_tail_is_not_run_as_a_command);
   RUN_TEST(test_a_port_that_takes_nothing_does_not_hang_the_console);
+  RUN_TEST(test_a_long_answer_arrives_whole_although_the_port_stalls_between_chunks);
+  RUN_TEST(test_with_no_computer_connected_nothing_waits);
+  RUN_TEST(test_a_computer_that_stopped_reading_makes_say_give_up_after_the_bound);
+  RUN_TEST(test_progress_resets_the_budget_so_a_slow_but_reading_computer_gets_everything);
   RUN_TEST(test_poll_without_input_does_nothing);
   return UNITY_END();
 }

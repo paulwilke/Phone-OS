@@ -118,12 +118,20 @@ ConsoleCommand parseConsoleLine(const std::string& input) {
 }
 
 void Console::say(const std::string& text) {
+  // The port's transmit buffer is far smaller than a log answer, so a zero-length write only means "full, try again
+  // in a moment". Without a computer nothing will ever drain it: drop at once, the firmware never waits for one
+  // that is not there.
   size_t done = 0;
-  int stalled = 0;
-  while (done < text.size() && stalled < 3) {
+  uint32_t lastProgress = millis_.millis32();
+  while (done < text.size() && port_.hostConnected()) {
     const size_t n = port_.write(reinterpret_cast<const uint8_t*>(text.data()) + done, text.size() - done);
-    if (n == 0) ++stalled;
-    else done += n, stalled = 0;
+    if (n > 0) {
+      done += n;
+      lastProgress = millis_.millis32();
+      continue;
+    }
+    if (millis_.millis32() - lastProgress >= kConsoleWriteStallMs) return;  // the computer stopped reading
+    delay_.delayMs(kConsoleWritePauseMs);
   }
 }
 
