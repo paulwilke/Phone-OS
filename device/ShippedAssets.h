@@ -166,6 +166,10 @@ status.firmware         = "Firmware: {version}"
 status.off-cable        = "Ausschalten: erst USB abziehen"
 status.off-press        = "Ausschalten: x zweimal drücken"
 status.off-again        = "Ausschalten? Noch einmal x"
+status.problems         = ["Konfiguration: {n} Problem", "Konfiguration: {n} Probleme"]
+status.problem-file     = "{file} ließ sich nicht lesen"
+status.problem-setting  = "{file}: {key} prüfen"
+status.problem-entry    = "Ein Eintrag in den Listen wurde nicht verwendet"
 
 call.no-network  = "{name}: kein Netz"
 call.sms-only    = "{name}: nur SMS"
@@ -521,6 +525,10 @@ status.firmware         = "Firmware: {version}"
 status.off-cable        = "Switch off: unplug USB first"
 status.off-press        = "Switch off: press x twice"
 status.off-again        = "Switch off? Press x again"
+status.problems         = ["Configuration: {n} problem", "Configuration: {n} problems"]
+status.problem-file     = "{file} could not be read"
+status.problem-setting  = "{file}: check {key}"
+status.problem-entry    = "An entry in the lists was not used"
 
 messages.view-inbox = "Inbox  (O: Sent)"
 messages.view-sent = "Sent  (O: Inbox)"
@@ -942,6 +950,10 @@ status.firmware         = "Firmware : {version}"
 status.off-cable        = "Éteindre : débrancher l'USB d'abord"
 status.off-press        = "Éteindre : appuyer deux fois sur x"
 status.off-again        = "Éteindre ? Encore une fois x"
+status.problems         = ["Configuration : {n} problème", "Configuration : {n} problèmes"]
+status.problem-file     = "{file} n'a pas pu être lu"
+status.problem-setting  = "{file} : vérifier {key}"
+status.problem-entry    = "Une entrée des listes n'a pas été utilisée"
 
 call.no-network  = "{name} : pas de réseau"
 call.sms-only    = "{name} : SMS seulement"
