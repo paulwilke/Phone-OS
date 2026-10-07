@@ -15,18 +15,9 @@ A language does not have to be shipped to be used: a catalog with a new code on 
 
 **A catalog on the card may be at most 32,768 bytes** (`ConfigLoader::kMaxCatalogBytes`), **each file for itself** (the device's and the page's are not added up); a larger file is skipped with an `OversizedFile` diagnostic. The device must not load unlimited text from the card into a small memory. The limit is the owner's decision ([open-points.md](open-points.md)).
 
-What that means today (bytes, `scripts/check_i18n.py` prints them):
+`scripts/check_i18n.py` prints the size of every shipped catalog and fails when one is over the limit. The shipped files are between a quarter and a half of it: `lang/en.toml` and `lang/web/en.toml` are the starting points of a new language (**copy the device file whole**: change `[meta]`, translate, keep the `{placeholders}`), and the German and French files are a little longer than the English ones.
 
-| Catalog | Size | |
-|---|---|---|
-| `lang/en.toml` | 13,396 | fits; **copy it whole** as the start of a new device language: change `[meta]`, translate, keep the `{placeholders}` |
-| `lang/de.toml` | 14,296 | fits |
-| `lang/fr.toml` | 14,887 | fits |
-| `lang/web/en.toml` | 8,441 | fits; the start of a new page language |
-| `lang/web/de.toml` | 9,989 | fits |
-| `lang/web/fr.toml` | 10,217 | fits |
-
-Every shipped file fits the limit, so a translation as complete as the shipped ones fits as two files. A message you leave out of a file falls back to English, and `[meta]` is required. A test keeps both English files under the limit, so the starting points always fit; the words of the demo page are not in these files (they are in `tools/lang/`, which the device never gets, [i18n.md](i18n.md)).
+A translation as complete as the shipped ones fits as two files. A message you leave out of a file falls back to English, and `[meta]` is required. A test keeps both English files under the limit, so the starting points always fit; the words of the demo page are not in these files (they are in `tools/lang/`, which the device never gets, [i18n.md](i18n.md)).
 
 ## Try your catalog in the simulator
 
@@ -44,6 +35,8 @@ You need no device. Put the catalog and a configuration that asks for it on a ca
 3. Run it: `.pio/build/sim/program --data my-card`. At the prompt, `log` shows what the simulator said about the card: `config: oversized-file /lang/xx.toml` (or `/lang/web/xx.toml`, logged when the page is first opened) says the catalog is over the limit, `config: user-catalog-error ...` names one that was rejected and why (a syntax error, a `{placeholder}` that English does not have), and `config: bad-catalog-code ...` says the configuration asks for a language nobody has. `language xx` switches to it at any time, `language en` back.
 4. Look: `screenshot xx.png`, or `ascii`, or a window with `pio run -e sim-sdl` ([simulator.md](simulator.md)). The messages of the screens that exist today appear as you walk through them: `sms +491701111111 hello` and `key inbox`, `call +491702222222`, `date 2026-09-15 08:00`, `battery 5`. The pseudo-language `language qps-ploc` is longer than any real one: if a screen fits it, it fits yours; one that clips in yours shows as cut-off words.
 5. To see the web page, `wifi ap` and open `http://127.0.0.1:8080/` (password `test-password-1`); your language is in its selector.
+
+`test/test_translating/test_doc.py` follows steps 2 to 5 as written (it runs the shell block of step 2 itself, and fails when the document no longer names the commands and log lines it uses), and then breaks each step on purpose to see the log lines that step 3 promises. Run it after `pio run -e sim`.
 
 A script can check what you see, in your language, by key: `see home.phone` is true when the screen says your word for `home.phone`. A scenario (`sim/scripts/`, [simulator.md](simulator.md)) written that way runs in every language, yours included.
 

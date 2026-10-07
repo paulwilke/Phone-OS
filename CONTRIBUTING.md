@@ -21,6 +21,7 @@ pio test -e native              # host tests of the C++ code
 pio run -e sim                  # the simulator builds ...
 for s in sim/scripts/*.txt; do .pio/build/sim/program --script "$s" >/dev/null || echo "FAIL $s"; done   # ... and every scenario passes
 pio run -e device               # the firmware compiles (compile-only; flashing is the owner's decision)
+python3 test/test_translating/test_doc.py # docs/translating.md followed step by step in the simulator, and broken on purpose
 python3 scripts/counter_check_scenarios.py # every scenario fails when the behaviour it pins is put back (not part of CI: it rebuilds the simulator)
 python3 scripts/make_demo.py    # the pictures and the click-through demo; fails when a picture is missing
 node test/test_demo_page/test.mjs # the demo page
