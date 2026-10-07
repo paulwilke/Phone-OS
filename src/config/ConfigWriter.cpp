@@ -131,7 +131,8 @@ bool ConfigWriter::writeSettings(const Profile& p) const {
     snprintf(time, sizeof(time), "%02d:%02d", w.from / 60, w.from % 60);
     out += "from = "; appendStr(out, time); out += "\n";
     snprintf(time, sizeof(time), "%02d:%02d", w.to / 60, w.to % 60);
-    out += "to = "; appendStr(out, time); out += "\n\n";
+    out += "to = "; appendStr(out, time); out += "\n";
+    out += "enabled = "; appendBool(out, w.enabled); out += "\n\n";
   }
 
   for (const std::string& target : p.callTargets) {

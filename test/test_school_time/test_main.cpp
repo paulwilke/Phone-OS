@@ -27,6 +27,15 @@ void test_school_time_follows_the_profile_and_the_clock() {
   TEST_ASSERT_FALSE(f.school.active());
 }
 
+// The window is on the card but switched off: it is not school time for anybody, and there is
+// nothing for an emergency to lift.
+void test_a_switched_off_window_is_no_school_time_and_nothing_to_lift() {
+  CoreFakes f(ProfileBuilder().schoolTime("tue", "14:00", "15:00", false).build());
+  TEST_ASSERT_FALSE(f.school.active());
+  TEST_ASSERT_FALSE(f.school.lift());
+  TEST_ASSERT_EQUAL(0, f.school.liftedUntil());
+}
+
 void test_no_school_time_without_a_known_time() {
   CoreFakes f(tuesday());
   f.clock.setEpochUtc(0);
@@ -103,6 +112,7 @@ void test_the_profile_may_change_while_the_device_runs() {
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_school_time_follows_the_profile_and_the_clock);
+  RUN_TEST(test_a_switched_off_window_is_no_school_time_and_nothing_to_lift);
   RUN_TEST(test_no_school_time_without_a_known_time);
   RUN_TEST(test_lifting_ends_exactly_at_the_end_of_the_window);
   RUN_TEST(test_the_end_is_counted_from_the_second_not_the_minute);

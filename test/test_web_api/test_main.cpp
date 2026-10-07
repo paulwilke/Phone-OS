@@ -473,6 +473,20 @@ void test_empty_lists_are_stored_and_read_back_as_none_without_a_warning() {
   TEST_ASSERT_TRUE(f.store.files["/config/settings.toml"].find("extra_trigger_words = [\"#WoIstDu\", \"Ping\"]") != std::string::npos);
 }
 
+// The page's school-time checkbox: enabled goes to the card as a boolean without a warning, comes back as one,
+// and a string in its place is refused like every other wrong type.
+void test_the_enabled_flag_of_a_school_time_window_is_stored_and_read_back() {
+  Fixture f;
+  TEST_ASSERT_EQUAL(200, f.put("/api/settings",
+      "{\"quiet_hours\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"12:30\",\"enabled\":false}]}"));
+  TEST_ASSERT_FALSE(f.has("warning"));
+  TEST_ASSERT_TRUE(f.store.files["/config/settings.toml"].find("enabled = false") != std::string::npos);
+  TEST_ASSERT_EQUAL(200, f.get("/api/settings"));
+  TEST_ASSERT_TRUE(f.has("\"enabled\":false"));
+  TEST_ASSERT_EQUAL(422, f.put("/api/settings",
+      "{\"quiet_hours\":[{\"days\":\"mon-fri\",\"from\":\"08:00\",\"to\":\"12:30\",\"enabled\":\"no\"}]}"));
+}
+
 void test_paths_cannot_leave_the_card() {
   Fixture f;
   const char* bad[] = {
@@ -764,6 +778,7 @@ int main() {
   RUN_TEST(test_raw_config_files_are_validated);
   RUN_TEST(test_a_value_of_the_wrong_type_is_refused_and_nothing_is_stored);
   RUN_TEST(test_empty_lists_are_stored_and_read_back_as_none_without_a_warning);
+  RUN_TEST(test_the_enabled_flag_of_a_school_time_window_is_stored_and_read_back);
   RUN_TEST(test_paths_cannot_leave_the_card);
   RUN_TEST(test_a_truncated_file_is_marked_so_the_editor_cannot_save_it_back);
   RUN_TEST(test_logs_are_read_from_the_end);

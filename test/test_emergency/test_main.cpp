@@ -221,6 +221,14 @@ void test_sos_works_in_school_time() {
   TEST_ASSERT_TRUE(SosFlow::Phase::QuietConfirm == r.emergency.phase());
 }
 
+// No five-tap rule while the window is switched off: the press is the ordinary SOS.
+void test_a_switched_off_window_does_not_ask_for_five_taps() {
+  Rig r(ProfileBuilder().childName("Alex").schoolTime("tue", "14:00", "15:00", false).build());
+  TEST_ASSERT_FALSE(r.school.active());
+  TEST_ASSERT_TRUE(r.emergency.begin());
+  TEST_ASSERT_FALSE(SosFlow::Phase::QuietConfirm == r.emergency.phase());
+}
+
 void test_five_taps_in_school_time_lift_the_lock() {
   Rig r(inSchool());
   r.emergency.begin();
@@ -561,6 +569,7 @@ int main() {
   RUN_TEST(test_pickup_sends_the_other_text);
   RUN_TEST(test_pressing_sos_again_keeps_the_countdown_and_a_running_ping);
   RUN_TEST(test_sos_works_in_school_time);
+  RUN_TEST(test_a_switched_off_window_does_not_ask_for_five_taps);
   RUN_TEST(test_five_taps_in_school_time_lift_the_lock);
   RUN_TEST(test_the_lift_is_logged_and_ends_with_the_school_time);
   RUN_TEST(test_leaving_the_school_time_warning_has_no_effect);

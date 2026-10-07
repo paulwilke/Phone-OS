@@ -24,6 +24,7 @@ if not os.path.exists(PIO):
 MUTATIONS = [
     ('normal-day', [('src/boot/Runtime.cpp', 'call == ModemState::RingingIn && !callInterrupt_', 'false && !callInterrupt_')], 'an incoming call no longer takes the screen'),
     ('school-time', [('src/app/SosFlow.h', 'kOverrideTaps = 5', 'kOverrideTaps = 3')], 'the SOS in school time needs three taps, not five'),
+    ('school-time-off', [('src/app/QuietHours.cpp', 'if (!w.enabled) continue;', '')], 'a window the parents switched off still locks the phone'),
     ('remote-query-during-sos', [('src/app/SosPing.cpp', 'if (!(kind_ == Kind::Query && kind != Kind::Query)) return false;', 'if (false) return false;')], 'a remote query replaces a running emergency'),
     ('network-drop', [('src/app/Messaging.cpp', 'void Messaging::flushQueue() {\n  if (outbox_.empty()) return;', 'void Messaging::flushQueue() {\n  return;')], 'the queue is never sent when the network is back'),
     ('contacts-only', [('src/app/Messaging.cpp', 'if (!profile_.mayReceiveFrom(sms.phone)) {', 'if (false) {')], 'a stranger\'s text is stored like any other'),

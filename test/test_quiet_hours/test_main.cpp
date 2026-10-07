@@ -187,6 +187,54 @@ void test_touching_windows_are_reported_one_at_a_time() {
   TEST_ASSERT_EQUAL(12 * 60, end);
 }
 
+// ---------------------------------------------------------------------------
+// Windows that are switched off
+// ---------------------------------------------------------------------------
+
+void test_a_disabled_window_never_makes_school_time() {
+  QuietHours q;
+  q.add("mon-fri", "08:00", "12:30", false);
+  TEST_ASSERT_EQUAL(1, (int)q.count());                 // kept, so that it can be switched on again
+  TEST_ASSERT_FALSE(q.window(0).enabled);
+  int end = 77;
+  TEST_ASSERT_FALSE(q.active(at(0, 9, 0), 0, &end));
+  TEST_ASSERT_EQUAL(77, end);                           // and the end is left alone
+}
+
+void test_an_enabled_window_is_the_default_of_add_and_makes_school_time() {
+  QuietHours q;
+  q.add("mon-fri", "08:00", "12:30");
+  TEST_ASSERT_TRUE(q.window(0).enabled);
+  TEST_ASSERT_TRUE(q.active(at(0, 9, 0), 0));
+}
+
+// A disabled window next to an enabled one must not stretch the lock or its reported end.
+void test_a_disabled_window_does_not_change_what_the_enabled_ones_report() {
+  QuietHours q;
+  q.add("mon", "08:00", "10:00");
+  q.add("mon", "09:00", "12:00", false);
+  int end = 0;
+  TEST_ASSERT_TRUE(q.active(at(0, 9, 30), 0, &end));
+  TEST_ASSERT_EQUAL(10 * 60, end);
+  TEST_ASSERT_FALSE(q.active(at(0, 11, 0), 0));         // only the disabled one covers 11:00
+}
+
+// A disabled window across midnight is skipped in both of its halves.
+void test_a_disabled_window_across_midnight_is_skipped_evening_and_morning() {
+  QuietHours q;
+  q.add("mon", "22:00", "06:00", false);
+  TEST_ASSERT_FALSE(q.active(at(0, 23, 0), 0));
+  TEST_ASSERT_FALSE(q.active(at(1, 5, 0), 0));
+}
+
+// Switching a window on later must not break the limit, so a disabled one counts.
+void test_a_disabled_window_still_counts_towards_the_two_a_day() {
+  QuietHours q;
+  TEST_ASSERT_TRUE(q.add("mon", "08:00", "09:00", false) == QuietHours::AddResult::Added);
+  TEST_ASSERT_TRUE(q.add("mon", "10:00", "11:00") == QuietHours::AddResult::Added);
+  TEST_ASSERT_TRUE(q.add("mon", "12:00", "13:00") == QuietHours::AddResult::DayFull);
+}
+
 // A local time just after 1970-01-01 UTC with a negative offset is still the
 // evening of the day before; a computation that rounds towards zero gets the
 // day wrong.
@@ -357,6 +405,11 @@ int main() {
   RUN_TEST(test_the_latest_end_also_wins_across_midnight);
   RUN_TEST(test_touching_windows_are_reported_one_at_a_time);
   RUN_TEST(test_local_time_before_the_epoch_day_is_the_previous_day);
+  RUN_TEST(test_a_disabled_window_never_makes_school_time);
+  RUN_TEST(test_an_enabled_window_is_the_default_of_add_and_makes_school_time);
+  RUN_TEST(test_a_disabled_window_does_not_change_what_the_enabled_ones_report);
+  RUN_TEST(test_a_disabled_window_across_midnight_is_skipped_evening_and_morning);
+  RUN_TEST(test_a_disabled_window_still_counts_towards_the_two_a_day);
   RUN_TEST(test_parse_days);
   RUN_TEST(test_a_range_may_cross_the_weekend);
   RUN_TEST(test_blanks_around_entries_are_ignored);

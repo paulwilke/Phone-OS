@@ -15,6 +15,7 @@ Version 4.0 is a new code base, written from the start in English, layered and t
 - **The battery gauge is checked at every start.** The chip ships with a wrong battery size; the device compares it with `[battery] capacity_mah` (default 1500) and writes it only when it differs. A percentage that the cell voltage contradicts is shown as "unknown".
 - **New pages and values:** the network page shows whether the IMS is registered, the position page shows the last known position with its age, the status page shows the configuration problems it found, and a self-test page checks the board.
 - **The USB console** (`scripts/deviceconfig.py`, `scripts/webbridge.py`) reads and writes the three configuration files with a checksum and a safe write, reads the logs, sends a text by hand and prints the diagnosis of the fuel gauge and the charger.
+- **A school-time window can be switched off.** Each `[[quiet_hours]]` window has `enabled` (default `true`, so every existing card locks as before) and the parents' page shows it as a checkbox "active". A card without any window gets one built-in window, Monday to Friday 08:00 to 12:30, switched off: no school time runs until a parent ticks it. A switched-off window is ignored everywhere ([docs/quiet-hours.md](docs/quiet-hours.md)).
 - **A simulator and generated pictures:** the whole application runs on a laptop on fakes of the hardware (`pio run -e sim`), and `scripts/make_demo.py` renders every page in three languages and a click-through demo.
 
 ### What changed in the files

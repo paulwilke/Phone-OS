@@ -439,8 +439,29 @@
               "label": "config.quiet_hours.to.label",
               "help": "config.quiet_hours.to.help",
               "field": ""
+            },
+            {
+              "name": "enabled",
+              "type": "bool",
+              "required": false,
+              "secret": false,
+              "apply": "restart",
+              "default": "true",
+              "min_val": 0,
+              "max_val": 0,
+              "enums": "",
+              "label": "config.quiet_hours.enabled.label",
+              "help": "config.quiet_hours.enabled.help",
+              "field": "",
+              "widget": "checkbox"
             }
-          ]
+          ],
+          "default_entry": {
+            "days": "mon-fri",
+            "from": "08:00",
+            "to": "12:30",
+            "enabled": false
+          }
         },
         {
           "id": "tiles",

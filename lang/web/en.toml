@@ -99,6 +99,8 @@ config.quiet_hours.from.label = "From"
 config.quiet_hours.from.help = "Start of the school-time window (HH:MM, 24-hour)."
 config.quiet_hours.to.label = "To"
 config.quiet_hours.to.help = "End of the school-time window (HH:MM, 24-hour)."
+config.quiet_hours.enabled.label = "Active"
+config.quiet_hours.enabled.help = "Switches this window on. A window that is not ticked is kept but never makes school time."
 
 config.tiles.label = "Call buttons"
 config.tiles.help = "The call buttons on the home screen, in the order they appear. Only action=call buttons add a call target; other actions are ignored with a warning."

@@ -286,7 +286,11 @@ void applyQuietHoursEntry(const toml::Value& entry, QuietHours& qh, std::vector<
     d.push_back({Diagnostic::Code::BadQuietHours, {"wrong-type"}});
     return;
   }
-  auto result = qh.add(days->str().c_str(), from->str().c_str(), to->str().c_str());
+  // A wrong type leaves the window switched on, as a window written before the key existed is:
+  // a typo must not quietly end school time.
+  bool enabled = true;
+  if (const toml::Value* e = entry.find("enabled")) checkBool(*e, "settings", "quiet_hours.enabled", d, enabled);
+  auto result = qh.add(days->str().c_str(), from->str().c_str(), to->str().c_str(), enabled);
   if (result != QuietHours::AddResult::Added) {
     const char* reason = "invalid";
     switch (result) {
@@ -298,6 +302,27 @@ void applyQuietHoursEntry(const toml::Value& entry, QuietHours& qh, std::vector<
     }
     d.push_back({Diagnostic::Code::BadQuietHours, {reason}});
   }
+}
+
+// The value the schema gives the entry a list section uses when the file has none, or nullptr.
+const char* defaultEntryValue(const char* file, const char* section, const char* key) {
+  for (size_t i = 0; i < kDefaultEntryCount; ++i) {
+    const DefaultEntryValue& v = kDefaultEntries[i];
+    if (strcmp(v.file, file) == 0 && strcmp(v.section, section) == 0 && strcmp(v.key, key) == 0) return v.value;
+  }
+  return nullptr;
+}
+
+// A card without any window gets the schema's one (switched off): the parents' page and the example
+// file show the same window, and no school time runs until a parent switches it on. Only the file's
+// own list decides: a card whose windows are all refused has said what it wants and gets no default.
+void addDefaultQuietHours(QuietHours& qh) {
+  const char* days = defaultEntryValue("settings", "quiet_hours", "days");
+  const char* from = defaultEntryValue("settings", "quiet_hours", "from");
+  const char* to = defaultEntryValue("settings", "quiet_hours", "to");
+  const char* enabled = defaultEntryValue("settings", "quiet_hours", "enabled");
+  if (!days || !from || !to) return;
+  qh.add(days, from, to, !enabled || strcmp(enabled, "false") != 0);
 }
 
 void applyTileEntry(const toml::Value& entry, std::vector<std::string>& callTargets,
@@ -385,13 +410,14 @@ void loadSettings(const toml::Value& root, Profile& p, std::vector<Diagnostic>& 
     applyRadio(*radioSec, p, d);
   }
 
-  if (const toml::Value* list = root.find("quiet_hours")) {
-    if (list->type() == toml::Value::Type::TableList) {
-      for (size_t i = 0; i < list->size(); ++i) {
-        checkLeafKeys(d, list->at(i), "settings", "quiet_hours");
-        applyQuietHoursEntry(list->at(i), p.quietHours, d);
-      }
+  const toml::Value* windows = root.find("quiet_hours");
+  if (windows && windows->type() == toml::Value::Type::TableList && windows->size() > 0) {
+    for (size_t i = 0; i < windows->size(); ++i) {
+      checkLeafKeys(d, windows->at(i), "settings", "quiet_hours");
+      applyQuietHoursEntry(windows->at(i), p.quietHours, d);
     }
+  } else {
+    addDefaultQuietHours(p.quietHours);  // no key, `quiet_hours = []` and anything that is no list of tables
   }
   if (const toml::Value* list = root.find("tiles")) {
     if (list->type() == toml::Value::Type::TableList) {
@@ -541,6 +567,7 @@ ConfigLoader::ConfigLoader(ConfigStore& store) : store_(store) {}
 ConfigLoader::Result ConfigLoader::load() const {
   Result r;
   std::string text;
+  bool settingsLoaded = false;
 
   if (readConfigFile(store_, "/config/settings.toml", "settings", text, r.diagnostics)) {
     toml::Value root;
@@ -550,8 +577,11 @@ ConfigLoader::Result ConfigLoader::load() const {
         {"settings", std::to_string(err.line), toml::codeName(err.code)}});
     } else {
       loadSettings(root, r.profile, r.diagnostics);
+      settingsLoaded = true;
     }
   }
+  // A missing or unreadable settings file is a card without windows as well.
+  if (!settingsLoaded) addDefaultQuietHours(r.profile.quietHours);
 
   if (readConfigFile(store_, "/config/contacts.toml", "contacts", text, r.diagnostics)) {
     toml::Value root;

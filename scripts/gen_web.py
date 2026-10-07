@@ -297,7 +297,14 @@ function buildField(key, value, namePrefix) {{
   lbl.textContent = t(key.label);
   wrap.appendChild(lbl);
   var input;
-  if (key.type === 'bool') {{
+  if (key.type === 'bool' && key.widget === 'checkbox') {{
+    // A switch the parent ticks (school-time window "active"). A key that is missing from the file has
+    // the schema's default, not "off": a window written before the key existed is on.
+    input = document.createElement('input');
+    input.name = namePrefix + key.name;
+    input.type = 'checkbox';
+    input.checked = value === undefined || value === null ? key['default'] === 'true' : value === true || value === 'true';
+  }} else if (key.type === 'bool') {{
     input = document.createElement('select');
     input.name = namePrefix + key.name;
     var yes = document.createElement('option'); yes.value = 'true';
@@ -350,6 +357,7 @@ function buildField(key, value, namePrefix) {{
 }}
 
 function readField(input, keyDef) {{
+  if (keyDef.type === 'bool' && keyDef.widget === 'checkbox') return !!input.checked;
   if (keyDef.type === 'bool') return input.value === 'true';
   if (keyDef.type === 'integer') return parseInt(input.value, 10) || 0;
   // The schema type is a list of strings: an empty field is [] ("" is the wrong type and the device
@@ -366,6 +374,9 @@ function buildSection(section, sectionData, fileId) {{
   if (section.label) fs.appendChild(leg);
   if (section.list) {{
     var entries = Array.isArray(sectionData) ? sectionData : [];
+    // The device uses the schema's entry when the card has none; the page shows the same one, so that
+    // saving writes it to the card (the school-time window, switched off).
+    if (entries.length === 0 && section.default_entry) entries = [section.default_entry];
     var container = document.createElement('div');
     container.setAttribute('data-list-section', section.id);
     entries.forEach(function(entry, idx) {{

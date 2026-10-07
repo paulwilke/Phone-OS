@@ -46,9 +46,10 @@ name = "phoneplus"  # restart
 peer = ""  # restart
 
 [[quiet_hours]]
-# days = "mon-fri"   # example
-# from = "08:00"   # example
-# to = "08:00"   # example
+days = "mon-fri"
+from = "08:00"
+to = "12:30"
+enabled = false
 
 [[tiles]]
 # label = ""   # example

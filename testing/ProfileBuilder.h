@@ -44,8 +44,8 @@ public:
     callTargets_ = std::move(targets);
     return *this;
   }
-  ProfileBuilder& schoolTime(const char* days, const char* from, const char* to) {
-    windows_.push_back({days, from, to});
+  ProfileBuilder& schoolTime(const char* days, const char* from, const char* to, bool enabled = true) {
+    windows_.push_back({days, from, to, enabled});
     return *this;
   }
   ProfileBuilder& radio(bool allowed) {
@@ -118,13 +118,14 @@ public:
     Profile p = profile_;
     p.contacts.load(contacts_.data(), contacts_.size());
     p.callTargets = callTargets_;
-    for (const Window& w : windows_) p.quietHours.add(w.days, w.from, w.to);
+    for (const Window& w : windows_) p.quietHours.add(w.days, w.from, w.to, w.enabled);
     return p;
   }
 
 private:
   struct Window {
     const char *days, *from, *to;
+    bool enabled;
   };
   Profile profile_;
   std::string contacts_;

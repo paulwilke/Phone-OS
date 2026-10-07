@@ -32,7 +32,7 @@ Un contact a un rôle : **parent** ou **family** (famille) (`role`). Un parent p
 
 ## Heures de classe
 
-Les heures de classe sont un ensemble de plages (`[[quiet_hours]]` dans `settings.toml` : `days`, `from`, `to` ; par exemple `mon-fri` de `08:00` à `13:30` ; au plus deux plages par jour, une plage peut passer minuit). Tant que l'une d'elles court :
+Les heures de classe sont un ensemble de plages (`[[quiet_hours]]` dans `settings.toml` : `days`, `from`, `to`, `enabled` ; par exemple `mon-fri` de `08:00` à `13:30` ; au plus deux plages par jour, une plage peut passer minuit). Une plage ne compte que si elle est **active** : sur la page des parents, chaque plage a une case "actif" (`enabled = true` ou `false` ; une plage sans cette clé est active). Un appareil sans aucune plage démarre avec une plage intégrée, du lundi au vendredi de 08:00 à 12:30, **non active** : aucune heure de classe ne court tant qu'un parent n'a pas coché la case et enregistré. Tant qu'une plage active court :
 
 - la barre d'état dit "En classe", et l'écran verrouillé dit "Classe jusqu'à 13:30" ;
 - l'enfant ne peut pas appeler : la tuile **Appels** dit "Classe jusqu'à 13:30" et reste là ;

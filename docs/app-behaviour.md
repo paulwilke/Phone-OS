@@ -95,6 +95,77 @@ Tests in `test/test_school_time/`.
 | SCH-09 | The lift is logged on every log level | `test_lifting_is_logged_and_never_dropped_from_the_log` | SC:test_sos_in_school_time_needs_five_taps_and_lifts_the_lock | done |
 | SCH-10 | The windows may change while the device runs | `test_the_profile_may_change_while_the_device_runs` | — | done |
 
+### Windows that can be switched off
+
+Each window has `enabled` (default true) and a card without windows has one built-in disabled window ([quiet-hours.md](quiet-hours.md)). The page's checkbox and default window are tested by `test/test_web_page/test.mjs`, the generator by `test/test_schema_gen/test_gen.py`, and the scenario `school-time-off` pins that a switched-off window locks nothing in the simulator.
+
+Tests in `test/test_quiet_hours/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-11 | A window that is not enabled never makes school time, leaves the end minute alone and stays in the list | `test_a_disabled_window_never_makes_school_time` | — | done |
+| SCH-12 | `add` makes an enabled window unless told otherwise | `test_an_enabled_window_is_the_default_of_add_and_makes_school_time` | — | done |
+| SCH-13 | A disabled window does not change the lock or the end minute that the enabled windows report | `test_a_disabled_window_does_not_change_what_the_enabled_ones_report` | — | done |
+| SCH-14 | A disabled window across midnight is skipped in the evening and in the morning | `test_a_disabled_window_across_midnight_is_skipped_evening_and_morning` | — | done |
+| SCH-15 | A disabled window still counts towards the two windows a day, so that switching it on cannot break the limit | `test_a_disabled_window_still_counts_towards_the_two_a_day` | — | done |
+
+Tests in `test/test_school_time/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-16 | A switched-off window is no school time, and there is nothing for an emergency to lift | `test_a_switched_off_window_is_no_school_time_and_nothing_to_lift` | — | done |
+
+Tests in `test/test_config_loader/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-17 | A card without `[[quiet_hours]]` gets one built-in window, Monday to Friday 08:00 to 12:30, disabled, and no diagnostic | `test_a_card_without_quiet_hours_gets_one_default_window_switched_off` | — | done |
+| SCH-18 | `quiet_hours = []`, as the parents' page writes an empty list, is the same as no key | `test_the_empty_array_the_page_writes_is_the_same_as_no_key` | — | done |
+| SCH-19 | A missing or unreadable `settings.toml` gets the default window too | `test_a_missing_or_broken_settings_file_gets_the_default_window_too` | — | done |
+| SCH-20 | The default window never makes school time, not even Monday morning | `test_a_default_window_never_makes_school_time` | — | done |
+| SCH-21 | A card that lists windows gets exactly those, no default added | `test_a_card_that_lists_windows_gets_exactly_those` | — | done |
+| SCH-22 | A window without `enabled` is enabled, so a card of before the key locks as before | `test_a_window_without_enabled_is_enabled` | — | done |
+| SCH-23 | `enabled = false` is loaded and disabled; `enabled = true` is enabled | `test_a_window_with_enabled_false_is_loaded_and_disabled` | — | done |
+| SCH-24 | `enabled` of the wrong type is reported as `wrong-type` and the window stays enabled | `test_enabled_of_the_wrong_type_is_reported_and_the_window_stays_on` | — | done |
+| SCH-25 | A card whose only listed window is refused gets no default window | `test_a_card_whose_only_window_is_refused_gets_no_default` | — | done |
+| SCH-26 | `enabled` survives the writer, and the default window is written to the card still disabled | `test_enabled_survives_the_writer_and_the_default_is_written_to_the_card` | — | done |
+
+Tests in `test/test_calls/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-27 | A switched-off window does not stop dialling and does not reject an incoming call | `test_a_switched_off_window_does_not_stop_dialling_or_ringing` | — | done |
+
+Tests in `test/test_messaging/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-28 | A switched-off window lets every text vibrate | `test_a_switched_off_window_lets_everybody_vibrate` | — | done |
+
+Tests in `test/test_emergency/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-29 | A switched-off window does not ask for the five SOS taps | `test_a_switched_off_window_does_not_ask_for_five_taps` | — | done |
+
+Tests in `test/test_app_core/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-30 | A switched-off window is no school time in the state the status bar and the lock page draw | `test_a_switched_off_window_is_no_school_time_in_the_state` | — | done |
+
+Tests in `test/test_simulator/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-31 | On the demo card with switched-off windows and on a card without windows, no hour of the week is school time | `test_switched_off_windows_and_the_default_window_never_make_school_time` | — | done |
+
+Tests in `test/test_web_api/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| SCH-32 | The `enabled` flag of a window is stored as a boolean, read back, and a string in its place is refused | `test_the_enabled_flag_of_a_school_time_window_is_stored_and_read_back` | — | done |
+
 ## Messaging
 
 Tests in `test/test_messaging/`.

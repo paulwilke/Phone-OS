@@ -91,7 +91,7 @@ bool QuietHours::parseTime(const char* text, int& minuteOfDay) {
   return true;
 }
 
-QuietHours::AddResult QuietHours::add(const char* days, const char* from, const char* to) {
+QuietHours::AddResult QuietHours::add(const char* days, const char* from, const char* to, bool enabled) {
   uint8_t mask;
   int a, b;
   if (!parseDays(days, mask)) return AddResult::BadDays;
@@ -106,7 +106,7 @@ QuietHours::AddResult QuietHours::add(const char* days, const char* from, const 
     }
     if (onThisDay >= kMaxPerDay) return AddResult::DayFull;
   }
-  windows_[count_++] = Window{mask, (uint16_t)a, (uint16_t)b};
+  windows_[count_++] = Window{mask, (uint16_t)a, (uint16_t)b, enabled};
   return AddResult::Added;
 }
 
@@ -121,6 +121,7 @@ bool QuietHours::active(uint32_t epochUtc, int tzOffsetMinutes, int* endMinute) 
   int endsAt = 0;
   for (size_t i = 0; i < count_; ++i) {
     const Window& w = windows_[i];
+    if (!w.enabled) continue;
     int remaining = 0;
     if (w.from < w.to) {
       if ((w.days & (1u << today)) && now.minuteOfDay >= w.from && now.minuteOfDay < w.to) {

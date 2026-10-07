@@ -34,6 +34,8 @@ struct Rig : CoreFakes {
 };
 
 Profile inSchool() { return ProfileBuilder().schoolTime("tue", "14:00", "15:00").build(); }
+// The same window, switched off by the parents.
+Profile inSwitchedOffSchool() { return ProfileBuilder().schoolTime("tue", "14:00", "15:00", false).build(); }
 
 }  // namespace
 
@@ -64,6 +66,17 @@ void test_dialling_is_refused_in_school_time() {
   TEST_ASSERT_EQUAL(15 * 60, r.notices.current().minute);
   TEST_ASSERT_EQUAL_STRING("", r.modem.callPhone().c_str());
   TEST_ASSERT_TRUE(r.calls.refuseInSchoolTime());                  // the same question for anything else the child starts
+}
+
+void test_a_switched_off_window_does_not_stop_dialling_or_ringing() {
+  Rig r(inSwitchedOffSchool());
+  TEST_ASSERT_FALSE(r.calls.refuseInSchoolTime());
+  TEST_ASSERT_TRUE(r.calls.call(kParentOne));
+  Rig q(inSwitchedOffSchool());
+  q.modem.injectIncomingCall(kGrandma);
+  q.poll();
+  TEST_ASSERT_FALSE(q.log.contains("rejected in quiet hours"));
+  TEST_ASSERT_FALSE(q.noticeIs(NoticeKind::CallerInSchoolTime));
 }
 
 void test_dialling_works_outside_school_time() {
@@ -751,6 +764,7 @@ int main() {
   RUN_TEST(test_only_allowed_numbers_are_dialled);
   RUN_TEST(test_a_number_in_another_spelling_and_a_listed_non_parent_may_be_called);
   RUN_TEST(test_dialling_is_refused_in_school_time);
+  RUN_TEST(test_a_switched_off_window_does_not_stop_dialling_or_ringing);
   RUN_TEST(test_dialling_works_outside_school_time);
   RUN_TEST(test_dialling_is_refused_with_cellular_off);
   RUN_TEST(test_dialling_is_refused_without_a_network);

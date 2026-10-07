@@ -191,7 +191,9 @@ void test_empty_card_gives_defaults_and_missing_file_diagnostics() {
   TEST_ASSERT_FALSE(r.profile.freeText);
   TEST_ASSERT_TRUE(r.profile.modemSleep);
   TEST_ASSERT_EQUAL(0, (int)r.profile.contacts.count());
-  TEST_ASSERT_EQUAL(0, (int)r.profile.quietHours.count());
+  // A card without windows: the one built-in window, switched off.
+  TEST_ASSERT_EQUAL(1, (int)r.profile.quietHours.count());
+  TEST_ASSERT_FALSE(r.profile.quietHours.window(0).enabled);
   TEST_ASSERT_EQUAL(0, (int)r.profile.callTargets.size());
   TEST_ASSERT_TRUE(r.simPin.empty());
   TEST_ASSERT_TRUE(r.webPassword.empty());
@@ -468,6 +470,115 @@ void test_bad_quiet_hours_is_reported() {
   auto r = loadWith(store);
   TEST_ASSERT_TRUE(hasDiag(r.diagnostics, Diagnostic::Code::BadQuietHours));
   TEST_ASSERT_EQUAL(0, (int)r.profile.quietHours.count());
+}
+
+// ---------------------------------------------------------------------------
+// School-time windows: the built-in default and the `enabled` key
+// ---------------------------------------------------------------------------
+
+// The default is the schema's: Monday to Friday, 08:00 to 12:30, switched off.
+void assertIsTheDefaultWindow(const QuietHours& qh) {
+  TEST_ASSERT_EQUAL(1, (int)qh.count());
+  TEST_ASSERT_EQUAL_HEX8(0x1F, qh.window(0).days);
+  TEST_ASSERT_EQUAL(8 * 60, qh.window(0).from);
+  TEST_ASSERT_EQUAL(12 * 60 + 30, qh.window(0).to);
+  TEST_ASSERT_FALSE(qh.window(0).enabled);
+}
+
+void test_a_card_without_quiet_hours_gets_one_default_window_switched_off() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", "[child]\nname = \"Alex\"\n");
+  auto r = loadWith(store);
+  assertIsTheDefaultWindow(r.profile.quietHours);
+  TEST_ASSERT_FALSE(hasDiag(r.diagnostics, Diagnostic::Code::BadQuietHours));
+}
+
+void test_the_empty_array_the_page_writes_is_the_same_as_no_key() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", kPageSettings);
+  assertIsTheDefaultWindow(loadWith(store).profile.quietHours);
+}
+
+void test_a_missing_or_broken_settings_file_gets_the_default_window_too() {
+  FakeConfigStore missing;
+  assertIsTheDefaultWindow(loadWith(missing).profile.quietHours);
+  FakeConfigStore broken;
+  broken.put("/config/settings.toml", "[child\nname = ");
+  assertIsTheDefaultWindow(loadWith(broken).profile.quietHours);
+}
+
+void test_a_default_window_never_makes_school_time() {
+  FakeConfigStore store;
+  auto r = loadWith(store);
+  // Monday 2025-01-06 09:00 UTC, inside the default hours
+  TEST_ASSERT_FALSE(r.profile.schoolTime(1736154000u, 0));
+}
+
+void test_a_card_that_lists_windows_gets_exactly_those() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", "[[quiet_hours]]\ndays = \"sat\"\nfrom = \"10:00\"\nto = \"11:00\"\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_EQUAL(1, (int)r.profile.quietHours.count());
+  TEST_ASSERT_EQUAL_HEX8(0x20, r.profile.quietHours.window(0).days);
+}
+
+void test_a_window_without_enabled_is_enabled() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", "[[quiet_hours]]\ndays = \"mon-fri\"\nfrom = \"08:00\"\nto = \"12:00\"\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_EQUAL(1, (int)r.profile.quietHours.count());
+  TEST_ASSERT_TRUE(r.profile.quietHours.window(0).enabled);
+}
+
+void test_a_window_with_enabled_false_is_loaded_and_disabled() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml",
+    "[[quiet_hours]]\ndays = \"mon-fri\"\nfrom = \"08:00\"\nto = \"12:00\"\nenabled = false\n\n"
+    "[[quiet_hours]]\ndays = \"mon-fri\"\nfrom = \"13:00\"\nto = \"15:00\"\nenabled = true\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_EQUAL(2, (int)r.profile.quietHours.count());
+  TEST_ASSERT_FALSE(r.profile.quietHours.window(0).enabled);
+  TEST_ASSERT_TRUE(r.profile.quietHours.window(1).enabled);
+  TEST_ASSERT_EQUAL(0, (int)r.diagnostics.size() - 2);  // only the two missing files
+}
+
+void test_enabled_of_the_wrong_type_is_reported_and_the_window_stays_on() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml",
+    "[[quiet_hours]]\ndays = \"mon-fri\"\nfrom = \"08:00\"\nto = \"12:00\"\nenabled = \"no\"\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::WrongType, "quiet_hours.enabled"));
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::WrongType, "bool"));
+  TEST_ASSERT_EQUAL(1, (int)r.profile.quietHours.count());
+  TEST_ASSERT_TRUE(r.profile.quietHours.window(0).enabled);
+}
+
+void test_a_card_whose_only_window_is_refused_gets_no_default() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", "[[quiet_hours]]\ndays = \"badday\"\nfrom = \"08:00\"\nto = \"12:00\"\n");
+  TEST_ASSERT_EQUAL(0, (int)loadWith(store).profile.quietHours.count());
+}
+
+void test_enabled_survives_the_writer_and_the_default_is_written_to_the_card() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml",
+    "[[quiet_hours]]\ndays = \"mon\"\nfrom = \"08:00\"\nto = \"09:00\"\nenabled = false\n\n"
+    "[[quiet_hours]]\ndays = \"tue\"\nfrom = \"08:00\"\nto = \"09:00\"\n");
+  auto r1 = loadWith(store);
+  TEST_ASSERT_TRUE(ConfigWriter(store).writeSettings(r1.profile));
+  auto r2 = loadWith(store);
+  TEST_ASSERT_EQUAL(2, (int)r2.profile.quietHours.count());
+  TEST_ASSERT_FALSE(r2.profile.quietHours.window(0).enabled);
+  TEST_ASSERT_TRUE(r2.profile.quietHours.window(1).enabled);
+
+  // A card without windows: the writer puts the default on the card, still switched off.
+  FakeConfigStore empty;
+  auto r3 = loadWith(empty);
+  TEST_ASSERT_TRUE(ConfigWriter(empty).writeSettings(r3.profile));
+  std::string text;
+  TEST_ASSERT_TRUE(empty.read("/config/settings.toml", text, 8192));
+  TEST_ASSERT_TRUE(text.find("enabled = false") != std::string::npos);
+  assertIsTheDefaultWindow(loadWith(empty).profile.quietHours);
 }
 
 void test_tile_without_target_is_reported() {
@@ -1014,6 +1125,16 @@ int main() {
   RUN_TEST(test_bad_enum_is_reported);
   RUN_TEST(test_out_of_range_integer_is_reported);
   RUN_TEST(test_bad_quiet_hours_is_reported);
+  RUN_TEST(test_a_card_without_quiet_hours_gets_one_default_window_switched_off);
+  RUN_TEST(test_the_empty_array_the_page_writes_is_the_same_as_no_key);
+  RUN_TEST(test_a_missing_or_broken_settings_file_gets_the_default_window_too);
+  RUN_TEST(test_a_default_window_never_makes_school_time);
+  RUN_TEST(test_a_card_that_lists_windows_gets_exactly_those);
+  RUN_TEST(test_a_window_without_enabled_is_enabled);
+  RUN_TEST(test_a_window_with_enabled_false_is_loaded_and_disabled);
+  RUN_TEST(test_enabled_of_the_wrong_type_is_reported_and_the_window_stays_on);
+  RUN_TEST(test_a_card_whose_only_window_is_refused_gets_no_default);
+  RUN_TEST(test_enabled_survives_the_writer_and_the_default_is_written_to_the_card);
   RUN_TEST(test_tile_without_target_is_reported);
   RUN_TEST(test_unknown_timezone_is_reported);
   RUN_TEST(test_oversized_file_is_skipped_with_diagnostic);

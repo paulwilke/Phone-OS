@@ -10,6 +10,7 @@ Tests:
   3. A schema with a missing required field is refused with a reason.
   4. --check detects an out-of-date file.
   5. --check passes when all files are up to date.
+  6. A default entry of a list section reaches every output and is checked; the checkbox widget is only for a bool.
 """
 import json
 import os
@@ -207,6 +208,67 @@ def test_check_mode():
 
 
 # ---------------------------------------------------------------------------
+# 6. A default entry for a list section, and the checkbox widget
+# ---------------------------------------------------------------------------
+
+def tiny_with_default(entry):
+    files, sections, keys = gen_config.load_schema(TINY)
+    for sec in sections:
+        if sec["name"] == "tags":
+            sec["default_entry"] = entry
+    return files, sections, keys
+
+
+def test_default_entry():
+    files, sections, keys = tiny_with_default({"value": "first"})
+    check("default entry: valid schema", gen_config.validate_schema(files, sections, keys) == [])
+    out = gen_config.all_outputs(files, sections, keys, REPO)
+    cpp = out["src/config/schema_generated.h"]
+    check("default entry: in the C++ table", '{"settings", "tags", "value", "first"},' in cpp)
+    check("default entry: counted without the sentinel", "kDefaultEntryCount" in cpp and '{"", "", "", ""},' in cpp)
+    form = json.loads(out["config/form_generated.json"])
+    tags = next(s for s in form["files"]["settings"]["sections"] if s["id"] == "tags")
+    check("default entry: in the form description", tags.get("default_entry") == {"value": "first"})
+    example = out["config/examples/settings.toml"]
+    check("default entry: written out in the example, uncommented", '[[tags]]\nvalue = "first"\n' in example, example)
+    check("default entry: said in the reference", "built-in entry" in out["docs/configuration-reference.md"])
+    # without one nothing of it appears
+    plain = tiny_outputs()
+    check("no default entry: no key in the form description",
+          all("default_entry" not in s for s in json.loads(plain["config/form_generated.json"])["files"]["settings"]["sections"]))
+    check("no default entry: the example keeps the commented key", "# value = " in plain["config/examples/settings.toml"])
+
+
+def test_default_entry_is_checked():
+    for name, entry, word in [
+        ("unknown key", {"nope": "x", "value": "y"}, "not a key"),
+        ("wrong type", {"value": True}, "must be a string"),
+        ("required key missing", {}, "required key"),
+    ]:
+        errors = gen_config.validate_schema(*tiny_with_default(entry))
+        check(f"default entry refused: {name}", any(word in e for e in errors), f"errors = {errors}")
+    files, sections, keys = gen_config.load_schema(TINY)
+    for sec in sections:
+        if sec["name"] == "child":
+            sec["default_entry"] = {"name": "x"}
+    errors = gen_config.validate_schema(files, sections, keys)
+    check("default entry refused: section is no list", any("list section" in e for e in errors), f"errors = {errors}")
+
+
+def test_checkbox_widget():
+    files, sections, keys = gen_config.load_schema(TINY)
+    for k in keys:
+        if k["name"] == "value":
+            k["widget"] = "checkbox"
+    errors = gen_config.validate_schema(files, sections, keys)
+    check("widget checkbox refused on a string", any("widget" in e for e in errors), f"errors = {errors}")
+    for k in keys:
+        if k["name"] == "age":
+            k["widget"] = "checkbox"
+    check("widget checkbox refused on an integer too", any("age" in e for e in gen_config.validate_schema(files, sections, keys)))
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     print("test_gen.py")
@@ -217,6 +279,9 @@ def main():
     test_unknown_type()
     test_missing_required_field()
     test_check_mode()
+    test_default_entry()
+    test_default_entry_is_checked()
+    test_checkbox_widget()
 
     print()
     print(f"{TESTS_PASSED} passed, {TESTS_FAILED} failed")

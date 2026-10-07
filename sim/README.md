@@ -12,7 +12,7 @@ python3 scripts/make_demo.py                              # the pictures and the
 
 | Directory | What it holds |
 |---|---|
-| `data/`, `data-parent/`, `data-school/` | the demo cards: the child's device, a parent's, and one on which school time never ends (invented values only) |
+| `data/`, `data-parent/`, `data-school/`, `data-school-off/` | the demo cards: the child's device, a parent's, one on which school time never ends, and the same with its windows switched off (invented values only) |
 | `scripts/` | the scenarios, one story each, run by CI headless |
 | `golden/` | the pictures the smoke scenario compares with (`#` and `.`, like `test/golden/`) |
 | `demo/` | the world, the scenes and the page of the generated demo |

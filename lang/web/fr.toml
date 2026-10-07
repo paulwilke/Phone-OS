@@ -97,6 +97,8 @@ config.quiet_hours.from.label         = "De"
 config.quiet_hours.from.help          = "Début de la plage des heures de classe (HH:MM, format 24 heures)."
 config.quiet_hours.to.label           = "À"
 config.quiet_hours.to.help            = "Fin de la plage des heures de classe (HH:MM, format 24 heures)."
+config.quiet_hours.enabled.label        = "actif"
+config.quiet_hours.enabled.help         = "Active cette plage. Une plage non cochée est conservée mais ne verrouille jamais."
 
 config.tiles.label                    = "Boutons d'appel"
 config.tiles.help                     = "Les boutons d'appel de l'écran d'accueil, dans l'ordre où ils apparaissent. Seules les entrées avec action=call ajoutent une cible d'appel ; les autres actions sont ignorées et un avertissement apparaît."

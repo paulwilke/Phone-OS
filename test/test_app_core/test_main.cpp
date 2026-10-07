@@ -145,6 +145,13 @@ void test_poll_drains_everything() {
   TEST_ASSERT_EQUAL(1, d.played(HapticPattern::Failed));
 }
 
+// The lock screen and the status bar draw school time from this flag.
+void test_a_switched_off_window_is_no_school_time_in_the_state() {
+  Device d(ProfileBuilder().childName("Alex").schoolTime("tue", "14:00", "15:00", false).build());
+  AppCore::State s = d.poll();
+  TEST_ASSERT_FALSE(s.schoolTime);
+}
+
 void test_the_state_offers_what_the_interface_draws() {
   Device d(inSchool());
   d.modem.setNetwork("F-Operator Telecom", 3);
@@ -740,6 +747,7 @@ void test_the_state_has_the_time_to_measure_ages_against_and_what_the_radio_says
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_poll_drains_everything);
+  RUN_TEST(test_a_switched_off_window_is_no_school_time_in_the_state);
   RUN_TEST(test_the_state_offers_what_the_interface_draws);
   RUN_TEST(test_the_state_tells_whether_calls_are_possible);
   RUN_TEST(test_a_full_day);

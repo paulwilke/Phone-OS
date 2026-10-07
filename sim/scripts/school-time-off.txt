@@ -1,0 +1,29 @@
+# data: sim/data-school-off
+# The card of school-time.txt with its windows switched off (enabled = false): there is no school
+# time, a call rings, the tile opens the phone page, and the SOS needs no five taps.
+advance 5s
+check school no
+check haptic-ring 0
+
+# Parent One calls: it rings, as on a day without lessons.
+call +491701111111
+advance 1s
+check call ringing
+check haptic-ring 1
+remote hangup
+advance 1s
+check call idle
+
+# The phone tile opens the phone page.
+key select
+check screen phone
+key home
+
+# The SOS: the page asks for the kind of emergency, no tap count, and the text goes out.
+sos begin
+check sos choosing
+sos choose emergency
+advance 40s
+check sms-sent 1
+check last-sms-to +491701111111
+check last-sms-has Alex sends SOS

@@ -39,6 +39,12 @@ The loader accepts `[mesh]` as an alias for `[radio]` so that a card from a devi
 the previous firmware loads without a manual edit. A `MeshAlias` diagnostic is added when
 the alias is used; `[radio]` is used on every write.
 
+### School-time windows: `enabled` and the default window
+
+A `[[quiet_hours]]` window may carry `enabled = true|false`; without the key it is enabled, so a card written before the key existed locks as before. A value that is not a boolean is reported (`WrongType settings quiet_hours.enabled bool`) and the window stays **enabled**: a typo must not quietly end school time.
+
+A card without any window gets the schema's built-in window, Monday to Friday, 08:00 to 12:30, disabled. The loader adds it when `settings.toml` is missing, does not parse, has no `quiet_hours` key, has `quiet_hours = []` (what the parents' page writes for an empty list) or anything that is not a list of tables. It does not add it when the file lists windows, including when every listed window was refused. The values come from `default_entry` of the `quiet_hours` section in `config/schema.toml` (generated into `kDefaultEntries` of `src/config/schema_generated.h`), the same place the generated `config/examples/settings.toml` and the page's form description take them from. `ConfigWriter` writes `enabled` for every window, so saving from the page puts the default window on the card, still switched off.
+
 ### Non-call tiles
 
 `[[tiles]]` entries with `action` other than `call` are accepted but ignored with a

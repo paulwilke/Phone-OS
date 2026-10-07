@@ -204,11 +204,14 @@ Takes effect on next start.
 
 ### `[[quiet_hours]]`
 
+Without any `[[quiet_hours]]` entry the device uses one built-in entry: `days = "mon-fri"`, `from = "08:00"`, `to = "12:30"`, `enabled = false`.
+
 | Key | Type | Default | Required | Apply |
 |-----|------|---------|----------|-------|
 | `days` | weekday_set | `—` | yes | restart |
 | `from` | time_of_day | `—` | yes | restart |
 | `to` | time_of_day | `—` | yes | restart |
+| `enabled` | bool | `true` | no | restart |
 
 #### `days`
 
@@ -226,6 +229,12 @@ Takes effect on next start.
 
 Time of day in 24-hour format: `"HH:MM"`.
 Required.
+Takes effect on next start.
+
+#### `enabled`
+
+Boolean (`true` or `false`).
+Default: `true`.
 Takes effect on next start.
 
 ### `[[tiles]]`

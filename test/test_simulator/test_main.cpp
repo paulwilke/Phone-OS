@@ -61,7 +61,7 @@ bool contains(const std::string& text, const std::string& part) { return text.fi
 // ---- the demo cards ------------------------------------------------------------------------------------
 
 void test_every_demo_card_loads_without_a_diagnostic_or_a_warning() {
-  for (const char* dir : {"sim/data", "sim/data-parent", "sim/data-school"}) {
+  for (const char* dir : {"sim/data", "sim/data-parent", "sim/data-school", "sim/data-school-off"}) {
     Sim s(dir);
     TEST_ASSERT_TRUE_MESSAGE(s.sim.runtime().diagnostics().empty(), dir);
     TEST_ASSERT_FALSE_MESSAGE(contains(s.output(), "warning"), dir);
@@ -83,6 +83,21 @@ void test_school_time_on_the_school_card_never_ends() {
     TEST_ASSERT_TRUE(s.run(std::string("date ") + when));
     s.sim.advance(2000);
     TEST_ASSERT_TRUE_MESSAGE(s.state().schoolTime, when);
+  }
+}
+
+// The windows of this card cover every hour and are switched off; a card without any window has the
+// built-in one, also switched off, and Monday morning is inside it.
+void test_switched_off_windows_and_the_default_window_never_make_school_time() {
+  Sim off("sim/data-school-off"), none("sim/data");
+  TEST_ASSERT_EQUAL(2, static_cast<int>(off.sim.runtime().core().profile().quietHours.count()));
+  TEST_ASSERT_EQUAL(1, static_cast<int>(none.sim.runtime().core().profile().quietHours.count()));
+  for (Sim* s : {&off, &none}) {
+    for (const char* when : {"2026-09-14 09:00", "2026-09-15 03:00", "2026-09-19 23:59", "2026-09-16 23:30"}) {
+      TEST_ASSERT_TRUE(s->run(std::string("date ") + when));
+      s->sim.advance(2000);
+      TEST_ASSERT_FALSE_MESSAGE(s->state().schoolTime, when);
+    }
   }
 }
 
@@ -773,6 +788,7 @@ int main() {
   RUN_TEST(test_every_demo_card_loads_without_a_diagnostic_or_a_warning);
   RUN_TEST(test_the_cards_differ_in_what_they_are_for);
   RUN_TEST(test_school_time_on_the_school_card_never_ends);
+  RUN_TEST(test_switched_off_windows_and_the_default_window_never_make_school_time);
   RUN_TEST(test_a_missing_data_directory_is_a_warning_and_an_empty_card);
   RUN_TEST(test_the_device_starts_on_a_tuesday_afternoon_in_germany);
   RUN_TEST(test_date_sets_the_local_time_of_the_devices_zone_also_across_the_change_of_the_clocks);

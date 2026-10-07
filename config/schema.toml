@@ -21,6 +21,10 @@
 #   phone_number  — E.164 phone number
 #   catalog_code  — two-letter (or longer) language code of an installed catalog
 #
+# Optional on a [[section]] with list = true: `default_entry = { key = value, ... }` is the one entry the
+# loader, the generated example file and the page's form use when the file has no entry of that list.
+# Optional on a bool [[key]]: `widget = "checkbox"` makes the page draw a checkbox, not a yes/no list.
+#
 # `apply`:  restart = takes effect on next start; immediate = takes effect without restart
 # `secret`: value must never appear in logs
 # `field`:  Profile field that this key fills; empty string if the key is returned separately
@@ -159,6 +163,9 @@ list    = true
 label   = "config.quiet_hours.label"
 help    = "config.quiet_hours.help"
 field   = "quietHours"
+# A card without any window gets this one, switched off: the parents see a window to adjust, and no
+# school time is active until they tick it. A card that lists windows gets exactly those.
+default_entry = { days = "mon-fri", from = "08:00", to = "12:30", enabled = false }
 
 [[section]]
 file    = "settings"
@@ -557,6 +564,21 @@ field   = ""
 apply   = "restart"
 secret  = false
 required = true
+
+[[key]]
+file    = "settings"
+section = "quiet_hours"
+name    = "enabled"
+type    = "bool"
+# True, so that a window written before the key existed keeps locking the phone.
+default = "true"
+widget  = "checkbox"
+label   = "config.quiet_hours.enabled.label"
+help    = "config.quiet_hours.enabled.help"
+field   = ""
+apply   = "restart"
+secret  = false
+required = false
 
 # ---------------------------------------------------------------------------
 # Keys — settings.toml / [[tiles]]

@@ -2,7 +2,7 @@
 
 Code: `src/app/SchoolTime.{h,cpp}`; tests in `test/test_school_time/`. The windows themselves are [quiet-hours.md](quiet-hours.md); this is the profile's windows on the clock, and the one exception.
 
-`SchoolTime::active(&end)` asks the profile whether school time is running now, with the minute it ends. Without a known time of day there is no school time ([hardware-capabilities.md](hardware-capabilities.md)); the end minute itself is free.
+`SchoolTime::active(&end)` asks the profile whether school time is running now, with the minute it ends. A window the parents switched off (`enabled = false`) is not school time and there is nothing for an emergency to lift ([quiet-hours.md](quiet-hours.md)). Without a known time of day there is no school time ([hardware-capabilities.md](hardware-capabilities.md)); the end minute itself is free.
 
 ## The emergency exception
 

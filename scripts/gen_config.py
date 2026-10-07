@@ -98,7 +98,49 @@ def validate_schema(files, sections, keys):
         if t == "integer":
             if "min_val" not in k and "max_val" not in k:
                 errors.append(f"[[key]] {k.get('name','?')}: integer type should have min_val/max_val")
+
+    # A default entry fills a list section when the file has none. Its names must be keys of that
+    # section and its values of the key's type, so that a typo cannot reach the device.
+    keys_by_section = {}
+    for k in keys:
+        keys_by_section.setdefault((k.get("file"), k.get("section")), {})[k.get("name")] = k
+    for s in sections:
+        if "default_entry" not in s:
+            continue
+        where = f"[[section]] {s.get('name','?')}: default_entry"
+        entry = s["default_entry"]
+        if not s.get("list"):
+            errors.append(f"{where} needs a list section")
+        if not isinstance(entry, dict):
+            errors.append(f"{where} must be a table")
+            continue
+        section_keys = keys_by_section.get((s.get("file"), s.get("name")), {})
+        for name, value in entry.items():
+            k = section_keys.get(name)
+            if k is None:
+                errors.append(f"{where}: `{name}` is not a key of the section")
+            elif k.get("type") == "bool":
+                if not isinstance(value, bool):
+                    errors.append(f"{where}: `{name}` must be true or false")
+            elif k.get("type") == "integer":
+                if isinstance(value, bool) or not isinstance(value, int):
+                    errors.append(f"{where}: `{name}` must be an integer")
+            elif not isinstance(value, str):
+                errors.append(f"{where}: `{name}` must be a string")
+        for name, k in section_keys.items():
+            if k.get("required") and name not in entry:
+                errors.append(f"{where}: required key `{name}` is missing")
+    for k in keys:
+        if "widget" in k and not (k["widget"] == "checkbox" and k.get("type") == "bool"):
+            errors.append(f"[[key]] {k.get('name','?')}: `widget` can only be \"checkbox\" on a bool")
     return errors
+
+
+def _text_value(v):
+    """A schema value as the text a default is kept in."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return str(v)
 
 
 def _esc(s):
@@ -164,6 +206,14 @@ def generate_cpp(files, sections, keys):
         "    const char* field;     // Profile field path",
         "};",
         "",
+        "// One value of the entry a list section gets when the file has none (SectionDef is the list).",
+        "struct DefaultEntryValue {",
+        "    const char* file;",
+        "    const char* section;",
+        "    const char* key;",
+        "    const char* value;     // as text: \"true\", \"08:00\"",
+        "};",
+        "",
     ]
 
     # kKeys array
@@ -206,7 +256,17 @@ def generate_cpp(files, sections, keys):
             f'     "{label}", "{help_}", "{field}"}},')
     lines.append("};")
     lines.append("")
+    lines.append("// The last element is a sentinel, so that the array is never empty.")
+    lines.append("// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)")
+    lines.append("inline constexpr DefaultEntryValue kDefaultEntries[] = {")
+    for sd in sections:
+        for name, value in sd.get("default_entry", {}).items():
+            lines.append(f'    {{"{_esc(sd["file"])}", "{_esc(sd["name"])}", "{_esc(name)}", "{_esc(_text_value(value))}"}},')
+    lines.append('    {"", "", "", ""},')
+    lines.append("};")
+    lines.append("")
     lines.append("inline constexpr size_t kKeyCount     = sizeof(kKeys)     / sizeof(kKeys[0]);")
+    lines.append("inline constexpr size_t kDefaultEntryCount = sizeof(kDefaultEntries) / sizeof(kDefaultEntries[0]) - 1;")
     lines.append("inline constexpr size_t kSectionCount = sizeof(kSections) / sizeof(kSections[0]);")
     lines.append("")
     lines.append("} // namespace config")
@@ -249,6 +309,8 @@ def generate_form_json(files, sections, keys):
                 "field": sd["field"] if sd else "",
                 "keys":  [],
             }
+            if sd and "default_entry" in sd:
+                sec_obj["default_entry"] = sd["default_entry"]
             for k in ks:
                 kobj = {
                     "name":     k["name"],
@@ -264,6 +326,8 @@ def generate_form_json(files, sections, keys):
                     "help":     k["help"],
                     "field":    k.get("field", ""),
                 }
+                if "widget" in k:
+                    kobj["widget"] = k["widget"]
                 sec_obj["keys"].append(kobj)
             out["files"][fid]["sections"].append(sec_obj)
 
@@ -324,6 +388,10 @@ def generate_docs(files, sections, keys):
             else:
                 lines.append("### Root keys")
             lines.append("")
+            if is_list and "default_entry" in sd:
+                shown = ", ".join(f"`{n} = {_example_toml(v)}`" for n, v in sd["default_entry"].items())
+                lines.append(f"Without any `[[{sec}]]` entry the device uses one built-in entry: {shown}.")
+                lines.append("")
 
             ks = by_file_sec.get((fid, sec), [])
             # Table header
@@ -396,6 +464,12 @@ def generate_docs(files, sections, keys):
     return "\n".join(lines)
 
 
+def _example_toml(v):
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return _toml_str(v) if isinstance(v, str) else str(v)
+
+
 def _toml_str(v):
     return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -428,7 +502,14 @@ def generate_examples(files, sections, keys):
             is_list = sd["list"] if sd else False
             ks = by_file_sec.get((fid, sec), [])
 
-            if is_list:
+            if is_list and sd and "default_entry" in sd:
+                # What the device uses when the file has no entry, written out so that it can be edited.
+                lines.append(f"[[{sec}]]")
+                for k2 in ks:
+                    if k2["name"] in sd["default_entry"]:
+                        lines.append(f"{k2['name']} = {_example_toml(sd['default_entry'][k2['name']])}")
+                lines.append("")
+            elif is_list:
                 lines.append(f"[[{sec}]]")
                 for k2 in ks:
                     dflt = k2.get("default", "")

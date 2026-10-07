@@ -163,6 +163,13 @@ void test_in_school_time_only_parents_vibrate() {
   TEST_ASSERT_EQUAL(1, r.haptic.played().size());
 }
 
+void test_a_switched_off_window_lets_everybody_vibrate() {
+  Rig r(ProfileBuilder().schoolTime("tue", "14:00", "15:00", false).build());
+  r.receive(kGrandma, "Hello");
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.haptic.played().size());
+}
+
 void test_after_school_time_everybody_vibrates_again() {
   Rig r(inSchool());
   r.advance(3600);                                             // 15:32
@@ -845,6 +852,7 @@ int main() {
   RUN_TEST(test_an_incoming_sms_vibrates_the_message_pattern);
   RUN_TEST(test_message_vibration_can_be_switched_off);
   RUN_TEST(test_in_school_time_only_parents_vibrate);
+  RUN_TEST(test_a_switched_off_window_lets_everybody_vibrate);
   RUN_TEST(test_after_school_time_everybody_vibrates_again);
   RUN_TEST(test_an_incoming_sms_means_the_modem_is_awake);
   RUN_TEST(test_an_sms_from_a_stranger_is_dropped_without_a_trace);

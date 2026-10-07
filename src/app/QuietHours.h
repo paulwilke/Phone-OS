@@ -33,6 +33,10 @@ public:
     uint8_t days = 0;
     uint16_t from = 0;  // minute of the day
     uint16_t to = 0;
+    // A window the parents have switched off stays in the list, so that it can be switched on again
+    // without typing it anew, but it never makes school time. It still counts towards kMaxPerDay:
+    // otherwise switching it on later could break the limit.
+    bool enabled = true;
   };
 
   enum class AddResult {
@@ -43,7 +47,7 @@ public:
     DayFull,      // one of the days already has kMaxPerDay windows; nothing was added
   };
 
-  AddResult add(const char* days, const char* from, const char* to);
+  AddResult add(const char* days, const char* from, const char* to, bool enabled = true);
 
   size_t count() const { return count_; }
   // `i` must be below count(). The settings page shows the windows from this.
@@ -53,7 +57,9 @@ public:
   // known and never locks. When true and `endMinute` is given, it receives the
   // minute of the day at which the period ends (13:30 = 810); with overlapping
   // windows that is the end of the one that lasts longest. Two windows that merely
-  // touch (10:00 end, 10:00 start) are reported one at a time.
+  // touch (10:00 end, 10:00 start) are reported one at a time. A window that is not
+  // `enabled` is skipped here, and only here: this is the one place that decides, so
+  // calls, messages, the status bar and the SOS rule cannot disagree about it.
   bool active(uint32_t epochUtc, int tzOffsetMinutes, int* endMinute = nullptr) const;
 
   // Public because the parsing is exactly what has to be tested.

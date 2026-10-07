@@ -52,6 +52,14 @@ struct SectionDef {
     const char* field;     // Profile field path
 };
 
+// One value of the entry a list section gets when the file has none (SectionDef is the list).
+struct DefaultEntryValue {
+    const char* file;
+    const char* section;
+    const char* key;
+    const char* value;     // as text: "true", "08:00"
+};
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
 inline constexpr KeyDef kKeys[] = {
     // settings / [child]
@@ -136,6 +144,9 @@ inline constexpr KeyDef kKeys[] = {
     {"settings", "quiet_hours", "to", KeyType::TimeOfDay, true, false, Apply::Restart,
      "", 0, 0, "",
      "config.quiet_hours.to.label", "config.quiet_hours.to.help", ""},
+    {"settings", "quiet_hours", "enabled", KeyType::Bool, false, false, Apply::Restart,
+     "true", 0, 0, "",
+     "config.quiet_hours.enabled.label", "config.quiet_hours.enabled.help", ""},
     // settings / [tiles]
     {"settings", "tiles", "label", KeyType::String, false, false, Apply::Restart,
      "", 0, 24, "",
@@ -217,7 +228,18 @@ inline constexpr SectionDef kSections[] = {
      "config.wifi.network.label", "config.wifi.network.help", "wifi.networks"},
 };
 
+// The last element is a sentinel, so that the array is never empty.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
+inline constexpr DefaultEntryValue kDefaultEntries[] = {
+    {"settings", "quiet_hours", "days", "mon-fri"},
+    {"settings", "quiet_hours", "from", "08:00"},
+    {"settings", "quiet_hours", "to", "12:30"},
+    {"settings", "quiet_hours", "enabled", "false"},
+    {"", "", "", ""},
+};
+
 inline constexpr size_t kKeyCount     = sizeof(kKeys)     / sizeof(kKeys[0]);
+inline constexpr size_t kDefaultEntryCount = sizeof(kDefaultEntries) / sizeof(kDefaultEntries[0]) - 1;
 inline constexpr size_t kSectionCount = sizeof(kSections) / sizeof(kSections[0]);
 
 } // namespace config

@@ -24,6 +24,8 @@ Two things 3.2 accepted are **refused** by 4.0. Both are reported, but the effec
 - **German day names** (`mo-fr`, `taeglich`) in `[[quiet_hours]]`: 4.0 knows `mon-fri`, `mon,wed,fri` and `daily`. A window with another spelling is dropped (`bad-quiet-hours bad-days`). Write the English names.
 - **A third window on one day**: 3.2 allowed three, 4.0 allows two per day ([quiet-hours.md](quiet-hours.md)). The windows are taken in file order and the third one of a day is dropped (`bad-quiet-hours day-full`).
 
+A window of a 3.2 card has no `enabled` key and is **enabled**: it locks as before. A card without any window gets one built-in window on the parents' page and in the loader, Monday to Friday 08:00 to 12:30, **switched off**, so nothing is locked until a parent ticks "active" ([quiet-hours.md](quiet-hours.md)).
+
 Sizes: 4.0 skips a file larger than 4096 bytes. 3.2 read `settings.toml` in 4096, `contacts.toml` in 3072 and `secrets.toml` in 2048 bytes, so a file that 3.2 read in full fits. The limits of 16 contacts and 4 home networks are the same.
 
 You can try the card before the device does: the simulator reads it (`.pio/build/sim/program --data <folder>`, with the folder holding `config/`, then the console command `log`; [simulator.md](simulator.md)) and lists what it did not understand as `config:` lines. The history `messages.log` is not read by the simulator; the host test reads it.

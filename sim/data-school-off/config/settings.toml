@@ -1,0 +1,38 @@
+# The child's device with a school-time window that covers every hour and is switched off by the
+# parents (enabled = false): every value invented. It must behave like a card without school time.
+[child]
+name = "Alex"
+[interface]
+language = "en"
+[sms]
+language = "en"
+[time]
+timezone = "Europe/Berlin"
+[features]
+free_text = false
+radio = true
+[wifi]
+auto_off_minutes = 10
+[radio]
+name = "alex-device"
+peer = "NodeOne"
+[[tiles]]
+label = "Parent One"
+action = "call"
+target = "+491701111111"
+[[tiles]]
+label = "Parent Two"
+action = "call"
+target = "+491702222222"
+# Two windows, as on the card of data-school, which together would cover the whole week.
+[[quiet_hours]]
+days = "daily"
+from = "00:00"
+to = "23:59"
+enabled = false
+
+[[quiet_hours]]
+days = "daily"
+from = "23:00"
+to = "01:00"
+enabled = false

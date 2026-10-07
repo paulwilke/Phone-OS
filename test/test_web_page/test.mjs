@@ -213,7 +213,34 @@ function fakeElement(id) {
   return el;
 }
 
-async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false }) {
+// An element that keeps its children and answers the three selectors the form code uses, for the tests
+// that read a built form back (the plain fakeElement answers every query with one empty input).
+function richElement(tag) {
+  const matches = (el, sel) => {
+    let m;
+    if ((m = sel.match(/^\.([\w-]+)$/))) return String(el.className || '').split(/\s+/).includes(m[1]);
+    if ((m = sel.match(/^\[name="([^"]+)"\]$/))) return el.name === m[1];
+    if ((m = sel.match(/^\[data-list-section="([^"]+)"\]$/))) return el.attrs['data-list-section'] === m[1];
+    throw new Error('selector the test double does not know: ' + sel);
+  };
+  const el = {
+    tag, id: tag, children: [], attrs: {}, className: '', textContent: '', value: '', checked: false, hidden: false, style: {}, listeners: {},
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    appendChild(c) { this.children.push(c); return c; },
+    setAttribute(n, v) { this.attrs[n] = v; }, getAttribute(n) { return this.attrs[n] ?? null; },
+    addEventListener(t, f) { this.listeners[t] = f; }, remove() {}, focus() {}, click() {},
+    querySelectorAll(sel) {
+      const out = [];
+      const walkDown = (n) => { for (const c of n.children) { if (matches(c, sel)) out.push(c); walkDown(c); } };
+      walkDown(this);
+      return out;
+    },
+    querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
+  };
+  return el;
+}
+
+async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false, rich = false, settings = {} }) {
   const store = {};
   if (storedAuth) store.pp_auth = storedAuth;
   if (storedLang) store.pp_lang = storedLang;
@@ -227,9 +254,9 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     dataT.push(el);
   }
   const document = {
-    getElementById(id) { return els[id] ??= fakeElement(id); },
+    getElementById(id) { return els[id] ??= (rich && id.startsWith('form-') ? richElement(id) : fakeElement(id)); },
     querySelectorAll(sel) { return sel === '[data-t]' ? dataT : sel === '#tabs button' ? dataT.filter((e) => e.attrs['data-tab']) : []; },
-    createElement: (tag) => fakeElement(tag), querySelector: () => null,
+    createElement: (tag) => (rich ? richElement(tag) : fakeElement(tag)), querySelector: () => null,
     title: '', body: fakeElement('body'),
   };
   const calls = [];
@@ -245,6 +272,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     if (h && helpFails) return reply(500, { error: 'Response too large' });
     if (h) return catalogs[h[1]] ? reply(200, helps[h[1]] || {}) : reply(404, { error: 'Unknown language' });
     if (l && !h) return catalogs[l[1]] ? reply(200, catalogs[l[1]]) : reply(404, { error: 'Unknown language' });
+    if (path === '/api/settings' && opts.method !== 'PUT') return reply(200, settings);
     if (path === '/api/contacts') return reply(200, { contact: [{ number: '+491701111111', name: 'Parent One', role: 'parent' }] });
     return reply(200, {});
   };
@@ -431,6 +459,78 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   const sent2 = JSON.parse(pg2.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings').body);
   fakeQueryValue = '';
   assert(JSON.stringify(sent2.sms.extra_trigger_words) === '["#WoIstDu","Ping"]', 'typed words become an array of trimmed words: ' + JSON.stringify(sent2.sms.extra_trigger_words));
+}
+
+// (j) a school-time window has a checkbox "active"; a card without windows shows the schema's one window,
+// unticked; saving writes `enabled` (the owner's decision of 2026-10-07)
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const schema = JSON.parse(readFileSync(resolve(ROOT, 'config', 'form_generated.json'), 'utf8'));
+  const section = schema.files.settings.sections.find((x) => x.id === 'quiet_hours');
+  const enabledKey = section.keys.find((k) => k.name === 'enabled');
+  assert(enabledKey && enabledKey.type === 'bool' && enabledKey.widget === 'checkbox' && enabledKey.default === 'true',
+    'the schema gives a school-time window the key enabled: a checkbox, on unless the file says otherwise');
+  assert(JSON.stringify(section.default_entry) === JSON.stringify({ days: 'mon-fri', from: '08:00', to: '12:30', enabled: false }),
+    'the schema carries the default window: Monday to Friday, 08:00 to 12:30, switched off');
+  for (const [name, cat, word] of [['en', en, 'Active'], ['de', de, 'aktiv'], ['fr', fr, 'actif']])
+    assert(cat['config.quiet_hours.enabled.label'] === word, 'the catalog ' + name + ' words the checkbox: ' + cat['config.quiet_hours.enabled.label']);
+
+  const openSettings = async (settings, lang = 'en') => {
+    const pg = await runPage({ storedAuth: auth, storedLang: lang, catalogs: { en, de }, rich: true, settings });
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'settings').listeners.click();
+    await pg.settle();
+    return pg;
+  };
+  const windowsOf = (pg) => pg.els['form-settings'].querySelector('[data-list-section="quiet_hours"]').querySelectorAll('.list-entry');
+  const fieldsOf = (entry) => ({
+    days: entry.querySelector('[name="days"]').value, from: entry.querySelector('[name="from"]').value,
+    to: entry.querySelector('[name="to"]').value, box: entry.querySelector('[name="enabled"]'),
+  });
+  const save = async (pg) => {
+    pg.els['form-settings'].querySelectorAll('.btn-primary')[0].listeners.click();
+    await pg.settle();
+    return JSON.parse(pg.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings').body);
+  };
+
+  // no key at all, and the empty array the page writes today: the default window, unticked
+  for (const settings of [{}, { quiet_hours: [] }]) {
+    const pg = await openSettings(settings);
+    const entries = windowsOf(pg);
+    assert(entries.length === 1, 'a card without windows shows one: ' + JSON.stringify(settings));
+    const f = fieldsOf(entries[0]);
+    assert(f.days === 'mon-fri' && f.from === '08:00' && f.to === '12:30', 'the default window is Monday to Friday, 08:00 to 12:30');
+    assert(f.box.type === 'checkbox' && f.box.checked === false, 'the default window is not ticked');
+    const sent = await save(pg);
+    assert(JSON.stringify(sent.quiet_hours) === '[{"days":"mon-fri","from":"08:00","to":"12:30","enabled":false}]',
+      'saving writes the default window to the card, switched off: ' + JSON.stringify(sent.quiet_hours));
+  }
+
+  // ticking it writes enabled = true
+  {
+    const pg = await openSettings({});
+    fieldsOf(windowsOf(pg)[0]).box.checked = true;
+    const sent = await save(pg);
+    assert(sent.quiet_hours.length === 1 && sent.quiet_hours[0].enabled === true, 'a ticked window is written enabled = true');
+  }
+
+  // a card that lists windows gets exactly those: no default added; a window without the key is on
+  {
+    const pg = await openSettings({ quiet_hours: [{ days: 'sat', from: '10:00', to: '11:00' }, { days: 'sun', from: '10:00', to: '11:00', enabled: false }] });
+    const entries = windowsOf(pg);
+    assert(entries.length === 2, 'a card with two windows shows two, no default');
+    assert(fieldsOf(entries[0]).box.checked === true, 'a window without the key is ticked');
+    assert(fieldsOf(entries[1]).box.checked === false, 'enabled = false is unticked');
+    const sent = await save(pg);
+    assert(JSON.stringify(sent.quiet_hours.map((w) => w.enabled)) === '[true,false]', 'both are written with their state: ' + JSON.stringify(sent.quiet_hours));
+  }
+
+  // the checkbox carries the catalog's word in the page's language
+  {
+    const pg = await openSettings({}, 'de');
+    const box = fieldsOf(windowsOf(pg)[0]).box;
+    const label = windowsOf(pg)[0].children.flatMap((wrap) => wrap.children).find((c) => c.children.includes(box));
+    assert(label && label.textContent === 'aktiv', 'in German the checkbox is called "aktiv": ' + (label && label.textContent));
+  }
 }
 
 // ---------- summary ----------
