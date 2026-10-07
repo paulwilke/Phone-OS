@@ -322,6 +322,25 @@ def check_set(label, langs, ref_code, problems, device):
                     break
 
 
+def accent_share(strings):
+    """The share of the letters of a catalog that are not ASCII: 0 for a language written without accents."""
+    letters = [c for value in strings.values() for form in forms(value) for c in PLACEHOLDER.sub("", form) if c.isalpha()]
+    return sum(ord(c) > 127 for c in letters) / len(letters) if letters else 0.0
+
+
+def transliteration_problems(device, web):
+    """The page of a language that has accents on the device is written with them too. A catalog in ASCII
+    transliteration ("Geraet", "Parametres") reads wrongly to the parents, and the page is a browser's and has
+    no font limit that would excuse it."""
+    problems = []
+    for code in sorted(set(device) & set(web)):
+        on_device, on_page = accent_share(device[code][2]), accent_share(web[code][2])
+        if on_device >= 0.005 and on_page < on_device / 4:
+            problems.append(f"lang/web/{code}.toml: only {on_page:.1%} of its letters carry an accent against {on_device:.1%} in lang/{code}.toml: "
+                            f"is it written in ASCII transliteration? The page is shown in a browser and may use every letter")
+    return problems
+
+
 def main():
     if "--usage" in sys.argv[1:]:
         return usage()
@@ -343,6 +362,8 @@ def main():
         problems.append(f"lang/web/{code}.toml is missing: the device has lang/{code}.toml")
     for code in sorted(set(web) - set(device)):
         problems.append(f"lang/{code}.toml is missing: the page has lang/web/{code}.toml")
+
+    problems += transliteration_problems(device, web)
 
     device_ref = device.get("en", (None, None, {}))[2]
     web_ref = web.get("en", (None, None, {}))[2]

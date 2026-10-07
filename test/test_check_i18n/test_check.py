@@ -14,7 +14,9 @@ and runs the copied checker, so that what is tested is what the checker says abo
   7. lang/en.toml or lang/web/en.toml over the limit fails the check, and each file is judged alone;
   8. the sizes of every file are printed;
   9. a sentence written as a literal in the interface (src/ui/) is reported by --usage; a sentence in a comment or in an
-     assertion message is not.
+     assertion message is not;
+ 10. a web catalog written in ASCII transliteration (accents spelled out or dropped) is reported, the same one with its
+     accents is not.
 """
 import os
 import re
@@ -133,6 +135,21 @@ def main():
         code, out = tree.run("--usage")
         check("--usage reports a sentence in a string literal of the interface",
               code == 1 and "ProbeScreen.cpp:1: a sentence in a string literal" in out, out)
+    finally:
+        tree.close()
+
+    # 10. a page written in ASCII transliteration
+    tree = Tree()
+    try:
+        original = tree.read("lang/web/de.toml")
+        plain = original.replace("\u00e4", "ae").replace("\u00f6", "oe").replace("\u00fc", "ue").replace("\u00c4", "Ae").replace("\u00d6", "Oe").replace("\u00dc", "Ue").replace("\u00df", "ss")
+        tree.write("lang/web/de.toml", plain)
+        code, out = tree.run()
+        check("a web catalog in ASCII transliteration is reported",
+              code == 1 and "lang/web/de.toml: only" in out and "ASCII transliteration" in out, out)
+        tree.write("lang/web/de.toml", original)
+        code, out = tree.run()
+        check("the same catalog with its umlauts passes", code == 0, out)
     finally:
         tree.close()
 
