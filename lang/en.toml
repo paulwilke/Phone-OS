@@ -123,6 +123,10 @@ status.firmware         = "Firmware: {version}"
 status.off-cable        = "Switch off: unplug USB first"
 status.off-press        = "Switch off: press x twice"
 status.off-again        = "Switch off? Press x again"
+status.problems         = ["Configuration: {n} problem", "Configuration: {n} problems"]
+status.problem-file     = "{file} could not be read"
+status.problem-setting  = "{file}: check {key}"
+status.problem-entry    = "An entry in the lists was not used"
 
 messages.view-inbox = "Inbox  (O: Sent)"
 messages.view-sent = "Sent  (O: Inbox)"

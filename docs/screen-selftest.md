@@ -18,7 +18,7 @@ A result is kept as a code and worded when drawn, so it stays right after a chan
 
 ## Not ported
 
-The previous page showed the self-test summary of the start-up above the state line. Nothing in the application produces such a summary, and the page would have had to print a sentence made elsewhere in no language in particular, so the line is not there. Decision to confirm if the start-up check is to be shown.
+The previous page showed the self-test summary of the start-up above the state line. Nothing in the application produces such a summary, and the page would have had to print a sentence made elsewhere in no language in particular, so the line is not there.
 
 ## Tests
 

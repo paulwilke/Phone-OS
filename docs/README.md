@@ -51,7 +51,7 @@ The documents describe what exists in this repository — each one is written fr
 | [screen-settings.md](screen-settings.md) | the options page: volume, message vibration, save mode, Wi-Fi, language |
 | [screen-wifi.md](screen-wifi.md) | the Wi-Fi page: three buttons, the mark, what to join with, why it did not work |
 | [screen-net.md](screen-net.md) | the network page: the lines, SIM problems and their explanations |
-| [screen-status.md](screen-status.md) | the status page: battery, queries, firmware, switching off |
+| [screen-status.md](screen-status.md) | the status page: battery, configuration problems, queries, firmware, switching off |
 | [screen-language.md](screen-language.md) | the language page: native names, choosing at once through the core |
 | [screen-gnss.md](screen-gnss.md) | the position page: the receiver held while it is open, four values, the last known position with its age |
 | [screen-radio.md](screen-radio.md) | the radio page: head line, controls per state, contacts with way and age, writing to one |

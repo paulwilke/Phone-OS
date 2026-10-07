@@ -158,6 +158,10 @@ status.firmware         = "Firmware: {version}"
 status.off-cable        = "Ausschalten: erst USB abziehen"
 status.off-press        = "Ausschalten: x zweimal drücken"
 status.off-again        = "Ausschalten? Noch einmal x"
+status.problems         = ["Konfiguration: {n} Problem", "Konfiguration: {n} Probleme"]
+status.problem-file     = "{file} ließ sich nicht lesen"
+status.problem-setting  = "{file}: {key} prüfen"
+status.problem-entry    = "Ein Eintrag in den Listen wurde nicht verwendet"
 
 call.no-network  = "{name}: kein Netz"
 call.sms-only    = "{name}: nur SMS"

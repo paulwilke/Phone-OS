@@ -12,7 +12,7 @@ Numbers are written by `ui::format` (`degrees`, `tenths`, `age`; see [ui-framewo
 
 ## Not ported
 
-The previous page also showed the time of the fix ("as of 14:31"). The age of the last known position says what the time of day was meant to say, and the page has no time zone of its own. Decision to confirm.
+The previous page also showed the time of the fix ("as of 14:31"). The age of the last known position says what the time of day was meant to say, and the page has no time zone of its own.
 
 ## Tests
 

@@ -1,6 +1,6 @@
 # The number page
 
-Code: `src/ui/screens/NumberScreen.{h,cpp}`; tests in `test/test_screen_number/`. A number typed in, for the child who must write to somebody who is in no list. **It leads to a message and never to a call**: calls go to the numbers the profile allows, a security limit of the parents, not of this page. It also leads nowhere unless the profile lets the child choose any recipient (`Profile::freeText`). *Decision to confirm: the brief says "when free dialling is allowed"; the profile has no such switch, and the core refuses any call to a number that is not allowed, so I read it as `freeText`.*
+Code: `src/ui/screens/NumberScreen.{h,cpp}`; tests in `test/test_screen_number/`. A number typed in, for the child who must write to somebody who is in no list. **It leads to a message and never to a call**: calls go to the numbers the profile allows, a security limit of the parents, not of this page. It also leads nowhere unless the profile lets the child choose any recipient (`Profile::freeText`). The brief says "when free dialling is allowed"; the profile has no such switch, and the core refuses any call to a number that is not allowed, so the page reads it as `freeText`.
 
 Twelve large keys (1–9, +, 0, delete), because on the keyboard the digits are on the second layer. The keyboard works too: digits, and the plus only as the first character.
 

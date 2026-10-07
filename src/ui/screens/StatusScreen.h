@@ -14,20 +14,37 @@
 // attempt fails and tells the core, which says so in the notice line; the page says it before.
 //
 // What the firmware and the hardware are called is the application's to say (build constants), so it
-// hands them to the page.
+// hands them to the page, together with the problems found in reading the configuration: the page shows
+// their number and the first one.
 //
 // It is a text and scrolls with the arrows when a language makes it longer than the page.
 
 #include <string>
+#include <vector>
 
 #include "ui/AppScreen.h"
 #include "ui/TextBlock.h"
 
 namespace ui {
 
+// A problem found while reading the configuration, as the page needs it: what kind of thing it was and the
+// names to put in the sentence. The loader's own report (src/config/) is not the page's to know; the
+// application turns it into this, so the page words it from the catalogs.
+struct ConfigProblem {
+  enum class Kind {
+    File,     // a file could not be read (missing, too large, not valid)
+    Setting,  // a key in a file was not understood or out of range
+    Entry,    // an entry of a list (a contact, a school-time window, a tile) was not used
+  };
+  Kind kind = Kind::Entry;
+  std::string file;  // Kind::File and Kind::Setting
+  std::string key;   // Kind::Setting
+};
+
 struct DeviceInfo {
   std::string firmware;
   std::string hardware;  // empty: no line
+  std::vector<ConfigProblem> problems;  // from the start; none: no line
 };
 
 class StatusScreen : public AppScreen {

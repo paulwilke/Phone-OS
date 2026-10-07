@@ -23,8 +23,8 @@ const Rect kContent = ScreenLayout::standard().content;
 struct Page {
   DeviceRig rig;
   StatusScreen screen;
-  Page() : rig(ProfileBuilder().childName("Alex").build()), screen(rig.context(), {"1.2.3", "Example board"}) { start(); }
-  explicit Page(Profile profile, DeviceInfo info = {"1.2.3", "Example board"})
+  Page() : rig(ProfileBuilder().childName("Alex").build()), screen(rig.context(), {"1.2.3", "Example board", {}}) { start(); }
+  explicit Page(Profile profile, DeviceInfo info = {"1.2.3", "Example board", {}})
       : rig(std::move(profile)), screen(rig.context(), std::move(info)) { start(); }
   void start() {
     rig.power.setBattery(80);
@@ -73,7 +73,7 @@ void test_the_page_gives_battery_time_left_child_contacts_queries_and_firmware()
 }
 
 void test_unknown_values_are_told_as_unknown_and_empty_ones_are_left_out() {
-  Page page(ProfileBuilder().childName("").build(), {"1.2.3", ""});
+  Page page(ProfileBuilder().childName("").build(), {"1.2.3", "", {}});
   page.rig.power.setBattery(-1);
   page.rig.power.setMinutesRemaining(-1);
   page.rig.poll();
@@ -101,6 +101,26 @@ void test_the_cable_is_told_with_the_battery_and_switching_off_says_unplug_first
 void test_the_number_of_contacts_follows_the_book() {
   Page page(ProfileBuilder().noContacts().contact(kParentOne, "Parent One", true).build());
   TEST_ASSERT_TRUE(page.says("Contacts: 1"));
+}
+
+void test_the_problems_of_the_configuration_are_counted_and_the_first_one_is_told() {
+  DeviceInfo info{"1.2.3", "Example board", {{ConfigProblem::Kind::Setting, "settings.toml", "colour"},
+                                           {ConfigProblem::Kind::File, "contacts.toml", ""}}};
+  Page page(ProfileBuilder().childName("Alex").build(), info);
+  TEST_ASSERT_TRUE(page.says("Configuration: 2 problems"));
+  TEST_ASSERT_TRUE(page.says("settings.toml: check colour"));
+  TEST_ASSERT_FALSE(page.says("could not be read"));                  // only the first
+  Page one(ProfileBuilder().childName("Alex").build(), {"1.2.3", "", {{ConfigProblem::Kind::File, "contacts.toml", ""}}});
+  TEST_ASSERT_TRUE(one.says("Configuration: 1 problem"));
+  TEST_ASSERT_TRUE(one.says("contacts.toml could not be read"));
+  Page entry(ProfileBuilder().childName("Alex").build(), {"1.2.3", "", {{ConfigProblem::Kind::Entry, "", ""}}});
+  TEST_ASSERT_TRUE(entry.says("An entry in the lists was not used"));
+}
+
+void test_without_problems_there_is_no_line_about_the_configuration() {
+  Page page;
+  TEST_ASSERT_FALSE(page.says("Configuration: 0 problems"));
+  TEST_ASSERT_FALSE(shows::text(page.rig.frame, "Configuration:", FontSize::Small, kContent));
 }
 
 // ---- remote queries -----------------------------------------------------------------------------------------
@@ -179,7 +199,7 @@ void test_back_goes_back_and_scrolling_is_offered_only_when_there_is_something_t
   TEST_ASSERT_FALSE(page.screen.softKeys().scroll);
   TEST_ASSERT_TRUE(page.screen.handle(Input::pressed(Key::Back)));
   TEST_ASSERT_EQUAL_STRING("back", page.rig.nav.last().c_str());
-  Page long_(ProfileBuilder().childName("Alex").build(), {"1.2.3", kLongHardware});
+  Page long_(ProfileBuilder().childName("Alex").build(), {"1.2.3", kLongHardware, {}});
   TEST_ASSERT_TRUE(long_.screen.softKeys().scroll);
   const std::string top = long_.rig.frame.toAscii();
   long_.key(Key::Down);
@@ -190,7 +210,7 @@ void test_back_goes_back_and_scrolling_is_offered_only_when_there_is_something_t
 }
 
 void test_the_position_in_a_long_text_is_kept_while_nothing_changes() {
-  Page page(ProfileBuilder().childName("Alex").build(), {"1.2.3", kLongHardware});
+  Page page(ProfileBuilder().childName("Alex").build(), {"1.2.3", kLongHardware, {}});
   page.key(Key::Down);
   const std::string scrolled = page.rig.frame.toAscii(kContent);
   page.rig.run(5);                                                    // a few seconds: the same words
@@ -202,8 +222,10 @@ void test_the_position_in_a_long_text_is_kept_while_nothing_changes() {
 
 void test_every_state_is_drawn_inside_the_screen_in_every_language() {
   languages::forEach([](const std::string& language, i18n::Translator&) {
-    for (int state = 0; state < 4; ++state) {
-      Page page;
+    for (int state = 0; state < 5; ++state) {
+      const DeviceInfo problems{"1.2.3", "Example board", {{ConfigProblem::Kind::Setting, "settings.toml", "interface.language"},
+                                                         {ConfigProblem::Kind::File, "contacts.toml", ""}}};
+      Page page = state == 4 ? Page(ProfileBuilder().childName("Alex").build(), problems) : Page();
       page.rig.language(language);
       if (state == 1) { page.rig.power.plugIn(ChargeState::Full); page.rig.poll(); }
       if (state == 2) { page.letter('x'); }
@@ -230,12 +252,24 @@ void test_the_pictures_in_english_and_german() {
   }
 }
 
+void test_the_pictures_with_problems_in_english_and_german() {
+  for (const char* language : {"en", "de"}) {
+    Page page(ProfileBuilder().childName("Alex").build(),
+              {"1.2.3", "Example board", {{ConfigProblem::Kind::Setting, "settings.toml", "child.name"}, {ConfigProblem::Kind::File, "contacts.toml", ""}}});
+    page.rig.language(language);
+    page.draw();
+    golden::expect(page.rig.frame, std::string("status_problems_") + language);
+  }
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_the_page_gives_battery_time_left_child_contacts_queries_and_firmware);
   RUN_TEST(test_unknown_values_are_told_as_unknown_and_empty_ones_are_left_out);
   RUN_TEST(test_the_cable_is_told_with_the_battery_and_switching_off_says_unplug_first);
   RUN_TEST(test_the_number_of_contacts_follows_the_book);
+  RUN_TEST(test_the_problems_of_the_configuration_are_counted_and_the_first_one_is_told);
+  RUN_TEST(test_without_problems_there_is_no_line_about_the_configuration);
   RUN_TEST(test_enter_steps_through_the_visibility_of_remote_queries);
   RUN_TEST(test_switching_off_takes_two_presses_of_x);
   RUN_TEST(test_any_other_key_takes_the_first_press_back);
@@ -246,5 +280,6 @@ int main(int, char**) {
   RUN_TEST(test_the_position_in_a_long_text_is_kept_while_nothing_changes);
   RUN_TEST(test_every_state_is_drawn_inside_the_screen_in_every_language);
   RUN_TEST(test_the_pictures_in_english_and_german);
+  RUN_TEST(test_the_pictures_with_problems_in_english_and_german);
   return UNITY_END();
 }

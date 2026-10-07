@@ -34,6 +34,17 @@ std::string StatusScreen::words() {
   const std::string how = t().get(notice == CommandNotice::Silent ? "status.queries-silent"
                                   : notice == CommandNotice::Notify ? "status.queries-notice" : "status.queries-history");
   line(t().get("status.queries", {{"how", how.c_str()}}));
+  if (!info_.problems.empty()) {
+    line(t().plural("status.problems", static_cast<uint32_t>(info_.problems.size())));
+    const ConfigProblem& first = info_.problems.front();
+    switch (first.kind) {
+      case ConfigProblem::Kind::File: line(t().get("status.problem-file", {{"file", first.file.c_str()}})); break;
+      case ConfigProblem::Kind::Setting:
+        line(t().get("status.problem-setting", {{"file", first.file.c_str()}, {"key", first.key.c_str()}}));
+        break;
+      case ConfigProblem::Kind::Entry: line(t().get("status.problem-entry")); break;
+    }
+  }
   line(t().get("status.firmware", {{"version", info_.firmware.c_str()}}));
   if (!info_.hardware.empty()) line(info_.hardware);
   line(t().get(cable ? "status.off-cable" : offArmed_ ? "status.off-again" : "status.off-press"));

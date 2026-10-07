@@ -7,6 +7,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <regex>
 #include <set>
 #include <string>
 #include <utility>
@@ -14,6 +15,9 @@
 
 #include <FrameBuffer.h>
 #include <Languages.h>
+#include <Shows.h>
+#include <ui/Fonts.h>
+#include <ui/Text.h>
 #include <SimPanel.h>
 #include <boot/Runtime.h>
 #include <fakes/FakeClock.h>
@@ -291,6 +295,32 @@ void test_an_unknown_interface_language_falls_back_to_english_with_a_diagnostic(
   TEST_ASSERT_TRUE(d.code == config::Diagnostic::Code::BadCatalogCode);
   TEST_ASSERT_EQUAL_STRING("interface.language", d.args[1].c_str());
   TEST_ASSERT_EQUAL_STRING("xx", d.args[2].c_str());
+}
+
+// The loader's report reaches the status page as data: the page words the count and the first problem.
+void test_the_status_page_tells_the_problems_found_in_reading_the_configuration() {
+  World w;
+  w.store.put("/config/settings.toml", std::regex_replace(settings(), std::regex("\\[child\\]\n"), "[child]\ncolour = \"blue\"\n"));  // a key that no schema knows
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(3);
+  w.runtime->stack().open(ui::screen::kStatus);
+  w.runtime->render();
+  const ui::Rect page = ui::ScreenLayout::standard().content;
+  TEST_ASSERT_TRUE(shows::text(fb, "Configuration: 1 problem", ui::FontSize::Small, page));
+  // The line may wrap on the small page: every piece of it must be there.
+  for (std::string_view piece : ui::text::wrap(ui::font(ui::FontSize::Small), "settings.toml: check child.colour", page.w - 8))
+    TEST_ASSERT_TRUE(shows::text(fb, std::string(piece), ui::FontSize::Small, page));
+}
+
+void test_the_status_page_says_nothing_about_the_configuration_when_it_read_without_problems() {
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(3);
+  w.runtime->stack().open(ui::screen::kStatus);
+  w.runtime->render();
+  TEST_ASSERT_FALSE(shows::text(fb, "Configuration:", ui::FontSize::Small, ui::ScreenLayout::standard().content));
 }
 
 void test_a_user_catalog_on_the_card_can_be_the_language_of_the_device() {
@@ -593,6 +623,8 @@ int main() {
   RUN_TEST(test_the_frames_go_through_the_refresh_policy);
   RUN_TEST(test_a_card_with_nothing_on_it_boots_with_defaults_and_says_what_is_missing);
   RUN_TEST(test_an_unknown_interface_language_falls_back_to_english_with_a_diagnostic);
+  RUN_TEST(test_the_status_page_tells_the_problems_found_in_reading_the_configuration);
+  RUN_TEST(test_the_status_page_says_nothing_about_the_configuration_when_it_read_without_problems);
   RUN_TEST(test_a_user_catalog_on_the_card_can_be_the_language_of_the_device);
   RUN_TEST(test_an_incoming_message_is_counted_and_changes_the_next_picture);
   RUN_TEST(test_an_incoming_call_takes_the_screen_and_gives_it_back);

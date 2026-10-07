@@ -10,6 +10,36 @@ std::string describe(const config::Diagnostic& diagnostic) {
   return line;
 }
 
+// What the status page shows of the loader's report. A [mesh] section read as [radio] is left out: it works,
+// and the card is rewritten with the new name at the next save, so there is nothing for the parents to do.
+std::vector<ui::ConfigProblem> problemsOf(const std::vector<config::Diagnostic>& diagnostics) {
+  using Code = config::Diagnostic::Code;
+  std::vector<ui::ConfigProblem> problems;
+  for (const config::Diagnostic& d : diagnostics) {
+    ui::ConfigProblem problem;
+    const auto arg = [&](size_t i) { return i < d.args.size() ? d.args[i] : std::string(); };
+    // The loader names its three files by id ("settings") and a catalog by its path; the card has settings.toml.
+    const auto file = [&] { const std::string name = arg(0); return !name.empty() && name[0] != '/' ? name + ".toml" : name; };
+    switch (d.code) {
+      case Code::MeshAlias: continue;
+      case Code::MissingFile: case Code::OversizedFile: case Code::SyntaxError: case Code::UserCatalogError:
+        problem.kind = ui::ConfigProblem::Kind::File;
+        problem.file = file();
+        break;
+      case Code::UnknownKey: case Code::WrongType: case Code::OutOfRange: case Code::BadEnum: case Code::BadCatalogCode:
+        problem.kind = ui::ConfigProblem::Kind::Setting;
+        problem.file = file();
+        problem.key = arg(1);
+        break;
+      case Code::ContactNoNumber: case Code::UnknownRole: case Code::BadQuietHours: case Code::NonCallTile: case Code::TileNoTarget:
+        problem.kind = ui::ConfigProblem::Kind::Entry;
+        break;
+    }
+    problems.push_back(std::move(problem));
+  }
+  return problems;
+}
+
 }  // namespace
 
 config::ConfigLoader::Result Runtime::boot(const Capabilities& capabilities, i18n::Translator& translator,
@@ -45,7 +75,7 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
       settings_(ui::ScreenContext{core_, translator, stack_, session_}),
       wifiPage_(ui::ScreenContext{core_, translator, stack_, session_}),
       net_(ui::ScreenContext{core_, translator, stack_, session_}),
-      status_(ui::ScreenContext{core_, translator, stack_, session_}, ui::DeviceInfo{capabilities.firmware, capabilities.hardware}),
+      status_(ui::ScreenContext{core_, translator, stack_, session_}, ui::DeviceInfo{capabilities.firmware, capabilities.hardware, problemsOf(diagnostics_)}),
       language_(ui::ScreenContext{core_, translator, stack_, session_}),
       gnssPage_(ui::ScreenContext{core_, translator, stack_, session_}),
       radioPage_(ui::ScreenContext{core_, translator, stack_, session_}),

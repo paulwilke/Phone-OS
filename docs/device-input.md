@@ -19,7 +19,7 @@ Everything that decides what a byte means is in `src/` and tested on the host wi
 | $ key | `Key::Up` |
 | mic key | `Key::Down` |
 
-**Decision to confirm.** The device has no arrow keys, and `W` and `S` cannot scroll as in the earlier code: a letter is text here, and the screens do not guess whether a text field has the focus. The two keys with no other use in this product, the $ key and the mic key, scroll instead; touch (the soft keys, taps on rows) reaches every function as well. The earlier code's chords for the backlights (both Shifts, Alt+B) are not carried over: nothing in the interface uses them.
+The device has no arrow keys, and `W` and `S` cannot scroll as in the earlier code: a letter is text here, and the screens do not guess whether a text field has the focus. The two keys with no other use in this product, the $ key and the mic key, scroll instead; touch (the soft keys, taps on rows) reaches every function as well. The earlier code's chords for the backlights (both Shifts, Alt+B) are not carried over: nothing in the interface uses them.
 
 ## The three keys under the screen, and touch
 
@@ -29,7 +29,7 @@ They are **keys of the touch chip**, not of the keyboard. The chip is a CST66xx;
 
 ## Vibration
 
-`Drv2605` runs the sequence of the chip's own library (an ERM motor in open loop, effect library 1). `BoardHaptic` plays the patterns of `HapticPattern` through it and passes the `Haptic` contract. **Decision to confirm:** the motor's supply (expander leg 5) is switched on with the first pulse and **off two seconds after the last**; the earlier code left it on after the first use, and the driver draws current while it idles. A motor that does not answer loses its pulses, the pattern runs out and the supply goes off again. The effect numbers are the data sheet's; the rhythms have been felt only as far as "the motor runs" (2026-10-01).
+`Drv2605` runs the sequence of the chip's own library (an ERM motor in open loop, effect library 1). `BoardHaptic` plays the patterns of `HapticPattern` through it and passes the `Haptic` contract. The motor's supply (expander leg 5) is switched on with the first pulse and **off two seconds after the last**; the earlier code left it on after the first use, and the driver draws current while it idles. A motor that does not answer loses its pulses, the pattern runs out and the supply goes off again. The effect numbers are the data sheet's; the rhythms have been felt only as far as "the motor runs" (2026-10-01).
 
 ## Motion
 

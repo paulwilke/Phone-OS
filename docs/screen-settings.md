@@ -18,7 +18,7 @@ The values are read from the core when the page is drawn and nothing is kept: a 
 
 ## Not ported
 
-The previous page listed the school-time windows under the boxes. The status bar says "School time" while it runs and the lock page says until when, and the windows themselves are the parents' to read on their page, so the options do not repeat them. Decision to confirm.
+The previous page listed the school-time windows under the boxes. The status bar says "School time" while it runs and the lock page says until when, and the windows themselves are the parents' to read on their page, so the options do not repeat them.
 
 ## Tests
 
