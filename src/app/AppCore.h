@@ -186,6 +186,12 @@ public:
   bool requestRadioStart() { return connectivity_.requestRadioStart(); }
   bool takeRadioStartRequest() { return connectivity_.takeRadioStartRequest(); }
   void requestRestart() { connectivity_.requestRestart(); }
+  // A restart the person holding the device asked for (the status page): the log says who, since the parents'
+  // page and the console say it in their own lines. The log line lives here because screens hold no sentences.
+  void requestRestartOnDevice() {
+    log("Restart requested on the device");
+    requestRestart();
+  }
   bool restartRequested() const { return connectivity_.restartRequested(); }
 
   // --- power ---

@@ -8,6 +8,7 @@ void StatusScreen::onEnter() {
   block_.setText(std::string());
   text_.clear();
   offArmed_ = false;
+  restartArmed_ = false;
 }
 
 std::string StatusScreen::words() {
@@ -48,6 +49,8 @@ std::string StatusScreen::words() {
   line(t().get("status.firmware", {{"version", info_.firmware.c_str()}}));
   if (!info_.hardware.empty()) line(info_.hardware);
   line(t().get(cable ? "status.off-cable" : offArmed_ ? "status.off-again" : "status.off-press"));
+  // A restart works on the cable too: the reason switch-off refuses there (USB keeps the board alive) does not apply.
+  line(t().get(restartArmed_ ? "status.restart-again" : "status.restart-press"));
   return text;
 }
 
@@ -85,7 +88,19 @@ void StatusScreen::stepQueries() {
 
 bool StatusScreen::onInput(const Input& input, const Rect& area) {
   const bool x = input.kind == Input::Kind::Text && (input.character == 'x' || input.character == 'X');
+  const bool r = input.kind == Input::Kind::Text && (input.character == 'r' || input.character == 'R');
+  if (r) {
+    offArmed_ = false;                 // the two are separate questions: a press of one takes the other back
+    if (!restartArmed_) {
+      restartArmed_ = true;
+      return true;
+    }
+    restartArmed_ = false;
+    app().requestRestartOnDevice();    // logs who asked; the host restarts, as for the parents' page and the console
+    return true;
+  }
   if (x) {
+    restartArmed_ = false;
     if (!offArmed_) {
       offArmed_ = true;                // only the second press is meant
       return true;
@@ -95,6 +110,7 @@ bool StatusScreen::onInput(const Input& input, const Rect& area) {
     return true;
   }
   offArmed_ = false;                   // any other input takes the first press back
+  restartArmed_ = false;
   if (input.isKey(Key::Select)) {
     stepQueries();
     return true;

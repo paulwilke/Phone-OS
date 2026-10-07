@@ -26,7 +26,7 @@ The host (the firmware, or the simulator) provides the capabilities and builds a
 3. `poll(displayOn, nextRenderInMs)` in the main loop. It returns the decision on sleeping, which the host carries out;
 4. `leaveSos()` when the SOS screen closes.
 
-The host does what only hardware can do: sleeps the processor, starts the radio when `takeRadioStartRequest()` says so, restarts when `restartRequested()` says so, switches the device off when `powerOffRequested()` says so (and tells `notePowerOffFailed()` when it could not).
+The host does what only hardware can do: sleeps the processor, starts the radio when `takeRadioStartRequest()` says so, restarts when `restartRequested()` says so, switches the device off when `powerOffRequested()` says so (and tells `notePowerOffFailed()` when it could not). `requestRestartOnDevice()` is the restart the status page asks for: it writes "Restart requested on the device" to the log and then does what `requestRestart()` does.
 
 ## One pass
 

@@ -67,7 +67,7 @@ The parents' page is a web page that the device serves over Wi-Fi. It is for the
 
 On the device, the page **Options** (second page of the home screen, tile **Settings**) has five boxes; Enter or a tap changes the one in focus: **Volume in calls** ("4 of 7"), **Message vibration**, **Save mode**, **Wi-Fi** (opens the Wi-Fi page) and **Language** (opens the language page, each language by its own name). Save mode turns cellular and Wi-Fi off and keeps the radio; it needs a radio and says "Switch the radio on first" without one.
 
-On the **Status** page, Enter steps through the visibility of remote queries, and "Switch off: press x twice" switches the device off. With the USB cable plugged in it cannot, and says "Switch off: unplug USB first".
+On the **Status** page, Enter steps through the visibility of remote queries, and "Switch off: press x twice" switches the device off. With the USB cable plugged in it cannot, and says "Switch off: unplug USB first". "Restart: press r twice" restarts the device (press r again at "Restart? Press r again"); any other key takes the first press back, and a restart works with the cable plugged in.
 
 The rest is on the parents' page or in the three files on the card. The keys most parents use:
 

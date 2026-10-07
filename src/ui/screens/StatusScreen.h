@@ -13,6 +13,9 @@
 // cable plugged in the device cannot be switched off (USB keeps the board alive): the application's
 // attempt fails and tells the core, which says so in the notice line; the page says it before.
 //
+// **Restarting** is written below it and works the same way (r twice, any other key takes the first back),
+// but also with the cable plugged in. It logs one line and asks the core (`requestRestart`); the host restarts.
+//
 // What the firmware and the hardware are called is the application's to say (build constants), so it
 // hands them to the page, together with the problems found in reading the configuration: the page shows
 // their number and the first one.
@@ -67,6 +70,7 @@ private:
   TextBlock block_;
   std::string text_;   // what the block holds: set again only when the words change, or the position would reset
   bool offArmed_ = false;
+  bool restartArmed_ = false;  // like offArmed_: the first press of r is taken back by any other input
 };
 
 }  // namespace ui

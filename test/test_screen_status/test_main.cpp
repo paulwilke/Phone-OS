@@ -70,6 +70,7 @@ void test_the_page_gives_battery_time_left_child_contacts_queries_and_firmware()
   TEST_ASSERT_TRUE(page.says("Firmware: 1.2.3"));
   TEST_ASSERT_TRUE(page.says("Example board"));
   TEST_ASSERT_TRUE(page.says("Switch off: press x twice"));
+  TEST_ASSERT_TRUE(page.says("Restart: press r twice"));
 }
 
 void test_unknown_values_are_told_as_unknown_and_empty_ones_are_left_out() {
@@ -191,6 +192,75 @@ void test_on_the_cable_the_application_fails_and_the_notice_says_why() {
   TEST_ASSERT_EQUAL_STRING("Switch off only without cable", page.screen.noticeLine().c_str());
 }
 
+// ---- restarting ----------------------------------------------------------------------------------------------
+
+void test_restarting_takes_two_presses_of_r_and_logs_who_asked() {
+  Page page;
+  page.letter('r');
+  TEST_ASSERT_FALSE(page.rig.core.restartRequested());
+  TEST_ASSERT_TRUE(page.says("Restart? Press r again"));
+  TEST_ASSERT_FALSE(page.rig.log.contains("Restart requested on the device"));
+  page.letter('r');
+  TEST_ASSERT_TRUE(page.rig.core.restartRequested());                 // the host fake reads the core's request
+  TEST_ASSERT_TRUE(page.rig.log.contains("Restart requested on the device"));
+  TEST_ASSERT_FALSE(page.rig.core.powerOffRequested());
+}
+
+void test_a_capital_r_counts_too() {
+  Page page;
+  page.letter('R');
+  page.letter('r');
+  TEST_ASSERT_TRUE(page.rig.core.restartRequested());
+}
+
+void test_any_other_key_takes_the_first_press_of_r_back() {
+  Page page;
+  page.letter('r');
+  page.key(Key::Down);
+  TEST_ASSERT_TRUE(page.says("Restart: press r twice"));
+  page.letter('r');
+  TEST_ASSERT_FALSE(page.rig.core.restartRequested());
+  page.letter('y');
+  page.letter('r');
+  TEST_ASSERT_FALSE(page.rig.core.restartRequested());
+  page.letter('x');                                                   // the other question takes it back as well
+  page.letter('r');
+  TEST_ASSERT_FALSE(page.rig.core.restartRequested());
+  TEST_ASSERT_FALSE(page.rig.core.powerOffRequested());
+}
+
+void test_r_between_the_presses_of_x_takes_the_switch_off_back() {
+  Page page;
+  page.letter('x');
+  page.letter('r');
+  page.letter('x');
+  TEST_ASSERT_FALSE(page.rig.core.powerOffRequested());
+  TEST_ASSERT_FALSE(page.rig.core.restartRequested());
+}
+
+void test_leaving_the_page_takes_the_first_press_of_r_back() {
+  Page page;
+  page.letter('r');
+  page.screen.onEnter();                                              // the page opened afresh
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Restart: press r twice"));
+  page.letter('r');
+  TEST_ASSERT_FALSE(page.rig.core.restartRequested());
+}
+
+void test_restarting_works_on_the_cable() {
+  Page page;
+  page.rig.power.plugIn(ChargeState::Charging);
+  page.rig.poll();
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Switch off: unplug USB first"));
+  TEST_ASSERT_TRUE(page.says("Restart: press r twice"));
+  page.letter('r');
+  TEST_ASSERT_TRUE(page.says("Restart? Press r again"));
+  page.letter('r');
+  TEST_ASSERT_TRUE(page.rig.core.restartRequested());
+}
+
 // ---- keys, scrolling ------------------------------------------------------------------------------------------
 
 void test_back_goes_back_and_scrolling_is_offered_only_when_there_is_something_to_scroll() {
@@ -222,13 +292,14 @@ void test_the_position_in_a_long_text_is_kept_while_nothing_changes() {
 
 void test_every_state_is_drawn_inside_the_screen_in_every_language() {
   languages::forEach([](const std::string& language, i18n::Translator&) {
-    for (int state = 0; state < 5; ++state) {
+    for (int state = 0; state < 6; ++state) {
       const DeviceInfo problems{"1.2.3", "Example board", {{ConfigProblem::Kind::Setting, "settings.toml", "interface.language"},
                                                          {ConfigProblem::Kind::File, "contacts.toml", ""}}};
       Page page = state == 4 ? Page(ProfileBuilder().childName("Alex").build(), problems) : Page();
       page.rig.language(language);
       if (state == 1) { page.rig.power.plugIn(ChargeState::Full); page.rig.poll(); }
       if (state == 2) { page.letter('x'); }
+      if (state == 5) { page.letter('r'); }
       if (state == 3) { page.rig.power.setBattery(-1); page.rig.power.setMinutesRemaining(-1); page.rig.poll(); }
       FrameBuffer fb;
       page.draw();
@@ -249,6 +320,15 @@ void test_the_pictures_in_english_and_german() {
     page.rig.language(language);
     page.draw();
     golden::expect(page.rig.frame, std::string("status_") + language);
+  }
+}
+
+void test_the_pictures_with_the_restart_asked_in_english_and_german() {
+  for (const char* language : {"en", "de"}) {
+    Page page;
+    page.rig.language(language);
+    page.letter('r');
+    golden::expect(page.rig.frame, std::string("status_restart_") + language);
   }
 }
 
@@ -276,10 +356,17 @@ int main(int, char**) {
   RUN_TEST(test_a_capital_x_counts_too);
   RUN_TEST(test_a_cable_that_is_not_charging_is_still_a_cable);
   RUN_TEST(test_on_the_cable_the_application_fails_and_the_notice_says_why);
+  RUN_TEST(test_restarting_takes_two_presses_of_r_and_logs_who_asked);
+  RUN_TEST(test_a_capital_r_counts_too);
+  RUN_TEST(test_any_other_key_takes_the_first_press_of_r_back);
+  RUN_TEST(test_r_between_the_presses_of_x_takes_the_switch_off_back);
+  RUN_TEST(test_leaving_the_page_takes_the_first_press_of_r_back);
+  RUN_TEST(test_restarting_works_on_the_cable);
   RUN_TEST(test_back_goes_back_and_scrolling_is_offered_only_when_there_is_something_to_scroll);
   RUN_TEST(test_the_position_in_a_long_text_is_kept_while_nothing_changes);
   RUN_TEST(test_every_state_is_drawn_inside_the_screen_in_every_language);
   RUN_TEST(test_the_pictures_in_english_and_german);
+  RUN_TEST(test_the_pictures_with_the_restart_asked_in_english_and_german);
   RUN_TEST(test_the_pictures_with_problems_in_english_and_german);
   return UNITY_END();
 }
