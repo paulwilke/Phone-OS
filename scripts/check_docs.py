@@ -8,10 +8,12 @@ Checks every Markdown file and every source file:
   * relative links resolve to files that exist;
   * `paths/in/backticks` that look like repository files exist;
   * no placeholder markers (TODO, FIXME, XXX, TBD, "for now", "legacy", "deprecated",
-    "temporary") — open work belongs in the issue tracker, not in the files;
+    "temporary", "decision to confirm") — open work belongs in docs/open-points.md, not scattered over the files;
   * VERSION holds one `major.minor.patch` line;
   * every screen name of src/ui/ScreenIds.h has a docs/screen-<name>.md and every such document names a
     screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
+  * every Markdown file under docs/ is linked from docs/README.md, so that no document is a stranger, and
+    docs/open-points.md exists: open work is listed in that one place and nowhere else;
   * the user's guide and its translations have the same headings in the same order (level for level), so
     that a section added to one is added to all;
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
@@ -29,7 +31,7 @@ if len(sys.argv) == 3 and sys.argv[1] == "--root":
     ROOT = os.path.abspath(sys.argv[2])
 SKIP_DIRS = {".git", ".pio", "node_modules", "_workbench", "__pycache__", ".publish", ".claude", "out"}
 CODE_SUFFIXES = (".h", ".hpp", ".c", ".cpp", ".py", ".sh", ".ini", ".yml", ".yaml", ".js", ".html", ".toml")
-MARKER = re.compile(r"\b(TODO|FIXME|XXX|TBD)\b|\b(for now|legacy|deprecated|temporary)\b", re.I)
+MARKER = re.compile(r"\b(TODO|FIXME|XXX|TBD)\b|\b(for now|legacy|deprecated|temporary|decision to confirm)\b", re.I)
 GERMAN = re.compile(r"[äöüÄÖÜß]|\b(und|nicht|oder|ist|sind|wird|eine?|der|die|das|für|mit|auch|noch)\b")
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 TICK = re.compile(r"`([A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+\.[A-Za-z0-9]+)`")
@@ -113,8 +115,26 @@ def guide_problems():
     return problems
 
 
+def index_problems():
+    """docs/README.md names every document of docs/, and the one list of open work is there."""
+    index = os.path.join(ROOT, "docs", "README.md")
+    if not os.path.exists(index):
+        return ["docs/README.md: the index of the documents does not exist"]
+    with open(index, encoding="utf-8") as f:
+        linked = {os.path.normpath(os.path.join("docs", t.split("#")[0])) for t in LINK.findall(f.read())}
+    problems = []
+    for base, dirs, names in os.walk(os.path.join(ROOT, "docs")):
+        for n in sorted(names):
+            rel = os.path.relpath(os.path.join(base, n), ROOT)
+            if n.endswith(".md") and rel != os.path.join("docs", "README.md") and rel not in linked:
+                problems.append(f"{rel}: not linked from docs/README.md")
+    if not os.path.exists(os.path.join(ROOT, "docs", "open-points.md")):
+        problems.append("docs/open-points.md: the list of open work does not exist")
+    return problems
+
+
 def main():
-    problems = screen_problems() + guide_problems()
+    problems = screen_problems() + guide_problems() + index_problems()
     if version_problem():
         problems.append(version_problem())
     for path in files():

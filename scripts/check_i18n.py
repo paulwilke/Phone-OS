@@ -32,7 +32,9 @@ that ship with the firmware. Exits with 1 on any problem.
 `--usage` checks the other direction: every key of the English files appears as a string literal in the
 code or in a test (a key nothing asks for is dead weight, or the screen that should use it has lost it),
 and every string literal that looks like a key of a catalog section ("status.gps") is a key of one of
-them (a misspelled key shows the key itself on the child's screen). Which code uses which set: the device
+them (a misspelled key shows the key itself on the child's screen), and no file of the interface (src/ui/)
+holds a sentence as a literal: two words with a space between them are text the child would read in one
+language only, so it belongs in a catalog. Which code uses which set: the device
 code (src/ without src/web/) uses the device set; scripts/gen_web.py, config/schema.toml and the web
 service code (src/web/) use the web set. A key of the device set that only web code uses, and a key of the
 web set that only device code uses, is reported: it is in the wrong file. The code is src/, testing/ and
@@ -173,6 +175,29 @@ def kind_of(rel):
 FILE_SUFFIXES = (".toml", ".txt", ".json", ".csv")
 
 
+# Two words with a space between them, in a string literal: a sentence. Assertion messages are for developers.
+SENTENCE = re.compile(r'"(?:[^"\\\n]|\\.)*[A-Za-z]{2,} [A-Za-z]{2,}(?:[^"\\\n]|\\.)*"')
+
+
+def sentence_problems():
+    """The files of the interface hold no sentence as a literal: user text lives in the catalogs."""
+    found = []
+    for folder, _, names in os.walk(os.path.join(ROOT, "src", "ui")):
+        for name in sorted(names):
+            if not name.endswith((".h", ".cpp")):
+                continue
+            path = os.path.join(folder, name)
+            with open(path, encoding="utf-8") as f:
+                lines = f.read().split("\n")
+            for number, line in enumerate(lines, 1):
+                code = re.sub(r"//.*$", "", line)  # a comment may quote a sentence; the code may not
+                if "static_assert" in code or code.lstrip().startswith("#include"):
+                    continue
+                if SENTENCE.search(code):
+                    found.append(f"{os.path.relpath(path, ROOT)}:{number}: a sentence in a string literal: user text belongs in a catalog (lang/)")
+    return found
+
+
 def usage():
     """Compares the keys of the catalogs with the key-like string literals of the code."""
     device = shipped(DEVICE_DIR).get("en")
@@ -241,6 +266,7 @@ def usage():
     problems += [f"{users[0][0]}: \"{literal}\" looks like a catalog key but is not in a catalog (lang/, lang/web/) or a host set (tools/lang/)"
                  for literal, users in sorted(literals.items())
                  if literal.split(".")[0] in sections and literal not in known]
+    problems += sentence_problems()
     for p in problems:
         print(p)
     if problems:

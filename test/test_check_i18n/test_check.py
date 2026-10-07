@@ -12,7 +12,9 @@ and runs the copied checker, so that what is tested is what the checker says abo
   5. a key missing in one language of the web set fails the check;
   6. a language with a device catalog and no web catalog fails the check;
   7. lang/en.toml or lang/web/en.toml over the limit fails the check, and each file is judged alone;
-  8. the sizes of every file are printed.
+  8. the sizes of every file are printed;
+  9. a sentence written as a literal in the interface (src/ui/) is reported by --usage; a sentence in a comment or in an
+     assertion message is not.
 """
 import os
 import re
@@ -117,6 +119,20 @@ def main():
         tree.write("scripts/gen_web.py", tree.read("scripts/gen_web.py") + '\n# ' + lit("web", "probe") + '\n')
         code, out = tree.run("--usage")
         check("--usage accepts the key once the page generator uses it", code == 0, out)
+    finally:
+        tree.close()
+
+    # 9. a sentence in a literal of the interface
+    tree = Tree()
+    try:
+        probe = "src/ui/screens/ProbeScreen.cpp"
+        tree.write(probe, '// "Hello there" is only a comment\nstatic_assert(true, "this one is for developers");\nconst char* const kA = "ok";\n')
+        code, out = tree.run("--usage")
+        check("--usage accepts a sentence in a comment and an assertion message", code == 0, out)
+        tree.write(probe, 'const char* const kWords = "Hello there";\n')
+        code, out = tree.run("--usage")
+        check("--usage reports a sentence in a string literal of the interface",
+              code == 1 and "ProbeScreen.cpp:1: a sentence in a string literal" in out, out)
     finally:
         tree.close()
 

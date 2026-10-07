@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Counter-checks of the guide rule in scripts/check_docs.py: the user's guide and its two translations must have the
-same headings in the same order, and the check must say so when one does not. Runs the script on small trees built
-on the fly (--root); the other rules of the script report on those trees too, so the cases look only for the
-guide's own findings.
+"""Counter-checks of two rules of scripts/check_docs.py: the user's guide and its two translations must have the
+same headings in the same order, and every document of docs/ must be linked from docs/README.md (with the list of open
+work, docs/open-points.md, among them). The check must say so when a rule is broken. Runs the script on small trees
+built on the fly (--root); the other rules of the script report on those trees too, so the cases look only for the
+findings of the rule they test.
 
     python3 test/test_check_docs/test_check.py
 """
@@ -41,8 +42,37 @@ CASES = [
 ]
 
 
+def run_index(files):
+    with tempfile.TemporaryDirectory() as root:
+        for rel, text in files.items():
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        p = subprocess.run([sys.executable, SCRIPT, "--root", root], capture_output=True, text=True)
+        return [l for l in p.stdout.split("\n") if "not linked" in l or "open-points" in l or "index of the documents" in l]
+
+
+INDEX_OK = {"docs/README.md": "[a](a.md) [open](open-points.md)\n", "docs/a.md": "# A\n", "docs/open-points.md": "# Open\n"}
+
+INDEX_CASES = [
+    ("a document linked from the index passes", INDEX_OK, []),
+    ("a document the index does not link is found", {**INDEX_OK, "docs/stranger.md": "# S\n"}, ["docs/stranger.md: not linked from docs/README.md"]),
+    ("a translated document the index does not link is found", {**INDEX_OK, "docs/de/stranger.md": "# S\n"}, ["stranger.md: not linked from docs/README.md"]),
+    ("a missing list of open work is found", {"docs/README.md": "[a](a.md)\n", "docs/a.md": "# A\n"}, ["docs/open-points.md: the list of open work does not exist"]),
+    ("a missing index is found", {"docs/a.md": "# A\n", "docs/open-points.md": "# Open\n"}, ["docs/README.md: the index of the documents does not exist"]),
+]
+
+
 def main():
     failed = 0
+    for name, files, needles in INDEX_CASES:
+        got = run_index(files)
+        ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)
+        print(("ok   " if ok else "FAIL ") + name)
+        if not ok:
+            failed += 1
+            print("\n".join(got))
     for name, files, needles in CASES:
         got = run(*files)
         ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)
