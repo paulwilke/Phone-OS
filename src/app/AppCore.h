@@ -117,6 +117,8 @@ public:
     int batteryPercent = -1;
     int batteryMinutes = -1;
     ChargeState charge = ChargeState::Unknown;
+    // A supply is attached, whatever the charger is doing: the charger's power-good bit, not the charge state.
+    bool externalPower = false;
     bool modemAsleep = false;
     bool frontlight = false;
     bool powerOffRequested = false;

@@ -61,6 +61,7 @@ public:
 
   int batteryPercent() { return power_.batteryPercent(); }
   ChargeState chargeState() { return power_.chargeState(); }
+  bool externalPower() { return power_.externalPower(); }
   int batteryMinutesRemaining() { return power_.batteryMinutesRemaining(); }
 
 private:

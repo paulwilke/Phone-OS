@@ -164,6 +164,7 @@ AppCore::State AppCore::state() {
   s.batteryPercent = powerCoordination_.batteryPercent();
   s.batteryMinutes = powerCoordination_.batteryMinutesRemaining();
   s.charge = powerCoordination_.chargeState();
+  s.externalPower = powerCoordination_.externalPower();
   s.modemAsleep = powerCoordination_.modemAsleep();
   s.frontlight = powerCoordination_.frontlightOn();
   s.powerOffRequested = powerCoordination_.powerOffRequested();

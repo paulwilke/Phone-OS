@@ -149,6 +149,15 @@ void test_a_capital_x_counts_too() {
   TEST_ASSERT_TRUE(page.rig.core.powerOffRequested());
 }
 
+void test_a_cable_that_is_not_charging_is_still_a_cable() {
+  Page page;
+  page.rig.power.plugInWithoutCharging();
+  page.rig.poll();
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Switch off: unplug USB first"));
+  TEST_ASSERT_FALSE(page.says("charging"));
+}
+
 void test_on_the_cable_the_application_fails_and_the_notice_says_why() {
   Page page;
   page.rig.power.plugIn(ChargeState::Charging);
@@ -231,6 +240,7 @@ int main(int, char**) {
   RUN_TEST(test_switching_off_takes_two_presses_of_x);
   RUN_TEST(test_any_other_key_takes_the_first_press_back);
   RUN_TEST(test_a_capital_x_counts_too);
+  RUN_TEST(test_a_cable_that_is_not_charging_is_still_a_cable);
   RUN_TEST(test_on_the_cable_the_application_fails_and_the_notice_says_why);
   RUN_TEST(test_back_goes_back_and_scrolling_is_offered_only_when_there_is_something_to_scroll);
   RUN_TEST(test_the_position_in_a_long_text_is_kept_while_nothing_changes);

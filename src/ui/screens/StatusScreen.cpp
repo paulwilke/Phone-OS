@@ -19,7 +19,9 @@ std::string StatusScreen::words() {
     text += words;
   };
 
-  const bool cable = s.charge == ChargeState::Charging || s.charge == ChargeState::Full;
+  // The cable is the charger's power-good bit: a full battery on a cable reads "not charging", and the
+  // board stays alive on USB either way.
+  const bool cable = s.externalPower;
   if (s.batteryPercent < 0) line(t().get("status.battery-unknown"));
   else line(t().get(s.charge == ChargeState::Charging ? "status.battery-charging" : s.charge == ChargeState::Full ? "status.battery-full" : "status.battery",
                     {{"percent", s.batteryPercent}}));

@@ -37,7 +37,7 @@ public:
     ++powerOffCalls_;
     return powerOffAllowed_;
   }
-  bool externalPower() override { return charge_ == ChargeState::Charging || charge_ == ChargeState::Full; }
+  bool externalPower() override { return cableOnly_ || charge_ == ChargeState::Charging || charge_ == ChargeState::Full; }
 
   int batteryPercent() override { return percent_; }
   // Unknown while charging, as the contract says.
@@ -48,7 +48,10 @@ public:
   void setBattery(int percent) { percent_ = percent; }
   void setMinutesRemaining(int minutes) { minutes_ = minutes; }
   void plugIn(ChargeState state) { charge_ = state == ChargeState::Full ? ChargeState::Full : ChargeState::Charging; }
-  void unplug() { charge_ = ChargeState::Discharging; }
+  // A cable with a supply behind it while the charger neither charges nor reports the charge as done:
+  // the charger's power-good bit is set and its charge state says "not charging".
+  void plugInWithoutCharging() { charge_ = ChargeState::Discharging; cableOnly_ = true; }
+  void unplug() { charge_ = ChargeState::Discharging; cableOnly_ = false; }
   void setChargerAnswers(bool answers) { chargerAnswers_ = answers; }
   void failDomain(PowerDomain domain, bool fails) { failing_[(int)domain] = fails; }
   void allowPowerOff(bool allowed) { powerOffAllowed_ = allowed; }
@@ -57,6 +60,7 @@ public:
   uint64_t switchedOnAtMs(PowerDomain domain) const { return switchedOnAt_[(int)domain]; }
 
 private:
+  bool cableOnly_ = false;
   bool enabled_[4] = {};
   bool failing_[4] = {};
   int switchedOn_[4] = {};
