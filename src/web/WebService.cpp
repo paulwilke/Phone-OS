@@ -4,7 +4,10 @@
 
 
 WebService::WebService(TcpServer& tcp, ConfigStore& store, WebAssets& assets, AppCore& app, i18n::Translator& translator)
-    : app_(app), api_(store, assets, *this, app, translator), server_(tcp, api_) {}
+    : app_(app), api_(store, assets, *this, app, translator), server_(tcp, api_) {
+  // A request that ended badly leaves a line in the log, so that the next try on the device shows why.
+  server_.setLog([this](const std::string& line) { app_.log(line.c_str()); });
+}
 
 size_t WebService::handleRaw(const uint8_t* request, size_t len, uint32_t now,
                               char* head, size_t headSize,

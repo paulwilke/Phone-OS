@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <Simulator.h>
+#include <web/WebServer.h>
 
 void setUp() {}
 void tearDown() {}
@@ -100,11 +101,15 @@ struct Web {
     return o;
   }
 
+  uint32_t lastSimMs = 0;  // the time of the simulated device that the last request took
+
   Reply send(const std::string& request) {
     auto answer = std::async(std::launch::async, [this, request] { return talk(port, request); });
     const auto limit = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    lastSimMs = 0;
     while (answer.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
       sim.advance(20);
+      lastSimMs += 20;
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       if (std::chrono::steady_clock::now() > limit) TEST_FAIL_MESSAGE("the simulator did not answer in 20 seconds");
     }
@@ -164,6 +169,45 @@ void test_the_state_needs_the_password() {
   TEST_ASSERT_EQUAL(401, w.get("/api/state", "wrong").status);
   const Reply state = w.get("/api/state");
   TEST_ASSERT_EQUAL(200, state.status);
+}
+
+// ---- connections ------------------------------------------------------------------------------------------
+
+// A browser keeps spare connections open that never send a byte. The device serves one connection at a time,
+// so such a connection must not hold the next request up for the whole idle time.
+void test_a_spare_connection_that_says_nothing_does_not_hold_the_page_up() {
+  Web w;
+  std::vector<int> spare;
+  for (int i = 0; i < 3; ++i) {
+    const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(w.port);
+    TEST_ASSERT_EQUAL(0, ::connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)));
+    spare.push_back(fd);
+  }
+  const Reply state = w.get("/api/state");
+  TEST_ASSERT_EQUAL(200, state.status);
+  // three spare connections, each let go after the first-byte time; with the whole idle time each it would be 30 s
+  TEST_ASSERT_TRUE_MESSAGE(w.lastSimMs <= 3 * (web::WebServer::kFirstByteSeconds + 1) * 1000, std::to_string(w.lastSimMs).c_str());
+  for (int fd : spare) ::close(fd);
+}
+
+// A request that ends with an error status leaves a line in the device's log: method, path without query values,
+// status, bytes sent of total; and nothing of the password or the body.
+void test_a_request_with_an_error_status_is_in_the_log_without_secrets() {
+  Web w;
+  TEST_ASSERT_EQUAL(404, w.get("/api/file?path=/config/nothing-here.toml").status);
+  TEST_ASSERT_EQUAL(401, w.get("/api/state", "wrong").status);
+  TEST_ASSERT_EQUAL(200, w.get("/api/state").status);
+  std::string log;
+  for (const std::string& line : w.sim.log().lines()) log += line + "\n";
+  TEST_ASSERT_TRUE(log.find("WEB: GET /api/file?path -> 404, sent ") != std::string::npos);
+  TEST_ASSERT_TRUE(log.find("WEB: GET /api/state -> 401, sent ") != std::string::npos);
+  TEST_ASSERT_TRUE(log.find("GET /api/state -> 200") == std::string::npos);
+  TEST_ASSERT_TRUE(log.find("nothing-here") == std::string::npos);
+  TEST_ASSERT_TRUE(log.find("wrong") == std::string::npos);
 }
 
 // ---- languages -----------------------------------------------------------------------------------------------
@@ -426,6 +470,8 @@ int main() {
   RUN_TEST(test_there_is_no_page_while_wifi_is_off);
   RUN_TEST(test_the_real_page_is_served_without_a_password);
   RUN_TEST(test_the_state_needs_the_password);
+  RUN_TEST(test_a_spare_connection_that_says_nothing_does_not_hold_the_page_up);
+  RUN_TEST(test_a_request_with_an_error_status_is_in_the_log_without_secrets);
   RUN_TEST(test_the_page_can_be_had_in_every_shipped_language);
   RUN_TEST(test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare);
   RUN_TEST(test_the_help_texts_need_the_password_and_a_known_language);

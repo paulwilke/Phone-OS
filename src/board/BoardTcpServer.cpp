@@ -38,7 +38,10 @@ TcpConnection* BoardTcpServer::accept() {
   if (!listening_) return nullptr;
   TcpSocket* client = listener_.nextClient();
   if (!client) return nullptr;
-  connection_.close();  // the one before is over when the next one is taken
+  // The one before is over when the next one is taken. A listener that hands out one socket object again
+  // and again (the Wi-Fi stack's, device/Esp32TcpListener.h) has put the new client into it already:
+  // stopping that object now would stop the new client, not the old one.
+  if (client != connection_.socket()) connection_.close();
   connection_.attach(client);
   return &connection_;
 }

@@ -5,6 +5,10 @@
 
 #include <BoardNetworkRigs.h>
 
+#include <cstring>
+#include <deque>
+#include <string>
+
 using namespace board;
 
 void setUp() {}
@@ -87,6 +91,71 @@ void test_an_accepted_client_replaces_the_one_before_and_closes_it() {
   TEST_ASSERT_FALSE(second->stopped());
 }
 
+// The Wi-Fi stack's listener hands out one socket object and puts each new client into it
+// (device/Esp32TcpListener.h). Taking the next client while the one before is still open must give a working
+// connection to the new client: the close of "the one before" must not reach the new one.
+namespace {
+struct OneObjectSocket : TcpSocket {
+  std::string inbox;
+  bool open = false;
+  void attach(const std::string& bytes) { inbox = bytes; open = true; }
+  int available() override { return (int)inbox.size(); }
+  int read(uint8_t* buf, size_t size) override {
+    const size_t n = size < inbox.size() ? size : inbox.size();
+    memcpy(buf, inbox.data(), n);
+    inbox.erase(0, n);
+    return (int)n;
+  }
+  size_t write(const uint8_t*, size_t len) override { return open ? len : 0; }
+  bool connected() override { return open; }
+  void stop() override { open = false; }
+};
+struct OneObjectListener : TcpListener {
+  OneObjectSocket socket;
+  std::deque<std::string> waiting;
+  bool listen(uint16_t) override { return true; }
+  void stopListening() override {}
+  TcpSocket* nextClient() override {
+    if (waiting.empty()) return nullptr;
+    socket.attach(waiting.front());
+    waiting.pop_front();
+    return &socket;
+  }
+};
+}  // namespace
+
+void test_a_listener_that_reuses_its_socket_object_does_not_have_the_new_client_stopped() {
+  OneObjectListener listener;
+  BoardTcpServer server(listener);
+  server.begin(80);
+  listener.waiting = {"first", "second"};
+  TcpConnection* a = server.accept();
+  TEST_ASSERT_NOT_NULL(a);
+  TcpConnection* b = server.accept();  // the first is still open
+  TEST_ASSERT_NOT_NULL(b);
+  uint8_t buf[16];
+  TEST_ASSERT_EQUAL(6, b->read(buf, sizeof(buf)));
+  TEST_ASSERT_EQUAL(0, memcmp(buf, "second", 6));
+  TEST_ASSERT_EQUAL(4, b->write(buf, 4));
+}
+
+// "Gone" (-1) is only for a client that has left and whose bytes are all read: half a request that was
+// sent before the client went away is still handed over, and a client that is merely quiet is 0.
+void test_a_request_still_arriving_is_never_reported_as_gone() {
+  BoardTcpServerRig r;
+  r.impl.begin(80);
+  FakeTcpClient* c = r.listener.connect();
+  c->send("GET / HT");
+  TcpConnection* conn = r.impl.accept();
+  uint8_t buf[64];
+  TEST_ASSERT_EQUAL(8, conn->read(buf, sizeof(buf)));
+  TEST_ASSERT_EQUAL(0, conn->read(buf, sizeof(buf)));  // quiet, not gone
+  c->send("TP/1.1");
+  c->leave();                                           // gone, with six bytes unread
+  TEST_ASSERT_EQUAL(6, conn->read(buf, sizeof(buf)));
+  TEST_ASSERT_EQUAL(-1, conn->read(buf, sizeof(buf)));
+}
+
 void test_a_read_never_asks_for_more_than_is_waiting_and_a_write_of_nothing_is_nothing() {
   BoardTcpServerRig r;
   r.impl.begin(80);
@@ -128,6 +197,8 @@ int main(int, char**) {
   RUN_TEST(test_stop_powers_the_chip_down_once_and_stopping_when_off_does_nothing);
   RUN_TEST(test_the_address_of_a_station_is_the_one_the_network_gave_and_only_once_signed_in);
   RUN_TEST(test_an_accepted_client_replaces_the_one_before_and_closes_it);
+  RUN_TEST(test_a_listener_that_reuses_its_socket_object_does_not_have_the_new_client_stopped);
+  RUN_TEST(test_a_request_still_arriving_is_never_reported_as_gone);
   RUN_TEST(test_a_read_never_asks_for_more_than_is_waiting_and_a_write_of_nothing_is_nothing);
   RUN_TEST(test_stopping_the_server_closes_the_connection_and_stops_listening);
   RUN_TEST(test_beginning_again_restarts_the_listener_on_the_new_port);
