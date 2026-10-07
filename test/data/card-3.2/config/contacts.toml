@@ -1,0 +1,16 @@
+# Who may call and write. role = "parent" may also query the device by SMS
+# and gets through in quiet hours; everyone else is family.
+
+[[contact]]
+number = "+491701111111"
+name = "Papa"
+role = "parent"
+
+[[contact]]
+number = "+491702222222"
+name = "Mama"
+role = "parent"
+
+[[contact]]
+number = "+493012345678"
+name = "Oma"

@@ -1,0 +1,72 @@
+# phoneplus settings — nothing in here opens anything for a stranger.
+# Passwords and PIN live in secrets.toml, contacts in contacts.toml.
+
+# Which pages exist (home and lock always do).
+screens = ["home", "call", "messages", "compose", "mesh"]
+
+[child]
+name = "Alex"                # shown in the SOS ping
+role = "child"               # child | parent
+
+[display]
+font_scale = 2                 # 1 small .. 3 large
+map_url = "https://maps.google.com/?q={lat},{lon}"
+
+[features]
+mesh = true
+free_text = true   # free text and typing a number when writing
+modem_sleep = true
+message_vibration = true
+call_vibration = true
+quiet_call_vibration = false
+parent_tools = false   # status page and WLAN switch (parent devices)
+
+[remote_queries]
+notice = "history"   # silent | history | notify — what the child sees; the log always records them
+
+[time]
+gps_utc_offset_minutes = 120   # only while no timezone is set and the time comes from GPS alone
+timezone = "Europe/Berlin"      # summer/winter time automatic; wins against the network's zone
+
+[log]
+level = "events"   # all | events | errors; remote queries, SOS, restarts and firmware changes are always logged
+
+[wifi]
+auto_off_minutes = 10
+
+[mesh]
+name = "Kind-Node"
+peer = "Papa-Node"
+
+[[tiles]]
+label = "Mama"
+action = "call"
+target = "+491702222222"
+
+[[tiles]]
+label = "Papa"
+action = "call"
+target = "+491701111111"
+
+[[tiles]]
+label = "Papa"
+action = "compose"
+target = "+491701111111"
+
+[[tiles]]
+label = "Light"
+action = "light"
+
+[[tiles]]
+label = "Status"
+action = "status"
+
+[[quiet_hours]]
+days = "mon-fri"
+from = "08:00"
+to = "12:30"
+
+[[quiet_hours]]
+days = "mon-fri"
+from = "13:30"
+to = "15:00"

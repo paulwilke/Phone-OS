@@ -19,11 +19,13 @@ Version 4.0 is a new code base, written from the start in English, layered and t
 
 ### What changed in the files
 
-A 3.2 card is read by 4.0 without changes; what is reported and ignored is this:
+A 3.2 card is read by 4.0 without changes ([docs/upgrading.md](docs/upgrading.md) goes through the upgrade and the way back); what is reported and ignored is this:
 
 - `[mesh]` is read as `[radio]` and reported once; `features.mesh` is not read (the key is `features.radio`);
 - `display.font_scale`, `time.gps_utc_offset_minutes`, `child.role` and the top-level `screens` list are not read and are reported as unknown keys;
 - `[[tiles]]` entries are call buttons only; a tile with another action is reported and ignored;
+- German day names in school time (`mo-fr`) and a third window on one day, which 3.2 accepted, are refused and reported: 4.0 knows `mon-fri` and allows two windows a day;
+- a card without `[interface] language` and `[sms] language` gets English for the screens and for the texts sent to the parents; the German of 3.2 is `language = "de"` in both;
 - the message history `messages.log` keeps its format; entries of earlier versions that hold a sentence are shown as it is.
 
 ### What was removed

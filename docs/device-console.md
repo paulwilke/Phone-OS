@@ -37,7 +37,15 @@ The console is the processor's own USB port. Lines (each also with the word `CON
 
 ## The tools
 
-`scripts/deviceconfig.py` (`list`, `read`, `write … [--restart]`, `battery`, `sms`, `restart`; `--help` lists them) and `scripts/webbridge.py` (a local web server on 127.0.0.1 that forwards every request through `CONFIG WEB`; the serial port is exclusive while it runs). Both need pyserial, which PlatformIO brings along: `~/.platformio/penv/bin/python scripts/deviceconfig.py list`. They are English, and `test_tools.py` runs them against a scripted console: the framing and checksum of a write, an error line, that a log cannot be written and no path read, and the raw request the bridge builds.
+`scripts/deviceconfig.py` (`list`, `read`, `write … [--restart]`, `battery`, `sms`, `restart`; `--help` lists them) and `scripts/webbridge.py` (a local web server on 127.0.0.1 that forwards every request through `CONFIG WEB`; the serial port is exclusive while it runs). Both need pyserial, which PlatformIO brings along: `~/.platformio/penv/bin/python scripts/deviceconfig.py list`. They are English, and `test_tools.py` runs them against a scripted console.
+
+What the tools do with the console's answers, and what the tests pin:
+
+- **`read`** prints the file byte for byte. The device announces the length and the 16-bit sum in `CONFIG CONTENT`, the tool reads exactly that many bytes (so blank lines and line ends are content, not skipped) and compares the sum; a read that one of the device's own log lines disturbed is repeated, three times at most. Of a long log the device sends the last 8 KB: the tool says on the error output where they begin. The device cannot tell a file that does not exist from an empty one, and the tool says that too.
+- **`write`** announces the length and the sum, sends the bytes in pieces, and compares the length the device reports with the one it sent. `--restart` and `restart` wait for the device's `CONFIG OK restart`.
+- **`sms`** prints the device's answer. `accepted` means the text left or waits for the network; `refused` (an empty text, one longer than the limit, a full queue of waiting texts) ends the tool with an error. A real line break in the text is refused by the tool: the console takes one line, a break is written `\n`.
+- **`webbridge.py`** announces each request with `CONFIG WEB <n>`, sends it whole (at most 9300 bytes, the console's limit; a larger one gets a 413 from the bridge) and returns the response of the announced length. It forwards only the `Authorization`, `X-Phoneplus` and `Content-Type` headers and sets the length itself.
+- **Commands of 3.2's tool that are gone:** `dial`, `hangup`, `query` and `motion` do not exist in 4.0's console.
 
 ## Not verified on the device
 

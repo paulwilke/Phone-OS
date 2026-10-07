@@ -1,6 +1,6 @@
 # Release 4.0
 
-Version 4.0.0 of PhonePlus, the emergency phone for a child on the LilyGO T-Deck Pro MAX. What changed against 3.2 is in [../CHANGELOG.md](../CHANGELOG.md), and every open question is in [open-points.md](open-points.md). This page says what the release is, what it is not, and where the owner's checklist stands.
+Version 4.0.0 of PhonePlus, the emergency phone for a child on the LilyGO T-Deck Pro MAX. What changed against 3.2 is in [../CHANGELOG.md](../CHANGELOG.md), the way from a running 3.2 device is in [upgrading.md](upgrading.md), and every open question is in [open-points.md](open-points.md). This page says what the release is, what it is not, and where the owner's checklist stands.
 
 ## What the release is
 
@@ -47,7 +47,8 @@ Each one is in [open-points.md](open-points.md) with the question and a recommen
 | 13 | Meck's licence file for the copied board description | compare it and add it, or replace the board file |
 | 14 | handing out a firmware binary | do not, until the sensor image's terms are verified |
 | 16 | the tag, the repository's visibility, what happens to the old repositories | the owner's, after the checklist |
+| 17 | school-time windows of a 3.2 card: German day names and a third window a day are refused | keep the refusals and check the card by hand ([upgrading.md](upgrading.md)) |
 
 ## Going back to 3.2
 
-Flash the 3.2 firmware again and put back the card files saved before the upgrade: the old firmware needs the old files.
+Flash the 3.2 firmware again and put back the card files saved before the upgrade: the old firmware needs the old files. [upgrading.md](upgrading.md) goes through the upgrade, the first start and the way back.

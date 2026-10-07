@@ -12,7 +12,11 @@ Over the cable only settings.toml, contacts.toml and secrets.toml can be read an
 system.log, system.old.log and messages.log read. Everything else on the card is the parents' page's business
 (scripts/webbridge.py). A new file takes effect after a restart.
 
-`battery` reads the fuel gauge and the charger without writing anything and prints one line for each value.
+`read` prints the file byte for byte (of a long log the last 8 KB, and says where they start); the device sends the
+length and a checksum with it, and a read that a log line of the device disturbed is repeated. A file that does not
+exist reads like an empty one. `sms` says "accepted" when the text was sent or is waiting for the network; only an
+empty text, one that is too long, or a full queue is refused. `battery` reads the fuel gauge and the charger
+without writing anything and prints one line for each value.
 
 The port is found automatically (/dev/cu.usbmodem*, /dev/ttyACM*, /dev/ttyUSB*); --port overrides it.
 Needs pyserial, which PlatformIO brings along:
@@ -91,16 +95,35 @@ def do_list(ser):
         print(line)
 
 
+def read_exact(ser, count, timeout=20.0):
+    """Exactly `count` bytes, or fewer when the device stops sending; blank lines and line ends are content here."""
+    data = b""
+    end = time.time() + timeout
+    while len(data) < count and time.time() < end:
+        data += ser.read(count - len(data))
+    return data
+
+
 def do_read(ser, name):
-    send(ser, f"CONFIG READ {name}")
-    head, _ = read_until(ser, "CONFIG CONTENT")
-    length = int(head.split()[3])
-    _, lines = read_until(ser, "CONFIG END", timeout=20)
-    text = "\n".join(lines)
-    print(text)
-    # The final line break is lost when the lines are joined; anything beyond it would be a real loss.
-    if len(text.encode()) + 1 < length:
-        print(f"(note: {length} bytes reported, {len(text.encode())} read)", file=sys.stderr)
+    """Prints the file byte for byte. The device announces length and checksum, so a read that one of its own log
+    lines disturbed is noticed and repeated instead of being printed with the line inside it."""
+    for attempt in range(3):
+        send(ser, f"CONFIG READ {name}")
+        head, _ = read_until(ser, "CONFIG CONTENT")
+        fields = head.split()  # CONFIG CONTENT <file> <length> <sum> from <first> of <total>
+        length, expected, first, total = int(fields[3]), int(fields[4]), int(fields[6]), int(fields[8])
+        data = read_exact(ser, length)
+        read_until(ser, "CONFIG END", timeout=5)
+        if len(data) == length and checksum(data) == expected:
+            break
+        print("The answer was disturbed (a log line of the device in it?). Reading again.", file=sys.stderr)
+    else:
+        sys.exit("The file could not be read without a disturbance in three tries.")
+    sys.stdout.write(data.decode("utf-8", "replace"))
+    if length == 0:
+        print("(the file is empty or does not exist)", file=sys.stderr)
+    elif first > 0:
+        print(f"(the last {length} bytes of {total}: the file begins {first} bytes earlier)", file=sys.stderr)
 
 
 def do_write(ser, name, source, restart):
@@ -117,9 +140,16 @@ def do_write(ser, name, source, restart):
         time.sleep(0.01)
     answer, _ = read_until(ser, "CONFIG OK", timeout=15)
     print(answer)
+    if answer.split()[-1] != str(len(data)):
+        sys.exit(f"The device stored {answer.split()[-1]} bytes, not {len(data)}.")
     if restart:
-        send(ser, "CONFIG RESTART")
-        print("The device is restarting.")
+        do_restart(ser)
+
+
+def do_restart(ser):
+    send(ser, "CONFIG RESTART")
+    read_until(ser, "CONFIG OK restart")
+    print("The device is restarting.")
 
 
 def do_battery(ser):
@@ -131,9 +161,13 @@ def do_battery(ser):
 
 
 def do_sms(ser, number, text):
+    if "\n" in text or "\r" in text:
+        sys.exit("A line break in the text is written \\n: the console takes one line.")
     send(ser, f"SMS {number} {text}")
     answer, _ = read_until(ser, "CONFIG OK", timeout=10)
     print(answer)
+    if answer.endswith("refused"):
+        sys.exit("The device refused the text: it is empty or too long, or the queue of waiting texts is full.")
 
 
 def build_parser():
@@ -171,8 +205,7 @@ def main(argv=None, opener=open_port):
         elif args.cmd == "sms":
             do_sms(ser, args.number, args.text)
         elif args.cmd == "restart":
-            send(ser, "CONFIG RESTART")
-            print("The device is restarting.")
+            do_restart(ser)
     finally:
         ser.close()
 
