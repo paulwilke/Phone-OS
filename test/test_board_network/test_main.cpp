@@ -25,6 +25,12 @@ void test_a_refused_start_does_not_touch_the_radio_and_leaves_what_runs_running(
   TEST_ASSERT_TRUE(r.radio.running());
 }
 
+void test_the_radio_s_own_words_about_the_link_reach_the_capability() {
+  BoardWifiRig r;
+  r.radio.setLinkDetail("status 6");
+  TEST_ASSERT_EQUAL_STRING("status 6", r.impl.linkDetail().c_str());
+}
+
 void test_names_of_more_than_32_characters_and_passwords_of_more_than_63_are_refused() {
   BoardWifiRig r;
   TEST_ASSERT_TRUE(r.impl.startStation(std::string(32, 'n'), ""));
@@ -190,6 +196,7 @@ void test_beginning_again_restarts_the_listener_on_the_new_port() {
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_a_refused_start_does_not_touch_the_radio_and_leaves_what_runs_running);
+  RUN_TEST(test_the_radio_s_own_words_about_the_link_reach_the_capability);
   RUN_TEST(test_names_of_more_than_32_characters_and_passwords_of_more_than_63_are_refused);
   RUN_TEST(test_an_open_network_is_asked_with_an_empty_password);
   RUN_TEST(test_starting_one_mode_shuts_the_chip_down_before_the_other_comes_up);

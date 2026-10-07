@@ -2,6 +2,9 @@
 
 #include <unity.h>
 
+#include <string>
+#include <vector>
+
 #include <fakes/FakeWifi.h>
 
 #include <app/WifiController.h>
@@ -180,6 +183,8 @@ void test_a_lost_connection_is_retried() {
   TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);
   r.wifi.stop();                                                    // the router goes off
   r.ctl.poll(10);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);          // a reading is not yet a lost link ...
+  r.ctl.poll(10 + WifiController::kLinkGraceSeconds);               // ... but a link that stays gone is
   TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connecting);
   TEST_ASSERT_EQUAL_STRING("HomeNet", r.wifi.ssid().c_str());       // from the first network again
 }
@@ -194,7 +199,116 @@ void test_a_lost_connection_starts_again_from_the_first_network() {
   TEST_ASSERT_EQUAL_STRING("SecondNet", r.wifi.ssid().c_str());
   r.wifi.stop();
   r.ctl.poll(3);
+  r.ctl.poll(3 + WifiController::kLinkGraceSeconds);
   TEST_ASSERT_EQUAL_STRING("HomeNet", r.wifi.ssid().c_str());
+}
+
+// ---- a link that reads "not connected" for a moment (seen on the device, 2026-10-07) ----------------
+
+namespace {
+
+struct Linked : Rig {
+  std::vector<std::string> lines;
+  Linked() {
+    ctl.setLog([this](const std::string& line) { lines.push_back(line); });
+    ctl.request(WifiMode::Station, 0);
+    wifi.finishConnecting(true);
+    ctl.poll(1);
+  }
+  bool said(const std::string& part) const {
+    for (const std::string& l : lines) if (l.find(part) != std::string::npos) return true;
+    return false;
+  }
+};
+
+}  // namespace
+
+void test_one_reading_that_is_not_connected_does_not_restart_the_network() {
+  Linked r;
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);
+  r.wifi.setLinkDetail("status 6, heap 41236 free, largest 20480");
+  r.wifi.glitch();
+  r.ctl.poll(10);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);          // the server keeps running
+  TEST_ASSERT_EQUAL(1, r.wifi.stationStarts());                     // and the radio was not told to start again
+  r.wifi.restoreLink();
+  r.ctl.poll(11);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);
+  TEST_ASSERT_EQUAL(1, r.wifi.stationStarts());
+}
+
+void test_a_link_that_stays_gone_longer_than_the_bound_is_reconnected() {
+  Linked r;
+  r.wifi.setLinkDetail("status 6, heap 41236 free, largest 20480");
+  r.wifi.glitch();
+  r.ctl.poll(10);
+  r.ctl.poll(10 + WifiController::kLinkGraceSeconds - 1);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);          // one second short
+  r.ctl.poll(10 + WifiController::kLinkGraceSeconds);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connecting);         // the connection starts again
+  TEST_ASSERT_EQUAL(2, r.wifi.stationStarts());
+  TEST_ASSERT_EQUAL_STRING("HomeNet", r.wifi.ssid().c_str());
+  TEST_ASSERT_TRUE(r.said("Wi-Fi: link not connected (status 6, heap 41236 free, largest 20480); waiting 5 s before reconnecting"));
+  TEST_ASSERT_TRUE(r.said("Wi-Fi: link still not connected after 5 s (status 6"));
+  TEST_ASSERT_EQUAL(2, (int)r.lines.size());
+}
+
+void test_a_link_that_comes_back_inside_the_bound_logs_once_and_silently_resumes() {
+  Linked r;
+  r.wifi.glitch();
+  r.ctl.poll(10);
+  r.ctl.poll(12);
+  r.wifi.restoreLink();
+  r.ctl.poll(13);
+  TEST_ASSERT_EQUAL(2, (int)r.lines.size());                        // the start and the end, nothing else
+  TEST_ASSERT_TRUE(r.said("Wi-Fi: link not connected; waiting 5 s before reconnecting"));
+  TEST_ASSERT_TRUE(r.said("Wi-Fi: link back after 3 s"));
+  r.ctl.poll(60);
+  TEST_ASSERT_EQUAL(2, (int)r.lines.size());
+  // The grace period is over: a new glitch gets a full bound of its own.
+  r.wifi.glitch();
+  r.ctl.poll(70);
+  r.ctl.poll(70 + WifiController::kLinkGraceSeconds - 1);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);
+}
+
+void test_a_flapping_link_does_not_fill_the_log() {
+  Linked r;
+  uint32_t t = 10;
+  for (int i = 0; i < 10; ++i, t += 2) {
+    r.wifi.glitch();
+    r.ctl.poll(t);
+    r.wifi.restoreLink();
+    r.ctl.poll(t + 1);
+  }
+  // 3 glitches written (start and end each), the others left out.
+  TEST_ASSERT_EQUAL(2 * (int)WifiController::kGlitchLogsPerMinute, (int)r.lines.size());
+  r.wifi.glitch();
+  r.ctl.poll(200);                                                  // the next minute says how many were left out
+  TEST_ASSERT_TRUE(r.said("7 earlier ones not logged"));
+}
+
+void test_switching_off_in_the_grace_period_leaves_no_grace_behind() {
+  Linked r;
+  r.wifi.glitch();
+  r.ctl.poll(10);
+  r.ctl.request(WifiMode::Station, 12);                             // somebody starts again
+  r.wifi.finishConnecting(true);
+  r.ctl.poll(13);
+  r.wifi.glitch();
+  r.ctl.poll(14);
+  r.ctl.poll(14 + WifiController::kLinkGraceSeconds - 1);
+  TEST_ASSERT_TRUE(r.ctl.phase() == WifiPhase::Connected);          // a new bound, not the old one
+}
+
+void test_an_access_point_does_not_have_a_grace_period() {
+  // BoardWifi reports AccessPoint for as long as the mode is on, so there is no reading to wait out; a
+  // state that is not AccessPoint is a real loss and stays so.
+  Rig r;
+  r.ctl.request(WifiMode::AccessPoint, 0);
+  r.wifi.stop();
+  r.ctl.poll(1);
+  TEST_ASSERT_TRUE(r.ctl.reason() == WifiReason::AccessPointLost);
 }
 
 void test_an_access_point_failure_is_reported() {
@@ -254,6 +368,12 @@ int main() {
   RUN_TEST(test_activity_postpones_the_shutdown);
   RUN_TEST(test_a_lost_connection_is_retried);
   RUN_TEST(test_a_lost_connection_starts_again_from_the_first_network);
+  RUN_TEST(test_one_reading_that_is_not_connected_does_not_restart_the_network);
+  RUN_TEST(test_a_link_that_stays_gone_longer_than_the_bound_is_reconnected);
+  RUN_TEST(test_a_link_that_comes_back_inside_the_bound_logs_once_and_silently_resumes);
+  RUN_TEST(test_a_flapping_link_does_not_fill_the_log);
+  RUN_TEST(test_switching_off_in_the_grace_period_leaves_no_grace_behind);
+  RUN_TEST(test_an_access_point_does_not_have_a_grace_period);
   RUN_TEST(test_an_access_point_failure_is_reported);
   RUN_TEST(test_requesting_off_stops);
   RUN_TEST(test_a_lost_access_point_is_reported);

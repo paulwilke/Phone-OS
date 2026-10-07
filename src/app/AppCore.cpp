@@ -31,6 +31,7 @@ void AppCore::setRadio(RadioLink* radio) {
 void AppCore::setWifi(Wifi& wifi, WifiController::Random random) {
   wifi_ = std::make_unique<WifiController>(wifi, random);
   wifi_->configure(profile_.wifi);
+  wifi_->setLog([this](const std::string& line) { logger_.log(line); });
   connectivity_.setWifi(wifi_.get());
 }
 

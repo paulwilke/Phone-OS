@@ -40,4 +40,9 @@ public:
   // The device's own address ("192.168.4.1"); empty as long as there is none (Off,
   // Connecting, Failed).
   virtual std::string address() = 0;
+
+  // What the radio itself says about the link, for the log when the link is not what it should be (the raw
+  // status code and whatever else helps; free text, never shown to the user). Empty when there is nothing.
+  // Not pure: a capability that has nothing to add stays as it is.
+  virtual std::string linkDetail() { return std::string(); }
 };

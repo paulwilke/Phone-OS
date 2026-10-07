@@ -413,6 +413,7 @@ Tests in `test/test_runtime/`.
 | WSV-01 | The server runs exactly while the controller says Wi-Fi is up, whoever switched it | `test_the_server_runs_exactly_while_the_one_controller_says_wifi_is_up` | — | done |
 | WSV-02 | Silence switches Wi-Fi and the page off after the idle time | `test_silence_switches_wifi_and_the_page_off_after_the_idle_time` | — | done |
 | WSV-03 | A parent who keeps using the page is never cut off; a stranger cannot keep it on | `test_a_parent_who_keeps_using_the_page_is_never_cut_off_and_a_stranger_cannot_keep_it_on` | — | done |
+| WSV-04 | A link glitch does not stop the server or cut an answer in flight | `test_the_page_keeps_an_answer_going_through_a_link_glitch` | — | done |
 
 ## WifiController
 
@@ -436,6 +437,11 @@ Tests in `test/test_wifi_controller/`.
 | WIF-14 | An access point that stops while it runs is reported as lost | `test_a_lost_access_point_is_reported` | — | done |
 | WIF-15 | A lost connection starts again from the first network | `test_a_lost_connection_starts_again_from_the_first_network` | — | done |
 | WIF-16 | The idle time starts when the station has connected | `test_the_idle_time_starts_when_the_station_has_connected` | — | done |
+| WIF-17 | One reading "not connected" in the Connected phase neither changes the phase nor restarts the network | `test_one_reading_that_is_not_connected_does_not_restart_the_network` | — | done |
+| WIF-18 | A link that stays gone for the grace period is reconnected, and the log says why | `test_a_link_that_stays_gone_longer_than_the_bound_is_reconnected` | — | done |
+| WIF-19 | A link that comes back inside the grace period logs once and resumes without a trace | `test_a_link_that_comes_back_inside_the_bound_logs_once_and_silently_resumes` | — | done |
+| WIF-20 | A flapping link writes at most three opening lines a minute and counts the rest | `test_a_flapping_link_does_not_fill_the_log` | — | done |
+| WIF-21 | A new request ends the old grace period | `test_switching_off_in_the_grace_period_leaves_no_grace_behind` | — | done |
 
 ## PowerCoordination
 

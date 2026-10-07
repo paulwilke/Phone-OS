@@ -24,6 +24,7 @@ public:
   void stop() override;
   WifiState state() override;
   std::string address() override;
+  std::string linkDetail() override { return radio_.linkDetail(); }
 
 private:
   enum class Mode : unsigned char { Off, Station, AccessPoint };

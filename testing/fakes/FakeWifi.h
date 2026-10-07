@@ -5,7 +5,7 @@
 //
 // Scripting: finishConnecting(true|false) ends a station attempt (Connected or Failed),
 // failAccessPoint(bool) makes the next access point fail to start,
-// setStationAddress(a). Reading back: ssid(), password().
+// setStationAddress(a). Reading back: ssid(), password(), stationStarts(). glitch()/restoreLink(): the link reads "not connected" for a moment.
 
 #include <hal/Wifi.h>
 
@@ -14,6 +14,7 @@ public:
   bool startStation(const std::string& ssid, const std::string& password) override {
     if (ssid.empty()) return false;
     stop();
+    ++stationStarts_;
     state_ = WifiState::Connecting;
     ssid_ = ssid;
     password_ = password;
@@ -45,8 +46,14 @@ public:
   void finishConnecting(bool success) {
     if (state_ == WifiState::Connecting) state_ = success ? WifiState::Connected : WifiState::Failed;
   }
+  // The link reads "not connected" for a moment although nothing stopped it; restoreLink() ends that.
+  void glitch() { if (state_ == WifiState::Connected) state_ = WifiState::Connecting; }
+  void restoreLink() { if (state_ == WifiState::Connecting) state_ = WifiState::Connected; }
+  void setLinkDetail(const std::string& detail) { detail_ = detail; }
+  std::string linkDetail() override { return detail_; }
   void failAccessPoint(bool fails) { apFails_ = fails; }
   void setStationAddress(const std::string& address) { stationAddress_ = address; }
+  int stationStarts() const { return stationStarts_; }
   const std::string& ssid() const { return ssid_; }
   const std::string& password() const { return password_; }
 
@@ -54,5 +61,7 @@ private:
   WifiState state_ = WifiState::Off;
   std::string ssid_, password_;
   std::string stationAddress_ = "192.168.1.50";
+  std::string detail_;
+  int stationStarts_ = 0;
   bool apFails_ = false;
 };

@@ -10,8 +10,11 @@
 #include <WiFi.h>
 
 #include <cstdio>
+#include <string>
 
 #include <board/WifiRadio.h>
+
+#include "Esp32Heap.h"
 
 class Esp32WifiRadio : public board::WifiRadio {
 public:
@@ -38,6 +41,9 @@ public:
     if (s == WL_CONNECT_FAILED || s == WL_NO_SSID_AVAIL) return board::StationLink::Failed;
     return board::StationLink::Connecting;
   }
+  // The raw wl_status_t: stationLink() folds all but three values into "connecting", and a link that
+  // reads "not connected" while a page is being served has to be explained afterwards.
+  std::string linkDetail() override { return "status " + std::to_string((int)WiFi.status()) + ", " + heapSummary(); }
   std::string stationAddress() override { return format(WiFi.localIP()); }
   std::string accessPointAddress() override { return format(WiFi.softAPIP()); }
 

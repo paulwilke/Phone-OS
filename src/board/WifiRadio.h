@@ -26,6 +26,9 @@ public:
   virtual StationLink stationLink() = 0;
   virtual std::string stationAddress() = 0;
   virtual std::string accessPointAddress() = 0;
+  // The raw reason behind stationLink(), for the log: the chip's own status number and, on the device, the
+  // memory it has to work with. Empty when there is nothing to add.
+  virtual std::string linkDetail() { return std::string(); }
 };
 
 }  // namespace board

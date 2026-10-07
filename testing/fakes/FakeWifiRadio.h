@@ -35,6 +35,10 @@ public:
   std::string stationAddress() override { return link_ == board::StationLink::Connected ? stationAddress_ : std::string(); }
   std::string accessPointAddress() override { return running_ ? "192.168.4.1" : std::string(); }
 
+  // A reading that is not "connected" although nothing was shut down (the chip's own hiccup), and its way back.
+  void glitch() { link_ = board::StationLink::Connecting; }
+  void setLinkDetail(const std::string& detail) { detail_ = detail; }
+  std::string linkDetail() override { return detail_; }
   void finishConnecting(bool success) { link_ = success ? board::StationLink::Connected : board::StationLink::Failed; }
   void failAccessPoint(bool fails) { failAp_ = fails; }
   void setStationAddress(const std::string& address) { stationAddress_ = address; }
@@ -50,6 +54,7 @@ private:
   board::StationLink link_ = board::StationLink::Connecting;
   std::string stationAddress_ = "192.168.1.50";
   std::string ssid_, password_;
+  std::string detail_;
   bool failAp_ = false;
   bool running_ = false;
   int stationCalls_ = 0, apCalls_ = 0, shutdowns_ = 0;

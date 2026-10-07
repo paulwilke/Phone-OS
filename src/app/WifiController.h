@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 
 #include "../hal/Wifi.h"
@@ -38,11 +39,23 @@ enum class WifiReason : uint8_t {
 class WifiController {
 public:
   static constexpr uint32_t kAttemptSeconds = 20;
+  // A station that was connected and reads "not connected" is given this long to come back before the link
+  // counts as lost. Seen on the device (2026-10-07): a single reading while the web page was being served
+  // restarted the whole connection and cut an answer off in the middle. The stack reports "connecting" for
+  // many states that are not a lost link, and a real loss (the access point gone, the router restarted) is
+  // still there after five seconds, so waiting costs a real loss five seconds and a glitch nothing. The poll
+  // runs in whole seconds, so the wait is 4 to 5 s of real time.
+  static constexpr uint32_t kLinkGraceSeconds = 5;
+  // At most this many "link not connected" lines a minute; a flapping link must not fill the card.
+  static constexpr uint32_t kGlitchLogsPerMinute = 3;
+  using Log = std::function<void(const std::string&)>;
   using Random = uint32_t (*)();
 
   WifiController(Wifi& wifi, Random random) : wifi_(wifi), random_(random) {}
 
   void configure(const WifiSettings& settings) { settings_ = settings; }
+  // Where the lines about a link that is not connected go (the core's log).
+  void setLog(Log log) { log_ = std::move(log); }
 
   // Switches on (or over). False when it cannot; reason() says why.
   bool request(WifiMode mode, uint32_t nowSeconds);
@@ -67,6 +80,9 @@ public:
 private:
   void startNetwork(size_t index, uint32_t now);
   void fail(WifiReason reason);
+  void endGrace(uint32_t now);
+  void note(const std::string& line) { if (log_) log_(line); }
+  bool mayLogGlitch(uint32_t now);
 
   Wifi& wifi_;
   Random random_;
@@ -79,4 +95,12 @@ private:
   uint32_t lastActivity_ = 0;
   std::string ssid_, apPassword_;
   WifiReason reason_ = WifiReason::None;
+
+  Log log_;
+  bool inGrace_ = false;          // Connected phase, but the radio reads "not connected"
+  bool graceLogged_ = false;      // the line that opened it was written, so the one that ends it is too
+  uint32_t graceStarted_ = 0;
+  uint32_t logWindow_ = 0;
+  uint32_t logsInWindow_ = 0;
+  uint32_t suppressed_ = 0;
 };

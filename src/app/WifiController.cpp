@@ -3,6 +3,7 @@
 #include <cstdio>
 
 void WifiController::fail(WifiReason reason) {
+  inGrace_ = false;
   wifi_.stop();
   phase_ = WifiPhase::Failed;
   mode_ = WifiMode::Off;
@@ -10,6 +11,7 @@ void WifiController::fail(WifiReason reason) {
 }
 
 void WifiController::stop(WifiReason reason) {
+  inGrace_ = false;
   wifi_.stop();
   phase_ = WifiPhase::Off;
   mode_ = WifiMode::Off;
@@ -18,6 +20,7 @@ void WifiController::stop(WifiReason reason) {
 }
 
 void WifiController::startNetwork(size_t index, uint32_t now) {
+  inGrace_ = false;
   netIndex_ = index;
   attemptStarted_ = now;
   const WifiSettings::Network& n = settings_.networks[index];
@@ -85,8 +88,34 @@ void WifiController::poll(uint32_t now) {
 
   const WifiState s = wifi_.state();
   if (phase_ == WifiPhase::Connected) {
-    // The connection was lost: start again from the first network.
-    if (s != WifiState::Connected) startNetwork(0, now);
+    if (s == WifiState::Connected) {
+      if (inGrace_) endGrace(now);
+      return;
+    }
+    // One reading is not a lost link: the phase stays Connected (so the server keeps its answer going)
+    // until the link has been gone for kLinkGraceSeconds, and only then it starts again from the first network.
+    if (!inGrace_) {
+      inGrace_ = true;
+      graceStarted_ = now;
+      graceLogged_ = mayLogGlitch(now);
+      if (graceLogged_) {
+        const std::string detail = wifi_.linkDetail();
+        std::string line = "Wi-Fi: link not connected";
+        if (!detail.empty()) line += " (" + detail + ")";
+        line += "; waiting " + std::to_string(kLinkGraceSeconds) + " s before reconnecting";
+        if (suppressed_ > 0) line += " [" + std::to_string(suppressed_) + " earlier ones not logged]";
+        suppressed_ = 0;
+        note(line);
+      }
+      return;
+    }
+    if (now - graceStarted_ >= kLinkGraceSeconds) {
+      inGrace_ = false;
+      const std::string detail = wifi_.linkDetail();
+      note("Wi-Fi: link still not connected after " + std::to_string(now - graceStarted_) + " s" +
+           (detail.empty() ? std::string() : " (" + detail + ")") + "; reconnecting");
+      startNetwork(0, now);
+    }
     return;
   }
   if (s == WifiState::Connected) {
@@ -99,4 +128,28 @@ void WifiController::poll(uint32_t now) {
     if (netIndex_ + 1 < settings_.networks.size()) startNetwork(netIndex_ + 1, now);
     else fail(WifiReason::HomeNetworkUnreachable);
   }
+}
+
+// The link came back inside the grace period: nothing was lost, and the log says how long it took.
+void WifiController::endGrace(uint32_t now) {
+  inGrace_ = false;
+  if (!graceLogged_) return;
+  const uint32_t waited = now - graceStarted_;
+  note(waited == 0 ? std::string("Wi-Fi: link back within 1 s")
+                   : "Wi-Fi: link back after " + std::to_string(waited) + " s");
+}
+
+// A flapping link must not fill the card: at most kGlitchLogsPerMinute opening lines a minute, and the
+// next line that is written says how many were left out.
+bool WifiController::mayLogGlitch(uint32_t now) {
+  if (logsInWindow_ == 0 || now - logWindow_ >= 60) {
+    logWindow_ = now;
+    logsInWindow_ = 0;
+  }
+  if (logsInWindow_ >= kGlitchLogsPerMinute) {
+    ++suppressed_;
+    return false;
+  }
+  ++logsInWindow_;
+  return true;
 }

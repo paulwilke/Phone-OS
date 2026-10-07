@@ -556,6 +556,37 @@ void test_the_server_runs_exactly_while_the_one_controller_says_wifi_is_up() {
   TEST_ASSERT_TRUE(w.runtime->core().state().wifiPhase == WifiPhase::Off);
 }
 
+// Seen on the device (2026-10-07): the link read "not connected" once while the page was being answered,
+// the server was stopped and the answer cut off. A glitch must not touch the server.
+void test_the_page_keeps_an_answer_going_through_a_link_glitch() {
+  World w;
+  w.store.put("/config/secrets.toml", "web_password = \"test-password-1\"\n[[wifi.network]]\nssid = \"HomeNet\"\npassword = \"secret-pass\"\n");
+  FrameBuffer fb;
+  w.boot(fb);
+  TEST_ASSERT_TRUE(w.runtime->core().setWifiMode(WifiMode::Station));
+  w.wifi.finishConnecting(true);
+  w.run(2);
+  TEST_ASSERT_TRUE(w.tcp.listening());
+  FakeTcpConnection* client = w.tcp.connect();
+  TEST_ASSERT_NOT_NULL(client);
+  client->limitWritesTo(40);                                                  // the answer takes many turns of the loop
+  client->fromPeer(kAuthorized);
+  w.run(2);
+  const size_t before = client->sentToPeer().size();
+  TEST_ASSERT_TRUE(before > 0);
+  w.wifi.glitch();                                                            // the reading, in the middle of the answer
+  w.run(2);
+  TEST_ASSERT_TRUE(w.tcp.listening());
+  TEST_ASSERT_FALSE(client->closedBySoftware());
+  w.wifi.restoreLink();
+  w.run(60);
+  TEST_ASSERT_TRUE(client->sentToPeer().size() > before);
+  TEST_ASSERT_TRUE(client->sentToPeer().find("200 OK") != std::string::npos);
+  TEST_ASSERT_TRUE(client->sentToPeer().back() == '}');                       // the whole state, not a piece
+  TEST_ASSERT_FALSE(w.log.contains("aborted"));
+  TEST_ASSERT_EQUAL(1, w.wifi.stationStarts());
+}
+
 void test_silence_switches_wifi_and_the_page_off_after_the_idle_time() {
   World w;
   FrameBuffer fb;
@@ -641,6 +672,7 @@ int main() {
   RUN_TEST(test_the_three_languages_draw_three_different_pictures);
   RUN_TEST(test_the_web_service_is_the_real_one_and_answers_through_the_tcp_fake);
   RUN_TEST(test_the_server_runs_exactly_while_the_one_controller_says_wifi_is_up);
+  RUN_TEST(test_the_page_keeps_an_answer_going_through_a_link_glitch);
   RUN_TEST(test_silence_switches_wifi_and_the_page_off_after_the_idle_time);
   RUN_TEST(test_a_parent_who_keeps_using_the_page_is_never_cut_off_and_a_stranger_cannot_keep_it_on);
   RUN_TEST(test_a_restart_asked_by_the_web_interface_reaches_the_host);

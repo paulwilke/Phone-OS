@@ -5,11 +5,12 @@
 namespace loglevel {
 namespace {
 
-// Lines that must stay on every level. "web:" marks actions on the parents' page.
+// Lines that must stay on every level. "web:" marks actions on the parents' page; "wi-fi: link" is the explanation of a link that
+// dropped, which is only worth anything if it is still there when somebody looks.
 const char* const kAlways[] = {"command", "remote query", "sos",      "quiet hours", "restart",
                                "firmware", "shutdown",     "config",   "web:",
                                "not in the contact book", "number withheld",
-                               "not the configured radio peer"};
+                               "not the configured radio peer", "wi-fi: link"};
 
 const char* const kError[] = {"failed", "rejected",        "not found", "not responding", "error",
                               "not established", "crash", "blocked",   "cannot"};

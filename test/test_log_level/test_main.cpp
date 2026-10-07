@@ -25,6 +25,9 @@ const char* const kAlways[] = {
     "Shutdown requested",
     "Config written",
     "WEB: settings changed",
+    "Wi-Fi: link not connected (status 6, heap 41236 free, largest 20480); waiting 5 s before reconnecting",
+    "Wi-Fi: link back after 3 s",
+    "Wi-Fi: link still not connected after 5 s; reconnecting",
     "SMS dropped: sender not in the contact book (+491709999999)",
     "SMS dropped: sender not in the contact book (non-numeric sender)",
 };

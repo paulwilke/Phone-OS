@@ -219,7 +219,7 @@ void setup() {
   modemTransport.begin();
   display.begin();
 
-  shipped::load(translator);
+  shipped::load(translator, [](const std::string& line) { eventLog.log(line); });
   firmwareVersion = shipped::version();
   runtime.reset(new boot::Runtime(
       boot::Capabilities{deviceClock, *power, *modem, *gnss, haptic, eventLog, configStore, wifi, tcpServer, flashAssets, display,
