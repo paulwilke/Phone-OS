@@ -23,6 +23,7 @@ struct PanelCommand {
 };
 
 struct PanelProfile {
+  const char* name = "";  // said in the start log
   int width = 0;    // the panel's memory, in pixels
   int height = 0;
   // After the hardware reset: the commands that bring the controller up (panel setting, power, booster,

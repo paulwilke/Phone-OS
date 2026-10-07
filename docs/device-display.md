@@ -44,11 +44,11 @@ None of the three is in this repository. The vendor states no licence for the PD
 
 `test_eink_display` uses an invented profile with values that mean nothing: what it proves is the driver's sequencing.
 
-**What the host tests prove is that the profile sends what the documents say. They do not prove that the panel shows a picture.** That the demo's sequence is what this driver sends is checked by reading; that the panel then draws is the owner's check with the device.
+**What the host tests prove is that the profile sends what the documents say. They do not prove that the panel shows a picture.** Verified on the host: the sequences against the vendor's documentation, the pipeline, the policy. Not verified: everything in the next section. That the demo's sequence is what this driver sends is checked by reading; that the panel then draws is the owner's check with the device.
 
-## Not in the firmware yet
+## In the firmware
 
-`device/main.cpp` still passes no profile in this change, so the display says "not configured" and shows nothing. The next change hands it `gdeq031t10Profile()`.
+`device/main.cpp` hands `gdeq031t10Profile()` to the display, and the start log says which profile is used (`Display: profile GDEQ031T10 on UC8253, OTP waveform`). A build without a profile still says `Display: not configured` and does not drive the panel. **That the firmware compiles with the profile is shown by `pio run -e device`; that it shows a picture has not been seen.**
 
 ## Unverified, and cannot be verified without the panel
 

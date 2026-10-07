@@ -120,6 +120,16 @@ void test_begin_does_not_touch_the_panel_and_a_refresh_resets_and_starts_it_in_o
   TEST_ASSERT_TRUE(low && high);
 }
 
+void test_the_start_log_names_the_profile() {
+  Rig r;
+  r.profile.name = "test panel";
+  TEST_ASSERT_TRUE(r.display.begin());
+  TEST_ASSERT_TRUE(r.log.contains("Display: profile test panel"));
+  Rig none(false);
+  none.display.begin();
+  TEST_ASSERT_FALSE(none.log.contains("Display: profile"));
+}
+
 void test_every_refresh_wakes_the_panel_again() {
   Rig r;
   r.idleBusy();
@@ -339,6 +349,7 @@ int main(int, char**) {
   RUN_TEST(test_without_a_profile_the_panel_is_not_driven_and_says_so);
   RUN_TEST(test_a_profile_of_the_wrong_size_or_without_values_is_not_used);
   RUN_TEST(test_begin_does_not_touch_the_panel_and_a_refresh_resets_and_starts_it_in_order);
+  RUN_TEST(test_the_start_log_names_the_profile);
   RUN_TEST(test_every_refresh_wakes_the_panel_again);
   RUN_TEST(test_a_panel_that_stays_busy_after_power_on_is_said);
   RUN_TEST(test_a_tiny_change_is_sent_in_the_smallest_window_the_profile_allows);

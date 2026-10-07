@@ -20,7 +20,7 @@ Where the knowledge comes from: the earlier code base's hardware notes (device-p
 | Clock (`DeviceClock`, `TimeSync`) | the 64-bit uptime; which time to believe | the Clock capability; judgement for the limits | the Clock contract; wrap; the rules for a source that lies | the limits against real network times |
 | Card (`SdCard`, `SdConfigStore`, `SdEventLog`, `SdMessageLog`) | mount, the safe write, recovery, the logs | the notes (2026-09-30: MBR, release between attempts, descending clocks) | the ConfigStore, EventLog and MessageLog contracts; power loss at every step; full card; no card | the Arduino library's behaviour on a real volume |
 | Wi-Fi and TCP (`BoardWifi`, `BoardTcpServer`) | the capabilities' rules on small seams | the notes | the Wifi and TcpServer contracts | the radio, the access point, the page |
-| Display (`EinkDisplay`, `EpdWire`) | the pipeline; **no panel values** | the controller's command codes | the sequences against a recording SPI, with invented test data | **everything about the panel**: [device-display.md](device-display.md) |
+| Display (`EinkDisplay`, `EpdWire`, `GDEQ031T10Profile`) | the pipeline and the panel's profile | the controller's command codes; the panel specification, the UC8253 datasheet and the vendor's demo, for values only | the exact byte sequences of start, full and partial refresh, window and sleep against a recording SPI, each with a counter-check | **that the panel shows a picture**, the partial waveform from the temperature override, polarity, times, ghosting: [device-display.md](device-display.md) |
 | Console (`Console`) | CONFIG/BATTERY/SMS over USB | the earlier console's protocol | parsing, framing, timeouts, the whitelist | over the real USB bridge |
 
 ## The rules of hardware-lessons.md and their tests
@@ -36,4 +36,4 @@ Where the knowledge comes from: the earlier code base's hardware notes (device-p
 
 ## Licences
 
-SensorLib (MIT) is a dependency of the `device` environment only. The motion sensor's firmware image comes inside it and its redistribution terms are not verified: it is not in this repository, and binaries that contain it are for the owner's own device ([THIRD_PARTY.md](../THIRD_PARTY.md)). No GPL code is used: GxEPD2 is not a dependency and no table of it was copied ([device-display.md](device-display.md)).
+SensorLib (MIT) is a dependency of the `device` environment only. The motion sensor's firmware image comes inside it and its redistribution terms are not verified: it is not in this repository, and binaries that contain it are for the owner's own device ([THIRD_PARTY.md](../THIRD_PARTY.md)). No GPL code is used: GxEPD2 is not a dependency and no table of it or of the vendor's demo was copied ([device-display.md](device-display.md)).

@@ -4,12 +4,12 @@ Everything in [hardware-drivers.md](hardware-drivers.md) is compiled and tested 
 
 Before the first start: format the card FAT32 **with an MBR partition table** (macOS: `diskutil eraseDisk FAT32 PHONEPLUS MBRFormat /dev/diskN`); put the files of `config/examples/` into `/config/` with the values you want; keep the USB cable at hand. Read the console with `pio device monitor -e device` (opening the port resets the device; that is the USB bridge's habit and not a fault).
 
-**Known before you start:** the display shows nothing, because the panel's own values are not in this build ([device-display.md](device-display.md)); steps that say "picture" cannot pass until a `PanelProfile` exists. Everything else can be checked on the console.
+**Known before you start:** the display is driven with the GDEQ031T10 profile, whose values come from the vendor's documents and are checked against them on the host only ([device-display.md](device-display.md)). **No picture has ever been seen on this panel from this firmware**, so steps 2 and 24 are the first real test of it. Everything else can be checked on the console.
 
 | # | Step | Expect | Date | Result |
 |---|---|---|---|---|
-| 1 | Flash and start. Read the first console lines | `Board: expander answers, started`; `SD card: ready`; `Keyboard: answers`; `Touch: CST66xx found`; `Display: not configured …`; `Boot: the runtime runs` | | |
-| 2 | Boots and shows a picture | **Blocked until a panel profile exists.** Until then only the console lines of step 1 | | |
+| 1 | Flash and start. Read the first console lines | `Board: expander answers, started`; `SD card: ready`; `Keyboard: answers`; `Touch: CST66xx found`; `Display: profile GDEQ031T10 on UC8253, OTP waveform`; `Boot: the runtime runs` | | |
+| 2 | Boots and shows a picture | a complete, upright, readable first picture (a full refresh with several flashes, about 3 s); not inverted (black text on white, not the reverse); no stripes, no cut-off at 120 rows; no console line "the panel stayed busy" | | |
 | 3 | Keyboard: type letters, Shift, Alt then a letter, Enter, Backspace, the `$` key, the mic key | the input is traced; letters are text, Enter select, Backspace back, `$` up, mic down; the symbol of the layer is the one printed on the key; no letter comes twice | | |
 | 4 | The three keys under the screen, left to right | home, inbox, compose (once for each press) | | |
 | 5 | Touch: tap in the four corners and the middle | one touch for each tap; the corners are `0,0`, `239,0`, `0,319`, `239,319` within a few pixels; nothing mirrored | | |
@@ -31,6 +31,6 @@ Before the first start: format the card FAT32 **with an MBR partition table** (m
 | 21 | A restart by the modem | with a bad SIM contact or by `AT+CRESET` through a diagnostic: the log says "Modem restarted by itself (n since start)" and the device recovers; the power key is **not** pressed on a running modem | | |
 | 22 | Switch off | on battery: the switch-off asks the modem to say goodbye, then the device is off; on the cable it refuses and says so | | |
 | 23 | The motion page | the sensor starts (about 11 s), flat on the table z reads about −0.95, the ball rolls to the lower side | | |
-| 24 | The first picture | once a `PanelProfile` exists: the first frame is a full refresh, then partial refreshes of about half a second, every tenth full | | |
+| 24 | Refreshing | the first frame is a full refresh, complete; a small change (move the tile selection) is a partial refresh that **changes only the changed area** and does not flash; no inversion in either kind; every tenth change is a full refresh and clears the ghosts; ten partial refreshes in a row leave no unreadable ghosting (the datasheet advises a full one after five: report what you see); a picture left alone for 4 hours is refreshed in full once; the refresh times (note them); the picture also looks right when the device is cold | | |
 
 Report back **what differs**, with the console lines. A failed step is a finding for the next session; the driver that matches it is in [hardware-drivers.md](hardware-drivers.md).

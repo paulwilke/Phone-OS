@@ -1,5 +1,7 @@
 #include "EinkDisplay.h"
 
+#include <string>
+
 #include "../ui/Crc32.h"
 #include "Uc8253.h"
 
@@ -15,6 +17,7 @@ bool EinkDisplay::begin() {
   }
   wire_.begin();
   configured_ = true;
+  log_.log(std::string("Display: profile ") + p->name);
   return true;
 }
 

@@ -30,6 +30,7 @@ std::vector<uint8_t> encodeWindow(const ui::Rect& r) {
 PanelProfile build() {
   using namespace uc8253;
   PanelProfile p;
+  p.name = "GDEQ031T10 on UC8253, OTP waveform";
   p.width = 240;   // DS 1.3 (240 H x 320 V); DEMO: 240 x 320, 9600 bytes of picture
   p.height = 320;
 

@@ -25,6 +25,7 @@
 #include <board/Cst66xx.h>
 #include <board/DeviceClock.h>
 #include <board/EinkDisplay.h>
+#include <board/GDEQ031T10Profile.h>
 #include <board/EpdWire.h>
 #include <board/KeyboardDecoder.h>
 #include <board/ModemTransport.h>
@@ -94,11 +95,11 @@ Esp32UartPort gnssUart(Serial2, 38400, board::pin::kGnssUartRx, board::pin::kGns
 board::ModemTransport modemTransport(modemUart, expander, gpio, delays, millisSource, eventLog);
 board::TimeSync timeSync(deviceClock, eventLog);
 
-// The panel. The values of its datasheet are not in this build (docs/device-display.md): without a profile
-// the display says so at start and is not driven, and everything else runs.
+// The panel, driven with the GDEQ031T10 profile (docs/device-display.md). A build without a profile says so at
+// start and does not drive the panel.
 Esp32SpiPort displaySpi;
 board::EpdWire displayWire(displaySpi, gpio, delays);
-board::EinkDisplay display(displayWire, nullptr, millisSource, eventLog);
+board::EinkDisplay display(displayWire, &board::gdeq031t10Profile(), millisSource, eventLog);
 
 Esp32WifiRadio wifiRadio;
 board::BoardWifi wifi(wifiRadio);
