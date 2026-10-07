@@ -30,6 +30,16 @@ The `.bdf` files are the upstream files except for one comment line, from which 
 
 **Binaries that contain the Bosch firmware image are for the owner's own device until its redistribution terms are verified.** The image is fetched by the build as part of SensorLib; nothing of it is committed here, and a binary of the `device` environment must not be published or handed to others.
 
+### Read for values, not stored here
+
+| Work | Licence | Used for |
+|---|---|---|
+| Good Display, *GDEQ031T10* product specification, revision 1.0, 2022-03-08 | none stated by the vendor | the panel's data: resolution, BUSY, operation flow, power sequence (`src/board/GDEQ031T10Profile.cpp`, [docs/device-display.md](docs/device-display.md)) |
+| UltraChip, *UC8253* datasheet, `UC8253c_A0.6` | none stated | the meaning of the controller's commands and registers the profile sends |
+| Good Display's Arduino/ESP32 demo for the GDEQ031T10 (`A32-GDEQ031T10-2FP-20230616`, `AU-GDEQ031T10-FP-20221013`), published for use with the panel | none stated | the values the vendor sends to this panel (panel setting, temperature override, data interval, timings, window bytes, sleep). Hardware parameters only: **no code and no comment of it is copied** |
+
+The documents were fetched by the owner's permission and are not in the repository; the vendor states no licence for them. The values are facts about the hardware, written in our own words and checked against the datasheets (the places where the documents disagree are listed in [docs/device-display.md](docs/device-display.md)). GxEPD2 (GPL-3.0) is not used.
+
 ### Tools
 
 The Python scripts in `scripts/` use only the standard library.

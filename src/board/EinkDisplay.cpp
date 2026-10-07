@@ -14,22 +14,49 @@ bool EinkDisplay::begin() {
     return false;
   }
   wire_.begin();
-  wire_.reset(p->resetLowMs, p->resetHighMs);
-  send(p->start);
   configured_ = true;
   return true;
 }
 
 void EinkDisplay::send(const std::vector<PanelCommand>& commands) {
+  const PanelProfile& p = *profile_;
   for (const PanelCommand& c : commands) {
     wire_.command(c.command);
     wire_.data(c.data);
+    if (c.waitBusy && !wire_.waitIdle(p.busyTimeoutMs, p.busyIsHigh)) {
+      hung_ = true;
+      log_.log("Display: the panel stayed busy after a command; the next frame is a full refresh");
+    }
+    if (c.delayAfterMs) wire_.pause(c.delayAfterMs);
   }
+}
+
+void EinkDisplay::wake() {
+  const PanelProfile& p = *profile_;
+  wire_.reset(p.resetLowMs, p.resetHighMs);
+  send(p.start);
+}
+
+// The rectangle grown to at least the profile's smallest window, kept inside the screen and on a byte border.
+static ui::Rect grow(ui::Rect r, const PanelProfile& p) {
+  auto fit = [](int& pos, int& len, int least, int limit) {
+    if (len >= least) return;
+    pos -= (least - len) / 2;
+    len = least;
+    if (pos + len > limit) pos = limit - len;
+    if (pos < 0) pos = 0;
+  };
+  fit(r.x, r.w, p.minWindowWidth, ui::kScreenWidth);
+  fit(r.y, r.h, p.minWindowHeight, ui::kScreenHeight);
+  r.x -= r.x % 8;
+  r.w = (r.w + 7) / 8 * 8;
+  return r;
 }
 
 void EinkDisplay::finish() {
   const PanelProfile& p = *profile_;
   wire_.command(uc8253::kDisplayRefresh);
+  wire_.pause(p.refreshSettleMs);
   if (!wire_.waitIdle(p.busyTimeoutMs, p.busyIsHigh)) {
     hung_ = true;
     log_.log("Display: the panel stayed busy after a refresh; the next frame is a full refresh");
@@ -47,6 +74,7 @@ void EinkDisplay::endFrame() {
 
 void EinkDisplay::refreshFull() {
   const PanelProfile& p = *profile_;
+  wake();
   send(p.beforeFull);
   const ui::Rect all = {0, 0, ui::kScreenWidth, ui::kScreenHeight};
   wire_.command(uc8253::kDataTransmission1);
@@ -60,11 +88,13 @@ void EinkDisplay::refreshPartial() {
   const PanelProfile& p = *profile_;
   ui::Rect r;
   if (!drawn_.differences(shown_, r)) return;
+  r = grow(r, p);
   const std::vector<uint8_t> window = p.encodeWindow(r);
   if (window.empty()) {  // a window the panel cannot address: the whole picture instead
     refreshFull();
     return;
   }
+  wake();
   send(p.beforePartial);
   wire_.command(uc8253::kPartialIn);
   wire_.command(uc8253::kPartialWindow);
@@ -74,7 +104,6 @@ void EinkDisplay::refreshPartial() {
   wire_.command(uc8253::kDataTransmission2);
   wire_.data(drawn_.window(r, p.blackIsZero));
   finish();
-  wire_.command(uc8253::kPartialOut);
 }
 
 }  // namespace board

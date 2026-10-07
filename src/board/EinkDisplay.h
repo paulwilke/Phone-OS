@@ -6,14 +6,15 @@
 // panel's own data (board/PanelProfile.h).
 //
 // **Without a profile the panel is not driven**: begin() says "the display is not configured" and every frame
-// is dropped. The values a profile holds are not in this repository, because they could not be taken from
-// the panel's datasheet and the vendor's demo, and a library's tables are not used (docs/device-display.md).
+// is dropped (docs/device-display.md).
 //
+//   * every refresh starts with a hardware reset and the profile's start commands, and ends with its sleep
+//     commands (power off, deep sleep): the panel is only powered while it is being refreshed;
 //   * a full refresh sends the old picture to the first data register and the new one to the second, both
 //     whole, after the profile's full-refresh commands;
 //   * a partial refresh sends only the rectangle that differs from what the panel shows, widened to whole
-//     bytes, to both registers, inside a partial window, after the profile's partial-refresh commands;
-//   * after each refresh the panel is put to sleep with the profile's sleep commands;
+//     bytes and to the profile's smallest window, to both registers, inside a partial window, after the
+//     profile's partial-refresh commands;
 //   * a panel that stays busy longer than the profile allows is said in the log and the next frame is a full
 //     refresh, because what it shows is no longer known.
 
@@ -34,7 +35,8 @@ public:
       : wire_(wire), profile_(profile), millis_(millis), log_(log), drawn_(ui::kScreenWidth, ui::kScreenHeight),
         shown_(ui::kScreenWidth, ui::kScreenHeight), controller_(*this, config, millis.millis32()) {}
 
-  // Resets the controller and sends the start commands. False, and nothing sent, without a usable profile.
+  // Prepares the lines. False, and nothing sent, without a usable profile. The panel itself is not touched:
+  // it is woken by the first refresh.
   bool begin();
   bool configured() const { return configured_; }
   const ui::RefreshController::Stats& stats() const { return controller_.stats(); }
@@ -54,6 +56,7 @@ private:
   void refreshPartial() override;
   void refreshFull() override;
   void send(const std::vector<PanelCommand>& commands);
+  void wake();
   void finish();
 
   EpdWire& wire_;

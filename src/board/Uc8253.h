@@ -1,11 +1,9 @@
 #pragma once
 
 // The command codes of the UC8253 e-ink controller, as the controller's command set documents them. Codes
-// only: **no value that is sent after one is in this file**. The values (panel setting, power and booster
-// settings, data interval, resolution, the waveform tables, the format of a partial window) belong to the
-// panel and come from its datasheet and the panel vendor's published demo, never from a library; they are the
-// content of a PanelProfile (board/PanelProfile.h). A wrong power or booster value can damage the panel, so
-// none is guessed here.
+// only: **no value that is sent after one is in this file**. The values (panel setting, data interval,
+// temperature override, the format of a partial window) belong to the panel and are the content of a
+// PanelProfile (board/PanelProfile.h; the GDEQ031T10's is board/GDEQ031T10Profile.h).
 
 #include <cstdint>
 
@@ -27,6 +25,8 @@ constexpr uint8_t kResolutionSetting = 0x61;
 constexpr uint8_t kPartialWindow = 0x90;
 constexpr uint8_t kPartialIn = 0x91;
 constexpr uint8_t kPartialOut = 0x92;
+constexpr uint8_t kCascadeSetting = 0xE0;     // bit 1 (TSFIX): the temperature comes from kForceTemperature
+constexpr uint8_t kForceTemperature = 0xE5;   // the temperature the waveform is chosen for, in whole degrees
 
 }  // namespace uc8253
 }  // namespace board

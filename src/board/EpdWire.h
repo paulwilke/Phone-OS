@@ -27,6 +27,8 @@ public:
   // Waits until the panel is no longer busy; false when `timeoutMs` ran out (a panel that hangs must not hang
   // the device with it).
   bool waitIdle(uint32_t timeoutMs, bool busyIsHigh);
+  // A fixed pause the panel's documentation asks for (after the refresh command, before deep sleep).
+  void pause(uint32_t ms) { delay_.delayMs(ms); }
 
 private:
   SpiPort& spi_;

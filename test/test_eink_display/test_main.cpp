@@ -33,10 +33,11 @@ PanelProfile testProfile() {
   PanelProfile p;
   p.width = 240;
   p.height = 320;
-  p.start = {{0xA1, {0x01, 0x02}}, {0xA2, {}}};
+  p.start = {{0xA1, {0x01, 0x02}}, {0xA2, {}, true}};
   p.beforeFull = {{0xB1, {0x11}}};
   p.beforePartial = {{0xB2, {0x22}}};
-  p.sleep = {{0xC1, {}}};
+  p.sleep = {{0xC1, {}, true, 7}, {0xC2, {0x05}}};
+  p.refreshSettleMs = 3;
   p.encodeWindow = testWindow;
   p.resetLowMs = 10;
   p.resetHighMs = 20;
@@ -102,12 +103,16 @@ void test_a_profile_of_the_wrong_size_or_without_values_is_not_used() {
   TEST_ASSERT_EQUAL(0, r.spi.writes().size());
 }
 
-void test_begin_resets_the_controller_and_sends_the_start_commands_in_order() {
+// The panel sleeps between refreshes, so begin() leaves it alone and every refresh wakes it.
+void test_begin_does_not_touch_the_panel_and_a_refresh_resets_and_starts_it_in_order() {
   Rig r;
   r.idleBusy();
   TEST_ASSERT_TRUE(r.display.begin());
-  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:A1", "D:01 02", "C:A2"}));
-  TEST_ASSERT_EQUAL(30, r.delay.elapsedMs());  // 10 ms low, 20 ms high
+  TEST_ASSERT_EQUAL(0, r.spi.writes().size());
+  r.frame([](ui::Display&) {});
+  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:A1", "D:01 02", "C:A2", "C:B1"}));
+  // 10 ms low, 20 ms high, 3 ms after the refresh command, 7 ms after the power-off wait.
+  TEST_ASSERT_EQUAL(40, r.delay.elapsedMs());
   // The reset line was pulsed low and released.
   bool low = false, high = false;
   for (const auto& e : r.gpio.events())
@@ -115,11 +120,49 @@ void test_begin_resets_the_controller_and_sends_the_start_commands_in_order() {
   TEST_ASSERT_TRUE(low && high);
 }
 
+void test_every_refresh_wakes_the_panel_again() {
+  Rig r;
+  r.idleBusy();
+  r.display.begin();
+  r.frame([](ui::Display&) {});
+  r.spi.clear();
+  r.frame([](ui::Display& d) { d.setPixel(1, 1, true); });
+  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:A1", "D:01 02", "C:A2", "C:B2"}));
+  TEST_ASSERT_EQUAL_STRING("C:C2", r.spi.flatten()[r.spi.flatten().size() - 2].c_str());
+}
+
+// A power-on or power-off that leaves the panel busy is said, and the next frame is a full refresh.
+void test_a_panel_that_stays_busy_after_power_on_is_said() {
+  Rig r;
+  r.gpio.setInput(pin::kDisplayBusy, true);  // busy for ever (the profile says busy is high)
+  r.display.begin();
+  r.frame([](ui::Display&) {});
+  TEST_ASSERT_TRUE(r.log.contains("stayed busy after a command"));
+}
+
+// A change smaller than the panel's smallest window is sent as the window around it, inside the screen.
+void test_a_tiny_change_is_sent_in_the_smallest_window_the_profile_allows() {
+  Rig r;
+  r.profile.minWindowWidth = 16;
+  r.profile.minWindowHeight = 4;
+  r.idleBusy();
+  r.display.begin();
+  r.frame([](ui::Display&) {});
+  r.spi.clear();
+  r.frame([](ui::Display& d) { d.setPixel(239, 319, true); });  // the bottom right corner
+  const auto t = r.spi.flatten();
+  // The corner pixel is in byte 29 of row 319; the window grows to 16 x 4 and moves in to fit: bytes 28..29,
+  // rows 316..319.
+  TEST_ASSERT_EQUAL_STRING("D:1C 1E 01 3C 01 3F", t[7].c_str());
+  TEST_ASSERT_EQUAL(2 * 4, (int)r.spi.writes()[9].bytes.size());
+}
+
 // A command is sent with the data line low, data with it high, and the chip selected for each.
 void test_commands_go_out_with_dc_low_and_data_with_dc_high_inside_a_chip_select() {
   Rig r;
   r.idleBusy();
   r.display.begin();
+  r.frame([](ui::Display&) {});
   for (const auto& w : r.spi.writes()) TEST_ASSERT_TRUE(w.csLow);
   TEST_ASSERT_FALSE(r.spi.writes()[0].dcHigh);
   TEST_ASSERT_TRUE(r.spi.writes()[1].dcHigh);
@@ -133,17 +176,17 @@ void test_the_first_frame_is_a_full_refresh_with_old_and_new_data_whole() {
   r.spi.clear();
   r.frame([](ui::Display& d) { d.fillRect({0, 0, 8, 1}, true); });
   const auto t = r.spi.flatten();
-  TEST_ASSERT_TRUE(starts(t, {"C:B1", "D:11", "C:10"}));
-  TEST_ASSERT_EQUAL(8, t.size());  // B1, its data, 10, old, 13, new, 12, C1
-  TEST_ASSERT_EQUAL_STRING("C:13", t[4].c_str());
-  TEST_ASSERT_EQUAL_STRING("C:12", t[6].c_str());
-  TEST_ASSERT_EQUAL_STRING("C:C1", t[7].c_str());
+  TEST_ASSERT_TRUE(starts(t, {"C:A1", "D:01 02", "C:A2", "C:B1", "D:11", "C:10"}));
+  TEST_ASSERT_EQUAL(13, t.size());  // A1 and data, A2, B1 and data, 10, old, 13, new, 12, C1, C2 and data
+  TEST_ASSERT_EQUAL_STRING("C:13", t[7].c_str());
+  TEST_ASSERT_EQUAL_STRING("C:12", t[9].c_str());
+  TEST_ASSERT_EQUAL_STRING("C:C1", t[10].c_str());
   // The old picture is white (nothing was shown yet), the new one has its first byte set.
   TEST_ASSERT_EQUAL(1, r.display.stats().full);
-  TEST_ASSERT_EQUAL(9600, (int)r.spi.writes()[3].bytes.size());
-  TEST_ASSERT_EQUAL_HEX8(0x00, r.spi.writes()[3].bytes[0]);
-  TEST_ASSERT_EQUAL_HEX8(0xFF, r.spi.writes()[5 + 0].bytes[0]);
-  TEST_ASSERT_EQUAL_HEX8(0x00, r.spi.writes()[5 + 0].bytes[1]);
+  TEST_ASSERT_EQUAL(9600, (int)r.spi.writes()[6].bytes.size());
+  TEST_ASSERT_EQUAL_HEX8(0x00, r.spi.writes()[6].bytes[0]);
+  TEST_ASSERT_EQUAL_HEX8(0xFF, r.spi.writes()[8].bytes[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, r.spi.writes()[8].bytes[1]);
 }
 
 void test_an_unchanged_frame_sends_nothing() {
@@ -169,7 +212,8 @@ void test_a_small_change_is_a_partial_refresh_of_exactly_its_rectangle() {
     d.setPixel(21, 100, true);  // column 21 is in byte 2 (columns 16..23)
   });
   const auto t = r.spi.flatten();
-  const std::vector<std::string> head = {"C:B2", "D:22", "C:91", "C:90", "D:02 03 00 64 00 64", "C:10", "D:00", "C:13", "D:04", "C:12", "C:C1", "C:92"};
+  const std::vector<std::string> head = {"C:A1", "D:01 02", "C:A2", "C:B2", "D:22", "C:91", "C:90", "D:02 03 00 64 00 64",
+                                         "C:10", "D:00", "C:13", "D:04", "C:12", "C:C1", "C:C2", "D:05"};
   TEST_ASSERT_EQUAL_STRING(join(head).c_str(), join(t).c_str());
   TEST_ASSERT_EQUAL(1, r.display.stats().partial);
 }
@@ -185,9 +229,9 @@ void test_a_change_over_several_rows_and_columns_sends_the_bounding_box() {
     d.setPixel(40, 12, true);
   });
   const auto t = r.spi.flatten();
-  TEST_ASSERT_EQUAL_STRING("D:01 06 00 0A 00 0C", t[4].c_str());  // bytes 1..5, rows 10..12
-  TEST_ASSERT_EQUAL(5 * 3, (int)r.spi.writes()[6].bytes.size());  // old data: five bytes by three rows
-  TEST_ASSERT_EQUAL(5 * 3, (int)r.spi.writes()[8].bytes.size());
+  TEST_ASSERT_EQUAL_STRING("D:01 06 00 0A 00 0C", t[7].c_str());  // bytes 1..5, rows 10..12
+  TEST_ASSERT_EQUAL(5 * 3, (int)r.spi.writes()[9].bytes.size());  // old data: five bytes by three rows
+  TEST_ASSERT_EQUAL(5 * 3, (int)r.spi.writes()[11].bytes.size());
 }
 
 void test_every_tenth_change_is_a_full_refresh_by_the_policy() {
@@ -226,7 +270,7 @@ void test_a_window_the_panel_cannot_address_becomes_a_full_refresh() {
   r.frame([](ui::Display&) {});
   r.spi.clear();
   r.frame([](ui::Display& d) { d.setPixel(3, 3, true); });
-  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:B1"}));
+  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:A1", "D:01 02", "C:A2", "C:B1"}));
 }
 
 void test_the_polarity_of_the_data_follows_the_profile() {
@@ -236,8 +280,8 @@ void test_the_polarity_of_the_data_follows_the_profile() {
   r.display.begin();
   r.spi.clear();
   r.frame([](ui::Display& d) { d.fillRect({0, 0, 8, 1}, true); });
-  TEST_ASSERT_EQUAL_HEX8(0xFF, r.spi.writes()[3].bytes[0]);  // old: blank is all ones
-  TEST_ASSERT_EQUAL_HEX8(0x00, r.spi.writes()[5].bytes[0]);  // new: the black byte is zero
+  TEST_ASSERT_EQUAL_HEX8(0xFF, r.spi.writes()[6].bytes[0]);  // old: blank is all ones
+  TEST_ASSERT_EQUAL_HEX8(0x00, r.spi.writes()[8].bytes[0]);  // new: the black byte is zero
 }
 
 // A panel that hangs does not hang the device; the next frame starts from a full refresh.
@@ -251,7 +295,7 @@ void test_a_panel_that_stays_busy_is_said_and_the_next_frame_is_full() {
   r.idleBusy();
   r.spi.clear();
   r.frame([](ui::Display& d) { d.setPixel(1, 1, true); });
-  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:B1"}));
+  TEST_ASSERT_TRUE(starts(r.spi.flatten(), {"C:A1", "D:01 02", "C:A2", "C:B1"}));
 }
 
 void test_the_picture_is_not_rotated_and_drawing_outside_is_dropped() {
@@ -265,7 +309,7 @@ void test_the_picture_is_not_rotated_and_drawing_outside_is_dropped() {
     d.setPixel(0, 320, true);
     d.setPixel(239, 319, true);
   });
-  const auto& newData = r.spi.writes()[5].bytes;
+  const auto& newData = r.spi.writes()[8].bytes;
   TEST_ASSERT_EQUAL(9600, (int)newData.size());
   TEST_ASSERT_EQUAL_HEX8(0x01, newData[9599]);  // the last pixel: bottom right
   TEST_ASSERT_EQUAL_HEX8(0x00, newData[0]);
@@ -294,7 +338,10 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_without_a_profile_the_panel_is_not_driven_and_says_so);
   RUN_TEST(test_a_profile_of_the_wrong_size_or_without_values_is_not_used);
-  RUN_TEST(test_begin_resets_the_controller_and_sends_the_start_commands_in_order);
+  RUN_TEST(test_begin_does_not_touch_the_panel_and_a_refresh_resets_and_starts_it_in_order);
+  RUN_TEST(test_every_refresh_wakes_the_panel_again);
+  RUN_TEST(test_a_panel_that_stays_busy_after_power_on_is_said);
+  RUN_TEST(test_a_tiny_change_is_sent_in_the_smallest_window_the_profile_allows);
   RUN_TEST(test_commands_go_out_with_dc_low_and_data_with_dc_high_inside_a_chip_select);
   RUN_TEST(test_the_first_frame_is_a_full_refresh_with_old_and_new_data_whole);
   RUN_TEST(test_an_unchanged_frame_sends_nothing);
