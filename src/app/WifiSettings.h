@@ -1,8 +1,8 @@
 #pragma once
 
 // The Wi-Fi settings: the home networks the device may sign in to, and its own access point. Plain
-// data with the rules that make an entry usable; reading them from the settings file is a later
-// package.
+// data with the rules that make an entry usable; src/config/ConfigLoader reads them from the
+// settings file.
 //
 // Passwords are kept in clear on the card, like every other secret there — whoever has the card
 // has them — and are never shown on the web page, only set anew. Without an access point password

@@ -2,7 +2,7 @@
 
 An e-ink panel shows a picture without power, and costs time, current and a visible flash every time it is changed. The interface therefore tries to change the panel as rarely as it can, and the tests state how rarely.
 
-Code: `src/ui/RefreshPolicy.h`, `FrameTracker.h`, `RefreshController.h`; test helpers `testing/RefreshRig.h`; tests in `test/test_refresh/` and `test/test_frame_budget/`. The panel driver itself is not in the repository yet; it will implement `ui::Panel` and call `RefreshController::present()` at the end of each frame. The simulator's panel does exactly that ([simulated-panel.md](simulated-panel.md)).
+Code: `src/ui/RefreshPolicy.h`, `FrameTracker.h`, `RefreshController.h`; test helpers `testing/RefreshRig.h`; tests in `test/test_refresh/` and `test/test_frame_budget/`. The panel calls `RefreshController::present()` at the end of each frame: the simulator's panel ([simulated-panel.md](simulated-panel.md)) and the device's ([device-display.md](device-display.md)).
 
 ## Two kinds of refresh
 

@@ -17,7 +17,7 @@ The interface everything draws on: `width()`, `height()`, `beginFrame()`, `endFr
 
 ## `FrameBuffer`
 
-An in-memory implementation for tests and the later simulator. Beyond the pixels it keeps the layout honest.
+An in-memory implementation for tests and the simulator. Beyond the pixels it keeps the layout honest.
 
 **Clip detection.** A widget declares the rectangle it owns with `beginRegion(rect)` / `endRegion()`. Every drawing call that touches a pixel outside it is recorded as a `ClipEvent` (the call, the region, how many pixels fell outside, how many off the screen, the first offender), and so is every pixel off the screen, region or not. A widget test asserts `!fb.clipped()` and prints `describeClips()` on failure. Details that matter:
 

@@ -34,7 +34,6 @@ public:
 
   size_t count() const { return items_.size(); }
   size_t selected() const { return selected_; }
-  const ListItem& selectedItem() const { return items_[selected_]; }
   // The first row on show, for the area last used to draw or handle.
   size_t firstVisible() const { return first_; }
 

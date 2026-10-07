@@ -361,7 +361,7 @@ Tests in `test/test_wifi_controller/`.
 | WIF-10 | A lost connection is retried | `test_a_lost_connection_is_retried` | WF:test_lost_connection_is_retried | done |
 | WIF-11 | An access point that fails to start is reported | `test_an_access_point_failure_is_reported` | WF:test_ap_start_failure_is_reported | done |
 | WIF-12 | Requesting off stops | `test_requesting_off_stops` | WF:test_request_off_stops | done |
-| WIF-13 | Wi-Fi settings: networks, access point, idle minutes with their limits (the file format is a later package) | `test_the_settings_are_validated` | WF:test_config_reads_networks_and_ap, WF:test_config_rejects_short_passwords_and_reports_them, WF:test_config_caps_networks_and_clamps_timeout | done |
+| WIF-13 | Wi-Fi settings: networks, access point, idle minutes with their limits (the file format is read by the configuration loader, [config-loader.md](config-loader.md)) | `test_the_settings_are_validated` | WF:test_config_reads_networks_and_ap, WF:test_config_rejects_short_passwords_and_reports_them, WF:test_config_caps_networks_and_clamps_timeout | done |
 | WIF-14 | An access point that stops while it runs is reported as lost | `test_a_lost_access_point_is_reported` | — | done |
 | WIF-15 | A lost connection starts again from the first network | `test_a_lost_connection_starts_again_from_the_first_network` | — | done |
 | WIF-16 | The idle time starts when the station has connected | `test_the_idle_time_starts_when_the_station_has_connected` | — | done |
@@ -431,4 +431,4 @@ Tests in `test/test_app_core/`.
 | SC:test_motion_* | The motion sensor is a capability the screen uses directly; the application core does not wrap it. |
 | WF:test_broken_json_is_survivable | WLAN configuration file parsing is the configuration package. |
 | WF:test_cpu_does_not_sleep_while_wifi_runs | Already covered by the power-policy tests; the core only passes the Wi-Fi state in (see Power coordination). |
-| test_web_server | The web code is a later package. |
+| test_web_server | The web server is not part of the application core; it has its own tests in `test/test_web_server/` ([web-interface.md](web-interface.md)). |

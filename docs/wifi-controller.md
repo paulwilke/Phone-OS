@@ -10,7 +10,7 @@ The idle time is `auto_off_minutes` (default 10). The page has a button "keep Wi
 
 ## Settings
 
-`WifiSettings` is plain data with the rules that make an entry usable; reading it from the configuration is a later package.
+`WifiSettings` is plain data with the rules that make an entry usable; `ConfigLoader` reads it from the configuration ([config-loader.md](config-loader.md)).
 
 | Setting | Rule |
 |---|---|

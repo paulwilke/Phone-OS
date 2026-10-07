@@ -76,7 +76,6 @@ public:
   // Changes the settings at run time. The log stays out of reach of this.
   void setConfig(const Config& cfg);
   void setNotice(CommandNotice notice) { notice_ = notice; }
-  CommandNotice notice() const { return notice_; }
 
 private:
   CommandHost& host_;

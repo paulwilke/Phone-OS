@@ -16,7 +16,7 @@ The reasons are the core's codes worded by `wording::wifiReason`, so a language 
 
 ## Not ported
 
-The previous page also said whether the web server runs or starts. The web code is a later package and the core has no such state, so the line is left out until there is something to tell. The sentence under "off" names the parents' page and stays: the page is served as soon as Wi-Fi is on, and the sentence is what tells a parent why to switch it on.
+The previous page also said whether the web server runs or starts. The web server belongs to the runtime, not to the core, and the core has no such state, so the page has no such line. The sentence under "off" names the parents' page and stays: the page is served as soon as Wi-Fi is on, and the sentence is what tells a parent why to switch it on.
 
 ## Tests
 

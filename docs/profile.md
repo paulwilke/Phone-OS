@@ -2,7 +2,7 @@
 
 Code: `src/app/Profile.{h,cpp}`, `src/app/Logger.h`; test helper `testing/ProfileBuilder.h`; tests in `test/test_profile/`.
 
-The `Profile` is the settings the behaviour of the device depends on, as one plain struct. The application core reads it and never parses anything: reading the configuration files into this struct is a later package. Until then a test builds a profile with `ProfileBuilder` (two parents and Grandma, one call action, everything else at its default) and says only what differs: `ProfileBuilder().schoolTime("tue", "14:00", "15:00").radio(true).build()`.
+The `Profile` is the settings the behaviour of the device depends on, as one plain struct. The application core reads it and never parses anything: `ConfigLoader` reads the configuration files into this struct ([config-loader.md](config-loader.md)). A test builds a profile with `ProfileBuilder` (two parents and Grandma, one call action, everything else at its default) and says only what differs: `ProfileBuilder().schoolTime("tue", "14:00", "15:00").radio(true).build()`.
 
 The defaults are those of a freshly flashed device that has no settings file: message vibration and call vibration on, vibration for a call in school time off, modem sleep allowed, the remote query written to the history, the Google Maps address template, English as the language of every SMS, all log lines written, no radio, no free text, no parent tools.
 

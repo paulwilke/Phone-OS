@@ -54,7 +54,6 @@ private:
   bool type(uint32_t codePoint);
   void deleteLast();
   bool send(const std::string& body);
-  std::vector<std::string> cannedKeys() const;
   void fillCanned();
   Rect recipientLine(const Rect& area);
   // Where the list of ready-made messages is, under the recipient and its title.

@@ -582,7 +582,7 @@ inline void Simulator::printHelp() {
           "    type <text>                  typed characters\n"
           "    tap <x> <y>                  a touch at a pixel (240 x 320)\n"
           "    language <code>              the interface language (en de fr qps-ploc, or a user catalog)\n"
-          "    sos begin [number]|choose emergency|pickup|tap|leave   the SOS button's entry points (there is no SOS page yet)\n"
+          "    sos begin [number]|choose emergency|pickup|tap|leave   the SOS button's entry points, as the SOS page calls them\n"
           "    cellular on|off | savemode on|off | probe              what the network page and its options do\n"
           "    radio start                  the child asks for the radio; the simulator starts it\n"
           "  Looking\n"

@@ -2,8 +2,8 @@
 
 // The settings the behaviour of the device depends on, as one plain struct: who is in the
 // contact book, when school time is, which vibrations are on, what the child may do. The
-// application core reads it and never parses anything: reading the configuration files into
-// this struct is a later package. Tests fill it through testing/ProfileBuilder.h.
+// application core reads it and never parses anything: src/config/ConfigLoader reads the
+// configuration files into this struct. Tests fill it through testing/ProfileBuilder.h.
 //
 // The defaults are the ones the device had before anybody wrote a settings file: the
 // behaviour of a freshly flashed device must not depend on a file being there.

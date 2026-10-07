@@ -41,7 +41,6 @@ public:
                    const char** body, size_t* bodyLen);
 
   bool restartRequested() const { return restartRequested_; }
-  void clearRestartRequest() { restartRequested_ = false; }
 
   // Exposed for tests.
   web::WebServer& server() { return server_; }
