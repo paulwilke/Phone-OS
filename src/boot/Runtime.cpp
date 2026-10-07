@@ -57,6 +57,8 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
   core_.setFirmware(capabilities.firmware);
   if (capabilities.radio) core_.setRadio(capabilities.radio);
   core_.setWifi(capabilities.wifi, capabilities.random);
+  // Before start(): the history is read back from its file there.
+  if (capabilities.messageLog) core_.attachMessageLog(capabilities.messageLog);
   core_.start();
   // The page's catalogs on the card are read when the page needs them (Translator::ensureWeb()).
   translator.setWebUserSource([this](i18n::Translator&) { loadUserWebCatalogs(); });

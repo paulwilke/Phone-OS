@@ -21,6 +21,7 @@
 #include <fakes/FakeEventLog.h>
 #include <fakes/FakeGnss.h>
 #include <fakes/FakeHaptic.h>
+#include <fakes/FakeMessageLog.h>
 #include <fakes/FakeModem.h>
 #include <fakes/FakeMotion.h>
 #include <fakes/FakePower.h>
@@ -565,8 +566,25 @@ void test_a_restart_asked_by_the_web_interface_reaches_the_host() {
   TEST_ASSERT_TRUE(w.runtime->restartRequested());
 }
 
+// The history's file is attached before the core starts, so what it holds is the history after a restart.
+void test_the_history_is_read_back_from_the_message_log_the_host_hands_over() {
+  World w;
+  FakeMessageLog file;
+  file.append("M\t1\t1790000000\ts\ti\t+491701111111\tPick us up");
+  file.append("M\t2\t1790000100\ts\ti\t+491701111111\tOn my way");
+  sim::SimPanel panel([&] { return w.ms; });
+  w.ms = static_cast<uint32_t>(w.clock.uptimeMillis());
+  boot::Runtime runtime(boot::Capabilities{w.clock, w.power, w.modem, w.gnss, w.haptic, w.log, w.store, w.wifi, w.tcp,
+                                           w.assets, panel, [] { return 12345678u; }, "0.0.0-test", &w.radio, &w.motion, "",
+                                           &file},
+                        w.translator, w.ms);
+  TEST_ASSERT_EQUAL(2, runtime.core().history().count());
+  TEST_ASSERT_EQUAL(0, runtime.core().history().damagedLines());
+}
+
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_the_history_is_read_back_from_the_message_log_the_host_hands_over);
   RUN_TEST(test_it_boots_on_the_fakes_and_shows_the_home_screen_in_the_configured_language);
   RUN_TEST(test_every_screen_id_is_registered_by_the_runtime);
   RUN_TEST(test_every_registered_page_can_be_reached_from_the_home_screen_by_key_presses_alone);

@@ -10,7 +10,7 @@ Code: `device/` (the firmware's counterpart of `sim/`), the testable board logic
 | `device/` | only the implementations of the seams on the processor's peripherals and `main.cpp` | `src/` and the Arduino and ESP32 headers |
 | `testing/fakes/` | scripted implementations of the seams | the seams |
 
-`src/` never includes `device/`, and no file under `src/` names Arduino or an ESP32 header; `device/` never includes `sim/` or `testing/`; nothing includes MeshCore. `scripts/check_layers.py` checks all of it, and `test/test_check_layers/test_check.py` runs the checker on small trees that break each rule, so a rule that stops firing is noticed.
+`src/` never includes `device/`, and no file under `src/` names Arduino or an ESP32 header; `device/` never includes `sim/` or `testing/`; nothing includes MeshCore. The wiring of the whole firmware is in [device-console.md](device-console.md). `scripts/check_layers.py` checks all of it, and `test/test_check_layers/test_check.py` runs the checker on small trees that break each rule, so a rule that stops firing is noticed.
 
 The rule behind the split: **a bug found on the device gets a host test.** The hardware is reached only through four small seams, so what is above them is tested against a scripted chip.
 

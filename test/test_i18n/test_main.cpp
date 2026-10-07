@@ -452,8 +452,21 @@ void test_compare_finds_missing_extra_and_changed() {
   TEST_ASSERT_EQUAL(3, issues.size());
 }
 
+// Every integer type is an argument: size_t is the same type as unsigned int on the 32-bit processor, and two overloads of
+// one type do not compile there, so the constructor is one template.
+void test_arguments_take_every_integer_type() {
+  const i18n::Arg a[] = {{"a", (int)1}, {"b", (unsigned)2}, {"c", (size_t)3}, {"d", (int64_t)4}, {"e", (uint32_t)5},
+                         {"f", (long)6}, {"g", (unsigned long long)7}, {"h", (uint8_t)8}};
+  int64_t sum = 0;
+  for (const auto& x : a) sum += x.number;
+  TEST_ASSERT_EQUAL(36, (int)sum);
+  const i18n::Arg text("t", "words");
+  TEST_ASSERT_EQUAL_STRING("words", text.text);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_arguments_take_every_integer_type);
   RUN_TEST(test_shipped_languages_match_the_reference);
   RUN_TEST(test_language_picker_lists_the_shipped_languages_by_their_own_names);
   RUN_TEST(test_parser_reads_strings_arrays_escapes_and_comments);

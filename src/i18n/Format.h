@@ -15,6 +15,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #include <cstdio>
 #include <cstring>
 
@@ -27,10 +28,10 @@ struct Arg {
   int64_t number = 0;
 
   Arg(const char* n, const char* t) : name(n), text(t) {}
-  Arg(const char* n, int64_t v) : name(n), number(v) {}
-  Arg(const char* n, int v) : name(n), number(v) {}
-  Arg(const char* n, unsigned v) : name(n), number(v) {}
-  Arg(const char* n, size_t v) : name(n), number((int64_t)v) {}
+  // Any integer type. One template instead of an overload for each type: size_t is the same type as
+  // unsigned int on a 32-bit processor, and two overloads of one type do not compile there.
+  template <class T, class = typename std::enable_if<std::is_integral<T>::value>::type>
+  Arg(const char* n, T v) : name(n), number((int64_t)v) {}
 };
 
 // Writes the formatted message into `out` (always NUL-terminated, truncated at

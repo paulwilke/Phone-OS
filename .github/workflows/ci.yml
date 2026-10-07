@@ -78,6 +78,12 @@ jobs:
       - name: Generated configuration files
         run: python3 scripts/gen_config.py --check
 
+      - name: Generated device assets
+        run: python3 scripts/gen_device_assets.py --check
+
+      - name: USB tool tests
+        run: python3 test/test_device_tools/test_tools.py
+
       - name: Generated web page
         run: python3 scripts/gen_web.py --check
 

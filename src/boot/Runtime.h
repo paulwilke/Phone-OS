@@ -29,6 +29,7 @@
 #include "../config/ConfigWriter.h"
 #include "../config/Diagnostic.h"
 #include "../hal/ConfigStore.h"
+#include "../hal/MessageLog.h"
 #include "../hal/MotionSensor.h"
 #include "../ui/Display.h"
 #include "../ui/Input.h"
@@ -77,6 +78,7 @@ struct Capabilities {
   RadioLink* radio = nullptr;      // without it the core has no radio
   MotionSensor* motion = nullptr;  // its presence puts the motion tile on the home screen
   const char* hardware = "";       // the board, for the status page; empty: no line
+  MessageLog* messageLog = nullptr;  // the history's file; without it the history lives in memory only
 };
 
 class Runtime {
