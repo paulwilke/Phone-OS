@@ -347,6 +347,8 @@ void WebApi::state(http::Response& res, uint32_t now) {
   puts(",\"voice\":");       putBool(s.voice == VoiceStatus::Ready);
   puts(",\"epoch\":");       putInt(app_.epochUtc());
   puts(",\"tz_offset_minutes\":"); putInt(app_.tzOffsetMinutes());
+  // The page shows itself in this language until the parent chooses another one.
+  puts(",\"language\":");  appendJsonStr(resp_, sizeof(resp_), n, app_.profile().interfaceLanguage);
   puts(",\"wifi\":{\"state\":");
   appendJsonStr(resp_, sizeof(resp_), n, wifiPhaseText(wp));
   puts(",\"ssid\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi ? wifi->ssid() : std::string());

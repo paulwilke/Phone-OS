@@ -642,7 +642,7 @@ document.getElementById('auth-form').addEventListener('submit', function(e) {
       localStorage.setItem('pp_auth', authHeader);
       document.getElementById('auth-overlay').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
-      init();
+      r.json().catch(function() { return {}; }).then(init);
     } else if (r.status === 429) {
       errEl.textContent = t('web.auth.locked'); errEl.hidden = false;
     } else {
@@ -654,9 +654,13 @@ document.getElementById('auth-form').addEventListener('submit', function(e) {
 });
 
 // ---------- Init ----------
-// Runs once the password has been accepted, from the login form and from the stored credential.
-function init() {
+// Runs once the password has been accepted, from the login form and from the stored credential,
+// with the answer of /api/state. The language is, in this order: the one the parent chose on the page
+// (pp_lang), the device's own interface language (the parents read the page in the language the child's
+// device speaks), the browser's, English.
+function init(state) {
   var code = localStorage.getItem('pp_lang')
+    || (state && state.language)
     || (navigator.language || '').split('-')[0] || 'en';
   loadLang(code).catch(function() {}).then(function() {
     return api('GET', '/api/languages').then(function(r) { return r.json(); });
@@ -676,7 +680,7 @@ function init() {
     if (r.ok) {
       document.getElementById('auth-overlay').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
-      init();
+      r.json().catch(function() { return {}; }).then(init);
     } else {
       localStorage.removeItem('pp_auth');
     }

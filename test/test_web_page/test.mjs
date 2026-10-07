@@ -210,7 +210,7 @@ function fakeElement(id) {
   return el;
 }
 
-async function runPage({ storedAuth, storedLang, browserLang, catalogs, wrongFirst }) {
+async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang }) {
   const store = {};
   if (storedAuth) store.pp_auth = storedAuth;
   if (storedLang) store.pp_lang = storedLang;
@@ -226,7 +226,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, wrongFir
   const document = {
     getElementById(id) { return els[id] ??= fakeElement(id); },
     querySelectorAll(sel) { return sel === '[data-t]' ? dataT : []; },
-    createElement: (tag) => fakeElement(tag),
+    createElement: (tag) => fakeElement(tag), querySelector: () => null,
     title: '', body: fakeElement('body'),
   };
   const calls = [];
@@ -235,7 +235,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, wrongFir
     calls.push({ path, authed });
     const reply = (status, body) => ({ ok: status < 400, status, json: async () => body });
     if (!authed) return reply(401, { error: 'Unauthorized' });
-    if (path === '/api/state') return reply(200, {});
+    if (path === '/api/state') return reply(200, deviceLang ? { language: deviceLang } : {});
     if (path === '/api/languages') return reply(200, Object.keys(catalogs).map((c) => ({ code: c, name: c, native: c })));
     const l = path.match(/^\/api\/lang\/(.+)$/);
     if (l) return catalogs[l[1]] ? reply(200, catalogs[l[1]]) : reply(404, { error: 'Unknown language' });
@@ -307,6 +307,40 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
 {
   const pg = await runPage({ storedAuth: 'Basic ' + Buffer.from(':changed').toString('base64'), storedLang: 'de', catalogs });
   assert(pg.store.pp_auth === undefined && rawKey(overlayWords(pg)).length === 0, 'a stale credential is dropped and the login screen stays English');
+}
+
+// (g) the device's own language wins over the browser's when the page has no choice of its own
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const tabsOf = (pg) => pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
+  let pg = await runPage({ storedAuth: auth, browserLang: 'en-US', deviceLang: 'de', catalogs });
+  assert(tabsOf(pg).includes('Einstellungen'), 'device language de, browser en, no choice: German: ' + tabsOf(pg).join('|'));
+
+  // after the login form too
+  pg = await runPage({ browserLang: 'en-US', deviceLang: 'de', catalogs });
+  pg.els['auth-pw'] = Object.assign(fakeElement('auth-pw'), { value: PASSWORD });
+  await pg.els['auth-form'].listeners.submit({ preventDefault() {} });
+  await pg.settle();
+  assert(tabsOf(pg).includes('Einstellungen'), 'the login form takes the device language too');
+
+  // the parent's choice on the page is remembered and wins
+  pg = await runPage({ storedAuth: auth, storedLang: 'en', browserLang: 'de-DE', deviceLang: 'de', catalogs });
+  assert(tabsOf(pg).includes('Settings'), 'a stored choice (en) beats the device language (de): ' + tabsOf(pg).join('|'));
+
+  // choosing a language in the menu stores it
+  pg = await runPage({ storedAuth: auth, browserLang: 'en-US', deviceLang: 'en', catalogs });
+  pg.els['lang-select'].value = 'de';
+  await pg.els['lang-select'].listeners.change.call(pg.els['lang-select']);
+  await pg.settle();
+  assert(pg.store.pp_lang === 'de' && tabsOf(pg).includes('Einstellungen'), 'the language menu stores the choice');
+
+  // no device language (old firmware): the browser's
+  pg = await runPage({ storedAuth: auth, browserLang: 'de-DE', catalogs });
+  assert(tabsOf(pg).includes('Einstellungen'), 'no device language: the browser language');
+
+  // a device language the page has no catalog for: English
+  pg = await runPage({ storedAuth: auth, browserLang: 'de-DE', deviceLang: 'xx', catalogs });
+  assert(tabsOf(pg).includes('Settings'), 'device language without a catalog: English');
 }
 
 // ---------- summary ----------

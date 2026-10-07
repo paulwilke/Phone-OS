@@ -133,8 +133,8 @@ struct Fixture {
   // The one Wi-Fi controller of the device: the core's.
   WifiController& wifi() { return *app.wifiController(); }
 
-  explicit Fixture(bool withPassword = true)
-      : app{clock, power, modem, gnss, haptic, log, translator, Profile{}} ,
+  explicit Fixture(bool withPassword = true, Profile profile = Profile{})
+      : app{clock, power, modem, gnss, haptic, log, translator, profile} ,
         api{store, assets, host, app, translator} {
     app.setWifi(fw, rnd);
     clock.advanceSeconds(100);
@@ -679,6 +679,15 @@ void test_state_reports_the_device() {
   TEST_ASSERT_TRUE(f.has("\"battery_percent\":68"));
 }
 
+// The page starts in the device's own language until the parent chooses another one.
+void test_state_names_the_interface_language_of_the_device() {
+  Profile p;
+  p.interfaceLanguage = "de";
+  Fixture f(true, p);
+  TEST_ASSERT_EQUAL(200, f.get("/api/state"));
+  TEST_ASSERT_TRUE(f.has("\"language\":\"de\""));
+}
+
 void test_error_helper() {
   Fixture f;
   f.api.error(413, f.res);
@@ -744,6 +753,7 @@ int main() {
   RUN_TEST(test_the_state_is_the_one_controllers_state);
   RUN_TEST(test_a_device_without_wifi_answers_and_says_off);
   RUN_TEST(test_state_reports_the_device);
+  RUN_TEST(test_state_names_the_interface_language_of_the_device);
   RUN_TEST(test_error_helper);
   RUN_TEST(test_languages_returns_a_json_array);
   RUN_TEST(test_lang_catalog_for_unknown_code_is_404);
