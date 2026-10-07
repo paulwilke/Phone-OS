@@ -20,6 +20,8 @@
 #include <board/Charger.h>
 #include <board/Cst66xx.h>
 #include <board/DeviceClock.h>
+#include <board/EinkDisplay.h>
+#include <board/EpdWire.h>
 #include <board/FuelGauge.h>
 #include <board/BoardTcpServer.h>
 #include <board/BoardWifi.h>
@@ -41,6 +43,7 @@
 #include "Esp32I2cBus.h"
 #include "Esp32Millis.h"
 #include "Esp32SdVolume.h"
+#include "Esp32SpiPort.h"
 #include "Esp32TcpListener.h"
 #include "Esp32UartPort.h"
 #include "Esp32WifiRadio.h"
@@ -76,6 +79,12 @@ board::SdCard sdCard(sdVolume, gpio, delays);
 board::SdEventLog eventLog(sdCard, deviceClock, &serialLog);
 board::SdConfigStore configStore(sdCard);
 board::SdMessageLog messageLog(sdCard);
+
+// The panel. The values of its datasheet are not in this build (docs/device-display.md): without a profile
+// the display says so at start and is not driven.
+Esp32SpiPort displaySpi;
+board::EpdWire displayWire(displaySpi, gpio, delays);
+board::EinkDisplay display(displayWire, nullptr, millisSource, eventLog);
 
 Esp32WifiRadio wifiRadio;
 board::BoardWifi wifi(wifiRadio);
@@ -124,6 +133,8 @@ void setup() {
   if (configStore.list("/config", config)) Serial.printf("[boot] /config holds %u files\n", (unsigned)config.size());
   Serial.printf("[boot] web page in the firmware: %u bytes, Wi-Fi %s\n", (unsigned)[] { size_t n = 0; flashAssets.indexHtml(n); return n; }(),
                 wifi.state() == WifiState::Off ? "off" : "on");
+
+  display.begin();
 
   Serial.printf("[boot] keyboard %s\n", keyboard.begin() ? "answers" : "does not answer");
   Serial.printf("[boot] touch %s\n", touch.begin() ? "CST66xx" : "not found or not a CST66xx");
