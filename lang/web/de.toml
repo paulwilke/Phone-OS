@@ -38,7 +38,7 @@ config.sms.label                      = "SMS"
 config.sms.language.label             = "SMS-Sprache"
 config.sms.language.help              = "Sprache der SMS, die das Gerät sendet (z. B. en, de, fr)."
 config.sms.extra_trigger_words.label  = "Weitere Auslösewörter"
-config.sms.extra_trigger_words.help   = "Zusätzliche Wörter, die eine Ortsabfrage auslösen, neben den eingebauten Auslösewörtern aller installierten Sprachen."
+config.sms.extra_trigger_words.help   = "Zusätzliche Wörter, die eine Ortsabfrage auslösen, neben den eingebauten Auslösewörtern aller installierten Sprachen. Mehrere durch Kommas trennen."
 
 config.features.label                 = "Funktionen"
 config.features.free_text.label       = "Freitext"

@@ -444,6 +444,35 @@ void test_raw_config_files_are_validated() {
                    std::string::npos);
 }
 
+// The page wrote extra_trigger_words = "" for an empty field, the schema says a list, and every start
+// then reported a wrong type. A value of the wrong type is refused before it is stored.
+void test_a_value_of_the_wrong_type_is_refused_and_nothing_is_stored() {
+  Fixture f;
+  TEST_ASSERT_EQUAL(422, f.put("/api/settings", "{\"sms\":{\"extra_trigger_words\":\"\"}}"));
+  TEST_ASSERT_TRUE(f.has("wrong-type"));
+  TEST_ASSERT_TRUE(f.has("sms.extra_trigger_words"));
+  TEST_ASSERT_FALSE(f.store.files.count("/config/settings.toml"));
+  // the raw editor and the other typed fields meet the same rule
+  TEST_ASSERT_EQUAL(422, f.call("PUT", "/api/file?path=/config/settings.toml", "[sms]\nextra_trigger_words = \"\"\n", kAuth));
+  TEST_ASSERT_EQUAL(422, f.put("/api/settings", "{\"features\":{\"radio\":\"yes\"}}"));
+  TEST_ASSERT_EQUAL(422, f.put("/api/contacts", "{\"contact\":[{\"number\":\"+491701111111\",\"role\":5}]}"));
+  TEST_ASSERT_FALSE(f.store.files.count("/config/settings.toml"));
+  TEST_ASSERT_FALSE(f.store.files.count("/config/contacts.toml"));
+}
+
+// What the page sends for an empty form: empty lists, which the device reads as "none", without a word of complaint.
+void test_empty_lists_are_stored_and_read_back_as_none_without_a_warning() {
+  Fixture f;
+  TEST_ASSERT_EQUAL(200, f.put("/api/settings",
+      "{\"quiet_hours\":[],\"tiles\":[],\"child\":{\"name\":\"Alex\"},\"sms\":{\"language\":\"de\",\"extra_trigger_words\":[]}}"));
+  TEST_ASSERT_FALSE(f.has("warning"));
+  const std::string& toml = f.store.files["/config/settings.toml"];
+  TEST_ASSERT_TRUE(toml.find("extra_trigger_words = []") != std::string::npos);
+  TEST_ASSERT_TRUE(toml.find("quiet_hours = []") != std::string::npos);
+  TEST_ASSERT_EQUAL(200, f.put("/api/settings", "{\"sms\":{\"extra_trigger_words\":[\"#WoIstDu\",\"Ping\"]}}"));
+  TEST_ASSERT_TRUE(f.store.files["/config/settings.toml"].find("extra_trigger_words = [\"#WoIstDu\", \"Ping\"]") != std::string::npos);
+}
+
 void test_paths_cannot_leave_the_card() {
   Fixture f;
   const char* bad[] = {
@@ -733,6 +762,8 @@ int main() {
   RUN_TEST(test_list_files);
   RUN_TEST(test_raw_read_write_upload);
   RUN_TEST(test_raw_config_files_are_validated);
+  RUN_TEST(test_a_value_of_the_wrong_type_is_refused_and_nothing_is_stored);
+  RUN_TEST(test_empty_lists_are_stored_and_read_back_as_none_without_a_warning);
   RUN_TEST(test_paths_cannot_leave_the_card);
   RUN_TEST(test_a_truncated_file_is_marked_so_the_editor_cannot_save_it_back);
   RUN_TEST(test_logs_are_read_from_the_end);

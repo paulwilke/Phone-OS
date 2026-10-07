@@ -341,7 +341,9 @@ function buildField(key, value, namePrefix) {
     input = document.createElement('input');
     input.name = namePrefix + key.name;
     input.type = key.secret ? 'password' : 'text';
-    input.value = value !== undefined && value !== null ? String(value) : (key['default'] || '');
+    // A list of words is typed as words separated by commas and sent back as an array, never as a string.
+    input.value = Array.isArray(value) ? value.join(', ')
+      : value !== undefined && value !== null ? String(value) : (key['default'] || '');
     if (key.max_val) input.maxLength = key.max_val;
   }
   lbl.appendChild(input);
@@ -357,6 +359,10 @@ function buildField(key, value, namePrefix) {
 function readField(input, keyDef) {
   if (keyDef.type === 'bool') return input.value === 'true';
   if (keyDef.type === 'integer') return parseInt(input.value, 10) || 0;
+  // The schema type is a list of strings: an empty field is [] ("" is the wrong type and the device
+  // reports it at every start).
+  if (keyDef.type === 'string_list')
+    return input.value.split(',').map(function(w) { return w.trim(); }).filter(function(w) { return w; });
   return input.value;
 }
 

@@ -38,7 +38,7 @@ config.sms.label                      = "SMS"
 config.sms.language.label             = "Langue des SMS"
 config.sms.language.help              = "Langue des SMS envoyés par l'appareil (par ex. en, de, fr)."
 config.sms.extra_trigger_words.label  = "Mots déclencheurs supplémentaires"
-config.sms.extra_trigger_words.help   = "Mots supplémentaires qui déclenchent une demande de position, en plus des mots intégrés de toutes les langues installées."
+config.sms.extra_trigger_words.help   = "Mots supplémentaires qui déclenchent une demande de position, en plus des mots intégrés de toutes les langues installées. Séparer plusieurs mots par des virgules."
 
 config.features.label                 = "Fonctions"
 config.features.free_text.label       = "Texte libre"

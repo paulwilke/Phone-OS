@@ -439,7 +439,9 @@ bool WebApi::checkConfigText(const char* path, const char* text, size_t len,
       why = msg;
       return false;
     }
-    if (d.code == config::Diagnostic::Code::SyntaxError) {
+    // A value of the wrong type is rejected at start-up too and the key then keeps its default, so
+    // storing it would only move the failure to the next boot (the page once wrote "" for a list).
+    if (d.code == config::Diagnostic::Code::SyntaxError || d.code == config::Diagnostic::Code::WrongType) {
       why = msg;
       return false;
     }

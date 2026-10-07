@@ -234,6 +234,71 @@ void test_previous_layout_loads_correctly() {
 }
 
 // ---------------------------------------------------------------------------
+// What the parents' page writes (device card of 2026-10-07, anonymised)
+// ---------------------------------------------------------------------------
+
+const char* kPageSettings = R"(quiet_hours = []
+tiles = []
+
+[child]
+name = "Alex"
+
+[modem]
+apn = "internet.telekom"
+
+[interface]
+language = "de"
+
+[sms]
+language = "de"
+extra_trigger_words = []
+)";
+
+// An empty list section is written by the page as a top-level empty array: that means "none".
+void test_empty_list_sections_written_as_top_level_arrays_mean_none() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", kPageSettings);
+  auto r = loadWith(store);
+  for (const Diagnostic& d : r.diagnostics) {
+    if (d.code == Diagnostic::Code::MissingFile) continue;  // contacts.toml and secrets.toml are not on this card
+    TEST_FAIL_MESSAGE(("diagnostic on the page's own file: " + (d.args.empty() ? std::string("?") : d.args[d.args.size() > 1 ? 1 : 0])).c_str());
+  }
+  TEST_ASSERT_EQUAL_STRING("Alex", r.profile.childName.c_str());
+  TEST_ASSERT_EQUAL_STRING("internet.telekom", r.profile.modemApn.c_str());
+  TEST_ASSERT_EQUAL_STRING("de", r.profile.interfaceLanguage.c_str());
+  TEST_ASSERT_EQUAL(0, (int)r.profile.extraTriggers.size());
+  TEST_ASSERT_EQUAL(0, (int)r.profile.callTargets.size());
+}
+
+// The exact file the device had on 2026-10-07: the two empty top-level arrays raise nothing, the
+// string in the list field is the one and only complaint.
+void test_the_file_the_page_once_wrote_has_exactly_one_complaint() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", std::string(kPageSettings).replace(std::string(kPageSettings).find("extra_trigger_words = []"), 24, "extra_trigger_words = \"\""));
+  auto r = loadWith(store);
+  int complaints = 0;
+  for (const Diagnostic& d : r.diagnostics) {
+    if (d.code == Diagnostic::Code::MissingFile) continue;
+    ++complaints;
+    TEST_ASSERT_TRUE(d.code == Diagnostic::Code::WrongType);
+    TEST_ASSERT_EQUAL_STRING("sms.extra_trigger_words", d.args[1].c_str());
+    TEST_ASSERT_EQUAL_STRING("string-list", d.args[2].c_str());
+  }
+  TEST_ASSERT_EQUAL(1, complaints);
+  TEST_ASSERT_EQUAL_STRING("Alex", r.profile.childName.c_str());
+}
+
+// The page once wrote extra_trigger_words = "" for an empty field: the schema says a list, so the
+// loader reports it (and must keep doing so: a string is not silently a list).
+void test_a_string_for_the_trigger_word_list_is_a_wrong_type() {
+  FakeConfigStore store;
+  store.put("/config/settings.toml", "[sms]\nextra_trigger_words = \"\"\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::WrongType, "sms.extra_trigger_words"));
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::WrongType, "string-list"));
+}
+
+// ---------------------------------------------------------------------------
 // New layout: [radio], [interface], [sms]
 // ---------------------------------------------------------------------------
 
@@ -933,6 +998,9 @@ int main() {
   RUN_TEST(test_the_battery_capacity_survives_the_writer);
   RUN_TEST(test_previous_layout_loads_correctly);
   RUN_TEST(test_new_layout_loads_correctly);
+  RUN_TEST(test_empty_list_sections_written_as_top_level_arrays_mean_none);
+  RUN_TEST(test_the_file_the_page_once_wrote_has_exactly_one_complaint);
+  RUN_TEST(test_a_string_for_the_trigger_word_list_is_a_wrong_type);
   RUN_TEST(test_contacts_are_loaded_with_roles);
   RUN_TEST(test_contact_without_number_is_skipped_with_diagnostic);
   RUN_TEST(test_unknown_contact_role_is_reported_and_treated_as_family);

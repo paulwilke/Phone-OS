@@ -40,7 +40,7 @@ config.sms.label = "SMS"
 config.sms.language.label = "SMS language"
 config.sms.language.help = "Language for SMS messages the device sends (e.g. en, de, fr)."
 config.sms.extra_trigger_words.label = "Extra trigger words"
-config.sms.extra_trigger_words.help = "Additional words that trigger a remote location query, besides the built-in trigger words of all installed languages."
+config.sms.extra_trigger_words.help = "Additional words that trigger a remote location query, besides the built-in trigger words of all installed languages. Separate several with commas."
 
 config.features.label = "Features"
 config.features.free_text.label = "Free text"

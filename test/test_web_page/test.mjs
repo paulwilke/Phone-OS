@@ -195,6 +195,9 @@ console.log('\nTest: with a web password the login screen is English and the lan
 const PASSWORD = 'test-password-1';
 const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
 
+// what every input of a fake form holds when the page reads it back
+let fakeQueryValue = '';
+
 function fakeElement(id) {
   const el = {
     id, textContent: '', value: '', hidden: false, style: {}, children: [],
@@ -204,7 +207,7 @@ function fakeElement(id) {
     getAttribute(n) { return this.attrs[n] ?? null; },
     setAttribute(n, v) { this.attrs[n] = v; },
     appendChild(c) { this.children.push(c); return c; },
-    querySelector: () => fakeElement('q'), querySelectorAll: () => [],
+    querySelector: () => Object.assign(fakeElement('q'), { value: fakeQueryValue }), querySelectorAll: () => [],
     focus() {}, click() {}, remove() {},
   };
   return el;
@@ -232,7 +235,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
   const calls = [];
   const fetchFn = async (path, opts = {}) => {
     const authed = opts.headers && opts.headers.Authorization === 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
-    calls.push({ path, authed });
+    calls.push({ path, authed, method: opts.method, body: opts.body });
     const reply = (status, body) => ({ ok: status < 400, status, json: async () => structuredClone(body) });
     if (!authed) return reply(401, { error: 'Unauthorized' });
     if (path === '/api/state') return reply(200, deviceLang ? { language: deviceLang } : {});
@@ -392,6 +395,42 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   await pg.settle();
   hints = await hintsOf(pg);
   assert(hints.length === 3 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')), 'after a change in the menu the hints are in the new language');
+}
+
+// (i) a list field is written as an array: an empty one is [], never "" (the device reported
+// "wrong-type settings sms.extra_trigger_words string-list" at every start after the page wrote a string)
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const schema = JSON.parse(readFileSync(resolve(ROOT, 'config', 'form_generated.json'), 'utf8'));
+  const listFields = [];
+  for (const file of Object.values(schema.files))
+    for (const sec of file.sections)
+      for (const k of sec.keys) if (k.type === 'string_list') listFields.push({ path: (sec.id ? sec.id + '.' : '') + k.name, sec, k });
+  assert(listFields.length >= 1, 'the schema has list fields to test: ' + listFields.map((f) => f.path).join(', '));
+  const walk2 = (el, out) => { for (const c of el.children || []) { out.push(c); walk2(c, out); } return out; };
+  const nested = (obj, path) => path.split('.').reduce((o, p) => (o == null ? o : o[p]), obj);
+  const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs });
+  pg.dataT.find((e) => e.attrs['data-tab'] === 'settings').listeners.click();
+  await pg.settle();
+  const save = walk2(pg.els['form-settings'], []).find((c) => c.className === 'btn-primary');
+  save.listeners.click();
+  await pg.settle();
+  const put = pg.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings');
+  assert(!!put, 'the settings form saves with a PUT');
+  const sent = JSON.parse(put.body);
+  for (const f of listFields)
+    assert(Array.isArray(nested(sent, f.path)) && nested(sent, f.path).length === 0, 'an empty list field is sent as []: ' + f.path + ' = ' + JSON.stringify(nested(sent, f.path)));
+
+  // typed words, separated by commas, are an array of trimmed words
+  fakeQueryValue = ' #WoIstDu ,, Ping,  ';
+  const pg2 = await runPage({ storedAuth: auth, storedLang: 'en', catalogs });
+  pg2.dataT.find((e) => e.attrs['data-tab'] === 'settings').listeners.click();
+  await pg2.settle();
+  walk2(pg2.els['form-settings'], []).find((c) => c.className === 'btn-primary').listeners.click();
+  await pg2.settle();
+  const sent2 = JSON.parse(pg2.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings').body);
+  fakeQueryValue = '';
+  assert(JSON.stringify(sent2.sms.extra_trigger_words) === '["#WoIstDu","Ping"]', 'typed words become an array of trimmed words: ' + JSON.stringify(sent2.sms.extra_trigger_words));
 }
 
 // ---------- summary ----------
