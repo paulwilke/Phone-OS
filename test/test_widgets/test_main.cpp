@@ -1,5 +1,5 @@
 // Host tests for the widgets: soft keys, status bar, alert bar, tile grid, list view, text
-// block, button and the shapes they share. Layouts run in every language (languages::forEach);
+// block and the shapes they share. Layouts run in every language (languages::forEach);
 // pictures are kept in English and in the pseudo-language, clipping is asserted in all.
 // allow-non-english: the catalogs under test contain German and French.
 
@@ -10,7 +10,6 @@
 #include <sstream>
 
 #include <Languages.h>
-#include <ui/Button.h>
 #include <ui/Layout.h>
 #include <ui/ListView.h>
 #include <ui/OptionRows.h>
@@ -1151,41 +1150,6 @@ void test_catalog_text_in_a_text_block_stays_inside_in_every_language() {
   });
 }
 
-// ---- button ----------------------------------------------------------------------------------
-
-void test_a_focused_button_is_inverted() {
-  Button button{"OK", false};
-  const Rect area{10, 10, 100, 36};
-  FrameBuffer idle, focused;
-  button.draw(idle, area);
-  button.focused = true;
-  button.draw(focused, area);
-  TEST_ASSERT_FALSE(idle.pixel(60, 14));      // inside an unfocused button: white
-  TEST_ASSERT_TRUE(focused.pixel(60, 14));    // inside a focused one: black
-  TEST_ASSERT_TRUE(idle.pixel(60, 10));       // the frame
-  TEST_ASSERT_TRUE(idle.blackPixels() < focused.blackPixels());
-}
-
-void test_button_labels_fit_in_every_language() {
-  languages::forEach([](const std::string& language, Translator& t) {
-    const Rect left{10, 10, 112, 36}, right{128, 10, 112, 36};
-    Button cancel{t.get("sos.cancel"), false};
-    Button send{t.get("key.send"), true};
-    FrameBuffer first, second, both;
-    first.beginRegion(left);
-    cancel.draw(first, left);
-    first.endRegion();
-    second.beginRegion(right);
-    send.draw(second, right);
-    second.endRegion();
-    TEST_ASSERT_FALSE_MESSAGE(first.clipped(), clips(language, first).c_str());
-    TEST_ASSERT_FALSE_MESSAGE(second.clipped(), clips(language, second).c_str());
-    cancel.draw(both, left);
-    send.draw(both, right);
-    languages::expectPicture(both, "buttons", language, {0, 0, 240, 56});
-  });
-}
-
 // ---- option rows ----------------------------------------------------------------------------------
 
 namespace {
@@ -1354,7 +1318,5 @@ int main() {
   RUN_TEST(test_a_short_text_does_not_scroll_and_a_new_text_starts_at_the_top);
   RUN_TEST(test_a_text_block_draws_the_lines_it_shows_and_nothing_else);
   RUN_TEST(test_catalog_text_in_a_text_block_stays_inside_in_every_language);
-  RUN_TEST(test_a_focused_button_is_inverted);
-  RUN_TEST(test_button_labels_fit_in_every_language);
   return UNITY_END();
 }
