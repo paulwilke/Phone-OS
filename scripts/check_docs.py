@@ -2,6 +2,7 @@
 """Finds leftovers ("ghosts") in documentation and code. (allow-non-english: holds the German patterns it searches for.)
 
     scripts/check_docs.py            # from the repository root
+    scripts/check_docs.py --root <dir>   # another tree (the tests of this script use it)
 
 Checks every Markdown file and every source file:
   * relative links resolve to files that exist;
@@ -11,6 +12,8 @@ Checks every Markdown file and every source file:
   * VERSION holds one `major.minor.patch` line;
   * every screen name of src/ui/ScreenIds.h has a docs/screen-<name>.md and every such document names a
     screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
+  * the user's guide and its translations have the same headings in the same order (level for level), so
+    that a section added to one is added to all;
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
     `docs/<language-code>/` (translated documentation) and files that carry the marker
     `allow-non-english` in their first lines (test data, examples of other languages) are exempt.
@@ -22,6 +25,8 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if len(sys.argv) == 3 and sys.argv[1] == "--root":
+    ROOT = os.path.abspath(sys.argv[2])
 SKIP_DIRS = {".git", ".pio", "node_modules", "_workbench", "__pycache__", ".publish", ".claude", "out"}
 CODE_SUFFIXES = (".h", ".hpp", ".c", ".cpp", ".py", ".sh", ".ini", ".yml", ".yaml", ".js", ".html", ".toml")
 MARKER = re.compile(r"\b(TODO|FIXME|XXX|TBD)\b|\b(for now|legacy|deprecated|temporary)\b", re.I)
@@ -73,8 +78,43 @@ def screen_problems():
     return problems
 
 
+GUIDES = [os.path.join("docs", "user-guide.md"), os.path.join("docs", "de", "benutzerhandbuch.md"),
+          os.path.join("docs", "fr", "guide-utilisateur.md")]
+
+
+def headings(path):
+    """The heading levels of a Markdown file in order, outside code fences: the structure a translation keeps."""
+    levels, fenced = [], False
+    for line in open(path, encoding="utf-8").read().split("\n"):
+        if line.startswith("```"):
+            fenced = not fenced
+        elif not fenced:
+            m = re.match(r"(#{1,6}) \S", line)
+            if m:
+                levels.append(len(m.group(1)))
+    return levels
+
+
+def guide_problems():
+    """The three guides tell the same things in the same order: same number of headings, same levels."""
+    problems = []
+    reference = headings(os.path.join(ROOT, GUIDES[0])) if os.path.exists(os.path.join(ROOT, GUIDES[0])) else None
+    if reference is None:
+        return [f"{GUIDES[0]}: the user's guide is missing"]
+    for rel in GUIDES[1:]:
+        path = os.path.join(ROOT, rel)
+        if not os.path.exists(path):
+            problems.append(f"{rel}: the translation of the user's guide is missing")
+            continue
+        levels = headings(path)
+        if levels != reference:
+            first = next((i for i, (a, b) in enumerate(zip(levels, reference)) if a != b), min(len(levels), len(reference)))
+            problems.append(f"{rel}: headings differ from {GUIDES[0]}: {len(levels)} against {len(reference)}, first difference at heading {first + 1}")
+    return problems
+
+
 def main():
-    problems = screen_problems()
+    problems = screen_problems() + guide_problems()
     if version_problem():
         problems.append(version_problem())
     for path in files():

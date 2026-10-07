@@ -72,6 +72,9 @@ jobs:
       - name: Layer check tests
         run: python3 test/test_check_layers/test_check.py
 
+      - name: Guide structure check tests
+        run: python3 test/test_check_docs/test_check.py
+
       - name: Generated fonts
         run: python3 scripts/make_font.py --check
 
