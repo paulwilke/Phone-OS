@@ -497,8 +497,12 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     return pg;
   };
   const windowsOf = (pg) => pg.els['form-school_time'].querySelector('[data-list-section="quiet_hours"]').querySelectorAll('.list-entry');
+  const daysOf = (entry) => {
+    const on = entry.querySelector('[name="days"]').querySelectorAll('.day-box').filter((b) => b.checked).map((b) => b.attrs['data-day']);
+    return on.join(',') === 'mon,tue,wed,thu,fri' ? 'mon-fri' : on.join(',');
+  };
   const fieldsOf = (entry) => ({
-    days: entry.querySelector('[name="days"]').value, from: entry.querySelector('[name="from"]').value,
+    days: daysOf(entry), from: entry.querySelector('[name="from"]').value,
     to: entry.querySelector('[name="to"]').value, box: entry.querySelector('[name="enabled"]'),
   });
   const save = async (pg) => {
@@ -543,7 +547,8 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   {
     const pg = await openSettings({}, 'de');
     const box = fieldsOf(windowsOf(pg)[0]).box;
-    const label = windowsOf(pg)[0].children.flatMap((wrap) => wrap.children).find((c) => c.children.includes(box));
+    const all = (el, out = []) => { for (const c of el.children || []) { out.push(c); all(c, out); } return out; };
+    const label = all(windowsOf(pg)[0]).find((c) => c.children.includes(box));
     assert(label && label.textContent === 'aktiv', 'in German the checkbox is called "aktiv": ' + (label && label.textContent));
   }
 }
@@ -769,7 +774,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     const form = (id) => pg.els['form-' + id];
     const save = async (id) => { walkM(form(id)).find((c) => c.className === 'btn-primary').listeners.click(); await pg.settle(); };
     const field = (id, section, name) => form(id).querySelector('[data-section="' + section + '"]').querySelector('[name="' + name + '"]');
-    const statusOf = (id) => walkM(form(id)).filter((c) => c.tag === 'span').map((c) => c.textContent).join('');
+    const statusOf = (id) => walkM(form(id)).filter((c) => c.className === 'form-actions').flatMap((a) => a.children).filter((c) => c.tag === 'span').map((c) => c.textContent).join('');
     return { pg, state, tab, form, save, field, statusOf };
   };
 
@@ -853,6 +858,97 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     await t.tab('school_time');
     walkM(t.form('school_time')).find((c) => c.className === 'action-btn btn-edit').listeners.click();
     assert(t.statusOf('school_time') === 'Unsaved changes', 'an added window is an unsaved change');
+  }
+}
+
+// (n) the days of a school-time window are ticked, not typed, and a window is compact: the days in one row, from,
+// to, active and remove in the row below, no hint under each field (owner, 2026-10-08)
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const walkN = (el, out = []) => { for (const c of el.children || []) { out.push(c); walkN(c, out); } return out; };
+  const open = async (windows, lang = 'en') => {
+    const state = { file: { quiet_hours: windows }, puts: [] };
+    const onFetch = (path, opts, reply) => {
+      if (path !== '/api/settings') return null;
+      if (opts.method === 'PUT') { state.file = JSON.parse(opts.body); state.puts.push(state.file); return reply(200, { ok: true }); }
+      return reply(200, state.file);
+    };
+    const pg = await runPage({ storedAuth: auth, storedLang: lang, catalogs: { en, de }, rich: true, onFetch });
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'school_time').listeners.click();
+    await pg.settle();
+    const entries = () => pg.els['form-school_time'].querySelector('[data-list-section="quiet_hours"]').querySelectorAll('.list-entry');
+    const boxes = (entry) => entry.querySelector('[name="days"]').querySelectorAll('.day-box');
+    const ticked = (entry) => boxes(entry).filter((b) => b.checked).map((b) => b.attrs['data-day']).join(',');
+    const save = async () => {
+      walkN(pg.els['form-school_time']).find((c) => c.className === 'btn-primary').listeners.click();
+      await pg.settle();
+      return state.puts.at(-1).quiet_hours;
+    };
+    return { pg, entries, boxes, ticked, save };
+  };
+
+  // what the file says becomes ticked days, and the page writes it back in the file's own words
+  const cases = [
+    ['mon-fri', 'mon,tue,wed,thu,fri', 'mon-fri'], ['daily', 'mon,tue,wed,thu,fri,sat,sun', 'daily'],
+    ['Mon, Wed ,FRI', 'mon,wed,fri', 'mon,wed,fri'], ['fri-mon', 'mon,fri,sat,sun', 'mon,fri,sat,sun'],
+    ['sat-sun', 'sat,sun', 'sat,sun'], ['mon-sun', 'mon,tue,wed,thu,fri,sat,sun', 'daily'],
+  ];
+  for (const [file, shown, saved] of cases) {
+    const t = await open([{ days: file, from: '13:00', to: '15:00', enabled: true }]);
+    const e = t.entries()[0];
+    assert(t.boxes(e).length === 7 && t.ticked(e) === shown, 'days "' + file + '" are the boxes ' + shown + ': ' + t.ticked(e));
+    const sent = await t.save();
+    assert(sent[0].days === saved, 'and are saved as "' + saved + '": ' + sent[0].days);
+  }
+
+  // ticking changes what is saved; an empty window gets no day ticked
+  {
+    const t = await open([{ days: 'mon-fri', from: '08:00', to: '12:30', enabled: true }]);
+    const b = t.boxes(t.entries()[0]);
+    b.find((x) => x.attrs['data-day'] === 'fri').checked = false;
+    b.find((x) => x.attrs['data-day'] === 'sat').checked = true;
+    let sent = await t.save();
+    assert(sent[0].days === 'mon,tue,wed,thu,sat', 'Friday off, Saturday on: ' + sent[0].days);
+    walkN(t.pg.els['form-school_time']).find((c) => c.className === 'action-btn btn-edit').listeners.click();
+    assert(t.ticked(t.entries()[1]) === '', 'an added window has no day ticked yet');
+    t.boxes(t.entries()[1]).find((x) => x.attrs['data-day'] === 'tue').checked = true;
+    t.entries()[1].querySelector('[name="from"]').value = '13:00';
+    t.entries()[1].querySelector('[name="to"]').value = '16:00';
+    sent = await t.save();
+    assert(JSON.stringify(sent[1]) === '{"days":"tue","from":"13:00","to":"16:00","enabled":true}', 'a second window, Tuesday afternoon: ' + JSON.stringify(sent[1]));
+  }
+
+  // a text the page does not understand stays a text field and is saved unchanged, never lost
+  {
+    const t = await open([{ days: 'monday', from: '08:00', to: '12:30', enabled: true }]);
+    const f = t.entries()[0].querySelector('[name="days"]');
+    assert(f.tag === 'input' && f.value === 'monday', 'days the page cannot read stay a text field: ' + f.tag);
+    const sent = await t.save();
+    assert(sent[0].days === 'monday', 'and are saved as they were (the device reports them): ' + sent[0].days);
+  }
+
+  // the window is compact: the days alone in the first row, from, to, active and remove together, no hints
+  {
+    const t = await open([{ days: 'mon-fri', from: '08:00', to: '12:30', enabled: false }], 'de');
+    const e = t.entries()[0];
+    assert(e.className === 'list-entry compact', 'a window is a compact entry');
+    const row = e.children.find((c) => c.className === 'entry-row');
+    const names = walkN(row).filter((c) => c.name).map((c) => c.name);
+    assert(row && names.join('|') === 'from|to|enabled', 'from, to and active stand in one row: ' + names.join('|'));
+    assert(walkN(row).some((c) => c.className === 'remove-btn'), 'the remove button is in that row');
+    assert(walkN(e).filter((c) => c.className === 'hint').length === 0, 'no hint under the fields of a window');
+    assert(e.querySelector('[name="from"]').type === 'time' && e.querySelector('[name="to"]').type === 'time', 'from and to are time fields');
+    const words = walkN(e.querySelector('[name="days"]')).filter((c) => c.tag === 'span').map((c) => c.textContent);
+    assert(words.join(' ') === 'Mo Di Mi Do Fr Sa So', 'the days carry the German short words: ' + words.join(' '));
+    assert(walkN(e).filter((c) => c.tag === 'label' && c.children.some((x) => x.className === 'days')).length === 0,
+      'the seven boxes are not inside one label (a click on a word would tick Monday)');
+    for (const [name, cat, w] of [['en', en, 'Mo Tu We Th Fr Sa Su'], ['de', de, 'Mo Di Mi Do Fr Sa So'], ['fr', fr, 'lu ma me je ve sa di']])
+      assert(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) => cat['web.day.' + d]).join(' ') === w, name + ' has the day words ' + w);
+  }
+  // a time the time field would not show stays a text field
+  {
+    const t = await open([{ days: 'mon', from: '8:00', to: '12:30', enabled: true }]);
+    assert(t.entries()[0].querySelector('[name="from"]').type === 'text', '"8:00" stays a text field, not an empty time field');
   }
 }
 

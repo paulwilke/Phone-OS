@@ -61,6 +61,15 @@ pre{background:#222;color:#eee;padding:1rem;border-radius:6px;overflow:auto;
 .dl-label{color:#555;min-width:140px}
 .dl-value{font-weight:500}
 .note{font-size:.85rem;color:#555;margin-bottom:.75rem}
+.field input[type=checkbox]{width:auto;margin:0 .3rem}
+.days{display:flex;flex-wrap:wrap;gap:.3rem .8rem;margin-top:.25rem}
+.day{display:inline-flex;align-items:center;gap:.25rem;font-size:.9rem;color:#222}
+.entry-row{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:flex-end}
+.entry-row .field{margin-bottom:0}
+.entry-row .field input[type=time]{width:auto}
+.list-entry.compact .field{margin-bottom:.5rem}
+fieldset > .hint{font-size:.78rem;color:#777;margin-bottom:.5rem}
+.list-entry.compact .remove-btn{position:static;margin-left:auto}
 </style>
 </head>
 <body>
@@ -317,13 +326,59 @@ function setNestedValue(obj, path, value) {
   obj[parts[parts.length - 1]] = value;
 }
 
-function buildField(key, value, namePrefix) {
+// The days of a school-time window as the file writes them ("mon-fri", "fri-mon" across the weekend, "mon,wed",
+// "daily"; docs/quiet-hours.md) and the seven boxes of the page. parseDays gives the days, or null for a text the
+// page does not understand: that one stays a text field, so that saving never loses it.
+var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+function parseDays(text) {
+  var s = String(text === undefined || text === null ? '' : text).trim().toLowerCase();
+  if (s === 'daily') return DAYS.slice();
+  var out = [];
+  if (!s) return out;
+  var parts = s.split(',');
+  for (var i = 0; i < parts.length; i++) {
+    var range = parts[i].trim().split('-');
+    if (range.length > 2) return null;
+    var a = DAYS.indexOf(range[0].trim()), b = DAYS.indexOf(range[range.length - 1].trim());
+    if (a < 0 || b < 0) return null;
+    for (var d = a; ; d = (d + 1) % 7) {
+      if (out.indexOf(DAYS[d]) < 0) out.push(DAYS[d]);
+      if (d === b) break;
+    }
+  }
+  return out;
+}
+function writeDays(days) {
+  var set = DAYS.filter(function(d) { return days.indexOf(d) >= 0; });
+  if (set.length === 7) return 'daily';
+  if (set.join(',') === 'mon,tue,wed,thu,fri') return 'mon-fri';
+  return set.join(',');
+}
+
+// noHint: the field stands in a compact row (a school-time window); its section says once what it is for.
+function buildField(key, value, namePrefix, noHint) {
   var wrap = document.createElement('div'); wrap.className = 'field';
-  var lbl = document.createElement('label');
+  var days = key.type === 'weekday_set' ? parseDays(value) : null;
+  // Seven boxes are not one control: a <label> around them would tick Monday at every click on a day's word.
+  var lbl = document.createElement(days ? 'div' : 'label');
   lbl.textContent = t(key.label);
   wrap.appendChild(lbl);
   var input;
-  if (key.type === 'bool' && key.widget === 'checkbox') {
+  if (days) {
+    // The owner's wish of 2026-10-08: the days are ticked, not typed.
+    input = document.createElement('span'); input.className = 'days';
+    input.setAttribute('name', namePrefix + key.name); input.name = namePrefix + key.name;
+    input.setAttribute('data-days', '1');
+    DAYS.forEach(function(d) {
+      var item = document.createElement('label'); item.className = 'day';
+      var box = document.createElement('input'); box.type = 'checkbox'; box.className = 'day-box';
+      box.setAttribute('data-day', d);
+      box.checked = days.indexOf(d) >= 0;
+      var word = document.createElement('span'); word.textContent = t('web.day.' + d);
+      item.appendChild(box); item.appendChild(word);
+      input.appendChild(item);
+    });
+  } else if (key.type === 'bool' && key.widget === 'checkbox') {
     // A switch the parent ticks (school-time window "active"). A key that is missing from the file has
     // the schema's default, not "off": a window written before the key existed is on.
     input = document.createElement('input');
@@ -372,11 +427,13 @@ function buildField(key, value, namePrefix) {
     // A list of words is typed as words separated by commas and sent back as an array, never as a string.
     input.value = Array.isArray(value) ? value.join(', ')
       : value !== undefined && value !== null ? String(value) : (key['default'] || '');
+    // A time of day gets the browser's time field; a text it would not show ("8:00") stays a text field.
+    if (key.type === 'time_of_day' && /^([01][0-9]|2[0-3]):[0-5][0-9]$|^$/.test(input.value)) input.type = 'time';
     if (key.max_val) input.maxLength = key.max_val;
   }
   lbl.appendChild(input);
   // A hint whose text did not arrive is left out; a raw key is never shown to the parent.
-  if (key.help && T[key.help] !== undefined) {
+  if (!noHint && key.help && T[key.help] !== undefined) {
     var hint = document.createElement('div'); hint.className = 'hint';
     hint.textContent = t(key.help);
     wrap.appendChild(hint);
@@ -385,6 +442,11 @@ function buildField(key, value, namePrefix) {
 }
 
 function readField(input, keyDef) {
+  if (keyDef.type === 'weekday_set' && input.getAttribute('data-days')) {
+    var on = [];
+    input.querySelectorAll('.day-box').forEach(function(b) { if (b.checked) on.push(b.getAttribute('data-day')); });
+    return writeDays(on);
+  }
   if (keyDef.type === 'bool' && keyDef.widget === 'checkbox') return !!input.checked;
   if (keyDef.type === 'bool') return input.value === 'true';
   if (keyDef.type === 'integer') return parseInt(input.value, 10) || 0;
@@ -404,6 +466,12 @@ function buildSection(section, sectionData, changed) {
   var leg = document.createElement('legend');
   leg.textContent = t(section.label);
   if (section.label) fs.appendChild(leg);
+  // A compact section says once what its entries are for, in place of a hint under every field.
+  if (compactSection(section) && section.help && T[section.help] !== undefined) {
+    var about = document.createElement('div'); about.className = 'hint';
+    about.textContent = t(section.help);
+    fs.appendChild(about);
+  }
   if (section.list) {
     var entries = Array.isArray(sectionData) ? sectionData : [];
     // The device uses the schema's entry when the card has none; the page shows the same one, so that
@@ -433,18 +501,33 @@ function buildSection(section, sectionData, changed) {
   return fs;
 }
 
+// A section with a set of weekdays (the school-time windows) is compact: the days in one row, everything else
+// (from, to, active, remove) in the row below, and no hint under each field (owner, 2026-10-08: a window took
+// a whole screen).
+function compactSection(section) {
+  return section.keys.some(function(k) { return k.type === 'weekday_set'; });
+}
+
 function buildListEntry(section, entry, idx, changed) {
   var wrap = document.createElement('div'); wrap.className = 'list-entry';
+  var compact = compactSection(section);
+  var row = wrap;
+  if (compact) {
+    wrap.className = 'list-entry compact';
+    row = document.createElement('div'); row.className = 'entry-row';
+  }
   section.keys.forEach(function(key) {
-    wrap.appendChild(buildField(key, entry[key.name], ''));
+    var field = buildField(key, entry[key.name], '', compact);
+    (compact && key.type !== 'weekday_set' ? row : wrap).appendChild(field);
   });
+  if (compact) wrap.appendChild(row);
   var rmBtn = document.createElement('button');
   rmBtn.type = 'button'; rmBtn.className = 'remove-btn';
   rmBtn.textContent = t('web.form.remove');
   rmBtn.addEventListener('click', function() {
     if (confirm(t('web.form.confirm-remove'))) { wrap.remove(); changed(); }
   });
-  wrap.appendChild(rmBtn);
+  row.appendChild(rmBtn);
   return wrap;
 }
 

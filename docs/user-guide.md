@@ -32,7 +32,7 @@ A contact has a role: **parent** or **family** (`role`). A parent may also ask t
 
 ## School time
 
-School time is a set of windows (`[[quiet_hours]]` in `settings.toml`: `days`, `from`, `to`, `enabled`; for example `mon-fri` from `08:00` to `13:30`; at most two windows per day, and a window may cross midnight). A window counts only while it is **active**: on the parents' page each window has an "Active" checkbox (`enabled = true` or `false`; a window without the key is active). A device without any window starts with one built-in window, Monday to Friday 08:00 to 12:30, **not active**: no school time runs until a parent ticks it and saves. While an active window runs:
+School time is a set of windows (`[[quiet_hours]]` in `settings.toml`: `days`, `from`, `to`, `enabled`; on the **School time** tab each window is one box: the days are ticked (Mo to Su), below them from, to and "Active"; **Add** adds a further window, for example Monday and Tuesday afternoon; for example `mon-fri` from `08:00` to `13:30`; at most two windows per day, and a window may cross midnight). A window counts only while it is **active**: on the parents' page each window has an "Active" checkbox (`enabled = true` or `false`; a window without the key is active). A device without any window starts with one built-in window, Monday to Friday 08:00 to 12:30, **not active**: no school time runs until a parent ticks it and saves. While an active window runs:
 
 - the status bar says "School time" and the lock page says "School time until 13:30";
 - the child cannot call: the **Phone** tile says "School time until 13:30" and stays;
