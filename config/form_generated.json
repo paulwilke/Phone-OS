@@ -24,7 +24,8 @@
               "help": "config.child.name.help",
               "field": "childName"
             }
-          ]
+          ],
+          "group": "basics"
         },
         {
           "id": "display",
@@ -47,7 +48,8 @@
               "help": "config.display.map_url.help",
               "field": "mapTemplate"
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "modem",
@@ -70,7 +72,8 @@
               "help": "config.modem.apn.help",
               "field": "modemApn"
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "battery",
@@ -93,7 +96,8 @@
               "help": "config.battery.capacity_mah.help",
               "field": "batteryCapacityMah"
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "interface",
@@ -116,7 +120,8 @@
               "help": "config.interface.language.help",
               "field": "interfaceLanguage"
             }
-          ]
+          ],
+          "group": "basics"
         },
         {
           "id": "sms",
@@ -153,7 +158,8 @@
               "help": "config.sms.extra_trigger_words.help",
               "field": "extraTriggers"
             }
-          ]
+          ],
+          "group": "basics"
         },
         {
           "id": "features",
@@ -260,7 +266,8 @@
               "help": "config.features.modem_sleep.help",
               "field": "modemSleep"
             }
-          ]
+          ],
+          "group": "basics"
         },
         {
           "id": "remote_queries",
@@ -288,7 +295,8 @@
                 "notify": "config.remote_queries.notice.notify.label"
               }
             }
-          ]
+          ],
+          "group": "basics"
         },
         {
           "id": "time",
@@ -311,7 +319,8 @@
               "help": "config.time.timezone.help",
               "field": "timeZone"
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "log",
@@ -339,7 +348,8 @@
                 "errors": "config.log.level.errors.label"
               }
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "wifi",
@@ -362,7 +372,8 @@
               "help": "config.wifi.auto_off_minutes.help",
               "field": "wifi.autoOffMinutes"
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "radio",
@@ -399,7 +410,8 @@
               "help": "config.radio.peer.help",
               "field": "radioPeer"
             }
-          ]
+          ],
+          "group": "advanced"
         },
         {
           "id": "quiet_hours",
@@ -471,7 +483,8 @@
             "from": "08:00",
             "to": "12:30",
             "enabled": false
-          }
+          },
+          "group": "school_time"
         },
         {
           "id": "tiles",
@@ -530,7 +543,25 @@
               "help": "config.tiles.target.help",
               "field": ""
             }
-          ]
+          ],
+          "group": "basics"
+        }
+      ],
+      "groups": [
+        {
+          "id": "basics",
+          "label": "web.tab.basics",
+          "note": ""
+        },
+        {
+          "id": "school_time",
+          "label": "web.tab.school-time",
+          "note": ""
+        },
+        {
+          "id": "advanced",
+          "label": "web.tab.advanced",
+          "note": "web.settings.advanced-note"
         }
       ]
     },

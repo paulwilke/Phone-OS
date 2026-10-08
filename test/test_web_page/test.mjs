@@ -221,6 +221,7 @@ function richElement(tag) {
     if ((m = sel.match(/^\.([\w-]+)$/))) return String(el.className || '').split(/\s+/).includes(m[1]);
     if ((m = sel.match(/^\[name="([^"]+)"\]$/))) return el.name === m[1];
     if ((m = sel.match(/^\[data-list-section="([^"]+)"\]$/))) return el.attrs['data-list-section'] === m[1];
+    if ((m = sel.match(/^\[data-section="([^"]*)"\]$/))) return el.attrs['data-section'] === m[1];
     throw new Error('selector the test double does not know: ' + sel);
   };
   const el = {
@@ -328,7 +329,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   await pg.els['auth-form'].listeners.submit({ preventDefault() {} });
   await pg.settle();
   const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
-  assert(tabs.includes('Einstellungen'), 'after the login the tabs are German: ' + tabs.join('|'));
+  assert(tabs.includes('Allgemein'), 'after the login the tabs are German: ' + tabs.join('|'));
   assert(rawKey(pg.shown()).length === 0, 'no raw web.* key is shown after the login');
   assert(pg.calls.filter((c) => c.path !== '/api/state' && !c.authed).length === 0, 'the catalog and every later request carry the password');
 }
@@ -338,7 +339,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
   const pg = await runPage({ storedAuth: auth, storedLang: 'de', browserLang: 'en-US', catalogs });
   const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
-  assert(tabs.includes('Einstellungen') && rawKey(pg.shown()).length === 0, 'stored credential: the stored language is shown: ' + tabs.join('|'));
+  assert(tabs.includes('Allgemein') && rawKey(pg.shown()).length === 0, 'stored credential: the stored language is shown: ' + tabs.join('|'));
 }
 
 // (e) a language the device does not have falls back to English
@@ -346,7 +347,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
   const pg = await runPage({ storedAuth: auth, browserLang: 'xx-XX', catalogs });
   const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
-  assert(tabs.includes('Settings') && rawKey(pg.shown()).length === 0, 'unknown language: English words: ' + tabs.join('|'));
+  assert(tabs.includes('Basics') && rawKey(pg.shown()).length === 0, 'unknown language: English words: ' + tabs.join('|'));
 }
 
 // (f) a stored credential that is no longer right: back to the login screen, English words
@@ -360,33 +361,33 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
   const tabsOf = (pg) => pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
   let pg = await runPage({ storedAuth: auth, browserLang: 'en-US', deviceLang: 'de', catalogs });
-  assert(tabsOf(pg).includes('Einstellungen'), 'device language de, browser en, no choice: German: ' + tabsOf(pg).join('|'));
+  assert(tabsOf(pg).includes('Allgemein'), 'device language de, browser en, no choice: German: ' + tabsOf(pg).join('|'));
 
   // after the login form too
   pg = await runPage({ browserLang: 'en-US', deviceLang: 'de', catalogs });
   pg.els['auth-pw'] = Object.assign(fakeElement('auth-pw'), { value: PASSWORD });
   await pg.els['auth-form'].listeners.submit({ preventDefault() {} });
   await pg.settle();
-  assert(tabsOf(pg).includes('Einstellungen'), 'the login form takes the device language too');
+  assert(tabsOf(pg).includes('Allgemein'), 'the login form takes the device language too');
 
   // the parent's choice on the page is remembered and wins
   pg = await runPage({ storedAuth: auth, storedLang: 'en', browserLang: 'de-DE', deviceLang: 'de', catalogs });
-  assert(tabsOf(pg).includes('Settings'), 'a stored choice (en) beats the device language (de): ' + tabsOf(pg).join('|'));
+  assert(tabsOf(pg).includes('Basics'), 'a stored choice (en) beats the device language (de): ' + tabsOf(pg).join('|'));
 
   // choosing a language in the menu stores it
   pg = await runPage({ storedAuth: auth, browserLang: 'en-US', deviceLang: 'en', catalogs });
   pg.els['lang-select'].value = 'de';
   await pg.els['lang-select'].listeners.change.call(pg.els['lang-select']);
   await pg.settle();
-  assert(pg.store.pp_lang === 'de' && tabsOf(pg).includes('Einstellungen'), 'the language menu stores the choice');
+  assert(pg.store.pp_lang === 'de' && tabsOf(pg).includes('Allgemein'), 'the language menu stores the choice');
 
   // no device language (old firmware): the browser's
   pg = await runPage({ storedAuth: auth, browserLang: 'de-DE', catalogs });
-  assert(tabsOf(pg).includes('Einstellungen'), 'no device language: the browser language');
+  assert(tabsOf(pg).includes('Allgemein'), 'no device language: the browser language');
 
   // a device language the page has no catalog for: English
   pg = await runPage({ storedAuth: auth, browserLang: 'de-DE', deviceLang: 'xx', catalogs });
-  assert(tabsOf(pg).includes('Settings'), 'device language without a catalog: English');
+  assert(tabsOf(pg).includes('Basics'), 'device language without a catalog: English');
 }
 
 // (h) the help texts under the form fields are a second request; a raw key is never shown
@@ -423,7 +424,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
 
   // the help request fails (older firmware, answer too large): the words still load and the hints are left out, not shown as keys
   pg = await runPage({ storedAuth: auth, storedLang: 'de', catalogs: catalogsH, helps, helpFails: true });
-  assert(pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent).includes('Einstellungen'), 'a failing help request leaves the language loaded');
+  assert(pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent).includes('Allgemein'), 'a failing help request leaves the language loaded');
   hints = await hintsOf(pg);
   assert(hints.length === 0, 'a help text that did not arrive is left out, not shown as its key: ' + hints.join(' | '));
 
@@ -448,10 +449,13 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   assert(listFields.length >= 1, 'the schema has list fields to test: ' + listFields.map((f) => f.path).join(', '));
   const walk2 = (el, out) => { for (const c of el.children || []) { out.push(c); walk2(c, out); } return out; };
   const nested = (obj, path) => path.split('.').reduce((o, p) => (o == null ? o : o[p]), obj);
+  // every list field of settings.toml is on the tab of its section's group
+  const tabOf = listFields[0].sec.group;
+  assert(listFields.every((f) => f.sec.group === tabOf), 'the list fields are on one tab: ' + tabOf);
   const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs });
-  pg.dataT.find((e) => e.attrs['data-tab'] === 'settings').listeners.click();
+  pg.dataT.find((e) => e.attrs['data-tab'] === tabOf).listeners.click();
   await pg.settle();
-  const save = walk2(pg.els['form-settings'], []).find((c) => c.className === 'btn-primary');
+  const save = walk2(pg.els['form-' + tabOf], []).find((c) => c.className === 'btn-primary');
   save.listeners.click();
   await pg.settle();
   const put = pg.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings');
@@ -463,9 +467,9 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   // typed words, separated by commas, are an array of trimmed words
   fakeQueryValue = ' #WoIstDu ,, Ping,  ';
   const pg2 = await runPage({ storedAuth: auth, storedLang: 'en', catalogs });
-  pg2.dataT.find((e) => e.attrs['data-tab'] === 'settings').listeners.click();
+  pg2.dataT.find((e) => e.attrs['data-tab'] === tabOf).listeners.click();
   await pg2.settle();
-  walk2(pg2.els['form-settings'], []).find((c) => c.className === 'btn-primary').listeners.click();
+  walk2(pg2.els['form-' + tabOf], []).find((c) => c.className === 'btn-primary').listeners.click();
   await pg2.settle();
   const sent2 = JSON.parse(pg2.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings').body);
   fakeQueryValue = '';
@@ -488,17 +492,17 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
 
   const openSettings = async (settings, lang = 'en') => {
     const pg = await runPage({ storedAuth: auth, storedLang: lang, catalogs: { en, de }, rich: true, settings });
-    pg.dataT.find((e) => e.attrs['data-tab'] === 'settings').listeners.click();
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'school_time').listeners.click();
     await pg.settle();
     return pg;
   };
-  const windowsOf = (pg) => pg.els['form-settings'].querySelector('[data-list-section="quiet_hours"]').querySelectorAll('.list-entry');
+  const windowsOf = (pg) => pg.els['form-school_time'].querySelector('[data-list-section="quiet_hours"]').querySelectorAll('.list-entry');
   const fieldsOf = (entry) => ({
     days: entry.querySelector('[name="days"]').value, from: entry.querySelector('[name="from"]').value,
     to: entry.querySelector('[name="to"]').value, box: entry.querySelector('[name="enabled"]'),
   });
   const save = async (pg) => {
-    pg.els['form-settings'].querySelectorAll('.btn-primary')[0].listeners.click();
+    pg.els['form-school_time'].querySelectorAll('.btn-primary')[0].listeners.click();
     await pg.settle();
     return JSON.parse(pg.calls.find((c) => c.method === 'PUT' && c.path === '/api/settings').body);
   };
@@ -719,13 +723,136 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   }
   // the other enum selects of the page are worded the same way
   {
-    const pg = await openTab('settings', 'de', { log: { level: 'events' }, remote_queries: { notice: 'history' } });
-    for (const [name, key] of [['level', 'config.log.level'], ['notice', 'config.remote_queries.notice']]) {
-      const opts = optionsOf(pg, 'form-settings', name);
+    for (const [tab, name, key] of [['advanced', 'level', 'config.log.level'], ['basics', 'notice', 'config.remote_queries.notice']]) {
+      const pg = await openTab(tab, 'de', { log: { level: 'events' }, remote_queries: { notice: 'history' } });
+      const opts = optionsOf(pg, 'form-' + tab, name);
       const raw = opts.map((o) => o[0]);
       assert(opts.every(([v, text]) => text === de[key + '.' + v + '.label'] && text !== v), 'settings: the ' + name + ' options are catalog words: ' + opts.map((o) => o[1]).join('|'));
       assert(raw.length === 3, 'settings: ' + name + ' keeps its raw values: ' + raw.join('|'));
     }
+  }
+}
+
+// (m) settings.toml on three tabs (owner's wish of 2026-10-08: one long form needed too much scrolling). Which
+// section is on which tab is data of config/schema.toml; every tab saves into the one file and keeps the others.
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const schema = JSON.parse(readFileSync(resolve(ROOT, 'config', 'form_generated.json'), 'utf8'));
+  const groups = schema.files.settings.groups;
+  const walkM = (el, out = []) => { for (const c of el.children || []) { out.push(c); walkM(c, out); } return out; };
+  const tabIds = [...html.matchAll(/data-tab="([^"]+)"/g)].map((m) => m[1]);
+  assert(tabIds.join('|') === 'status|basics|school_time|advanced|contacts|secrets|files|log|backup',
+    'the tab bar: Status, the three settings tabs, then the rest: ' + tabIds.join('|'));
+  for (const [name, cat, words] of [['en', en, 'Basics|School time|Advanced'], ['de', de, 'Allgemein|Schulzeit|Erweitert'], ['fr', fr, 'Général|Heures de classe|Avancé']])
+    assert(groups.map((g) => cat[g.label]).join('|') === words, name + ' names the tabs ' + words);
+  assert(/<div id="panel-advanced" class="panel">\s*<p class="note" data-t="web.settings.advanced-note"><\/p>/.test(html),
+    'the Advanced tab starts with the line that most parents leave it as it is');
+
+  // a full file, as a card that was set up by hand holds it
+  const full = () => ({
+    child: { name: 'Kim' }, display: { map_url: 'https://maps.example/?q={lat},{lon}' }, modem: { apn: 'internet' },
+    battery: { capacity_mah: 1500 }, interface: { language: 'de' }, sms: { language: 'en', extra_trigger_words: ['Ping'] },
+    features: { free_text: true, radio: false, parent_tools: true, message_vibration: true, call_vibration: true, quiet_call_vibration: false, modem_sleep: true },
+    remote_queries: { notice: 'notify' }, time: { timezone: 'Europe/Berlin' }, log: { level: 'events' }, wifi: { auto_off_minutes: 20 },
+    radio: { name: 'pp', peer: '' }, quiet_hours: [{ days: 'mon-fri', from: '08:00', to: '13:00', enabled: true }],
+    tiles: [{ label: 'Mum', action: 'call', target: '+491701111111' }],
+  });
+  const open = async (settings) => {
+    const state = { file: settings, puts: [] };
+    const onFetch = (path, opts, reply) => {
+      if (path !== '/api/settings') return null;
+      if (opts.method === 'PUT') { state.file = JSON.parse(opts.body); state.puts.push(state.file); return reply(200, { ok: true, restart_required: true }); }
+      return state.file === null ? reply(500, { error: 'Read failed' }) : reply(200, state.file);
+    };
+    const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: { en, de }, rich: true, onFetch });
+    const tab = async (id) => { pg.dataT.find((e) => e.attrs['data-tab'] === id).listeners.click(); await pg.settle(); };
+    const form = (id) => pg.els['form-' + id];
+    const save = async (id) => { walkM(form(id)).find((c) => c.className === 'btn-primary').listeners.click(); await pg.settle(); };
+    const field = (id, section, name) => form(id).querySelector('[data-section="' + section + '"]').querySelector('[name="' + name + '"]');
+    const statusOf = (id) => walkM(form(id)).filter((c) => c.tag === 'span').map((c) => c.textContent).join('');
+    return { pg, state, tab, form, save, field, statusOf };
+  };
+
+  // each tab shows exactly the sections of its group, and every section is on one tab
+  {
+    const t = await open(full());
+    const seen = [];
+    for (const g of groups) {
+      await t.tab(g.id);
+      const shown = walkM(t.form(g.id)).filter((c) => c.tag === 'fieldset').map((c) => c.attrs['data-section']);
+      const want = schema.files.settings.sections.filter((sec) => sec.group === g.id).map((sec) => sec.id);
+      assert(shown.length > 0 && shown.join('|') === want.join('|'), 'the ' + g.id + ' tab shows its sections: ' + shown.join(', '));
+      seen.push(...shown);
+    }
+    assert(seen.slice().sort().join('|') === schema.files.settings.sections.map((sec) => sec.id).sort().join('|') && new Set(seen).size === seen.length,
+      'every section of settings.toml is on exactly one tab');
+  }
+
+  // saving one tab keeps what the others hold, and what was saved on them since this tab was opened
+  {
+    const t = await open(full());
+    await t.tab('school_time');
+    t.state.file.child.name = 'Alex';           // saved meanwhile on the Basics tab (or in the Files tab)
+    walkM(t.form('school_time')).find((c) => c.name === 'enabled').checked = false;
+    await t.save('school_time');
+    const sent = t.state.puts.at(-1);
+    const want = full(); want.child.name = 'Alex'; want.quiet_hours[0].enabled = false;
+    assert(JSON.stringify(sent) === JSON.stringify(want), 'saving School time writes the whole file with only the window changed: ' + JSON.stringify(sent));
+    assert(t.statusOf('school_time').startsWith('Saved.'), 'the tab says Saved.: ' + t.statusOf('school_time'));
+  }
+  {
+    const t = await open(full());
+    await t.tab('advanced');
+    t.field('advanced', 'time', 'timezone').value = 'Europe/Paris';
+    await t.save('advanced');
+    const sent = t.state.puts.at(-1);
+    assert(sent.time.timezone === 'Europe/Paris' && sent.child.name === 'Kim' && sent.quiet_hours.length === 1 && sent.tiles[0].target === '+491701111111' && sent.features.free_text === true,
+      'saving Advanced keeps Basics and School time: ' + JSON.stringify(sent));
+  }
+  // the file cannot be read at the moment of saving: nothing is sent, the tab says so
+  {
+    const t = await open(full());
+    await t.tab('basics');
+    t.state.file = null;
+    await t.save('basics');
+    assert(t.state.puts.length === 0, 'without the current file no tab writes a part of it');
+    assert(t.statusOf('basics').startsWith('Error'), 'the tab shows the error: ' + t.statusOf('basics'));
+  }
+
+  // two keys of the same name in two sections ([interface] language and [sms] language) are read back from their
+  // own section: the single form saved the interface language as the SMS language too
+  {
+    const t = await open(full());
+    await t.tab('basics');
+    await t.save('basics');
+    const sent = t.state.puts.at(-1);
+    assert(sent.interface.language === 'de' && sent.sms.language === 'en',
+      'interface de and SMS en stay as they are: ' + JSON.stringify([sent.interface, sent.sms]));
+    assert(JSON.stringify(sent) === JSON.stringify(full()), 'saving a tab without a change writes the file unchanged: ' + JSON.stringify(sent));
+  }
+
+  // a change that is not saved: the tab says so, and looking at another tab does not lose it
+  {
+    const t = await open(full());
+    await t.tab('basics');
+    assert(t.statusOf('basics') === '', 'a fresh tab says nothing');
+    t.field('basics', 'child', 'name').value = 'Robin';
+    t.form('basics').oninput();
+    assert(t.statusOf('basics') === 'Unsaved changes', 'a typed change: "Unsaved changes": ' + t.statusOf('basics'));
+    await t.tab('advanced');
+    await t.tab('basics');
+    assert(t.field('basics', 'child', 'name').value === 'Robin' && t.statusOf('basics') === 'Unsaved changes',
+      'back on the tab the change is still there, still unsaved');
+    await t.save('basics');
+    assert(t.state.puts.at(-1).child.name === 'Robin' && t.statusOf('basics').startsWith('Saved.'), 'saving it writes it and says Saved.');
+    t.state.file.child.name = 'Sam';
+    await t.tab('advanced');
+    await t.tab('basics');
+    assert(t.field('basics', 'child', 'name').value === 'Sam', 'a saved tab is read from the card again when it is opened');
+    // adding a school-time window is a change too, though no input event says so
+    await t.tab('school_time');
+    walkM(t.form('school_time')).find((c) => c.className === 'action-btn btn-edit').listeners.click();
+    assert(t.statusOf('school_time') === 'Unsaved changes', 'an added window is an unsaved change');
   }
 }
 

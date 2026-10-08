@@ -11,6 +11,8 @@ Tests:
   4. --check detects an out-of-date file.
   5. --check passes when all files are up to date.
   6. A default entry of a list section reaches every output and is checked; the checkbox widget is only for a bool.
+  7. The tabs of settings.toml ([[group]]): every key of the real schema is on exactly one tab, a section is
+     never split, and every mistake in a group is refused with a reason.
 """
 import json
 import os
@@ -38,8 +40,8 @@ def check(name, condition, detail=""):
 
 
 def tiny_outputs():
-    files, sections, keys = gen_config.load_schema(TINY)
-    return gen_config.all_outputs(files, sections, keys, REPO)
+    files, sections, keys, groups = gen_config.load_schema(TINY)
+    return gen_config.all_outputs(files, sections, keys, groups, REPO)
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +135,7 @@ required = false
         f.write(bad_schema)
         tmp = f.name
     try:
-        files, sections, keys = gen_config.load_schema(tmp)
+        files, sections, keys, _ = gen_config.load_schema(tmp)
         errors = gen_config.validate_schema(files, sections, keys)
         check("bad type refused",    any("badtype" in e for e in errors),
               f"errors = {errors}")
@@ -172,7 +174,7 @@ required = false
         f.write(bad_schema)
         tmp = f.name
     try:
-        files, sections, keys = gen_config.load_schema(tmp)
+        files, sections, keys, _ = gen_config.load_schema(tmp)
         errors = gen_config.validate_schema(files, sections, keys)
         check("missing apply refused",    bool(errors),   f"errors = {errors}")
         check("missing apply has reason", any("apply" in e for e in errors))
@@ -212,7 +214,7 @@ def test_check_mode():
 # ---------------------------------------------------------------------------
 
 def tiny_with_default(entry):
-    files, sections, keys = gen_config.load_schema(TINY)
+    files, sections, keys, _ = gen_config.load_schema(TINY)
     for sec in sections:
         if sec["name"] == "tags":
             sec["default_entry"] = entry
@@ -222,7 +224,7 @@ def tiny_with_default(entry):
 def test_default_entry():
     files, sections, keys = tiny_with_default({"value": "first"})
     check("default entry: valid schema", gen_config.validate_schema(files, sections, keys) == [])
-    out = gen_config.all_outputs(files, sections, keys, REPO)
+    out = gen_config.all_outputs(files, sections, keys, [], REPO)
     cpp = out["src/config/schema_generated.h"]
     check("default entry: in the C++ table", '{"settings", "tags", "value", "first"},' in cpp)
     check("default entry: counted without the sentinel", "kDefaultEntryCount" in cpp and '{"", "", "", ""},' in cpp)
@@ -247,7 +249,7 @@ def test_default_entry_is_checked():
     ]:
         errors = gen_config.validate_schema(*tiny_with_default(entry))
         check(f"default entry refused: {name}", any(word in e for e in errors), f"errors = {errors}")
-    files, sections, keys = gen_config.load_schema(TINY)
+    files, sections, keys, _ = gen_config.load_schema(TINY)
     for sec in sections:
         if sec["name"] == "child":
             sec["default_entry"] = {"name": "x"}
@@ -256,7 +258,7 @@ def test_default_entry_is_checked():
 
 
 def test_checkbox_widget():
-    files, sections, keys = gen_config.load_schema(TINY)
+    files, sections, keys, _ = gen_config.load_schema(TINY)
     for k in keys:
         if k["name"] == "value":
             k["widget"] = "checkbox"
@@ -266,6 +268,68 @@ def test_checkbox_widget():
         if k["name"] == "age":
             k["widget"] = "checkbox"
     check("widget checkbox refused on an integer too", any("age" in e for e in gen_config.validate_schema(files, sections, keys)))
+
+
+# ---------------------------------------------------------------------------
+# 7. Groups: the tabs of the parents' page that show settings.toml
+# ---------------------------------------------------------------------------
+
+REAL = os.path.join(REPO, "config", "schema.toml")
+
+
+def test_groups_of_the_real_schema():
+    files, sections, keys, groups = gen_config.load_schema(REAL)
+    check("groups: the real schema is valid", gen_config.validate_schema(files, sections, keys, groups) == [])
+    check("groups: three tabs in this order", [g["id"] for g in groups] == ["basics", "school_time", "advanced"],
+          [g["id"] for g in groups])
+    ids = {g["id"] for g in groups}
+    settings = [k for k in keys if k["file"] == "settings"]
+    check("groups: every key of settings.toml is on one of them",
+          all(k.get("group") in ids for k in settings),
+          [f"{k['section']}.{k['name']}" for k in settings if k.get("group") not in ids])
+    check("groups: no key of another file has one", all("group" not in k for k in keys if k["file"] != "settings"))
+    # what the owner asked for on which tab (briefs WP11, PR 0)
+    where = {(k["section"], k["name"]): k.get("group") for k in settings}
+    for section, name, tab in [("child", "name", "basics"), ("interface", "language", "basics"),
+                               ("sms", "language", "basics"), ("features", "free_text", "basics"),
+                               ("features", "parent_tools", "basics"), ("remote_queries", "notice", "basics"),
+                               ("quiet_hours", "enabled", "school_time"), ("time", "timezone", "advanced"),
+                               ("log", "level", "advanced"), ("wifi", "auto_off_minutes", "advanced"),
+                               ("battery", "capacity_mah", "advanced"), ("modem", "apn", "advanced"),
+                               ("display", "map_url", "advanced"), ("radio", "peer", "advanced")]:
+        check(f"groups: [{section}] {name} is on {tab}", where.get((section, name)) == tab, where.get((section, name)))
+    form = json.loads(gen_config.generate_form_json(files, sections, keys, groups))
+    sf = form["files"]["settings"]
+    check("groups: the form description lists the tabs with label and note",
+          [(g["id"], g["label"], bool(g["note"])) for g in sf["groups"]]
+          == [("basics", "web.tab.basics", False), ("school_time", "web.tab.school-time", False),
+              ("advanced", "web.tab.advanced", True)], sf["groups"])
+    check("groups: every section of settings.toml names its tab", all(s.get("group") in ids for s in sf["sections"]))
+    check("groups: contacts and secrets have no tabs of their own",
+          "groups" not in form["files"]["contacts"] and "groups" not in form["files"]["secrets"])
+
+
+def test_group_mistakes_are_refused():
+    def errors_with(change):
+        files, sections, keys, groups = gen_config.load_schema(REAL)
+        change(keys, groups)
+        return gen_config.validate_schema(files, sections, keys, groups)
+
+    def key(keys, section, name):
+        return next(k for k in keys if k["section"] == section and k["name"] == name)
+
+    cases = [
+        ("a key without a group", lambda k, g: key(k, "time", "timezone").pop("group", None), "missing `group`"),
+        ("an unknown group", lambda k, g: key(k, "time", "timezone").update(group="expert"), "unknown group"),
+        ("a section split over two tabs", lambda k, g: key(k, "sms", "extra_trigger_words").update(group="advanced"), "differs"),
+        ("a group on a contacts key", lambda k, g: key(k, "contact", "name").update(group="basics"), "only for keys"),
+        ("a tab without keys", lambda k, g: g.append({"id": "empty", "file": "settings", "label": "web.tab.basics"}), "no key"),
+        ("a duplicate tab", lambda k, g: g.append(dict(g[0])), "duplicate id"),
+        ("a tab of an unknown file", lambda k, g: g[0].update(file="nope"), "unknown file"),
+    ]
+    for name, change, word in cases:
+        errors = errors_with(change)
+        check(f"groups refused: {name}", any(word in e for e in errors), f"errors = {errors}")
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +346,8 @@ def main():
     test_default_entry()
     test_default_entry_is_checked()
     test_checkbox_widget()
+    test_groups_of_the_real_schema()
+    test_group_mistakes_are_refused()
 
     print()
     print(f"{TESTS_PASSED} passed, {TESTS_FAILED} failed")

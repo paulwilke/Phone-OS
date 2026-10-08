@@ -49,11 +49,53 @@ def load_schema(path):
     files    = raw.get("file",    [])
     sections = raw.get("section", [])
     keys     = raw.get("key",     [])
-    return files, sections, keys
+    groups   = raw.get("group",   [])
+    return files, sections, keys, groups
 
 
-def validate_schema(files, sections, keys):
+def validate_groups(files, sections, keys, groups):
+    """The tabs of the parents' page that show a file. Every key of a file with groups is on exactly one
+    tab, so that no setting is out of the parents' reach, and a section is never split over two tabs: it is
+    one table of the file and one box of the form."""
     errors = []
+    file_ids = {f.get("id") for f in files}
+    group_file = {}
+    for g in groups:
+        for req in ("id", "file", "label"):
+            if not g.get(req):
+                errors.append(f"[[group]]: missing required field `{req}` in {g}")
+        gid = g.get("id", "")
+        if gid in group_file:
+            errors.append(f"[[group]]: duplicate id `{gid}`")
+        if g.get("file") not in file_ids:
+            errors.append(f"[[group]] {gid}: unknown file `{g.get('file')}`")
+        group_file[gid] = g.get("file")
+    grouped_files = set(group_file.values())
+    section_group = {}
+    for k in keys:
+        where = f"[[key]] {k.get('file','?')}/{k.get('section','?')}/{k.get('name','?')}"
+        gid = k.get("group")
+        if k.get("file") in grouped_files:
+            if not gid:
+                errors.append(f"{where}: missing `group` (every key of this file is on one tab of the page)")
+                continue
+            if group_file.get(gid) != k.get("file"):
+                errors.append(f"{where}: unknown group `{gid}` for file `{k.get('file')}`")
+                continue
+            sec = (k.get("file"), k.get("section"))
+            if section_group.setdefault(sec, gid) != gid:
+                errors.append(f"{where}: group `{gid}` differs from `{section_group[sec]}` of the other keys of its section")
+        elif gid is not None:
+            errors.append(f"{where}: `group` is only for keys of a file with [[group]] entries")
+    used = set(section_group.values())
+    for g in groups:
+        if g.get("id") not in used:
+            errors.append(f"[[group]] {g.get('id')}: no key is on this tab")
+    return errors
+
+
+def validate_schema(files, sections, keys, groups=()):
+    errors = validate_groups(files, sections, keys, groups)
     file_ids = set()
     for f in files:
         for req in ("id", "path", "example", "label"):
@@ -274,7 +316,7 @@ def generate_cpp(files, sections, keys):
     return "\n".join(lines)
 
 
-def generate_form_json(files, sections, keys):
+def generate_form_json(files, sections, keys, groups=()):
     """Return the content of config/form_generated.json."""
     # Build a nested structure: file → section → [keys]
     section_set = {(s["file"], s["name"]): s for s in sections}
@@ -290,6 +332,11 @@ def generate_form_json(files, sections, keys):
     for f in files:
         fid = f["id"]
         out["files"][fid] = {"label": f["label"], "sections": []}
+        file_groups = [g for g in groups if g["file"] == fid]
+        if file_groups:
+            # The tabs of the page, in this order; a section names its tab with "group".
+            out["files"][fid]["groups"] = [
+                {"id": g["id"], "label": g["label"], "note": g.get("note", "")} for g in file_groups]
         # Group pairs belonging to this file
         sec_groups = {}
         for (ff, sec), ks in seen.items():
@@ -311,6 +358,8 @@ def generate_form_json(files, sections, keys):
             }
             if sd and "default_entry" in sd:
                 sec_obj["default_entry"] = sd["default_entry"]
+            if "group" in ks[0]:
+                sec_obj["group"] = ks[0]["group"]
             for k in ks:
                 kobj = {
                     "name":     k["name"],
@@ -567,13 +616,13 @@ def _example_value(type_, default, enums):
     return None
 
 
-def all_outputs(files, sections, keys, out_dir):
+def all_outputs(files, sections, keys, groups, out_dir):
     """Return a dict: relative path → content (str)."""
     examples = generate_examples(files, sections, keys)
     file_map = {f["id"]: f for f in files}
     out = {
         "src/config/schema_generated.h":      generate_cpp(files, sections, keys),
-        "config/form_generated.json":          generate_form_json(files, sections, keys),
+        "config/form_generated.json":          generate_form_json(files, sections, keys, groups),
         "docs/configuration-reference.md":     generate_docs(files, sections, keys),
     }
     for fid, content in examples.items():
@@ -583,14 +632,14 @@ def all_outputs(files, sections, keys, out_dir):
 
 
 def run(schema_path, out_dir, check_mode):
-    files, sections, keys = load_schema(schema_path)
-    errors = validate_schema(files, sections, keys)
+    files, sections, keys, groups = load_schema(schema_path)
+    errors = validate_schema(files, sections, keys, groups)
     if errors:
         for e in errors:
             print(f"schema error: {e}", file=sys.stderr)
         return 1
 
-    outputs = all_outputs(files, sections, keys, out_dir)
+    outputs = all_outputs(files, sections, keys, groups, out_dir)
     stale = []
     for rel_path, content in outputs.items():
         abs_path = os.path.join(out_dir, rel_path)

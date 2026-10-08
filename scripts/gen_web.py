@@ -24,7 +24,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_KEYS = [
     "web.title",
     "web.tab.status",
-    "web.tab.settings",
+    "web.tab.basics",
+    "web.tab.school-time",
+    "web.tab.advanced",
+    "web.settings.advanced-note",
     "web.tab.contacts",
     "web.tab.secrets",
     "web.tab.files",
@@ -111,8 +114,23 @@ def js_str(s):
     return "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
+def settings_groups(schema):
+    """The tabs of settings.toml (config/schema.toml [[group]]). A tab's id is also the id of its panel and its
+    form, so it must not be the name of another tab; its words must be keys the page knows."""
+    groups = schema["files"]["settings"].get("groups", [])
+    fixed = {"status", "contacts", "secrets", "files", "log", "backup"}
+    for g in groups:
+        if g["id"] in fixed:
+            raise ValueError(f"settings group `{g['id']}` has the name of another tab")
+        for key in (g["label"], g["note"]):
+            if key and key not in WEB_KEYS:
+                raise ValueError(f"settings group `{g['id']}`: `{key}` is not in WEB_KEYS")
+    return groups
+
+
 def generate(schema, en_strings):
     form_json = json.dumps(schema, separators=(",", ":"))
+    groups = settings_groups(schema)
 
     # Build inline CSS
     css = """\
@@ -172,6 +190,7 @@ pre{background:#222;color:#eee;padding:1rem;border-radius:6px;overflow:auto;
 .dl-row{display:flex;gap:.5rem;font-size:.9rem}
 .dl-label{color:#555;min-width:140px}
 .dl-value{font-weight:500}
+.note{font-size:.85rem;color:#555;margin-bottom:.75rem}
 """
 
     # Build the JS
@@ -222,11 +241,16 @@ function showPanel(name) {{
   if (p) {{ p.classList.add('active'); loadPanel(name); }}
 }}
 
-function loadPanel(name) {{
+// The tabs that show a part of settings.toml: the [[group]] entries of config/schema.toml, a tab per group.
+var SETTINGS_TABS = {{}};
+(SCHEMA.files.settings.groups || []).forEach(function(g) {{ SETTINGS_TABS[g.id] = true; }});
+
+// force: build the form again even when it holds changes that are not saved (a new language).
+function loadPanel(name, force) {{
   if (name === 'status') loadStatus();
-  else if (name === 'settings') loadConfigForm('settings');
-  else if (name === 'contacts') loadConfigForm('contacts');
-  else if (name === 'secrets') loadConfigForm('secrets');
+  else if (SETTINGS_TABS[name]) loadConfigForm('settings', name, force);
+  else if (name === 'contacts') loadConfigForm('contacts', null, force);
+  else if (name === 'secrets') loadConfigForm('secrets', null, force);
   else if (name === 'files') loadFiles();
   else if (name === 'log') loadLog();
   else if (name === 'backup') {{}};
@@ -369,8 +393,12 @@ function readField(input, keyDef) {{
   return input.value;
 }}
 
-function buildSection(section, sectionData, fileId) {{
+// changed: called when an entry is added or removed, which no input event reports.
+function buildSection(section, sectionData, changed) {{
   var fs = document.createElement('fieldset');
+  // Two sections can have a key of the same name ([interface] language and [sms] language): the page reads
+  // a field back from its own section's box, never the first of that name in the form.
+  fs.setAttribute('data-section', section.id);
   var leg = document.createElement('legend');
   leg.textContent = t(section.label);
   if (section.label) fs.appendChild(leg);
@@ -382,7 +410,7 @@ function buildSection(section, sectionData, fileId) {{
     var container = document.createElement('div');
     container.setAttribute('data-list-section', section.id);
     entries.forEach(function(entry, idx) {{
-      container.appendChild(buildListEntry(section, entry, idx));
+      container.appendChild(buildListEntry(section, entry, idx, changed));
     }});
     fs.appendChild(container);
     var addBtn = document.createElement('button');
@@ -390,7 +418,8 @@ function buildSection(section, sectionData, fileId) {{
     addBtn.textContent = t('web.form.add');
     addBtn.addEventListener('click', function() {{
       var count = container.querySelectorAll('.list-entry').length;
-      container.appendChild(buildListEntry(section, {{}}, count));
+      container.appendChild(buildListEntry(section, {{}}, count, changed));
+      changed();
     }});
     fs.appendChild(addBtn);
   }} else {{
@@ -402,7 +431,7 @@ function buildSection(section, sectionData, fileId) {{
   return fs;
 }}
 
-function buildListEntry(section, entry, idx) {{
+function buildListEntry(section, entry, idx, changed) {{
   var wrap = document.createElement('div'); wrap.className = 'list-entry';
   section.keys.forEach(function(key) {{
     wrap.appendChild(buildField(key, entry[key.name], ''));
@@ -411,7 +440,7 @@ function buildListEntry(section, entry, idx) {{
   rmBtn.type = 'button'; rmBtn.className = 'remove-btn';
   rmBtn.textContent = t('web.form.remove');
   rmBtn.addEventListener('click', function() {{
-    if (confirm(t('web.form.confirm-remove'))) wrap.remove();
+    if (confirm(t('web.form.confirm-remove'))) {{ wrap.remove(); changed(); }}
   }});
   wrap.appendChild(rmBtn);
   return wrap;
@@ -419,10 +448,6 @@ function buildListEntry(section, entry, idx) {{
 
 function collectFormData(form, fileSections) {{
   var result = {{}};
-  var nameToKey = {{}};
-  fileSections.forEach(function(sec) {{
-    sec.keys.forEach(function(k) {{ nameToKey[k.name] = k; }});
-  }});
   fileSections.forEach(function(sec) {{
     if (sec.list) {{
       var container = form.querySelector('[data-list-section="' + sec.id + '"]');
@@ -439,8 +464,10 @@ function collectFormData(form, fileSections) {{
       setNestedValue(result, sec.id, entries);
     }} else {{
       var val = {{}};
+      var box = form.querySelector('[data-section="' + sec.id + '"]');
+      if (!box) return;
       sec.keys.forEach(function(k) {{
-        var inp = form.querySelector('[name="' + k.name + '"]');
+        var inp = box.querySelector('[name="' + k.name + '"]');
         if (inp) val[k.name] = readField(inp, k);
       }});
       if (sec.id) setNestedValue(result, sec.id, val);
@@ -450,27 +477,49 @@ function collectFormData(form, fileSections) {{
   return result;
 }}
 
-function loadConfigForm(fileId) {{
-  var formEl = document.getElementById('form-' + fileId);
+// group: the tab of settings.toml to show (null: the whole file). A form with changes that are not saved is
+// left as it is when the parent comes back to its tab, so that looking at another tab loses nothing.
+function loadConfigForm(fileId, group, force) {{
+  var formEl = document.getElementById('form-' + (group || fileId));
   if (!formEl) return;
+  if (!force && formEl.getAttribute('data-unsaved') === '1') return;
   formEl.innerHTML = '';
+  formEl.setAttribute('data-unsaved', '');
   var fileDef = SCHEMA.files[fileId];
   if (!fileDef) return;
+  var sections = fileDef.sections.filter(function(sec) {{ return !group || sec.group === group; }});
   api('GET', '/api/' + fileId).then(function(r) {{ return r.json(); }}).then(function(data) {{
-    fileDef.sections.forEach(function(sec) {{
+    var statusEl = document.createElement('span');
+    function changed() {{
+      formEl.setAttribute('data-unsaved', '1');
+      statusEl.className = 'status-err'; statusEl.textContent = t('web.form.unsaved');
+    }}
+    formEl.oninput = changed; formEl.onchange = changed;
+    sections.forEach(function(sec) {{
       var secData = sec.id ? getNestedValue(data, sec.id) : data;
-      formEl.appendChild(buildSection(sec, secData, fileId));
+      formEl.appendChild(buildSection(sec, secData, changed));
     }});
     var actions = document.createElement('div'); actions.className = 'form-actions';
     var saveBtn = document.createElement('button');
     saveBtn.type = 'button'; saveBtn.className = 'btn-primary';
     saveBtn.textContent = t('web.form.save');
-    var statusEl = document.createElement('span');
     saveBtn.addEventListener('click', function() {{
-      var payload = collectFormData(formEl, fileDef.sections);
-      api('PUT', '/api/' + fileId, payload).then(function(r) {{ return r.json(); }})
+      var payload = collectFormData(formEl, sections);
+      // The device stores a whole file. A tab holds only some of its sections, so they go into what the file
+      // holds at this moment: saving one tab keeps what was saved on the others. Without the file there is
+      // nothing to save into, and nothing is sent.
+      var whole = !group ? Promise.resolve(payload) : api('GET', '/api/' + fileId).then(function(r) {{
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }}).then(function(current) {{
+        sections.forEach(function(sec) {{ setNestedValue(current, sec.id, getNestedValue(payload, sec.id)); }});
+        return current;
+      }});
+      whole.then(function(body) {{ return api('PUT', '/api/' + fileId, body); }})
+        .then(function(r) {{ return r.json(); }})
         .then(function(d) {{
           if (d.ok) {{
+            formEl.setAttribute('data-unsaved', '');
             statusEl.className = 'status-msg';
             statusEl.textContent = t('web.form.saved') + (d.restart_required ? ' ' + t('web.form.apply-restart') : ' ' + t('web.form.apply-immediate'));
           }} else {{
@@ -696,7 +745,7 @@ document.getElementById('lang-select').addEventListener('change', function() {{
     localStorage.setItem('pp_lang', code);
     populateLangSelect(window._langs || []);
     var active = document.querySelector('.panel.active');
-    if (active) loadPanel(active.id.replace('panel-', ''));
+    if (active) loadPanel(active.id.replace('panel-', ''), true);
   }});
 }});
 
@@ -791,7 +840,9 @@ function init(state) {{
         "",
         '  <nav id="tabs">',
         '    <button data-tab="status"   data-t="web.tab.status"></button>',
-        '    <button data-tab="settings" data-t="web.tab.settings"></button>',
+    ]
+    lines += [f'    <button data-tab="{g["id"]}" data-t="{g["label"]}"></button>' for g in groups]
+    lines += [
         '    <button data-tab="contacts" data-t="web.tab.contacts"></button>',
         '    <button data-tab="secrets"  data-t="web.tab.secrets"></button>',
         '    <button data-tab="files"    data-t="web.tab.files"></button>',
@@ -813,10 +864,13 @@ function init(state) {{
         "      </div>",
         "    </div>",
         "",
-        '    <div id="panel-settings" class="panel">',
-        '      <form id="form-settings"></form>',
-        "    </div>",
-        "",
+    ]
+    for g in groups:
+        lines.append(f'    <div id="panel-{g["id"]}" class="panel">')
+        if g["note"]:
+            lines.append(f'      <p class="note" data-t="{g["note"]}"></p>')
+        lines += [f'      <form id="form-{g["id"]}"></form>', "    </div>", ""]
+    lines += [
         '    <div id="panel-contacts" class="panel">',
         '      <form id="form-contacts"></form>',
         "    </div>",

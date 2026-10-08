@@ -25,6 +25,9 @@
 # loader, the generated example file and the page's form use when the file has no entry of that list.
 # Optional on a bool [[key]]: `widget = "checkbox"` makes the page draw a checkbox, not a yes/no list.
 #
+# `group`:  on every key of a file that has [[group]] entries (settings.toml), and only there: the tab of
+#           the parents' page that shows the key. All keys of one section share a group, because a
+#           section is one table of the file and one box of the form.
 # `apply`:  restart = takes effect on next start; immediate = takes effect without restart
 # `secret`: value must never appear in logs
 # `field`:  Profile field that this key fills; empty string if the key is returned separately
@@ -53,6 +56,29 @@ path    = "/config/secrets.toml"
 example = "config/examples/secrets.toml"
 label   = "config.file.secrets.label"
 secret  = true
+
+# ---------------------------------------------------------------------------
+# Groups — the tabs settings.toml is shown on, in the order of the tab bar.
+# On one page the settings needed too much scrolling, and most parents never touch half of them.
+# `label` names the tab (a web.* catalog key); `note` is an optional line at the top of the tab.
+# Every tab saves into the one settings.toml.
+# ---------------------------------------------------------------------------
+
+[[group]]
+id      = "basics"
+file    = "settings"
+label   = "web.tab.basics"
+
+[[group]]
+id      = "school_time"
+file    = "settings"
+label   = "web.tab.school-time"
+
+[[group]]
+id      = "advanced"
+file    = "settings"
+label   = "web.tab.advanced"
+note    = "web.settings.advanced-note"
 
 # ---------------------------------------------------------------------------
 # Sections — list=true for [[array of tables]], list=false for [regular]
@@ -206,6 +232,7 @@ field   = "wifi.networks"
 [[key]]
 file    = "settings"
 section = "child"
+group   = "basics"
 name    = "name"
 type    = "string"
 default = ""
@@ -224,6 +251,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "display"
+group   = "advanced"
 name    = "map_url"
 type    = "string"
 default = "https://maps.google.com/?q={lat},{lon}"
@@ -242,6 +270,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "modem"
+group   = "advanced"
 name    = "apn"
 type    = "string"
 default = ""
@@ -260,6 +289,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "battery"
+group   = "advanced"
 name    = "capacity_mah"
 type    = "integer"
 default = "1500"
@@ -279,6 +309,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "interface"
+group   = "basics"
 name    = "language"
 type    = "catalog_code"
 default = "en"
@@ -297,6 +328,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "sms"
+group   = "basics"
 name    = "language"
 type    = "catalog_code"
 default = "en"
@@ -311,6 +343,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "sms"
+group   = "basics"
 name    = "extra_trigger_words"
 type    = "string_list"
 default = ""
@@ -328,6 +361,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "free_text"
 type    = "bool"
 default = "false"
@@ -341,6 +375,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "radio"
 type    = "bool"
 default = "false"
@@ -354,6 +389,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "parent_tools"
 type    = "bool"
 default = "false"
@@ -367,6 +403,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "message_vibration"
 type    = "bool"
 default = "true"
@@ -380,6 +417,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "call_vibration"
 type    = "bool"
 default = "true"
@@ -393,6 +431,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "quiet_call_vibration"
 type    = "bool"
 default = "false"
@@ -406,6 +445,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "features"
+group   = "basics"
 name    = "modem_sleep"
 type    = "bool"
 default = "true"
@@ -423,6 +463,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "remote_queries"
+group   = "basics"
 name    = "notice"
 type    = "enum"
 enums   = "silent|history|notify"
@@ -441,6 +482,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "time"
+group   = "advanced"
 name    = "timezone"
 type    = "string"
 default = ""
@@ -459,6 +501,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "log"
+group   = "advanced"
 name    = "level"
 type    = "enum"
 enums   = "all|events|errors"
@@ -477,6 +520,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "wifi"
+group   = "advanced"
 name    = "auto_off_minutes"
 type    = "integer"
 default = "10"
@@ -497,6 +541,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "radio"
+group   = "advanced"
 name    = "name"
 type    = "string"
 default = "phoneplus"
@@ -511,6 +556,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "radio"
+group   = "advanced"
 name    = "peer"
 type    = "string"
 default = ""
@@ -529,6 +575,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "quiet_hours"
+group   = "school_time"
 name    = "days"
 type    = "weekday_set"
 default = ""
@@ -542,6 +589,7 @@ required = true
 [[key]]
 file    = "settings"
 section = "quiet_hours"
+group   = "school_time"
 name    = "from"
 type    = "time_of_day"
 default = ""
@@ -555,6 +603,7 @@ required = true
 [[key]]
 file    = "settings"
 section = "quiet_hours"
+group   = "school_time"
 name    = "to"
 type    = "time_of_day"
 default = ""
@@ -568,6 +617,7 @@ required = true
 [[key]]
 file    = "settings"
 section = "quiet_hours"
+group   = "school_time"
 name    = "enabled"
 type    = "bool"
 # True, so that a window written before the key existed keeps locking the phone.
@@ -590,6 +640,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "tiles"
+group   = "basics"
 name    = "label"
 type    = "string"
 default = ""
@@ -604,6 +655,7 @@ required = false
 [[key]]
 file    = "settings"
 section = "tiles"
+group   = "basics"
 name    = "action"
 type    = "enum"
 enums   = "call|compose|messages|light|status|sos"
@@ -618,6 +670,7 @@ required = true
 [[key]]
 file    = "settings"
 section = "tiles"
+group   = "basics"
 name    = "target"
 type    = "phone_number"
 default = ""
