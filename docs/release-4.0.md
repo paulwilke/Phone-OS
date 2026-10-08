@@ -1,10 +1,10 @@
 # Release 4.0
 
-Version 4.0.0 of PhonePlus, the emergency phone for a child on the LilyGO T-Deck Pro MAX. What changed against 3.2 is in [../CHANGELOG.md](../CHANGELOG.md), the way from a running 3.2 device is in [upgrading.md](upgrading.md), and every open question is in [open-points.md](open-points.md). This page says what the release is, what it is not, and where the owner's checklist stands.
+Version 4.0.1 of PhonePlus, the emergency phone for a child on the LilyGO T-Deck Pro MAX. What changed against 3.2 is in [../CHANGELOG.md](../CHANGELOG.md), the way from a running 3.2 device is in [upgrading.md](upgrading.md), and every open question is in [open-points.md](open-points.md). This page says what the release is, what it is not, and where the owner's checklist stands.
 
 ## What the release is
 
-The firmware of `pio run -e device`, built from this repository at the commit that carries the tag `v4.0.0`, together with the simulator, the host tests, the tools for the USB cable and the user's guide in English, German and French. The version is the file `VERSION`; the firmware reads it at build time and shows it on the status page ("Firmware: 4.0.0") and in the first log line of every start.
+The firmware of `pio run -e device`, built from this repository at the commit that carries the tag `v4.0.1`, together with the simulator, the host tests, the tools for the USB cable and the user's guide in English, German and French. The version is the file `VERSION`; the firmware reads it at build time and shows it on the status page ("Firmware: 4.0.1"). 4.0.1 changes the display fonts and fixes what the change showed; [../CHANGELOG.md](../CHANGELOG.md) lists it and in the first log line of every start.
 
 ## What the release is not
 

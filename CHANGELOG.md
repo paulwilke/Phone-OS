@@ -2,6 +2,13 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.0.1
+
+- **The display fonts are Adobe's Helvetica bitmaps** instead of Lucida Sans, whose licence allows their use but not their distribution or change. The sizes and the characters are the same; the letters are a little narrower, so some texts take fewer lines. Host-tested; not verified on the device.
+- **A text that was scrolled and then gets more room shows its first lines again.** Before, the lines above the scroll position stayed hidden although the whole text fitted. Host-tested.
+- **The French warning after a wrong PIN is shorter** ("PIN faux. Ne pas redémarrer ...") and fits the page without scrolling. Host-tested.
+- **The firmware is built for PlatformIO's own ESP32-S3 board** with the settings of the T-Deck Pro MAX, instead of a board description copied from another project. The build settings and the partition table are the same as before. Compiled; not verified on the device.
+
 ## 4.0.0
 
 Version 4.0 is a new code base, written from the start in English, layered and tested on a laptop. It replaces the 3.2 firmware. The release notes with the owner's checklist are in [docs/release-4.0.md](docs/release-4.0.md).
