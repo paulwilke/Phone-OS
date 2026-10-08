@@ -150,6 +150,11 @@ def _schema_catalog_keys():
             k = entry.get(field)
             if k:
                 keys[k] = "config/schema.toml"
+        # The words of an enum's values (same formula as enum_option_label_key in gen_config.py).
+        if entry.get("type") == "enum" and entry.get("label", "").endswith(".label"):
+            stem = entry["label"][:-len(".label")]
+            for v in entry.get("enums", "").split("|"):
+                keys[f"{stem}.{v}.label"] = "config/schema.toml"
     return keys
 
 

@@ -239,6 +239,14 @@ function richElement(tag) {
     },
     querySelector(sel) { return this.querySelectorAll(sel)[0] ?? null; },
   };
+  if (tag === 'select') {
+    // a select holds the value of its selected option (the first one when none is), as in a browser
+    let own;
+    Object.defineProperty(el, 'value', {
+      get() { return own ?? (this.children.find((o) => o.selected) ?? this.children[0])?.value ?? ''; },
+      set(v) { own = v; },
+    });
+  }
   return el;
 }
 
@@ -656,6 +664,69 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   // a directory the device does not have: its error text, not an empty list
   const pg404 = await open({ onFetch: (p, o, rep) => (p.startsWith('/api/files') ? rep(404, { error: 'Directory not found' }) : null) });
   assert(pg404.els['files-error'].textContent.includes('Directory not found'), 'a failed listing shows the device\'s error text');
+}
+
+// (l) the options of an enum select are catalog words, the saved value is the raw one (the first page
+// showed "parent" and "family" as they are written in the file)
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const schema = JSON.parse(readFileSync(resolve(ROOT, 'config', 'form_generated.json'), 'utf8'));
+  const enumKeys = [];
+  for (const file of Object.values(schema.files))
+    for (const sec of file.sections)
+      for (const k of sec.keys) if (k.type === 'enum') enumKeys.push({ sec, k });
+  assert(enumKeys.length >= 4, 'the schema has enum keys to test: ' + enumKeys.map((e) => e.k.name).join(', '));
+  // every value of every enum has a word in every shipped web catalog, and the schema names its key
+  for (const { sec, k } of enumKeys) for (const v of k.enums.split('|')) {
+    const key = k.option_labels && k.option_labels[v];
+    assert(key === k.label.replace(/\.label$/, '') + '.' + v + '.label', 'the schema names the catalog key of ' + sec.id + '.' + k.name + '=' + v + ': ' + key);
+    for (const [name, cat] of [['en', en], ['de', de], ['fr', fr]])
+      assert(cat[key] && cat[key].trim() !== '', name + ' has a word for ' + key);
+  }
+  assert(de['config.contact.role.parent.label'] === 'Elternteil' && de['config.contact.role.family.label'] === 'Familie', 'German: Elternteil / Familie');
+  assert(fr['config.contact.role.parent.label'] === 'Parent' && fr['config.contact.role.family.label'] === 'Famille', 'French: Parent / Famille');
+
+  const walk3 = (el, out = []) => { for (const c of el.children || []) { out.push(c); walk3(c, out); } return out; };
+  const openTab = async (tab, lang, settings = {}) => {
+    const pg = await runPage({ storedAuth: auth, storedLang: lang, catalogs: { en, de }, rich: true, settings });
+    pg.dataT.find((e) => e.attrs['data-tab'] === tab).listeners.click();
+    await pg.settle();
+    return pg;
+  };
+  const optionsOf = (pg, form, name) => walk3(pg.els[form]).find((c) => c.tag === 'select' && c.name === name).children.map((o) => [o.value, o.textContent]);
+
+  // the role of a contact
+  for (const [lang, words] of [['en', ['Parent', 'Family']], ['de', ['Elternteil', 'Familie']]]) {
+    const pg = await openTab('contacts', lang);
+    const opts = optionsOf(pg, 'form-contacts', 'role');
+    assert(opts.map((o) => o[1]).join('|') === words.join('|'), lang + ': the role options read ' + words.join(' / ') + ': ' + opts.map((o) => o[1]).join('|'));
+    assert(opts.map((o) => o[0]).join('|') === 'parent|family', lang + ': the option values stay parent|family');
+  }
+  // the saved value is the raw one, whatever language the page is in
+  {
+    const pg = await openTab('contacts', 'de');
+    const role = walk3(pg.els['form-contacts']).find((c) => c.tag === 'select' && c.name === 'role');
+    role.value = 'family';
+    walk3(pg.els['form-contacts']).find((c) => c.className === 'btn-primary').listeners.click();
+    await pg.settle();
+    const sent = JSON.parse(pg.calls.find((c) => c.method === 'PUT' && c.path === '/api/contacts').body);
+    assert(sent.contact[0].role === 'family', 'the German word "Familie" is saved as family: ' + JSON.stringify(sent.contact[0]));
+    const pg2 = await openTab('contacts', 'de');
+    walk3(pg2.els['form-contacts']).find((c) => c.className === 'btn-primary').listeners.click();
+    await pg2.settle();
+    const sent2 = JSON.parse(pg2.calls.find((c) => c.method === 'PUT' && c.path === '/api/contacts').body);
+    assert(sent2.contact[0].role === 'parent', 'a contact that is a parent stays parent when saved: ' + sent2.contact[0].role);
+  }
+  // the other enum selects of the page are worded the same way
+  {
+    const pg = await openTab('settings', 'de', { log: { level: 'events' }, remote_queries: { notice: 'history' } });
+    for (const [name, key] of [['level', 'config.log.level'], ['notice', 'config.remote_queries.notice']]) {
+      const opts = optionsOf(pg, 'form-settings', name);
+      const raw = opts.map((o) => o[0]);
+      assert(opts.every(([v, text]) => text === de[key + '.' + v + '.label'] && text !== v), 'settings: the ' + name + ' options are catalog words: ' + opts.map((o) => o[1]).join('|'));
+      assert(raw.length === 3, 'settings: ' + name + ' keeps its raw values: ' + raw.join('|'));
+    }
+  }
 }
 
 // ---------- summary ----------

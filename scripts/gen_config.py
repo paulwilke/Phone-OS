@@ -326,12 +326,24 @@ def generate_form_json(files, sections, keys):
                     "help":     k["help"],
                     "field":    k.get("field", ""),
                 }
+                if k["type"] == "enum":
+                    # The page shows these words, never the raw value; the saved value stays the raw one.
+                    kobj["option_labels"] = {v: enum_option_label_key(k["label"], v)
+                                             for v in k["enums"].split("|")}
                 if "widget" in k:
                     kobj["widget"] = k["widget"]
                 sec_obj["keys"].append(kobj)
             out["files"][fid]["sections"].append(sec_obj)
 
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"
+
+
+def enum_option_label_key(label_key, value):
+    """Catalog key of the word for one value of an enum key: `config.contact.role.label` + `parent` is
+    `config.contact.role.parent.label`. It ends in `.label` so that it travels with the labels
+    (/api/lang/<code>), which the page needs at once; scripts/check_i18n.py derives the same key."""
+    stem = label_key[:-len(".label")] if label_key.endswith(".label") else label_key
+    return f"{stem}.{value}.label"
 
 
 def _section_heading(section, file_id):

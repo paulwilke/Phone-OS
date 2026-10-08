@@ -281,7 +281,12 @@
               "enums": "silent|history|notify",
               "label": "config.remote_queries.notice.label",
               "help": "config.remote_queries.notice.help",
-              "field": "commandNotice"
+              "field": "commandNotice",
+              "option_labels": {
+                "silent": "config.remote_queries.notice.silent.label",
+                "history": "config.remote_queries.notice.history.label",
+                "notify": "config.remote_queries.notice.notify.label"
+              }
             }
           ]
         },
@@ -327,7 +332,12 @@
               "enums": "all|events|errors",
               "label": "config.log.level.label",
               "help": "config.log.level.help",
-              "field": "logLevel"
+              "field": "logLevel",
+              "option_labels": {
+                "all": "config.log.level.all.label",
+                "events": "config.log.level.events.label",
+                "errors": "config.log.level.errors.label"
+              }
             }
           ]
         },
@@ -496,7 +506,15 @@
               "enums": "call|compose|messages|light|status|sos",
               "label": "config.tiles.action.label",
               "help": "config.tiles.action.help",
-              "field": ""
+              "field": "",
+              "option_labels": {
+                "call": "config.tiles.action.call.label",
+                "compose": "config.tiles.action.compose.label",
+                "messages": "config.tiles.action.messages.label",
+                "light": "config.tiles.action.light.label",
+                "status": "config.tiles.action.status.label",
+                "sos": "config.tiles.action.sos.label"
+              }
             },
             {
               "name": "target",
@@ -566,7 +584,11 @@
               "enums": "parent|family",
               "label": "config.contact.role.label",
               "help": "config.contact.role.help",
-              "field": ""
+              "field": "",
+              "option_labels": {
+                "parent": "config.contact.role.parent.label",
+                "family": "config.contact.role.family.label"
+              }
             }
           ]
         }

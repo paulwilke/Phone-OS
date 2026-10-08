@@ -317,7 +317,9 @@ function buildField(key, value, namePrefix) {{
     input = document.createElement('select');
     input.name = namePrefix + key.name;
     key.enums.split('|').forEach(function(v) {{
-      var opt = document.createElement('option'); opt.value = v; opt.textContent = v;
+      // The parent reads the catalog word; the value that is saved is the raw one.
+      var opt = document.createElement('option'); opt.value = v;
+      opt.textContent = T[key.option_labels[v]] !== undefined ? T[key.option_labels[v]] : v;
       if (v === value) opt.selected = true;
       input.appendChild(opt);
     }});
