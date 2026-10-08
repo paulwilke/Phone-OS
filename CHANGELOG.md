@@ -2,6 +2,11 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.0.2
+
+- **The status line names the network again** ("Telekom", "Orange"). The modem answered the question for the operator with a blank, so the line said only "Network". The device now asks for the network's code when the name is blank and turns the code into the operator's name (Germany, its neighbours and the usual holiday countries; elsewhere the code). The log says `Cellular: network Telekom` when the network changes. Host-tested; verified on the device (2026-10-08).
+- **"Connecting ..." while the device connects.** After switching on, the status line said "No network", "Network" and "No calls yet" in turn before the operator's name. It now says "Connecting ..." until the network and the calls are ready; a network lost later is "No network" as before, and the network page still says which part is missing. Host-tested; not verified on the device.
+
 ## 4.0.1
 
 - **The display fonts are Adobe's Helvetica bitmaps** instead of Lucida Sans, whose licence grants their use but says nothing about distributing or changing them; Adobe's notice allows both. The sizes and the characters are the same; the letters are a little narrower, so some texts take fewer lines. Host-tested; not verified on the device.

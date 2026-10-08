@@ -352,20 +352,40 @@ void test_the_left_side_names_the_most_important_thing() {
   TEST_ASSERT_EQUAL_STRING("SIM locked", statusLeft(m, t).text.c_str());
 }
 
-// A network that is there while the IMS is not: calls come in a minute, which "SMS only" would not say.
-void test_the_left_side_says_when_calls_are_not_ready_yet() {
+// A network that is there while the IMS is not: calls come about half a minute later, so the device is
+// still connecting. The bar said "No calls yet", too much text for a state that passes by itself (owner,
+// 2026-10-08); "SMS only", a restriction of the network, stays.
+void test_the_left_side_says_connecting_while_calls_are_not_ready_yet() {
   Translator t = languages::loaded();
   t.select("en");
   StatusModel m;
   m.link = StatusModel::Link::Operator;
   m.operatorName = "Example Mobile";
   m.voice = StatusModel::Voice::NotReady;
-  TEST_ASSERT_EQUAL_STRING("No calls yet", statusLeft(m, t).text.c_str());
+  TEST_ASSERT_EQUAL_STRING("Connecting ...", statusLeft(m, t).text.c_str());
   TEST_ASSERT_FALSE(statusLeft(m, t).isOperatorName);
   t.select("de");
-  TEST_ASSERT_EQUAL_STRING("Noch keine Anrufe", statusLeft(m, t).text.c_str());
+  TEST_ASSERT_EQUAL_STRING("Verbinde ...", statusLeft(m, t).text.c_str());
   m.link = StatusModel::Link::Radio;               // it concerns the mobile network only
   TEST_ASSERT_EQUAL_STRING("Funk", statusLeft(m, t).text.c_str());
+}
+
+// The modem on its way to its first network, or registered before the network's name came: "Connecting",
+// not "Network" or "No network" (owner, 2026-10-08). A SIM problem and school time still win.
+void test_the_left_side_says_connecting_while_the_modem_is_on_its_way() {
+  Translator t = languages::loaded();
+  t.select("de");
+  StatusModel m;
+  m.link = StatusModel::Link::Connecting;
+  TEST_ASSERT_EQUAL_STRING("Verbinde ...", statusLeft(m, t).text.c_str());
+  TEST_ASSERT_FALSE(statusLeft(m, t).isOperatorName);
+  t.select("fr");
+  TEST_ASSERT_EQUAL_STRING("Connexion ...", statusLeft(m, t).text.c_str());
+  t.select("en");
+  m.quietHours = true;
+  TEST_ASSERT_EQUAL_STRING("School time", statusLeft(m, t).text.c_str());
+  m.sim = StatusModel::Sim::Missing;
+  TEST_ASSERT_EQUAL_STRING("No SIM", statusLeft(m, t).text.c_str());
 }
 
 void test_the_left_side_without_an_operator() {
@@ -468,6 +488,11 @@ StatusModel model(const char* kind) {
     m.batteryPercent = 3;
   } else if (k == "not-ready") {
     m.voice = StatusModel::Voice::NotReady;
+  } else if (k == "connecting") {
+    // after switching on: the start-up fix runs while the modem looks for its network
+    m.link = StatusModel::Link::Connecting;
+    m.operatorName.clear();
+    m.locating = true;
   }
   return m;
 }
@@ -477,7 +502,7 @@ StatusModel model(const char* kind) {
 void test_the_status_bar_fits_its_area_in_every_language() {
   const Rect area = ScreenLayout::standard().status;
   languages::forEach([&](const std::string& language, Translator& t) {
-    for (const char* kind : {"plain", "long-name", "school", "sim-locked", "nothing", "sms-only", "not-ready", "unnamed"}) {
+    for (const char* kind : {"plain", "long-name", "school", "sim-locked", "nothing", "sms-only", "not-ready", "unnamed", "connecting"}) {
       FrameBuffer fb;
       fb.beginRegion(area);
       drawStatusBar(fb, area, model(kind), t);
@@ -1273,7 +1298,8 @@ int main() {
   RUN_TEST(test_every_standard_soft_key_word_fits_either_button_with_and_without_the_arrows);
   RUN_TEST(test_the_battery_is_five_bars_rounded_up);
   RUN_TEST(test_the_left_side_names_the_most_important_thing);
-  RUN_TEST(test_the_left_side_says_when_calls_are_not_ready_yet);
+  RUN_TEST(test_the_left_side_says_connecting_while_calls_are_not_ready_yet);
+  RUN_TEST(test_the_left_side_says_connecting_while_the_modem_is_on_its_way);
   RUN_TEST(test_the_left_side_without_an_operator);
   RUN_TEST(test_the_date_is_written_the_way_the_language_writes_it);
   RUN_TEST(test_every_weekday_has_its_own_name_and_the_index_wraps);

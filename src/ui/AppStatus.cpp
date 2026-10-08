@@ -17,6 +17,7 @@ StatusModel statusModelOf(const AppCore::State& state) {
     case Connectivity::NetworkLabel::Kind::None: model.link = StatusModel::Link::None; break;
     case Connectivity::NetworkLabel::Kind::Operator: model.link = StatusModel::Link::Operator; break;
     case Connectivity::NetworkLabel::Kind::Radio: model.link = StatusModel::Link::Radio; break;
+    case Connectivity::NetworkLabel::Kind::Connecting: model.link = StatusModel::Link::Connecting; break;
   }
   model.operatorName = state.network.name;
   model.quietHours = state.schoolTime;

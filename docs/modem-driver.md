@@ -42,7 +42,9 @@ AT+CFUN=1                            the network builds the IMS bearer from cont
 
 ## Network, operator, time, signal
 
-`operatorName()` is the short name of `AT+COPS?` (a network that answers with its code gets the name for the usual countries) and empty without a network; `signalBars()` is 0 … 5 from `AT+CSQ` and 0 without a network; `networkTime()` is `AT+CCLK?` once an hour and after registration, and not known for a modem that has no network time yet (its clock starts in 1970 or 2004). A network that is lost after the start takes the operator, the bars and the voice with it, the state goes back to `Registering` and the 90-second window is **not** applied again: a device in the woods is not in error.
+`operatorName()` is the short name of `AT+COPS?` (a network that answers with its code gets the name for the usual countries) and empty without a network; `signalBars()` is 0 … 5 from `AT+CSQ` and 0 without a network; `networkTime()` is `AT+CCLK?` once an hour and after registration, and not known for a modem that has no network time yet (its clock starts in 1970 or 2004). **A blank name is no name.** Seen on the device 2026-10-08 (firmware 4.0.1, a Telekom SIM in Germany): `+COPS: 0,0," ",7`, a blank where the operator belongs, so the status line said only "Network". A name of blanks is now no name; the driver logs `Cellular: the network has no name, asking for its code` and from then on asks `AT+COPS=3,2;+COPS?` (the format switched to the numeric code, and the question in one line), at once after registration and at every periodic question; the table of `at::operatorNameForCode()` turns `26201` into "Telekom" and `20801` into "Orange", a code it does not know stays a code. The switch is kept across restarts of the modem: it is how this SIM and modem answer. The network is logged when it changes (`Cellular: network Telekom`). Host-tested; verified on the device the same day (`Cellular: network Telekom` within seconds after the blank).
+
+A network that is lost after the start takes the operator, the bars and the voice with it, the state goes back to `Registering` and the 90-second window is **not** applied again: a device in the woods is not in error.
 
 ## A restart of the modem
 
@@ -109,6 +111,7 @@ Nothing below was invented for the tests; each line is something the device or t
 | Manual choice of the network after eight rounds, and a longer window for it | a foreign SIM found no network in Germany automatically; the search once outlasted the window and the modem went to `Error` |
 | The operator and the network are asked every 30 seconds | abroad the device kept showing the home operator for lack of a question (2026-10-03) |
 | A code in place of an operator name becomes a name | some networks answer `AT+COPS?` with `26201` although the text was asked |
+| A blank operator name makes the driver ask for the code | the A7682E answered `" "` with a Telekom SIM (2026-10-08) |
 | `*ATREADY` after an answer is a restart | a bad SIM contact restarts the modem every 30 to 60 seconds |
 | The IMS is asked right before `ATD` | the state of 30 seconds ago may be gone, and `ATD` without the IMS hangs the modem |
 | A failed dial waits for `AT+CEER` | calls ended after two seconds with only "did not connect" and nobody saw why |

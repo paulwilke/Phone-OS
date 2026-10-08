@@ -596,6 +596,40 @@ void test_the_operator_comes_from_the_network_and_a_code_becomes_a_name() {
   TEST_ASSERT_EQUAL_STRING("Telekom", r.driver.operatorName().c_str());
 }
 
+// Seen on the device 2026-10-08 (Telekom SIM in Germany): the modem answered "+COPS: 0,0," ",7", a blank where the
+// name belongs, and the status line said "Network". A blank is no name; the driver then asks for the network's
+// code at once and from then on, and the table makes it "Telekom".
+void test_a_blank_operator_name_makes_the_driver_ask_for_the_code() {
+  Rig r;
+  Script s;
+  s.cops = "+COPS: 0,0,\" \",7";
+  s.apply(r.t);
+  r.t.reply("AT+COPS=3,2;+COPS?", {"+COPS: 0,2,\"26201\",7"});
+  TEST_ASSERT_TRUE(r.start());
+  r.run(2000);
+  TEST_ASSERT_EQUAL_STRING("Telekom", r.driver.operatorName().c_str());
+  TEST_ASSERT_TRUE(r.logged("Cellular: the network has no name, asking for its code"));
+  TEST_ASSERT_TRUE(r.logged("Cellular: network Telekom"));
+  const int asked = r.count("AT+COPS=3,2;+COPS?");
+  TEST_ASSERT_TRUE(asked >= 1);
+  r.run(31000);                                    // the periodic question asks for the code too
+  TEST_ASSERT_TRUE(r.count("AT+COPS=3,2;+COPS?") > asked);
+  TEST_ASSERT_EQUAL_STRING("Telekom", r.driver.operatorName().c_str());
+}
+
+// A network that has a name is asked for it as before, and logged once, not at every question.
+void test_a_named_network_is_asked_for_its_name_and_logged_once() {
+  Rig r;
+  Script().apply(r.t);
+  TEST_ASSERT_TRUE(r.start());
+  r.run(65000);
+  TEST_ASSERT_EQUAL_STRING("Example Mobile", r.driver.operatorName().c_str());
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=3,2;+COPS?"));
+  int lines = 0;
+  for (const std::string& l : r.logs) lines += l.find("Cellular: network ") != std::string::npos ? 1 : 0;
+  TEST_ASSERT_EQUAL(1, lines);
+}
+
 void test_the_network_time_and_zone_come_from_cclk() {
   Rig r;
   Script().apply(r.t);
@@ -826,6 +860,8 @@ int main(int, char**) {
   RUN_TEST(test_the_network_mode_comes_from_the_configuration);
   RUN_TEST(test_a_registration_for_sms_only_counts_as_registered);
   RUN_TEST(test_the_operator_comes_from_the_network_and_a_code_becomes_a_name);
+  RUN_TEST(test_a_blank_operator_name_makes_the_driver_ask_for_the_code);
+  RUN_TEST(test_a_named_network_is_asked_for_its_name_and_logged_once);
   RUN_TEST(test_the_network_time_and_zone_come_from_cclk);
   RUN_TEST(test_a_modem_clock_that_has_no_network_time_is_no_time);
   RUN_TEST(test_the_signal_is_five_bars_at_most_and_zero_without_a_network);

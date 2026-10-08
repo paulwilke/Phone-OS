@@ -25,11 +25,13 @@ void LockScreen::draw(Display& display, const Rect& area) {
   y += big.lineHeight() + 6;
 
   // The answer to "can they reach me": connected, only by SMS, or not.
-  const bool anyNetwork = state().network.kind != Connectivity::NetworkLabel::Kind::None;
+  // A modem that is still connecting cannot be reached yet.
+  const bool anyNetwork = state().network.kind == Connectivity::NetworkLabel::Kind::Operator ||
+                          state().network.kind == Connectivity::NetworkLabel::Kind::Radio;
   const bool operatorNet = state().network.kind == Connectivity::NetworkLabel::Kind::Operator;
   const char* reachable = !anyNetwork ? "lock.not-connected"
                           : (operatorNet && state().voice == VoiceStatus::SmsOnly)    ? "status.sms-only"
-                          : (operatorNet && state().voice == VoiceStatus::ImsMissing) ? "status.telephony-not-ready"
+                          : (operatorNet && state().voice == VoiceStatus::ImsMissing) ? "status.connecting"
                                                                                        : "lock.connected";
   text::drawCentered(display, body, area, y, t().get(reachable));
   y += body.lineHeight() + 22;

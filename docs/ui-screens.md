@@ -30,9 +30,9 @@ A screen that needs something the core does not hand out as data — the acceler
 | Bar | From the state |
 |---|---|
 | SIM problem | `SimStatus`: missing, PIN required or wrong (`PinWrong` is the same word: the stored PIN was rejected and is never tried again), locked (PUK). "Unknown" is a modem that was not asked yet: it tries anyway, so the bar says nothing |
-| network | the network label as data: operator, radio, none. A network with **no name** is shown by the general word `status.network` ("Network"), not as "No network": the device is connected |
+| network | the network label as data: operator, radio, connecting, none. **Connecting** (`status.connecting`, "Connecting ...") is a modem on its way: switched on and searching for its first network since then, or registered while the network's name has not come yet; a network lost after the first one is "No network", so that the child sees that nobody can reach the device. A network whose name is empty after shortening is shown by the general word `status.network` ("Network") |
 | school time | `schoolTime` |
-| "SMS only", "No calls yet" | `voice`: `SmsOnly` is a restriction of the network, `ImsMissing` (shown as "No calls yet") is telephony that is not ready and usually passes; `Unknown` says nothing, like an unknown SIM |
+| "SMS only", "Connecting ..." | `voice`: `SmsOnly` is a restriction of the network, `ImsMissing` is telephony that is not ready and usually passes within half a minute, shown as "Connecting ..." (owner, 2026-10-08: "No calls yet" was too much text for it; the network page still says which of the two is missing); `Unknown` says nothing, like an unknown SIM |
 | "GPS" | `positioningActive`: a device that locates in secret is what this one must not be |
 | battery | `batteryPercent`, five bars |
 | date | `wall`: month, day and weekday, or the "unknown" form when the time is not known |
@@ -56,7 +56,7 @@ The core's notice is a kind with a number (for who it concerns) and a minute (fo
 | `systemEntry` | a message of source System | the row of the history ("Missed call from Grandma"); an entry from an earlier version (a sentence) or from a later one (a kind this version does not know) is shown as it was stored |
 | `callReason` | `busy`, `no-answer`, `no-network`, `sms-only`, `not-connected` | a short phrase; an unknown code is shown as given |
 | `wifiReason` | `WifiReason` | why Wi-Fi is off or failed, nothing for `None`; a `switch` without a default, so a new reason is a compiler warning |
-| `networkLabel` | the network label | the operator's name or the word for none, radio, or "Network" |
+| `networkLabel` | the network label | the operator's name or the word for none, radio, connecting, or "Network" |
 | `peerName` | a phone number | the contact's name, the number, or `peer.unknown` |
 | `clockTime` | a minute of the day | `HH:MM` |
 

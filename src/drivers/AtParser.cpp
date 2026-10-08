@@ -358,7 +358,10 @@ bool parseCopsName(const char* line, char* name, size_t nameSize) {
   const char* open = strchr(line, '"');
   if (!open) return false;
   const char* close = strchr(open + 1, '"');
-  if (!close || close == open + 1) return false;
+  if (!close) return false;
+  // A name of blanks is no name (the A7682E answered " " with a Telekom SIM in Germany, 2026-10-08).
+  while (open + 1 < close && open[1] == ' ') ++open;
+  if (close == open + 1) return false;
   size_t len = (size_t)(close - open - 1);
   if (len >= nameSize) len = nameSize - 1;
   memcpy(name, open + 1, len);

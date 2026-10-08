@@ -4,7 +4,7 @@ Code: `src/ui/screens/NetScreen.{h,cpp}`; tests in `test/test_screen_net/`. What
 
 - the SIM, **only when there is a problem** (no card, PIN missing, PIN wrong, locked);
 - the network (the operator's name, or the words for none or the radio, as the status bar has them);
-- the IMS, **only where the modem knows it** (yes when telephony works, no when it does not): the one fact that tells "no calls yet" from "no network";
+- the IMS, **only where the modem knows it** (yes when telephony works, no when it does not): the one fact that tells "calls not ready yet" from "no network";
 - the status: connected, SMS only, calls not ready, not connected;
 - the signal as a number ("4/5" reads even when the display is small);
 - cellular power, the modem's sleep, whether the time is known, how many messages wait.

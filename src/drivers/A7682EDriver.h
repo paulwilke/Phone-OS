@@ -278,6 +278,12 @@ private:
   bool registered_ = false;
   bool smsOnly_ = false;
   std::string operator_;
+  std::string loggedOperator_;  // the network is logged when it changes, not at every question
+  // The modem gave a blank name: the operator is asked for as its code (AT+COPS=3,2), which the
+  // table of at::operatorNameForCode() turns into a name. Kept across restarts of the modem: it is
+  // how this SIM and modem answer.
+  bool operatorByCode_ = false;
+  const char* operatorQuery() const { return operatorByCode_ ? "AT+COPS=3,2;+COPS?" : "AT+COPS?"; }
   int rssi_ = 99;
   bool imsKnown_ = false;
   bool imsRegistered_ = false;

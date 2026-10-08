@@ -305,7 +305,8 @@ void A7682EDriver::finishJob(bool ok) {
       // Registered, and the question about the IMS is answered (or was not, which voiceStatus() then
       // says as "unknown"): now the modem is ready.
       setState(ModemState::Ready);
-      nextSignal_.set(now, config_.signalIntervalMs);
+      // A network without a name is asked for its code at once, not in half a minute.
+      nextSignal_.set(now, operator_.empty() && operatorByCode_ ? 0 : config_.signalIntervalMs);
       nextClock_.set(now, config_.clockIntervalMs);
       drainInboxPending_ = true;  // what arrived while the modem was away
       break;
@@ -586,7 +587,7 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       }
       if (stepIndex_ == 0) {
         stepIndex_ = 1;
-        send("AT+COPS?");
+        send(operatorQuery());
         expect(config_.commandTimeoutMs);
       } else if (stepIndex_ == 1) {
         stepIndex_ = 2;
@@ -639,7 +640,7 @@ void A7682EDriver::step(const char* line, at::LineType type) {
         send("AT+CREG?");
       } else if (stepIndex_ == 1) {
         stepIndex_ = 2;
-        send("AT+COPS?");
+        send(operatorQuery());
       } else if (stepIndex_ == 2 && registered_) {
         stepIndex_ = 3;
         send("AT+CIREG?");
@@ -1025,8 +1026,25 @@ void A7682EDriver::onLine(const char* line) {
         at::parseFirstOperatorCode(line, pickedOperator_, sizeof(pickedOperator_));
         return;
       }
+      if (!registered_) return;
       char name[24];
-      if (at::parseCopsName(line, name, sizeof(name)) && registered_) operator_ = name;
+      if (at::parseCopsName(line, name, sizeof(name))) {
+        operator_ = name;
+        if (operator_ != loggedOperator_) {
+          loggedOperator_ = operator_;
+          log("Cellular: network " + operator_);
+        }
+      } else {
+        operator_.clear();  // a blank is no name: the status line says "Connecting", not a stale or empty name
+      }
+      if (operator_.empty() && !operatorByCode_) {
+        // Seen on the device 2026-10-08 (Telekom SIM in Germany): "+COPS: 0,0," ",7", a blank where the name
+        // belongs, so the status line said only "Network". The network's code is always there and the table
+        // knows the usual ones: from now on the driver asks for the code, at once.
+        operatorByCode_ = true;
+        log("Cellular: the network has no name, asking for its code");
+        nextSignal_.set(transport_.now(), 0);
+      }
       return;
     }
 

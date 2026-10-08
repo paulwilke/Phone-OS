@@ -25,7 +25,15 @@ bool Connectivity::registered() { return cellular::registered(power_, modem_); }
 Connectivity::NetworkLabel Connectivity::networkLabel() {
   NetworkLabel label;
   const std::string op = modem_.operatorName();
-  if (!op.empty()) {
+  const ModemState state = modem_.state();
+  if (state == ModemState::Off || state == ModemState::PoweringOn || state == ModemState::Initializing) namedSinceOn_ = false;
+  if (!op.empty()) namedSinceOn_ = true;
+  // Owner, 2026-10-08: after switching on, the status line said "Network" and "No calls yet" before the
+  // operator's name. While the modem is on its way it says "Connecting".
+  const bool modemOn = cellularEnabled() && state != ModemState::Off && state != ModemState::Error;
+  if (op.empty() && modemOn && (!namedSinceOn_ || state != ModemState::Registering)) {
+    label.kind = NetworkLabel::Kind::Connecting;
+  } else if (!op.empty()) {
     char buffer[24];
     oplabel::shortName(op.c_str(), buffer, sizeof buffer);
     label.kind = NetworkLabel::Kind::Operator;

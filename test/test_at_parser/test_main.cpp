@@ -347,6 +347,11 @@ void test_the_operator_name_comes_out_of_cops() {
   TEST_ASSERT_FALSE(parseCopsName("+COPS: 0", name, sizeof(name)));                 // not registered: no name
   TEST_ASSERT_EQUAL_STRING("", name);
   TEST_ASSERT_FALSE(parseCopsName("+COPS: 0,0,\"\",7", name, sizeof(name)));
+  // the A7682E with a Telekom SIM, 2026-10-08: a blank is no name either
+  TEST_ASSERT_FALSE(parseCopsName("+COPS: 0,0,\" \",7", name, sizeof(name)));
+  TEST_ASSERT_FALSE(parseCopsName("+COPS: 0,0,\"   \",7", name, sizeof(name)));
+  TEST_ASSERT_TRUE(parseCopsName("+COPS: 0,0,\" Example\",7", name, sizeof(name)));
+  TEST_ASSERT_EQUAL_STRING("Example", name);
   char small[8];
   TEST_ASSERT_TRUE(parseCopsName("+COPS: 0,0,\"A very long operator name\",7", small, sizeof(small)));
   TEST_ASSERT_EQUAL_STRING("A very ", small);                                       // cut to fit, still terminated

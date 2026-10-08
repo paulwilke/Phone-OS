@@ -118,6 +118,33 @@ void test_the_network_label_is_data() {
   TEST_ASSERT_TRUE(Kind::Operator == r.net.networkLabel().kind);
 }
 
+// Owner, 2026-10-08: after switching on, the status line said "Network" before the operator's name. While the
+// modem looks for its first network since it was switched on, the label is Connecting; a network lost after
+// that is no network, so that the child sees nobody can reach the device.
+void test_the_label_says_connecting_until_the_first_network_since_switching_on() {
+  Rig r;
+  using Kind = Connectivity::NetworkLabel::Kind;
+  r.modem.shutdown();
+  TEST_ASSERT_TRUE(Kind::None == r.net.networkLabel().kind);        // off is not connecting
+  r.networkLost();
+  r.modem.begin();                                                  // on, searching, never named a network
+  TEST_ASSERT_TRUE(Kind::Connecting == r.net.networkLabel().kind);
+  TEST_ASSERT_FALSE(r.net.registered());                            // connecting is not registered
+  r.networkBack();
+  TEST_ASSERT_TRUE(Kind::Operator == r.net.networkLabel().kind);
+  r.networkLost();                                                  // lost after it had one: no network
+  TEST_ASSERT_TRUE(Kind::None == r.net.networkLabel().kind);
+  r.modem.shutdown();                                               // switched off and on again: connecting
+  TEST_ASSERT_TRUE(Kind::None == r.net.networkLabel().kind);
+  r.modem.begin();
+  TEST_ASSERT_TRUE(Kind::Connecting == r.net.networkLabel().kind);
+  r.modem.setSimStatus(SimStatus::Missing);                         // a modem in error is not on its way
+  TEST_ASSERT_TRUE(Kind::None == r.net.networkLabel().kind);
+  r.modem.setSimStatus(SimStatus::Ready);
+  r.net.setCellularEnabled(false);                                  // switched off by the device
+  TEST_ASSERT_TRUE(Kind::None == r.net.networkLabel().kind);
+}
+
 // ---- radio and restart --------------------------------------------------------------------------
 
 void test_the_radio_starts_only_on_request_and_if_permitted() {
@@ -214,6 +241,7 @@ int main() {
   RUN_TEST(test_a_switched_modem_is_not_asleep);
   RUN_TEST(test_registered_needs_power_state_and_operator);
   RUN_TEST(test_the_network_label_is_data);
+  RUN_TEST(test_the_label_says_connecting_until_the_first_network_since_switching_on);
   RUN_TEST(test_the_radio_starts_only_on_request_and_if_permitted);
   RUN_TEST(test_a_restart_can_be_requested);
   RUN_TEST(test_wifi_is_off_until_someone_asks);

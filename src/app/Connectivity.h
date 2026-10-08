@@ -36,9 +36,11 @@ public:
 
   struct NetworkLabel {
     enum class Kind : uint8_t {
-      None,       // no operator and no radio
-      Operator,   // `name` is the operator, shortened for the status line
-      Radio,      // no operator, the radio runs
+      None,        // no operator and no radio
+      Operator,    // `name` is the operator, shortened for the status line
+      Radio,       // no operator, the radio runs
+      Connecting,  // the modem is on its way to a network: searching for the first one since it was
+                   // switched on, or registered while the network's name has not come yet
     };
     Kind kind = Kind::None;
     std::string name;  // only for Operator
@@ -95,4 +97,7 @@ private:
   WifiController* wifi_ = nullptr;
   bool radioStartRequested_ = false;
   bool restartRequested_ = false;
+  // The modem has named a network since it was last switched on: a network lost after that is "no
+  // network", not "connecting" (a child must see that nobody can reach the device).
+  bool namedSinceOn_ = false;
 };

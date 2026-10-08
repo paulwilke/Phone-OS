@@ -48,8 +48,12 @@ StatusLeft statusLeft(const StatusModel& model, i18n::Translator& t) {
     left.text = t.get("status.quiet");
   } else if (model.link == StatusModel::Link::Operator && model.voice == StatusModel::Voice::SmsOnly) {
     left.text = t.get("status.sms-only");
-  } else if (model.link == StatusModel::Link::Operator && model.voice == StatusModel::Voice::NotReady) {
-    left.text = t.get("status.telephony-not-ready");
+  } else if (model.link == StatusModel::Link::Connecting ||
+             (model.link == StatusModel::Link::Operator && model.voice == StatusModel::Voice::NotReady)) {
+    // The IMS comes about half a minute after the network: until then the device is still connecting
+    // (owner, 2026-10-08: "No calls yet" was too much text for a state that passes by itself). The
+    // network page still says which of the two is missing.
+    left.text = t.get("status.connecting");
   } else if (model.link == StatusModel::Link::Operator && !model.operatorName.empty()) {
     left.text = model.operatorName;
     left.isOperatorName = true;

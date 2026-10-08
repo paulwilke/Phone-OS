@@ -169,7 +169,7 @@ bool isSimNotInserted(const char* errorLine);
 
 // +COPS: <mode>[,<format>,"<name>"[,<act>]] → the name (empty when the line carries none).
 // A network that answers with its code ("26201") instead of the text gets the name from
-// operatorNameForCode(). False when the line has no quoted name.
+// operatorNameForCode(). False when the line has no quoted name, or one of blanks only.
 bool parseCopsName(const char* line, char* name, size_t nameSize);
 // The first operator code (MCC and MNC, five or six digits in quotes) of an AT+COPS=? list;
 // names such as "o2 - de" are never five digits.
