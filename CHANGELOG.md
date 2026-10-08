@@ -32,6 +32,7 @@ A 3.2 card is read by 4.0 without changes ([docs/upgrading.md](docs/upgrading.md
 ### What was removed
 
 - **The radio is not part of 4.0.** The interface, the radio page and the message path exist and are tested against a fake, but there is no driver for the radio chip and no protocol of our own, so the feature cannot be switched on in a way that does anything: the tile is off and a request to start the radio is answered with "not available". The owner decided to leave it out of 4.0 and to add it in a later release ([docs/open-points.md](docs/open-points.md), item 9).
+- **Save mode ("Sparmodus": radio only, cellular and Wi-Fi off), its cell probe and its notices.** It needs the radio, which 4.0 does not have, so it could only say "switch the radio on first". The owner decided to remove it completely; it is planned together with the radio, where an emergency radio mode will switch battery saving on implicitly ([docs/open-points.md](docs/open-points.md), item 9).
 - **The hard-wired German interface words of 3.2.** German is now a catalog like any other.
 - **The USB commands `dial`, `hangup`, `query` and `motion` of 3.2's tool.** The tool of 4.0 has `list`, `read`, `write`, `battery`, `sms` and `restart`.
 

@@ -45,9 +45,6 @@ enum class NoticeKind : uint8_t {
   // The device
   CellularSwitchedOn,
   CellularSwitchedOff,
-  SaveModeNeedsRadio,
-  SaveModeOn,
-  SaveModeNoWifi,
   WifiBatteryLow,
   PowerOffRefused,
   LightOn,

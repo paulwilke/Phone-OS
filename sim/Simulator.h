@@ -583,7 +583,7 @@ inline void Simulator::printHelp() {
           "    tap <x> <y>                  a touch at a pixel (240 x 320)\n"
           "    language <code>              the interface language (en de fr qps-ploc, or a user catalog)\n"
           "    sos begin [number]|choose emergency|pickup|tap|leave   the SOS button's entry points, as the SOS page calls them\n"
-          "    cellular on|off | savemode on|off | probe              what the network page and its options do\n"
+          "    cellular on|off              what the network page does\n"
           "    radio start                  the child asks for the radio; the simulator starts it\n"
           "  Looking\n"
           "    state                        a summary of the device\n"
@@ -597,7 +597,7 @@ inline void Simulator::printHelp() {
           "    see <catalog key> [name=value...]   (a value may have spaces) the screen says that text, in the language of the moment\n"
           "    see-not <catalog key> [name=value...]\n"
           "    say <text> | say-not <text>         the screen says this literal text (a name, an operator)\n"
-          "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular, savemode,\n"
+          "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular,\n"
           "                                 battery, sms-sent, last-sms-to, last-sms-has, language, boots, log-has, wifi,\n"
           "                                 wifi-seconds-left, web-status, web-has, settings-has (a line of the card's settings.toml),\n"
           "                                 haptic-click|ring|message|sent|failed (how often played)\n"
@@ -755,7 +755,7 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
   }
   if (name == "wifi") {
     // What the device's Wi-Fi page does: the core's one Wi-Fi controller is switched, with the rules in
-    // front of it (save mode, battery), and the parents' page is reachable while it is on.
+    // front of it (battery), and the parents' page is reachable while it is on.
     AppCore& core = r.runtime->core();
     if (need(2) && w[1] == "ap") core.setWifiMode(WifiMode::AccessPoint);
     else if (need(2) && w[1] == "station") core.setWifiMode(WifiMode::Station);
@@ -844,15 +844,12 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
     if (!done && w[1] != "tap") out_ << "note: the core did not take that (no one to reach, or not the moment)\n";
     return true;
   }
-  if (name == "cellular" || name == "savemode") {
-    if (!need(2) || (w[1] != "on" && w[1] != "off")) return fail(name + " needs on or off");
-    const bool on = w[1] == "on";
-    if (name == "cellular") r.runtime->core().setCellularEnabled(on);
-    else r.runtime->core().setSaveMode(on);
+  if (name == "cellular") {
+    if (!need(2) || (w[1] != "on" && w[1] != "off")) return fail("cellular needs on or off");
+    r.runtime->core().setCellularEnabled(w[1] == "on");
     settle();
     return true;
   }
-  if (name == "probe") { r.runtime->core().probeCellular(); settle(); return true; }
 
   if (name == "web") return webCommand(w, line);
 
@@ -1118,7 +1115,6 @@ inline bool Simulator::check(const std::vector<std::string>& w, const std::strin
   else if (what == "school") actual = yesNo(s.schoolTime);
   else if (what == "registered") actual = yesNo(s.registered);
   else if (what == "cellular") actual = s.cellularEnabled ? "on" : "off";
-  else if (what == "savemode") actual = s.saveMode ? "on" : "off";
   else if (what == "battery") actual = std::to_string(s.batteryPercent);
   else if (what == "language") actual = translator_.language();
   else if (what == "boots") actual = std::to_string(boots_);

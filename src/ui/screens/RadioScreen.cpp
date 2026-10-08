@@ -23,7 +23,6 @@ std::string RadioScreen::head() {
   const AppCore::State& s = state();
   if (!context().app.profile().radioAllowed) return t().get("radio.not-allowed");
   if (!s.radioAttached) return t().get("radio.off");
-  if (s.saveMode) return t().get("radio.save-mode");
   if (!s.radioReady) return t().get("radio.nobody");
   if (s.radioRssi != 0) return t().get("radio.ready-dbm", {{"dbm", s.radioRssi}});
   return t().get("radio.ready");
@@ -36,17 +35,8 @@ void RadioScreen::rebuild() {
   if (context().app.profile().radioAllowed) {
     if (!s.radioAttached) {
       control(Control::Start, t().get("radio.start"));
-    } else if (!s.saveMode) {
-      control(Control::SaveOn, t().get("radio.save-on"));
-      control(Control::Stop, t().get("radio.stop"));
     } else {
-      if (s.probeSecondsLeft > 0) {
-        const std::string seconds = (s.probeSecondsLeft % 60 < 10 ? "0" : "") + std::to_string(s.probeSecondsLeft % 60);
-        control(Control::Probe, t().get("radio.probe-running", {{"minutes", static_cast<int>(s.probeSecondsLeft / 60)}, {"seconds", seconds.c_str()}}));
-      } else {
-        control(Control::Probe, t().get("radio.probe"));
-      }
-      control(Control::SaveOff, t().get("radio.save-off"));
+      control(Control::Stop, t().get("radio.stop"));
     }
     if (s.radioAttached) {
       for (size_t i = 0; i < context().app.radioPeerCount(); ++i) {
@@ -164,9 +154,6 @@ bool RadioScreen::activate(const Row& row) {
   if (row.isControl) {
     switch (row.control) {
       case Control::Start: app().requestRadioStart(); break;
-      case Control::SaveOn: app().setSaveMode(true); break;
-      case Control::SaveOff: app().setSaveMode(false); break;
-      case Control::Probe: app().probeCellular(); break;
       case Control::Stop: app().requestRestart(); break;
     }
     return true;

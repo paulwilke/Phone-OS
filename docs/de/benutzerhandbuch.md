@@ -65,7 +65,7 @@ Die Elternseite ist eine Webseite, die das Gerät über WLAN bereitstellt. Sie i
 
 ## Die Einstellungen
 
-Am Gerät hat die Seite **Optionen** (zweite Seite des Startbildschirms, Kachel **Option**) fünf Kästchen; die Eingabetaste oder ein Tippen ändert das Kästchen im Fokus: **Lautstärke im Gespräch** ("4 von 7"), **Vibration bei Nachrichten**, **Sparmodus**, **WLAN** (öffnet die WLAN-Seite) und **Sprache** (öffnet die Sprachseite, jede Sprache mit ihrem eigenen Namen). Der Sparmodus schaltet Mobilfunk und WLAN aus und behält den Funk; er braucht einen Funk und sagt ohne einen "Erst den Funk einschalten".
+Am Gerät hat die Seite **Optionen** (zweite Seite des Startbildschirms, Kachel **Option**) vier Kästchen; die Eingabetaste oder ein Tippen ändert das Kästchen im Fokus: **Lautstärke im Gespräch** ("4 von 7"), **Vibration bei Nachrichten**, **WLAN** (öffnet die WLAN-Seite) und **Sprache** (öffnet die Sprachseite, jede Sprache mit ihrem eigenen Namen).
 
 Auf der Seite **Status** schaltet die Eingabetaste durch die Sichtbarkeit der Abfragen, und "Ausschalten: x zweimal drücken" schaltet das Gerät aus. Mit eingestecktem USB-Kabel geht das nicht, und es sagt "Ausschalten: erst USB abziehen". "Neustart: r zweimal drücken" startet das Gerät neu (bei "Neustart? Noch einmal r" ein zweites Mal r); jede andere Taste nimmt den ersten Druck zurück, und ein Neustart geht auch mit eingestecktem USB-Kabel.
 

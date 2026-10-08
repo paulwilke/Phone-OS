@@ -66,13 +66,13 @@ size_t played(const DeviceRig& rig, HapticPattern pattern) {
 
 // ---- what is offered ------------------------------------------------------------------------------
 
-void test_the_child_sees_volume_vibration_save_mode_and_language() {
+void test_the_child_sees_volume_vibration_and_language() {
   Page page;
   TEST_ASSERT_TRUE(shows::text(page.rig.frame, "Options", FontSize::Small, kContent));
   TEST_ASSERT_TRUE(page.says("Volume in calls", "4 of 7", true));        // the first box has the focus
   TEST_ASSERT_TRUE(page.says("Message vibration", "on"));
-  TEST_ASSERT_TRUE(page.says("Save mode", "off"));
   TEST_ASSERT_TRUE(page.says("Language", "English"));
+  TEST_ASSERT_FALSE(shows::text(page.rig.frame, "Save mode", FontSize::Small, kContent));   // removed with version 4.0
   TEST_ASSERT_FALSE(shows::text(page.rig.frame, "Wi-Fi", FontSize::Small, kContent));     // the parents' tool
 }
 
@@ -138,31 +138,9 @@ void test_message_vibration_switches_and_buzzes_once_when_it_goes_on() {
   TEST_ASSERT_TRUE(page.says("Message vibration", "on", true));
 }
 
-void test_save_mode_is_refused_without_a_radio_and_the_notice_says_why() {
-  Page page;
-  page.down(2);
-  page.key(Key::Select);
-  TEST_ASSERT_FALSE(page.rig.core.state().saveMode);
-  TEST_ASSERT_TRUE(page.says("Save mode", "off", true));
-  TEST_ASSERT_EQUAL_STRING("Switch the radio on first", page.screen.noticeLine().c_str());
-}
-
-void test_save_mode_switches_with_a_radio_and_back() {
-  Page page;
-  page.rig.radio.setUp(true);
-  page.rig.core.setRadio(&page.rig.radio);
-  page.down(2);
-  page.key(Key::Select);
-  TEST_ASSERT_TRUE(page.rig.core.state().saveMode);
-  TEST_ASSERT_TRUE(page.says("Save mode", "on", true));
-  page.key(Key::Select);
-  TEST_ASSERT_FALSE(page.rig.core.state().saveMode);
-  TEST_ASSERT_TRUE(page.says("Save mode", "off", true));
-}
-
 void test_the_wifi_and_language_boxes_open_their_pages() {
   Page page(parents());
-  page.down(3);
+  page.down(2);
   page.key(Key::Select);
   TEST_ASSERT_TRUE(page.rig.nav.opened(screen::kWifi));
   page.down();
@@ -224,7 +202,7 @@ void test_every_page_is_drawn_inside_the_screen_in_every_language() {
     for (int variant = 0; variant < 2; ++variant) {
       Page page(variant == 0 ? ProfileBuilder().childName("Alex").build() : parents());
       page.rig.language(language);
-      for (int focus = 0; focus < 5; ++focus) {
+      for (int focus = 0; focus < 4; ++focus) {
         page.draw();
         FrameBuffer fb;
         page.screen.render(fb);
@@ -251,15 +229,13 @@ void test_the_pictures_in_english_and_german() {
 
 int main(int, char**) {
   UNITY_BEGIN();
-  RUN_TEST(test_the_child_sees_volume_vibration_save_mode_and_language);
+  RUN_TEST(test_the_child_sees_volume_vibration_and_language);
   RUN_TEST(test_the_parents_tools_add_wifi_and_say_whether_it_runs);
   RUN_TEST(test_a_device_without_wifi_offers_none_even_to_the_parents);
   RUN_TEST(test_a_modem_without_a_volume_control_has_no_volume_box);
   RUN_TEST(test_the_volume_goes_round_from_one_to_seven_and_never_to_silence);
   RUN_TEST(test_a_silent_volume_goes_to_one_not_to_two);
   RUN_TEST(test_message_vibration_switches_and_buzzes_once_when_it_goes_on);
-  RUN_TEST(test_save_mode_is_refused_without_a_radio_and_the_notice_says_why);
-  RUN_TEST(test_save_mode_switches_with_a_radio_and_back);
   RUN_TEST(test_the_wifi_and_language_boxes_open_their_pages);
   RUN_TEST(test_the_language_box_names_the_language_in_use_by_its_own_name);
   RUN_TEST(test_the_arrows_move_the_focus_and_stop_at_the_ends);

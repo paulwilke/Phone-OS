@@ -25,7 +25,7 @@ A `Notice` is a `NoticeKind`, a `peer` (a phone number, for the kinds that name 
 | `CallerInSchoolTime` | an incoming call from a contact was rejected in school time | name |
 | `MessageWaiting`, `MessageSent`, `MessageSentRadio`, `QueueFull`, `SmsRejected`, `RadioUnreachable`, `RadioUnconfirmed` | what happened to a message | |
 | `LocationQueried`, `QueryRefused` | a remote query (shown only when the profile says so); `LocationQueried` has the words of the history entry, `QueryRefused` words of its own that are short, because the one who asked is a stranger, shown by number, and a number is never shortened | name |
-| `CellularSwitchedOn`, `CellularSwitchedOff`, `SaveModeNeedsRadio`, `SaveModeOn`, `SaveModeNoWifi`, `WifiBatteryLow`, `PowerOffRefused`, `LightOn`, `LightOff` | the device | |
+| `CellularSwitchedOn`, `CellularSwitchedOff`, `WifiBatteryLow`, `PowerOffRefused`, `LightOn`, `LightOff` | the device | |
 
 A test checks that **every kind has a text in every shipped language** with exactly the placeholders it supplies, and that no language falls back to English for any of them.
 

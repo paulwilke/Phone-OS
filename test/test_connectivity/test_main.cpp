@@ -1,4 +1,4 @@
-// Host tests for connectivity: cellular, the radio request, save mode and the cell probe, Wi-Fi
+// Host tests for connectivity: cellular, the radio request, Wi-Fi
 // and the rules in front of it, and the network label.
 
 #include <unity.h>
@@ -113,8 +113,6 @@ void test_the_network_label_is_data() {
   TEST_ASSERT_TRUE(Kind::None == r.net.networkLabel().kind);        // nothing at all
   r.attachRadio();
   TEST_ASSERT_TRUE(Kind::Radio == r.net.networkLabel().kind);
-  r.net.setSaveMode(true);
-  TEST_ASSERT_TRUE(Kind::RadioOnly == r.net.networkLabel().kind);
   r.networkBack();                                                  // an operator wins over everything
   r.net.setCellularEnabled(true);
   TEST_ASSERT_TRUE(Kind::Operator == r.net.networkLabel().kind);
@@ -147,84 +145,6 @@ void test_a_restart_can_be_requested() {
   TEST_ASSERT_TRUE(r.net.restartRequested());
 }
 
-// ---- save mode ----------------------------------------------------------------------------------
-
-void test_save_mode_needs_the_radio() {
-  Rig r;
-  TEST_ASSERT_FALSE(r.net.setSaveMode(true));
-  TEST_ASSERT_FALSE(r.net.saveMode());
-  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::SaveModeNeedsRadio));
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());                        // nothing was switched off
-  TEST_ASSERT_TRUE(r.net.setSaveMode(false));                       // leaving what is not on is fine
-}
-
-void test_save_mode_switches_cellular_and_wifi_off() {
-  Rig r;
-  r.attachRadio();
-  TEST_ASSERT_TRUE(r.net.setWifiMode(WifiMode::AccessPoint));
-  TEST_ASSERT_TRUE(r.net.wifiActive());
-  TEST_ASSERT_TRUE(r.net.setSaveMode(true));
-  TEST_ASSERT_TRUE(r.net.saveMode());
-  TEST_ASSERT_FALSE(r.net.cellularEnabled());
-  TEST_ASSERT_FALSE(r.net.wifiActive());
-  TEST_ASSERT_TRUE(r.fakeWifi.state() == WifiState::Off);
-  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::SaveModeOn));
-  TEST_ASSERT_EQUAL(1, r.count("Save mode on"));
-  TEST_ASSERT_TRUE(r.net.setSaveMode(true));                        // asking again changes nothing
-  TEST_ASSERT_EQUAL(1, r.count("Save mode on"));
-
-  TEST_ASSERT_TRUE(r.net.setSaveMode(false));
-  TEST_ASSERT_FALSE(r.net.saveMode());
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
-  TEST_ASSERT_EQUAL(1, r.count("Save mode off"));
-}
-
-void test_the_cell_probe_ends_by_itself() {
-  Rig r;
-  r.attachRadio();
-  r.net.setSaveMode(true);
-  TEST_ASSERT_TRUE(r.net.probeCellular());
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
-  TEST_ASSERT_EQUAL_UINT32(Connectivity::kProbeSeconds, r.net.probeSecondsLeft());
-  r.advance(Connectivity::kProbeSeconds - 1);
-  r.net.poll();
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());                        // one second short
-  TEST_ASSERT_EQUAL_UINT32(1, r.net.probeSecondsLeft());
-  r.advance(1);
-  r.net.poll();
-  TEST_ASSERT_FALSE(r.net.cellularEnabled());
-  TEST_ASSERT_TRUE(r.net.saveMode());                               // save mode stays
-  TEST_ASSERT_EQUAL_UINT32(0, r.net.probeSecondsLeft());
-  TEST_ASSERT_EQUAL(1, r.count("cell probe ended"));
-  r.advance(60);
-  r.net.poll();                                                     // and it is not ended twice
-  TEST_ASSERT_EQUAL(1, r.count("cell probe ended"));
-}
-
-void test_a_probe_can_be_started_again_and_leaving_save_mode_ends_it() {
-  Rig r;
-  r.attachRadio();
-  r.net.setSaveMode(true);
-  r.net.probeCellular();
-  r.advance(100);
-  r.net.probeCellular();                                            // starts the 180 seconds anew
-  TEST_ASSERT_EQUAL_UINT32(Connectivity::kProbeSeconds, r.net.probeSecondsLeft());
-  r.net.setSaveMode(false);
-  TEST_ASSERT_EQUAL_UINT32(0, r.net.probeSecondsLeft());
-  r.advance(500);
-  r.net.poll();
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());                        // the old probe does not switch it off
-}
-
-void test_the_probe_works_only_in_save_mode() {
-  Rig r;
-  TEST_ASSERT_FALSE(r.net.probeCellular());
-  TEST_ASSERT_EQUAL_UINT32(0, r.net.probeSecondsLeft());
-  r.advance(500);
-  r.net.poll();
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
-}
-
 // ---- Wi-Fi --------------------------------------------------------------------------------------
 
 void test_wifi_is_off_until_someone_asks() {
@@ -232,16 +152,6 @@ void test_wifi_is_off_until_someone_asks() {
   r.net.poll();
   TEST_ASSERT_FALSE(r.net.wifiActive());
   TEST_ASSERT_TRUE(r.fakeWifi.state() == WifiState::Off);
-}
-
-void test_wifi_is_refused_in_save_mode() {
-  Rig r;
-  r.attachRadio();
-  r.net.setSaveMode(true);
-  TEST_ASSERT_FALSE(r.net.setWifiMode(WifiMode::Station));
-  TEST_ASSERT_TRUE(r.noticeIs(NoticeKind::SaveModeNoWifi));
-  TEST_ASSERT_TRUE(r.fakeWifi.state() == WifiState::Off);
-  TEST_ASSERT_TRUE(r.net.setWifiMode(WifiMode::Off));               // off always works
 }
 
 void test_wifi_is_refused_on_a_nearly_empty_battery() {
@@ -306,13 +216,7 @@ int main() {
   RUN_TEST(test_the_network_label_is_data);
   RUN_TEST(test_the_radio_starts_only_on_request_and_if_permitted);
   RUN_TEST(test_a_restart_can_be_requested);
-  RUN_TEST(test_save_mode_needs_the_radio);
-  RUN_TEST(test_save_mode_switches_cellular_and_wifi_off);
-  RUN_TEST(test_the_cell_probe_ends_by_itself);
-  RUN_TEST(test_a_probe_can_be_started_again_and_leaving_save_mode_ends_it);
-  RUN_TEST(test_the_probe_works_only_in_save_mode);
   RUN_TEST(test_wifi_is_off_until_someone_asks);
-  RUN_TEST(test_wifi_is_refused_in_save_mode);
   RUN_TEST(test_wifi_is_refused_on_a_nearly_empty_battery);
   RUN_TEST(test_an_unknown_battery_does_not_refuse_wifi);
   RUN_TEST(test_without_wifi_nothing_happens);

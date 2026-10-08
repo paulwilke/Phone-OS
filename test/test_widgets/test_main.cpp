@@ -386,8 +386,6 @@ void test_the_left_side_without_an_operator() {
   m.voice = StatusModel::Voice::Ready;
   m.link = StatusModel::Link::Radio;
   TEST_ASSERT_EQUAL_STRING("Radio", statusLeft(m, t).text.c_str());
-  m.link = StatusModel::Link::RadioOnly;
-  TEST_ASSERT_EQUAL_STRING("Radio only", statusLeft(m, t).text.c_str());
   m.operatorName = "Example Mobile";               // a name from an earlier connection is not shown without one
   m.link = StatusModel::Link::None;
   TEST_ASSERT_EQUAL_STRING("No network", statusLeft(m, t).text.c_str());

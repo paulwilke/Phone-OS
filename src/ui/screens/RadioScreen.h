@@ -9,8 +9,7 @@
 //
 //   not allowed          nothing to press; the profile does not allow the radio
 //   off                  "Switch radio on" (the application starts it and attaches it)
-//   running              "Save mode: radio only" (cellular and Wi-Fi off), "Radio off (restart)"
-//   in save mode         "Check cellular" (a probe of a few minutes, with its countdown), "End save mode"
+//   running              "Radio off (restart)"
 //
 // Enter on a contact writes to it over the radio, but only where the profile lets the child choose any
 // recipient (`freeText`): the contact is left in the session and the compose page opens. Without that
@@ -38,7 +37,7 @@ protected:
   bool onInput(const Input& input, const Rect& area) override;
 
 private:
-  enum class Control { Start, SaveOn, SaveOff, Stop, Probe };
+  enum class Control { Start, Stop };
   struct Row {
     bool isControl;
     Control control;

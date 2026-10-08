@@ -48,13 +48,13 @@ The documents describe what exists in this repository — each one is written fr
 | [school-time.md](school-time.md) | school time on the clock and the emergency lift |
 | [calls.md](calls.md) | dialling rules, every call rejected in school time, ringing, why a call failed, volume |
 | [emergency.md](emergency.md) | the SOS button and the reply to a location query as one search at a time; the receiver, school time, the outcome, the wording |
-| [connectivity.md](connectivity.md) | cellular, save mode and the cell probe, the radio request, Wi-Fi with its rules, the network label as data |
+| [connectivity.md](connectivity.md) | cellular, the radio request, Wi-Fi with its rules, the network label as data |
 | [wifi-controller.md](wifi-controller.md) | Wi-Fi settings and modes, the access point password, the idle switch-off |
 | [power-coordination.md](power-coordination.md) | the power policy applied to modem, radio chip and processor; the front light |
 | [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [screen-sos.md](screen-sos.md) | the SOS page: choice, school-time taps, the ping step by step, leaving releases the search |
-| [screen-settings.md](screen-settings.md) | the options page: volume, message vibration, save mode, Wi-Fi, language |
+| [screen-settings.md](screen-settings.md) | the options page: volume, message vibration, Wi-Fi, language |
 | [screen-wifi.md](screen-wifi.md) | the Wi-Fi page: three buttons, the mark, what to join with, why it did not work |
 | [screen-net.md](screen-net.md) | the network page: the lines, SIM problems and their explanations |
 | [screen-status.md](screen-status.md) | the status page: battery, configuration problems, queries, firmware, switching off |

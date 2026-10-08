@@ -59,8 +59,8 @@ std::string failedCallReason(const Notice& notice);
 // Why Wi-Fi is off or failed; empty for `None`.
 std::string wifiReason(WifiReason reason, i18n::Translator& t);
 
-// The network as the core hands it over: the operator's name, or a word for none, the radio and
-// the radio-only save mode; "Network" when a network is there but its name is not.
+// The network as the core hands it over: the operator's name, or a word for none, the radio;
+// "Network" when a network is there but its name is not.
 std::string networkLabel(const Connectivity::NetworkLabel& label, i18n::Translator& t);
 
 }  // namespace wording

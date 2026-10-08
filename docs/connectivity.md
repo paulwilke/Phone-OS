@@ -8,27 +8,20 @@ Code: `src/app/Connectivity.{h,cpp}`; tests in `test/test_connectivity/`. How th
 
 "Registered" is one definition in `Cellular.h`: powered, in a state past the search for a network, with an operator named.
 
-## Save mode and the cell probe
-
-Save mode is "radio only": cellular and Wi-Fi are off. **It needs a running radio**: without one the device would have no way out at all, so it is refused with a notice (`SaveModeNeedsRadio`) and nothing is switched. Leaving it switches cellular on again.
-
-With cellular off, a parent's SMS cannot arrive. The **cell probe** looks for the mobile network for `kProbeSeconds` (180): cellular goes on and off again by itself, and save mode stays. A new probe starts the time anew; leaving save mode ends it. The probe works only in save mode; `probeSecondsLeft()` is what the interface shows.
-
 ## The radio
 
 Starting the radio software belongs to the host. This component keeps the request: `requestRadioStart()` is refused when the profile does not allow the radio or it runs already, and the host reads and clears it with `takeRadioStartRequest()` (true once per request), then attaches the radio with `setRadio()`. The radio never starts by itself.
 
 `requestRestart()` only records the wish; the host restarts.
 
+**Save mode** ("radio only": cellular and Wi-Fi off, with a timed probe of the mobile network) is not part of version 4.0. It needs the LoRa radio, which 4.0 does not have, and comes back with the radio project, where an emergency radio mode switches battery saving on implicitly.
+
 ## Wi-Fi
 
-`setWifiMode(mode)` goes to the Wi-Fi controller, with two rules in front of it:
-
-- **not in save mode** (`SaveModeNoWifi`);
-- **not on a nearly empty battery** — below 20 percent, unless a cable feeds the device (`WifiBatteryLow`, logged). An unknown battery level does not refuse.
+`setWifiMode(mode)` goes to the Wi-Fi controller, with one rule in front of it: **not on a nearly empty battery** — below 20 percent, unless a cable feeds the device (`WifiBatteryLow`, logged). An unknown battery level does not refuse.
 
 Switching it **off** always works. Without a Wi-Fi capability nothing happens. Every request is logged ("Wi-Fi home network", "Wi-Fi access point failed", ...). `poll()` keeps the controller going.
 
 ## The network label
 
-`networkLabel()` is data, not text: `Operator` (the name shortened for the status line, [operator-label.md](operator-label.md); it can be empty for a name that shortens to nothing, and the interface then says a generic word), `RadioOnly` (save mode, no operator), `Radio` (no operator, the radio runs) or `None`. The interface words the last three.
+`networkLabel()` is data, not text: `Operator` (the name shortened for the status line, [operator-label.md](operator-label.md); it can be empty for a name that shortens to nothing, and the interface then says a generic word), `Radio` (no operator, the radio runs) or `None`. The interface words the last two.

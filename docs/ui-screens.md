@@ -30,7 +30,7 @@ A screen that needs something the core does not hand out as data — the acceler
 | Bar | From the state |
 |---|---|
 | SIM problem | `SimStatus`: missing, PIN required or wrong (`PinWrong` is the same word: the stored PIN was rejected and is never tried again), locked (PUK). "Unknown" is a modem that was not asked yet: it tries anyway, so the bar says nothing |
-| network | the network label as data: operator, radio, radio only, none. A network with **no name** is shown by the general word `status.network` ("Network"), not as "No network": the device is connected |
+| network | the network label as data: operator, radio, none. A network with **no name** is shown by the general word `status.network` ("Network"), not as "No network": the device is connected |
 | school time | `schoolTime` |
 | "SMS only", "No calls yet" | `voice`: `SmsOnly` is a restriction of the network, `ImsMissing` (shown as "No calls yet") is telephony that is not ready and usually passes; `Unknown` says nothing, like an unknown SIM |
 | "GPS" | `positioningActive`: a device that locates in secret is what this one must not be |
@@ -56,7 +56,7 @@ The core's notice is a kind with a number (for who it concerns) and a minute (fo
 | `systemEntry` | a message of source System | the row of the history ("Missed call from Grandma"); an entry from an earlier version (a sentence) or from a later one (a kind this version does not know) is shown as it was stored |
 | `callReason` | `busy`, `no-answer`, `no-network`, `sms-only`, `not-connected` | a short phrase; an unknown code is shown as given |
 | `wifiReason` | `WifiReason` | why Wi-Fi is off or failed, nothing for `None`; a `switch` without a default, so a new reason is a compiler warning |
-| `networkLabel` | the network label | the operator's name or the word for none, radio, radio only, or "Network" |
+| `networkLabel` | the network label | the operator's name or the word for none, radio, or "Network" |
 | `peerName` | a phone number | the contact's name, the number, or `peer.unknown` |
 | `clockTime` | a minute of the day | `HH:MM` |
 

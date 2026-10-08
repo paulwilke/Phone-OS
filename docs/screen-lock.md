@@ -12,7 +12,7 @@ The screen has **no soft keys**: a button that did nothing when tapped would be 
 
 No clock. The lock is the permanent state, and a clock would be the one thing that changes by itself: a redraw of the panel every minute, visible flicker, and current for nothing. (The status bar shows the date, which changes once a day, and the battery in bars.) What one wants to know without unlocking instead:
 
-- **what the device is connected to**, in the large font: the operator, or "Radio", "Radio only", "Network" (a network without a name) or "No network" — `wording::networkLabel`;
+- **what the device is connected to**, in the large font: the operator, or "Radio", "Network" (a network without a name) or "No network" — `wording::networkLabel`;
 - **how**: "Connected", "SMS only" (a network that does not carry calls), "No calls yet" (the network is there, the IMS is not) or "Not connected";
 - **what is new**: `✉ 2 new messages`, the plural of the language, when anything is unread (system entries included).
 

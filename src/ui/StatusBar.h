@@ -26,8 +26,8 @@ namespace ui {
 struct StatusModel {
   enum class Sim { Ready, Missing, PinRequired, Locked };
   // None: no network at all. Operator: connected to a mobile network named operatorName.
-  // Radio: the long-range radio is the way out; RadioOnly: the radio only, to save power.
-  enum class Link { None, Operator, Radio, RadioOnly };
+  // Radio: the long-range radio is the way out.
+  enum class Link { None, Operator, Radio };
   // What the network allows beyond messages. NotReady is a network that is there while the IMS is
   // not: a state that usually passes, which "SMS only" (a restriction) does not.
   enum class Voice { Ready, SmsOnly, NotReady };

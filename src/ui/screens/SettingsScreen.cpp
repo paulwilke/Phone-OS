@@ -8,7 +8,6 @@ std::vector<SettingsScreen::Kind> SettingsScreen::kinds() {
   std::vector<Kind> kinds;
   if (state().volumeAdjustable) kinds.push_back(Kind::Volume);
   kinds.push_back(Kind::Vibration);
-  kinds.push_back(Kind::SaveMode);
   if (context().app.profile().parentTools && context().app.wifi() != nullptr) kinds.push_back(Kind::Wifi);
   kinds.push_back(Kind::Language);
   return kinds;
@@ -25,7 +24,6 @@ void SettingsScreen::rebuild() {
                         t().get("settings.volume-value", {{"volume", state().volume}, {"max", Calls::kMaxVolume}})});
         break;
       case Kind::Vibration: rows.push_back({t().get("settings.vibration"), onOff(context().app.messageVibration())}); break;
-      case Kind::SaveMode: rows.push_back({t().get("settings.save-mode"), onOff(state().saveMode)}); break;
       case Kind::Wifi:
         rows.push_back({t().get("wifi.title"),
                         onOff(state().wifiPhase != WifiPhase::Off && state().wifiPhase != WifiPhase::Failed)});
@@ -86,7 +84,6 @@ void SettingsScreen::activate(Kind kind) {
       app().setMessageVibration(!app().messageVibration());
       if (app().messageVibration()) app().playTestPattern(HapticPattern::Message);   // whoever turns it on wants to feel the real one
       return;
-    case Kind::SaveMode: app().setSaveMode(!state().saveMode); return;
     case Kind::Wifi: nav().open(screen::kWifi); return;
     case Kind::Language: nav().open(screen::kLanguage); return;
   }

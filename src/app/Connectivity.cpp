@@ -4,11 +4,6 @@
 #include "OperatorLabel.h"
 
 void Connectivity::poll() {
-  if (saveMode_ && probeUntil_ && clock_.uptimeSeconds() >= probeUntil_) {
-    probeUntil_ = 0;
-    setCellularEnabled(false);
-    log_.log("Save mode: cell probe ended");
-  }
   if (wifi_) wifi_->poll(clock_.uptimeSeconds());
 }
 
@@ -35,8 +30,6 @@ Connectivity::NetworkLabel Connectivity::networkLabel() {
     oplabel::shortName(op.c_str(), buffer, sizeof buffer);
     label.kind = NetworkLabel::Kind::Operator;
     label.name = buffer;
-  } else if (saveMode_) {
-    label.kind = NetworkLabel::Kind::RadioOnly;
   } else if (radio_) {
     label.kind = NetworkLabel::Kind::Radio;
   }
@@ -55,47 +48,8 @@ bool Connectivity::takeRadioStartRequest() {
   return requested;
 }
 
-bool Connectivity::setSaveMode(bool on) {
-  if (on == saveMode_) return true;
-  probeUntil_ = 0;
-  if (on) {
-    // Without a running radio there would be no way out of the device any more.
-    if (!radio_) {
-      notices_.set(NoticeKind::SaveModeNeedsRadio);
-      return false;
-    }
-    saveMode_ = true;
-    if (wifi_) wifi_->request(WifiMode::Off, clock_.uptimeSeconds());
-    setCellularEnabled(false);
-    log_.log("Save mode on: radio only, cellular and Wi-Fi off");
-    notices_.set(NoticeKind::SaveModeOn);
-    return true;
-  }
-  saveMode_ = false;
-  setCellularEnabled(true);
-  log_.log("Save mode off: cellular on again");
-  return true;
-}
-
-bool Connectivity::probeCellular() {
-  if (!saveMode_) return false;
-  probeUntil_ = clock_.uptimeSeconds() + kProbeSeconds;
-  setCellularEnabled(true);
-  log_.log("Save mode: looking for the mobile network");
-  return true;
-}
-
-uint32_t Connectivity::probeSecondsLeft() const {
-  const uint32_t now = clock_.uptimeSeconds();
-  return probeUntil_ > now ? probeUntil_ - now : 0;
-}
-
 bool Connectivity::setWifiMode(WifiMode mode) {
   if (!wifi_) return false;
-  if (mode != WifiMode::Off && saveMode_) {
-    notices_.set(NoticeKind::SaveModeNoWifi);
-    return false;
-  }
   const int battery = power_.batteryPercent();
   if (mode != WifiMode::Off && !power_.externalPower() && battery >= 0 && battery < kMinWifiBattery) {
     notices_.set(NoticeKind::WifiBatteryLow);

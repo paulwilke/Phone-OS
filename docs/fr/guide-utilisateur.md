@@ -65,7 +65,7 @@ La page des parents est une page web que l'appareil sert par Wi-Fi. Elle est pou
 
 ## Les réglages
 
-Sur l'appareil, la page **Options** (seconde page de l'accueil, tuile **Options**) a cinq cases ; la touche Entrée ou un contact change la case qui a le focus : **Volume en appel** ("4 sur 7"), **Vibreur des messages**, **Mode économie**, **Wi-Fi** (ouvre la page Wi-Fi) et **Langue** (ouvre la page des langues, chacune sous son propre nom). Le mode économie éteint le cellulaire et le Wi-Fi et garde la radio ; il demande une radio et dit "Activez d'abord la radio" sans elle.
+Sur l'appareil, la page **Options** (seconde page de l'accueil, tuile **Options**) a quatre cases ; la touche Entrée ou un contact change la case qui a le focus : **Volume en appel** ("4 sur 7"), **Vibreur des messages**, **Wi-Fi** (ouvre la page Wi-Fi) et **Langue** (ouvre la page des langues, chacune sous son propre nom).
 
 Sur la page **État**, la touche Entrée fait défiler la visibilité des requêtes à distance, et "Éteindre : appuyer deux fois sur x" éteint l'appareil. Avec le câble USB branché, c'est impossible, et il dit "Éteindre : débrancher l'USB d'abord". "Redémarrer : appuyer deux fois sur r" redémarre l'appareil (encore un r à "Redémarrer ? Encore une fois r") ; toute autre touche annule le premier appui, et le redémarrage fonctionne aussi avec le câble USB branché.
 

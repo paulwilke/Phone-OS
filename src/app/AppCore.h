@@ -76,8 +76,6 @@ public:
     SimStatus sim = SimStatus::Unknown;
     VoiceStatus voice = VoiceStatus::Unknown;
     bool cellularEnabled = false;
-    bool saveMode = false;
-    uint32_t probeSecondsLeft = 0;
     bool radioAttached = false;
     bool radioReady = false;  // the radio runs and knows at least one contact
     int radioRssi = 0;        // dBm of the last message, 0 = unknown
@@ -176,8 +174,6 @@ public:
 
   // --- connectivity ---
   bool setCellularEnabled(bool on) { return connectivity_.setCellularEnabled(on); }
-  bool setSaveMode(bool on) { return connectivity_.setSaveMode(on); }
-  bool probeCellular() { return connectivity_.probeCellular(); }
   bool setWifiMode(WifiMode mode) { return connectivity_.setWifiMode(mode); }
   // The one Wi-Fi controller of the device: the screens switch it, the web service tells it about use and
   // reads its state. Null on a device without Wi-Fi.

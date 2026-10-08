@@ -167,7 +167,6 @@ void test_the_state_offers_what_the_interface_draws() {
   TEST_ASSERT_EQUAL(64, s.batteryPercent);
   TEST_ASSERT_TRUE(ChargeState::Charging == s.charge);
   TEST_ASSERT_TRUE(s.cellularEnabled);
-  TEST_ASSERT_FALSE(s.saveMode);
   TEST_ASSERT_FALSE(s.callActive);
   TEST_ASSERT_TRUE(s.pingStage == SosPing::Stage::Idle);
   TEST_ASSERT_TRUE(s.sosPhase == SosFlow::Phase::Idle);
@@ -366,10 +365,8 @@ void test_the_network_dropping_and_returning() {
   TEST_ASSERT_TRUE(s.registered);
 }
 
-void test_save_mode_and_the_cell_probe() {
+void test_the_radio_starts_on_request_and_carries_a_message_when_cellular_is_off() {
   Device d(ProfileBuilder().childName("Alex").radio(true).build(), false);
-  TEST_ASSERT_FALSE(d.core.setSaveMode(true));                       // without the radio there would be no way out
-  TEST_ASSERT_TRUE(d.core.state().notice.kind == NoticeKind::SaveModeNeedsRadio);
   TEST_ASSERT_TRUE(d.core.requestRadioStart());                      // the host starts the radio on request
   TEST_ASSERT_TRUE(d.core.takeRadioStartRequest());
   d.radio.setUp(true);
@@ -377,33 +374,13 @@ void test_save_mode_and_the_cell_probe() {
   d.core.setRadio(&d.radio);
   TEST_ASSERT_EQUAL(1, d.core.radioPeerCount());
 
-  d.core.setWifiMode(WifiMode::AccessPoint);
-  TEST_ASSERT_TRUE(d.core.setSaveMode(true));
-  AppCore::State s = d.poll();
-  TEST_ASSERT_TRUE(s.saveMode);
-  TEST_ASSERT_FALSE(s.cellularEnabled);
-  TEST_ASSERT_TRUE(s.wifiPhase == WifiPhase::Off);
+  TEST_ASSERT_TRUE(d.core.setCellularEnabled(false));
+  d.poll();
   d.modem.shutdown();                                                // what switching the power off does to the modem
-  TEST_ASSERT_TRUE(Connectivity::NetworkLabel::Kind::RadioOnly == d.core.state().network.kind);
-  TEST_ASSERT_FALSE(d.core.setWifiMode(WifiMode::Station));          // no Wi-Fi in save mode
+  TEST_ASSERT_TRUE(Connectivity::NetworkLabel::Kind::Radio == d.core.state().network.kind);
   // With cellular off a message goes by radio.
   TEST_ASSERT_TRUE(d.core.send(kParentOne, "By radio"));
   TEST_ASSERT_EQUAL(1, d.radio.sent().size());
-
-  TEST_ASSERT_TRUE(d.core.probeCellular());                          // look for the mobile network for a while
-  s = d.poll();
-  TEST_ASSERT_TRUE(s.cellularEnabled);
-  TEST_ASSERT_EQUAL_UINT32(Connectivity::kProbeSeconds, s.probeSecondsLeft);
-  d.modem.begin();
-  d.modem.injectSms(kParentOne, "Are you ok?", 1);
-  d.run(10);
-  TEST_ASSERT_EQUAL(1, d.core.state().unread);                       // it arrived during the probe
-  d.run(Connectivity::kProbeSeconds);
-  s = d.core.state();
-  TEST_ASSERT_FALSE(s.cellularEnabled);
-  TEST_ASSERT_TRUE(s.saveMode);
-  TEST_ASSERT_TRUE(d.core.setSaveMode(false));
-  TEST_ASSERT_TRUE(d.core.state().cellularEnabled);
 }
 
 void test_run_time_settings_change_the_profile() {
@@ -756,7 +733,7 @@ int main() {
   RUN_TEST(test_the_state_tells_how_the_sos_search_is_going_and_to_whom);
   RUN_TEST(test_a_remote_query_alone_is_answered_without_the_child_noticing);
   RUN_TEST(test_the_network_dropping_and_returning);
-  RUN_TEST(test_save_mode_and_the_cell_probe);
+  RUN_TEST(test_the_radio_starts_on_request_and_carries_a_message_when_cellular_is_off);
   RUN_TEST(test_run_time_settings_change_the_profile);
   RUN_TEST(test_the_trigger_words_come_from_every_language);
   RUN_TEST(test_the_clock_follows_the_time_zone);

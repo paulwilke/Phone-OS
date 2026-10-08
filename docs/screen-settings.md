@@ -6,7 +6,6 @@ Code: `src/ui/screens/SettingsScreen.{h,cpp}` with the widget `src/ui/OptionRows
 |---|---|---|
 | Volume in calls, "4 of 7" | the modem has a volume control | one step up, 1 to 7 and round again; never silent, because a call that starts mute is a mistake and no wish |
 | Message vibration, on / off | always | switches; switching it **on** buzzes once with the pattern of a message, so that whoever wants it feels it |
-| Save mode, on / off | always | asks the core; the core refuses without a radio and its notice ("Switch the radio on first") says why, the box stays "off" |
 | Wi-Fi, on / off | `parentTools` and the core has Wi-Fi (the condition of the Wi-Fi tile) | opens the Wi-Fi page |
 | Language, by its own name | always | opens the language page |
 
@@ -22,4 +21,4 @@ The previous page listed the school-time windows under the boxes. The status bar
 
 ## Tests
 
-`test_screen_settings`: what the child and the parents are offered, a device without Wi-Fi, a modem without a volume control, the volume round, a silent volume going to one, the vibration and its single buzz, save mode refused and accepted, the Wi-Fi and language boxes opening their pages, the language shown by its own name, the arrows, back, touch, the focus on open, layout in four languages, pictures in English and German. `test_widgets`: the option rows (ends, touch, scrolling, buttons, the focused box, the mark of the current one).
+`test_screen_settings`: what the child and the parents are offered, a device without Wi-Fi, a modem without a volume control, the volume round, a silent volume going to one, the vibration and its single buzz, no save-mode box, the Wi-Fi and language boxes opening their pages, the language shown by its own name, the arrows, back, touch, the focus on open, layout in four languages, pictures in English and German. `test_widgets`: the option rows (ends, touch, scrolling, buttons, the focused box, the mark of the current one).

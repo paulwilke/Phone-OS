@@ -130,8 +130,6 @@ AppCore::State AppCore::state() {
   s.sim = modem_.simStatus();
   s.voice = modem_.voiceStatus();
   s.cellularEnabled = connectivity_.cellularEnabled();
-  s.saveMode = connectivity_.saveMode();
-  s.probeSecondsLeft = connectivity_.probeSecondsLeft();
   s.radioAttached = connectivity_.radioAttached();
   if (radio_) {
     s.radioReady = radio_->ready();

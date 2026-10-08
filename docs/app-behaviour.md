@@ -14,7 +14,7 @@ The application core is split into small components with one owner each, compose
 | Messaging | incoming SMS and radio messages, routing, the queue, delivery reports, send failures, deletion |
 | Calls | dialling and answering rules, school-time rejection, failed-call reasons, volume |
 | Emergency | the SOS flow, the SOS ping and the reply to a remote query, one search at a time |
-| Connectivity | cellular on and off, save mode, the cell probe, radio start and restart requests, Wi-Fi |
+| Connectivity | cellular on and off, radio start and restart requests, Wi-Fi |
 | WifiController | Wi-Fi modes, the idle switch-off, the access point password |
 | PowerCoordination | the power policy applied to modem, radio chip and processor; the front light |
 | AppCore | the facade: owns the components, `poll()`, the entry points the interface calls, the read-only state |
@@ -372,20 +372,14 @@ Tests in `test/test_connectivity/`.
 | CON-01 | Cellular can be switched off and on; each is logged and noticed; a switch that fails is logged and returns false | `test_cellular_can_be_switched` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
 | CON-02 | A switched-off or just restarted modem is not asleep | `test_a_switched_modem_is_not_asleep` | — | done |
 | CON-03 | Registered means powered on, in a state that is registered and with an operator | `test_registered_needs_power_state_and_operator` | EA:test_cellular_off_uses_mesh_and_blocks_calls | done |
-| CON-04 | The network label is data: the operator name shortened, radio, radio only, or none | `test_the_network_label_is_data` | EA:test_network_label_names_the_provider_or_the_radio | done |
+| CON-04 | The network label is data: the operator name shortened, radio, or none | `test_the_network_label_is_data` | EA:test_network_label_names_the_provider_or_the_radio | done |
 | CON-05 | The radio starts only on request, and only if the profile allows it | `test_the_radio_starts_only_on_request_and_if_permitted` | EA:test_mesh_starts_only_on_request_and_only_if_permitted | done |
 | CON-06 | A restart can be requested | `test_a_restart_can_be_requested` | — | done |
-| CON-07 | Save mode needs the radio; without it it is refused with a notice | `test_save_mode_needs_the_radio` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
-| CON-08 | Save mode switches cellular and Wi-Fi off; leaving it switches cellular back on | `test_save_mode_switches_cellular_and_wifi_off` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
-| CON-09 | The cell probe switches cellular on for 180 seconds and off again by itself; save mode stays | `test_the_cell_probe_ends_by_itself` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
-| CON-10 | The probe only works in save mode and its seconds left are readable | `test_the_probe_works_only_in_save_mode` | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | done |
-| CON-11 | Wi-Fi is refused in save mode | `test_wifi_is_refused_in_save_mode` | — | done |
 | CON-12 | Wi-Fi is refused on a nearly empty battery unless on the cable; switching it off always works | `test_wifi_is_refused_on_a_nearly_empty_battery` | EA:test_wifi_is_refused_with_a_nearly_empty_battery, EA:test_wifi_on_cable_ignores_the_battery_limit | done |
 | CON-13 | Without a Wi-Fi capability nothing happens | `test_without_wifi_nothing_happens` | EA:test_wifi_without_a_web_service_does_nothing | done |
 | CON-14 | Wi-Fi requests are logged | `test_wifi_requests_are_logged` | — | done |
 | CON-15 | Wi-Fi is off until asked | `test_wifi_is_off_until_someone_asks` | WF:test_wifi_is_off_until_someone_asks | done |
 | CON-16 | A switch-on that fails is logged | `test_a_failed_switch_on_is_logged` | — | done |
-| CON-17 | A new probe starts the 180 seconds anew, and leaving save mode ends it | `test_a_probe_can_be_started_again_and_leaving_save_mode_ends_it` | — | done |
 | CON-18 | An unknown battery level does not refuse Wi-Fi | `test_an_unknown_battery_does_not_refuse_wifi` | — | done |
 | CON-19 | poll() keeps the Wi-Fi controller going | `test_poll_keeps_wifi_going` | — | done |
 
@@ -472,13 +466,13 @@ Tests in `test/test_app_core/`.
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
-| APP-01 | poll() drains SMS, radio, call events and send failures, advances the searches and the queue and the probe, in one pass | `test_poll_drains_everything` | — | done |
-| APP-02 | The read-only state offers what the interface draws: network label data, unread count, notice, call state and peer, SOS phase and countdown, school-time end, positioning active, save mode, battery, SIM | `test_the_state_offers_what_the_interface_draws` | SC:test_net_screen_explains_sms_only, SC:test_locked_sim_is_named_not_called_no_network, SC:test_status_screen_shows_charging | done |
+| APP-01 | poll() drains SMS, radio, call events and send failures, advances the searches and the queue, in one pass | `test_poll_drains_everything` | — | done |
+| APP-02 | The read-only state offers what the interface draws: network label data, unread count, notice, call state and peer, SOS phase and countdown, school-time end, positioning active, battery, SIM | `test_the_state_offers_what_the_interface_draws` | SC:test_net_screen_explains_sms_only, SC:test_locked_sim_is_named_not_called_no_network, SC:test_status_screen_shows_charging | done |
 | APP-03 | A full day: boot, start-up fix, message, calls in and out of school time | `test_a_full_day` | — | done |
 | APP-04 | An SOS in school time with the override | `test_an_sos_in_school_time_with_the_override` | — | done |
 | APP-05 | A remote query during an SOS | `test_a_remote_query_during_an_sos` | — | done |
 | APP-06 | The network dropping and returning | `test_the_network_dropping_and_returning` | — | done |
-| APP-07 | Save mode and the cell probe | `test_save_mode_and_the_cell_probe` | — | done |
+| APP-07 | The radio starts on request and carries a message when cellular is off (cellular, else radio) | `test_the_radio_starts_on_request_and_carries_a_message_when_cellular_is_off` | — | done |
 | APP-08 | Settings the child may change at run time (message vibration, how visible a remote query is) change the profile until restart | `test_run_time_settings_change_the_profile` | SC:test_options_toggle_message_vibration_and_volume, SC:test_status_screen_cycles_command_notice | done |
 | APP-09 | The time zone of the profile sets the clock's offset from the epoch, so school time stays on the wall clock across the change of the clocks | `test_the_clock_follows_the_time_zone` | — | done |
 | APP-10 | The core contains no sentence: every notice and system entry is a code | `test_the_core_produces_only_codes` | — | done |
@@ -503,6 +497,7 @@ Tests in `test/test_app_core/`.
 
 | Previous | Why |
 |---|---|
+| EA:test_save_mode_switches_cellular_off_with_a_timed_probe | Save mode (radio only, cellular and Wi-Fi off), the cell probe that belongs to it and its rules (Wi-Fi refused in save mode) are removed from version 4.0: they need the LoRa radio, which 4.0 does not have. They come back with the radio project, where an emergency radio mode switches battery saving on implicitly. |
 | EA:test_persona_and_warnings_reach_the_log | Parsing persona.json and whitelist.txt and logging their warnings belongs to the configuration package. The core receives a finished profile. |
 | SC (all UI screen tests) | Screens, soft keys, status bar, tile layout, lock screen, compose, number pad, wifi tiles, clock and test pages are user-interface work. The behaviours they exercised in the application are listed above; the stack rules are in docs/ui-framework.md. |
 | SC:test_motion_* | The motion sensor is a capability the screen uses directly; the application core does not wrap it. |

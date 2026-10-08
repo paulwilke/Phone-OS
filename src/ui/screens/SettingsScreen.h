@@ -6,7 +6,6 @@
 //   volume in calls   one step up, from 1 to 7 and round again; never silent, because a call that
 //                     starts mute is a mistake and no wish. Only where the modem has a volume.
 //   message vibration on or off; switching it on buzzes once, so that whoever wants it feels it.
-//   save mode         on or off. The core may refuse (it needs the radio); its notice says why.
 //   Wi-Fi             opens the Wi-Fi page. Only for the parents' tools, and only where the device has
 //                     Wi-Fi; the same condition as the Wi-Fi tile of the home page.
 //   language          opens the language page; the box says the language now in use.
@@ -33,7 +32,7 @@ protected:
   bool onInput(const Input& input, const Rect& area) override;
 
 private:
-  enum class Kind { Volume, Vibration, SaveMode, Wifi, Language };
+  enum class Kind { Volume, Vibration, Wifi, Language };
 
   std::vector<Kind> kinds();
   void rebuild();

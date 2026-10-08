@@ -29,9 +29,6 @@ const NoticeWording kWording[] = {
     {"notice.query-refused", true, false},     // short: a stranger asks by number, and a number is never shortened
     {"notice.cellular-switched-on", false, false},
     {"notice.cellular-switched-off", false, false},
-    {"notice.save-mode-needs-radio", false, false},
-    {"notice.save-mode-on", false, false},
-    {"notice.save-mode-no-wifi", false, false},
     {"notice.wifi-battery-low", false, false},
     {"notice.power-off-refused", false, false},
     {"notice.light-on", false, false},

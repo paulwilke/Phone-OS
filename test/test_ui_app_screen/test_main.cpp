@@ -73,8 +73,6 @@ void test_the_network_label_is_taken_as_data() {
   TEST_ASSERT_EQUAL_STRING("Example Mobile", m.operatorName.c_str());
   s.network.kind = Kind::Radio;
   TEST_ASSERT_TRUE(statusModelOf(s).link == StatusModel::Link::Radio);
-  s.network.kind = Kind::RadioOnly;
-  TEST_ASSERT_TRUE(statusModelOf(s).link == StatusModel::Link::RadioOnly);
   s.network.kind = Kind::None;
   TEST_ASSERT_TRUE(statusModelOf(s).link == StatusModel::Link::None);
 }

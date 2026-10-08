@@ -342,12 +342,9 @@ void test_the_network_label_is_the_operator_or_a_word_for_what_there_is() {
   Label radio;
   radio.kind = Label::Kind::Radio;
   TEST_ASSERT_EQUAL_STRING("Radio", wording::networkLabel(radio, t).c_str());
-  Label radioOnly;
-  radioOnly.kind = Label::Kind::RadioOnly;
-  TEST_ASSERT_EQUAL_STRING("Radio only", wording::networkLabel(radioOnly, t).c_str());
   for (const std::string& code : shipped(t)) {
     t.select(code);
-    for (const Label* l : {&unnamed, &none, &radio, &radioOnly}) expectWords(wording::networkLabel(*l, t), code);
+    for (const Label* l : {&unnamed, &none, &radio}) expectWords(wording::networkLabel(*l, t), code);
   }
   t.select("de");
   TEST_ASSERT_EQUAL_STRING("Netz", wording::networkLabel(unnamed, t).c_str());

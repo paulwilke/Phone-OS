@@ -59,8 +59,6 @@ StatusLeft statusLeft(const StatusModel& model, i18n::Translator& t) {
     left.text = t.get("status.network");
   } else if (model.link == StatusModel::Link::Radio) {
     left.text = t.get("status.radio");
-  } else if (model.link == StatusModel::Link::RadioOnly) {
-    left.text = t.get("status.radio-only");
   } else {
     left.text = t.get("status.no-network");
   }
