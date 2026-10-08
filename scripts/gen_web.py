@@ -485,59 +485,107 @@ function loadConfigForm(fileId) {{
 }}
 
 // ---------- Files ----------
-function loadFiles() {{
+// The device answers {{"path":"/config","entries":[{{"name","size","dir"}}...]}}: one directory at a time. The
+// page keeps the directory it shows; a file's own path is that directory and its name.
+var filesDir = '/';
+function joinPath(dir, name) {{ return (dir === '/' ? '' : dir) + '/' + name; }}
+function parentDir(dir) {{ var i = dir.lastIndexOf('/'); return i <= 0 ? '/' : dir.slice(0, i); }}
+
+// What the parent sees when the device refuses (403 on secrets.toml, 404, 400): the device's own words.
+function filesError(msg) {{
+  var el = document.getElementById('files-error');
+  el.textContent = msg ? t('web.form.error') + ': ' + msg : '';
+  el.hidden = !msg;
+}}
+function filesOk(r) {{
+  if (r.ok) return r;
+  return r.json().catch(function() {{ return {{}}; }}).then(function(d) {{
+    throw new Error(d.error || ('HTTP ' + r.status));
+  }});
+}}
+function filesFailed(e) {{ filesError(e && e.message ? e.message : t('web.form.error')); }}
+
+function fileRow(dir, e) {{
+  var tr = document.createElement('tr');
+  var td1 = document.createElement('td');
+  var td2 = document.createElement('td');
+  var td3 = document.createElement('td');
+  if (e.up) {{
+    var upBtn = document.createElement('button'); upBtn.className = 'action-btn btn-up';
+    upBtn.textContent = '..';
+    upBtn.addEventListener('click', function() {{ loadFiles(parentDir(dir)); }});
+    td1.appendChild(upBtn);
+  }} else if (e.dir) {{
+    var openBtn = document.createElement('button'); openBtn.className = 'action-btn btn-open';
+    openBtn.textContent = e.name + '/';
+    openBtn.addEventListener('click', function() {{ loadFiles(joinPath(dir, e.name)); }});
+    td1.appendChild(openBtn);
+  }} else {{
+    td1.textContent = e.name;
+    td2.textContent = e.size;
+    var path = joinPath(dir, e.name);
+    var dlBtn = document.createElement('button'); dlBtn.className = 'action-btn btn-dl';
+    dlBtn.textContent = t('web.files.download');
+    dlBtn.addEventListener('click', function() {{
+      filesError('');
+      api('GET', '/api/file?path=' + encodeURIComponent(path)).then(filesOk)
+        .then(function(r) {{ return r.text(); }}).then(function(text) {{
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([text]));
+          a.download = e.name; a.click();
+        }}).catch(filesFailed);
+    }});
+    var editBtn = document.createElement('button'); editBtn.className = 'action-btn btn-edit';
+    editBtn.textContent = t('web.files.edit');
+    editBtn.addEventListener('click', function() {{
+      filesError('');
+      api('GET', '/api/file?path=' + encodeURIComponent(path)).then(filesOk)
+        .then(function(r) {{ return r.text(); }}).then(function(text) {{
+          showEditor(path, text);
+        }}).catch(filesFailed);
+    }});
+    var delBtn = document.createElement('button'); delBtn.className = 'action-btn btn-del';
+    delBtn.textContent = t('web.files.delete');
+    delBtn.addEventListener('click', function() {{
+      if (!confirm(t('web.files.confirm-delete'))) return;
+      filesError('');
+      api('DELETE', '/api/file?path=' + encodeURIComponent(path), {{}}).then(filesOk)
+        .then(function() {{ loadFiles(); }}).catch(filesFailed);
+    }});
+    td3.appendChild(dlBtn); td3.appendChild(editBtn); td3.appendChild(delBtn);
+  }}
+  tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+  return tr;
+}}
+
+function loadFiles(dir) {{
+  if (typeof dir === 'string') filesDir = dir;
+  var shown = filesDir;
   var tbody = document.getElementById('files-tbody');
   var emptyEl = document.getElementById('files-empty');
   tbody.innerHTML = '';
-  api('GET', '/api/files').then(function(r) {{ return r.json(); }}).then(function(files) {{
-    emptyEl.hidden = files.length > 0;
-    files.forEach(function(f) {{
-      var tr = document.createElement('tr');
-      var td1 = document.createElement('td'); td1.textContent = f.path; tr.appendChild(td1);
-      var td2 = document.createElement('td'); td2.textContent = f.size; tr.appendChild(td2);
-      var td3 = document.createElement('td');
-      var dlBtn = document.createElement('button'); dlBtn.className = 'action-btn btn-dl';
-      dlBtn.textContent = t('web.files.download');
-      dlBtn.addEventListener('click', function() {{
-        api('GET', '/api/file?path=' + encodeURIComponent(f.path))
-          .then(function(r) {{ return r.text(); }}).then(function(text) {{
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([text]));
-            a.download = f.path.split('/').pop(); a.click();
-          }});
-      }});
-      var editBtn = document.createElement('button'); editBtn.className = 'action-btn btn-edit';
-      editBtn.textContent = t('web.files.edit');
-      editBtn.addEventListener('click', function() {{
-        api('GET', '/api/file?path=' + encodeURIComponent(f.path))
-          .then(function(r) {{ return r.text(); }}).then(function(text) {{
-            showEditor(f.path, text);
-          }});
-      }});
-      var delBtn = document.createElement('button'); delBtn.className = 'action-btn btn-del';
-      delBtn.textContent = t('web.files.delete');
-      delBtn.addEventListener('click', function() {{
-        if (!confirm(t('web.files.confirm-delete'))) return;
-        api('DELETE', '/api/file?path=' + encodeURIComponent(f.path), {{}})
-          .then(function() {{ loadFiles(); }});
-      }});
-      td3.appendChild(dlBtn); td3.appendChild(editBtn); td3.appendChild(delBtn);
-      tr.appendChild(td3);
-      tbody.appendChild(tr);
-    }});
-  }}).catch(function() {{}});
+  emptyEl.hidden = true;
+  filesError('');
+  document.getElementById('files-path').textContent = shown;
+  api('GET', '/api/files?path=' + encodeURIComponent(shown)).then(filesOk)
+    .then(function(r) {{ return r.json(); }}).then(function(d) {{
+      var entries = d.entries || [];
+      emptyEl.hidden = entries.length > 0;
+      if (shown !== '/') tbody.appendChild(fileRow(shown, {{ up: true }}));
+      entries.forEach(function(e) {{ tbody.appendChild(fileRow(shown, e)); }});
+    }}).catch(filesFailed);
   var uploadInput = document.getElementById('files-upload-input');
   uploadInput.onchange = function() {{
     if (!uploadInput.files.length) return;
     var file = uploadInput.files[0];
     var reader = new FileReader();
-    reader.onload = function(e) {{
-      var content = e.target.result;
-      var path = '/config/' + file.name;
+    reader.onload = function(ev) {{
+      var content = ev.target.result;
+      var path = joinPath(filesDir, file.name);
       var opts = {{ method: 'PUT', headers: {{ Authorization: authHeader,
           'Content-Type': 'text/plain', 'X-Phoneplus': '1' }}, body: content }};
-      fetch('/api/file?path=' + encodeURIComponent(path), opts)
-        .then(function() {{ loadFiles(); uploadInput.value = ''; }});
+      fetch('/api/file?path=' + encodeURIComponent(path), opts).then(filesOk)
+        .then(function() {{ loadFiles(); uploadInput.value = ''; }}).catch(filesFailed);
     }};
     reader.readAsText(file);
   }};
@@ -552,8 +600,8 @@ function showEditor(path, text) {{
     var opts = {{ method: 'PUT', headers: {{ Authorization: authHeader,
         'Content-Type': 'text/plain', 'X-Phoneplus': '1' }},
         body: textArea.value }};
-    fetch('/api/file?path=' + encodeURIComponent(path), opts)
-      .then(function() {{ editorDiv.hidden = true; loadFiles(); }});
+    fetch('/api/file?path=' + encodeURIComponent(path), opts).then(filesOk)
+      .then(function() {{ editorDiv.hidden = true; loadFiles(); }}).catch(filesFailed);
   }};
   document.getElementById('file-editor-cancel').onclick = function() {{
     editorDiv.hidden = true;
@@ -776,6 +824,8 @@ function init(state) {{
         "    </div>",
         "",
         '    <div id="panel-files" class="panel">',
+        '      <p id="files-path"></p>',
+        '      <p id="files-error" class="status-err" hidden></p>',
         "      <table>",
         "        <thead><tr>",
         '          <th data-t="web.files.path"></th>',

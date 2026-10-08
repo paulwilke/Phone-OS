@@ -389,6 +389,32 @@ void test_the_log_tab_reads_and_clears_the_log_file_of_the_card_through_the_file
   TEST_ASSERT_EQUAL(404, w.get("/api/file?path=/system.log").status);
 }
 
+void test_the_files_tab_reads_the_shape_the_api_sends_for_the_root_and_a_directory() {
+  // The page's Files tab reads {"path":..., "entries":[{"name","size","dir"}]} (test/test_web_page/test.mjs
+  // feeds the same shape to the page's script). The first page read a bare array and showed "no files".
+  Web w;
+  TEST_ASSERT_TRUE(w.sim.card().write("/system.log", "boot ok\n"));
+  TEST_ASSERT_TRUE(w.sim.card().write("/config/._contacts.toml", "appledouble"));
+  const Reply root = w.get("/api/files");
+  TEST_ASSERT_EQUAL(200, root.status);
+  TEST_ASSERT_TRUE_MESSAGE(root.body.rfind("{\"path\":\"/\",\"entries\":[", 0) == 0, root.body.c_str());
+  TEST_ASSERT_TRUE_MESSAGE(root.has("{\"name\":\"config\",\"size\":0,\"dir\":true}"), root.body.c_str());
+  TEST_ASSERT_TRUE_MESSAGE(root.has("{\"name\":\"system.log\",\"size\":8,\"dir\":false}"), root.body.c_str());
+
+  const Reply config = w.get("/api/files?path=/config");
+  TEST_ASSERT_EQUAL(200, config.status);
+  TEST_ASSERT_TRUE_MESSAGE(config.body.rfind("{\"path\":\"/config\",\"entries\":[", 0) == 0, config.body.c_str());
+  TEST_ASSERT_TRUE(config.has("\"name\":\"contacts.toml\""));
+  TEST_ASSERT_TRUE_MESSAGE(config.has("\"name\":\"._contacts.toml\""), "a macOS leftover is listed so that it can be deleted");
+  TEST_ASSERT_TRUE(config.has("\"name\":\"secrets.toml\""));
+  TEST_ASSERT_EQUAL(404, w.get("/api/files?path=/nosuchdir").status);
+
+  // The page shows the error text of a refused delete: the answer carries it as {"error": ...}.
+  const Reply refused = w.change("DELETE", "/api/file?path=/config/secrets.toml", "{}");
+  TEST_ASSERT_EQUAL(403, refused.status);
+  TEST_ASSERT_TRUE_MESSAGE(refused.has("\"error\":\"secrets.toml holds the web password"), refused.body.c_str());
+}
+
 void test_the_wifi_off_button_ends_the_page() {
   Web w;
   TEST_ASSERT_EQUAL(200, w.change("POST", "/api/wifi-off", "{}").status);
@@ -482,6 +508,7 @@ int main() {
   RUN_TEST(test_a_language_saved_through_the_api_is_the_devices_after_the_restart_the_page_asks_for);
   RUN_TEST(test_a_file_the_device_would_reject_is_not_stored_and_a_typo_is_stored_with_a_warning);
   RUN_TEST(test_the_log_tab_reads_and_clears_the_log_file_of_the_card_through_the_file_route);
+  RUN_TEST(test_the_files_tab_reads_the_shape_the_api_sends_for_the_root_and_a_directory);
   RUN_TEST(test_the_wifi_off_button_ends_the_page);
   RUN_TEST(test_a_change_without_the_header_is_refused_and_changes_nothing);
   RUN_TEST(test_five_wrong_passwords_lock_everybody_out_for_a_minute);

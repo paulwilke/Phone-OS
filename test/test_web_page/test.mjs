@@ -226,6 +226,8 @@ function richElement(tag) {
   const el = {
     tag, id: tag, children: [], attrs: {}, className: '', textContent: '', value: '', checked: false, hidden: false, style: {}, listeners: {},
     classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    // innerHTML = '' is how the page empties a container
+    set innerHTML(_v) { this.children = []; },
     appendChild(c) { this.children.push(c); return c; },
     setAttribute(n, v) { this.attrs[n] = v; }, getAttribute(n) { return this.attrs[n] ?? null; },
     addEventListener(t, f) { this.listeners[t] = f; }, remove() {}, focus() {}, click() {},
@@ -240,7 +242,7 @@ function richElement(tag) {
   return el;
 }
 
-async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false, rich = false, settings = {} }) {
+async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false, rich = false, settings = {}, onFetch = null, fileReader = null }) {
   const store = {};
   if (storedAuth) store.pp_auth = storedAuth;
   if (storedLang) store.pp_lang = storedLang;
@@ -254,7 +256,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     dataT.push(el);
   }
   const document = {
-    getElementById(id) { return els[id] ??= (rich && id.startsWith('form-') ? richElement(id) : fakeElement(id)); },
+    getElementById(id) { return els[id] ??= (rich && (id.startsWith('form-') || id === 'files-tbody') ? richElement(id) : fakeElement(id)); },
     querySelectorAll(sel) { return sel === '[data-t]' ? dataT : sel === '#tabs button' ? dataT.filter((e) => e.attrs['data-tab']) : []; },
     createElement: (tag) => (rich ? richElement(tag) : fakeElement(tag)), querySelector: () => null,
     title: '', body: fakeElement('body'),
@@ -263,8 +265,9 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
   const fetchFn = async (path, opts = {}) => {
     const authed = opts.headers && opts.headers.Authorization === 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
     calls.push({ path, authed, method: opts.method, body: opts.body });
-    const reply = (status, body) => ({ ok: status < 400, status, json: async () => structuredClone(body) });
+    const reply = (status, body, text) => ({ ok: status < 400, status, json: async () => structuredClone(body), text: async () => text ?? JSON.stringify(body) });
     if (!authed) return reply(401, { error: 'Unauthorized' });
+    if (onFetch) { const r = onFetch(path, opts, reply); if (r) return r; }
     if (path === '/api/state') return reply(200, deviceLang ? { language: deviceLang } : {});
     if (path === '/api/languages') return reply(200, Object.keys(catalogs).map((c) => ({ code: c, name: c, native: c })));
     const l = path.match(/^\/api\/lang\/(.+)$/);
@@ -280,7 +283,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     document, fetch: fetchFn, btoa: (x) => Buffer.from(x).toString('base64'), console,
     navigator: { language: browserLang || 'en-US' },
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
-    setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, FileReader: function () {}, Blob: function () {},
+    setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, FileReader: fileReader || function () {}, Blob: function () {},
     URL: { createObjectURL: () => '' }, confirm: () => true, alert() {},
   };
   context.window = context;
@@ -531,6 +534,128 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     const label = windowsOf(pg)[0].children.flatMap((wrap) => wrap.children).find((c) => c.children.includes(box));
     assert(label && label.textContent === 'aktiv', 'in German the checkbox is called "aktiv": ' + (label && label.textContent));
   }
+}
+
+
+// (k) the Files tab reads the shape the device sends: {path, entries:[{name,size,dir}]}, one directory at a time.
+// The first page read a bare array of {path,size}, so every real answer looked like an empty list.
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const tree = {
+    '/': [{ name: 'config', size: 0, dir: true }, { name: 'system.log', size: 68412, dir: false }],
+    '/config': [{ name: 'contacts.toml', size: 210, dir: false }, { name: '._contacts.toml', size: 4096, dir: false },
+                { name: 'secrets.toml', size: 90, dir: false }, { name: 'sub', size: 0, dir: true }],
+    '/config/sub': [],
+  };
+  const texts = { '/config/contacts.toml': '[[contact]]\nnumber = "+491700000000"\n' };
+  const onFetch = (path, opts, reply) => {
+    const url = new URL(path, 'http://device');
+    if (url.pathname === '/api/files') {
+      const dir = url.searchParams.get('path') ?? '/';
+      return tree[dir] ? reply(200, { path: dir, entries: tree[dir] }) : reply(404, { error: 'Directory not found' });
+    }
+    if (url.pathname === '/api/file') {
+      const f = url.searchParams.get('path');
+      if (opts.method === 'DELETE' && f === '/config/secrets.toml') return reply(403, { error: 'The secrets file cannot be deleted' });
+      if (opts.method === 'DELETE' || opts.method === 'PUT') return reply(200, { ok: true });
+      return reply(200, {}, texts[f] ?? '');
+    }
+    return null;
+  };
+  const walkF = (el, out = []) => { for (const c of el.children || []) { out.push(c); walkF(c, out); } return out; };
+  const open = async (extra = {}) => {
+    const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: { en, de }, rich: true, onFetch, ...extra });
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'files').listeners.click();
+    await pg.settle();
+    return pg;
+  };
+  // what the table shows: one entry per row, the name cell and its buttons
+  const rows = (pg) => pg.els['files-tbody'].children.map((tr) => {
+    const [name, size, actions] = tr.children;
+    const buttons = walkF(name).concat(walkF(actions)).filter((c) => c.tag === 'button');
+    return { name: name.textContent || buttons.map((b) => b.textContent)[0] || '', size: size.textContent, buttons, name_buttons: walkF(name).filter((c) => c.tag === 'button') };
+  });
+  const btn = (row, cls) => row.buttons.find((b) => b.className.includes(cls));
+  const listCalls = (pg) => pg.calls.filter((c) => c.path.startsWith('/api/files')).map((c) => decodeURIComponent(c.path));
+
+  // the root lists its entries (the real answer of the device), a directory has no file buttons
+  let pg = await open();
+  let r = rows(pg);
+  assert(r.length === 2 && r[0].name === 'config/' && r[1].name === 'system.log', 'the root lists its two entries: ' + r.map((x) => x.name).join(', '));
+  assert(r[1].size === 68412 || r[1].size === '68412', 'a file shows its size');
+  assert(pg.els['files-empty'].hidden === true, 'a listing with entries hides the empty text');
+  assert(r[0].buttons.length === 1 && r[0].name_buttons.length === 1, 'a directory has one button (open) and no Download, Edit or Delete');
+  assert(r[1].buttons.map((b) => b.textContent).join('|') === 'Download|Edit|Delete', 'a file has Download, Edit and Delete');
+  assert(pg.els['files-path'].textContent === '/', 'the current directory is shown');
+
+  // a file's actions use the full path: directory and name
+  btn(r[1], 'btn-edit').listeners.click();
+  await pg.settle();
+  assert(pg.calls.some((c) => c.path === '/api/file?path=%2Fsystem.log'), 'edit in the root asks for /system.log');
+
+  // a directory opens
+  btn(r[0], 'btn-open').listeners.click();
+  await pg.settle();
+  r = rows(pg);
+  assert(listCalls(pg).at(-1) === '/api/files?path=/config', 'opening a directory asks for ?path=/config: ' + listCalls(pg).join(' '));
+  assert(r.map((x) => x.name).join('|') === '..|contacts.toml|._contacts.toml|secrets.toml|sub/', 'the directory lists its entries behind a ".." step, macOS leftovers included: ' + r.map((x) => x.name).join('|'));
+  assert(pg.els['files-path'].textContent === '/config', 'the path shows /config');
+
+  // the actions of a file in that directory use /config/<name>
+  const contacts = r.find((x) => x.name === 'contacts.toml');
+  btn(contacts, 'btn-edit').listeners.click();
+  await pg.settle();
+  assert(pg.calls.some((c) => c.path === '/api/file?path=%2Fconfig%2Fcontacts.toml'), 'edit asks for /config/contacts.toml');
+  assert(pg.els['file-editor-text'].value === texts['/config/contacts.toml'], 'the editor holds the file text');
+  btn(contacts, 'btn-dl').listeners.click();
+  await pg.settle();
+  assert(pg.calls.filter((c) => c.path === '/api/file?path=%2Fconfig%2Fcontacts.toml').length === 2, 'download asks for the full path too');
+  const leftover = r.find((x) => x.name === '._contacts.toml');
+  btn(leftover, 'btn-del').listeners.click();
+  await pg.settle();
+  assert(pg.calls.some((c) => c.method === 'DELETE' && c.path === '/api/file?path=%2Fconfig%2F._contacts.toml'), 'a macOS leftover can be deleted, by its full path');
+  assert(pg.els['files-error'].hidden === true, 'a delete that worked shows no error');
+
+  // saving in the editor writes the full path
+  pg.els['file-editor-text'].value = 'x = 1\n';
+  pg.els['file-editor-save'].onclick();
+  await pg.settle();
+  assert(pg.calls.some((c) => c.method === 'PUT' && c.path === '/api/file?path=%2Fconfig%2Fcontacts.toml' && c.body === 'x = 1\n'), 'saving writes /config/contacts.toml');
+
+  // upload goes into the current directory
+  const pgU = await open({ fileReader: function () { this.readAsText = () => this.onload({ target: { result: 'a = 1\n' } }); } });
+  btn(rows(pgU)[0], 'btn-open').listeners.click();
+  await pgU.settle();
+  pgU.els['files-upload-input'].files = [{ name: 'new.toml' }];
+  pgU.els['files-upload-input'].onchange();
+  await pgU.settle();
+  assert(pgU.calls.some((c) => c.method === 'PUT' && c.path === '/api/file?path=%2Fconfig%2Fnew.toml'), 'an upload in /config goes to /config/new.toml');
+
+  // the secrets file cannot be deleted: the parent reads the device's reason
+  btn(r.find((x) => x.name === 'secrets.toml'), 'btn-del').listeners.click();
+  await pg.settle();
+  assert(pg.els['files-error'].hidden === false && pg.els['files-error'].textContent.includes('The secrets file cannot be deleted'),
+    'a refused delete shows the device\'s error text: ' + pg.els['files-error'].textContent);
+
+  // an empty directory shows the empty text (and the way back)
+  btn(r.find((x) => x.name === 'sub/'), 'btn-open').listeners.click();
+  await pg.settle();
+  r = rows(pg);
+  assert(pg.els['files-empty'].hidden === false && r.length === 1 && r[0].name === '..', 'an empty directory shows the empty text and the ".." step');
+  assert(pg.els['files-path'].textContent === '/config/sub', 'the path shows /config/sub');
+
+  // back up, one step at a time
+  btn(r[0], 'btn-up').listeners.click();
+  await pg.settle();
+  assert(listCalls(pg).at(-1) === '/api/files?path=/config' && pg.els['files-path'].textContent === '/config', 'the ".." step of /config/sub opens /config');
+  btn(rows(pg)[0], 'btn-up').listeners.click();
+  await pg.settle();
+  r = rows(pg);
+  assert(listCalls(pg).at(-1) === '/api/files?path=/' && r.map((x) => x.name).join('|') === 'config/|system.log', 'the ".." step of /config opens the root, which has no ".." step');
+
+  // a directory the device does not have: its error text, not an empty list
+  const pg404 = await open({ onFetch: (p, o, rep) => (p.startsWith('/api/files') ? rep(404, { error: 'Directory not found' }) : null) });
+  assert(pg404.els['files-error'].textContent.includes('Directory not found'), 'a failed listing shows the device\'s error text');
 }
 
 // ---------- summary ----------
