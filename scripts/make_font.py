@@ -5,18 +5,18 @@
     scripts/make_font.py --check    # fail if a generated file is not what --all would write
 
 Sources:
-  * Lucida Sans bitmap fonts by Bigelow & Holmes (BDF, hand-pixelled, 100 dpi). The glyphs are
-    taken over pixel by pixel and are not changed, which the Lucida licence requires
-    (assets/fonts/LICENSE-Lucida-BH.txt); only where a glyph sits relative to the pen is
-    corrected when its ink would lie outside its cell (see read_bdf). Every font has the glyph of every character in
+  * Adobe Helvetica bitmap fonts (BDF, hand-pixelled, 100 dpi; licence and notices in
+    assets/fonts/LICENSE-Adobe-Helvetica.txt). The glyphs are taken over pixel by pixel; only
+    where a glyph sits relative to the pen is corrected when its ink would lie outside its
+    cell (see read_bdf). Every font has the glyph of every character in
     assets/fonts/charset.txt, except the interface symbols.
   * assets/fonts/symbols.txt: the interface symbols, our own pixel art, one set per font size.
-  * Lucida's own box glyph (code 0 in the BDF files) is the replacement glyph that is drawn for
+  * The font's own box glyph (code 0 in the BDF files) is the replacement glyph that is drawn for
     a character the font does not have.
 
 The generated files hold nothing but data. They are named after their role (FontSmall, ...), not
-after Lucida, because the licence allows the Lucida name only on unmodified fonts and ours also
-hold our own symbols. Dependency-free on purpose: the build must not need anything installed.
+after Helvetica, which is a trademark of Linotype: the fonts here also hold our own symbols.
+Dependency-free on purpose: the build must not need anything installed.
 """
 import argparse
 import os
@@ -32,22 +32,19 @@ SYMBOL_FILE = os.path.join(FONT_DIR, "symbols.txt")
 
 # (name used in symbols.txt, generated C++ name, BDF source)
 FONTS = [
-    ("small", "FontSmall", "luBS10.bdf"),
-    ("text", "FontText", "luRS14.bdf"),
-    ("tile", "FontTile", "luBS18.bdf"),
-    ("large", "FontLarge", "luBS24.bdf"),
+    ("small", "FontSmall", "helvB10.bdf"),
+    ("text", "FontText", "helvR14.bdf"),
+    ("tile", "FontTile", "helvB18.bdf"),
+    ("large", "FontLarge", "helvB24.bdf"),
 ]
-# Blank columns after a symbol: the Lucida letters carry their spacing in their advance.
+# Blank columns after a symbol: the letters carry their spacing in their advance.
 SYMBOL_GAP = {"small": 1, "text": 1, "tile": 2, "large": 2}
 
 NOTICE = """\
-// (c) Copyright Bigelow & Holmes 1986, 1985. Lucida is a registered trademark of Bigelow &
-// Holmes. Permission to use the Lucida trademark is hereby granted only in association with the
-// images and fonts described in the licence file. (c) Copyright 1989 Sun Microsystems, Inc. Sun
-// design patents pending in the U.S. and foreign countries. OPEN LOOK is a trademark of AT&T.
-// Used by written permission of the owners.
-// Licence: assets/fonts/LICENSE-Lucida-BH.txt. The letter glyphs are unchanged; the interface
-// symbols are our own (assets/fonts/symbols.txt) and no part of Lucida."""
+// Copyright 1984-1989, 1994 Adobe Systems Incorporated. Copyright 1988, 1994 Digital Equipment
+// Corporation. Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
+// Licence and permission notice: assets/fonts/LICENSE-Adobe-Helvetica.txt. The letter glyphs are
+// Adobe's; the interface symbols are our own (assets/fonts/symbols.txt)."""
 
 
 class FontError(Exception):
@@ -181,7 +178,7 @@ def build(kind, cpp_name, bdf_name, symbol_sets):
     if unused:
         raise FontError(f"{SYMBOL_FILE}: font {kind} draws symbols charset.txt does not know: {sorted(unused)}")
 
-    # Some Lucida accents reach above the font's ascent or below its descent; the line grows
+    # Some accents reach above the font's ascent or below its descent; the line grows
     # to hold them, so that nothing a font draws is outside its line.
     lift = max(0, -min(e[3] for e in entries))
     ascent += lift

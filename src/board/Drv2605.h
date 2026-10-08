@@ -4,7 +4,7 @@
 // effect library. Its supply is gated by the expander (leg kHapticPower), and **that must be on before
 // begin(), or the chip does not answer**: the most common mistake with this part.
 //
-// The register sequence is the one of the chip's own library (Adafruit_DRV2605::begin() followed by
+// The register sequence is the one of Adafruit's library for the chip (Adafruit_DRV2605::begin() followed by
 // selectLibrary(1) and the internal-trigger mode), checked against the data sheet's register map: 13
 // register addresses and the two read-modify-write bits (ERM instead of LRA in the feedback register,
 // open loop in control 3).

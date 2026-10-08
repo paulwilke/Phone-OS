@@ -44,7 +44,6 @@ Each one is in [open-points.md](open-points.md) with the question and a recommen
 | Item | Decision | Recommendation |
 |---|---|---|
 | 9 | the radio | decided: not in 4.0, in a later release |
-| 13 | Meck's licence file for the copied board description | compare it and add it, or replace the board file |
 | 14 | handing out a firmware binary | do not, until the sensor image's terms are verified |
 | 16 | the tag, the repository's visibility, what happens to the old repositories | the owner's, after the checklist |
 | 17 | school-time windows of a 3.2 card: German day names and a third window a day are refused | decided: the refusals stay; the owner writes the windows anew in the format of 4.0 ([upgrading.md](upgrading.md)) |

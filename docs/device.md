@@ -35,7 +35,7 @@ The rule behind the split: **a bug found on the device gets a host test.** The h
 pio run -e device      # the firmware, compile-only; CI does the same
 ```
 
-The board description is `boards/t-deck_pro_max.json` (ESP32-S3, 16 MB flash, 8 MB PSRAM, USB serial on the processor's own port). **A build is not a test, and a test on the host is not a test on the device:** everything about behaviour on the device stays "not verified" until the owner's checklist ([bring-up.md](bring-up.md)) says otherwise. Flashing is the owner's decision.
+The board is PlatformIO's own `esp32-s3-devkitc-1`, set in `platformio.ini` to what the T-Deck Pro MAX has (ESP32-S3, 16 MB QIO flash, 8 MB QSPI PSRAM, USB serial on the processor's own port); the partition table is the core's default. **A build is not a test, and a test on the host is not a test on the device:** everything about behaviour on the device stays "not verified" until the owner's checklist ([bring-up.md](bring-up.md)) says otherwise. Flashing is the owner's decision.
 
 ## The console and the serial port
 

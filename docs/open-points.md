@@ -32,7 +32,6 @@ The owner is the person who owns the device and the repository. Software work th
 
 | # | Open point | What exactly | Owner | Described in |
 |---|---|---|---|---|
-| 13 | Meck | `boards/t-deck_pro_max.json` is a copy of Meck's board description, and values and register sequences were read from Meck's code (MIT, copyright line known only from the earlier project's notes). The verbatim `LICENSE` of Meck has not been compared. Compare it, then add its text and the notice to `THIRD_PARTY.md`, or replace the board file with one of our own. | owner | [THIRD_PARTY.md](../THIRD_PARTY.md) |
 | 14 | Handing out a firmware binary | The Bosch image of the motion sensor comes inside SensorLib and carries no licence text: until Bosch's redistribution terms are verified, a binary is for the owner's own device and is not published. The binary also contains LGPL code (the Arduino core) and Bosch's BSD-3-Clause drivers; what that asks of a published binary has not been assessed. | owner | [THIRD_PARTY.md](../THIRD_PARTY.md), [hardware-drivers.md](hardware-drivers.md) |
 | 15 | A native speaker for German and French | The catalogs and guides were read for wording by the author, not by a native speaker. The places where an opinion is wanted are listed below. | owner | [translating.md](translating.md) |
 | 16 | Release 4.0 | The version is set (`VERSION` 4.0.0, [release-4.0.md](release-4.0.md)). Still the owner's: the tag, whether the repository is published, and what happens to the old repositories. Nothing is published, archived or deleted without the owner's decision. | owner | [release-4.0.md](release-4.0.md), [../CHANGELOG.md](../CHANGELOG.md) |
@@ -43,12 +42,12 @@ Where a word was chosen because a better one does not fit, or where two good one
 
 | Language | Place | Choice | Alternative |
 |---|---|---|---|
-| German | tile `home.settings` | "Option" (singular), because "Optionen" is 71 pixels | "Optionen" on a wider tile |
+| German | tile `home.settings` | "Option" (singular), chosen when "Optionen" did not fit | "Optionen": 65 pixels, it fits since the display fonts are Helvetica |
 | German | `messages.call-back` (soft key) | "Rückruf" | "Zurückrufen" does not fit |
 | German | the words for the access point and the parents' tools | "Zugangspunkt", "Elternwerkzeuge", "Zugangsdaten" for the tab of `secrets.toml` | "Hotspot", "Elternfunktionen" |
 | German | `notice.message-sent` | "Nachricht ist raus" (colloquial) | "Nachricht gesendet" |
 | German | address of the child | "Du" in the history, bare infinitives in hints | |
-| French | tile `home.inbox` | "Courrier"; "Messages" is 77 pixels | "SMS" |
+| French | tile `home.inbox` | "Courrier"; "Messages" is 70 pixels | "SMS" |
 | French | tile `home.motion` and `motion.reset` | "Mouv.", "Réinit." | |
 | French | `home.settings`, `wifi.home-network` | "Réseau maison" | "Réseau domestique" |
 | French | `selftest.on`, `selftest.off` | "oui" and "non" ("Lumière : oui") | "activé" (does not agree in gender with both lines) |

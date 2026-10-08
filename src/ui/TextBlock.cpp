@@ -44,7 +44,8 @@ void TextBlock::draw(Display& display, const Rect& area) {
   const Font& f = font(size_);
   const auto lines = text::wrap(f, text_, textWidth(area));
   const size_t visible = visibleLines(area);
-  if (first_ + visible > lines.size() && lines.size() > visible) first_ = lines.size() - visible;
+  // An area that has grown since the last scroll shows as much as it can: the whole text when it fits now.
+  if (first_ + visible > lines.size()) first_ = lines.size() > visible ? lines.size() - visible : 0;
   for (size_t i = 0; i < visible && first_ + i < lines.size(); ++i)
     text::draw(display, f, area.x + 2, area.y + static_cast<int>(i) * f.lineHeight(), lines[first_ + i]);
   shapes::drawScrollBar(display, {area.right() - kBarWidth, area.y, kBarWidth, area.h}, lines.size(), first_, visible);

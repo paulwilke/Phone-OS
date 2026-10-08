@@ -208,8 +208,8 @@ void test_the_ink_of_every_glyph_stays_inside_its_cell() {
 
 void test_line_heights_and_proportions() {
   struct Expect { FontSize s; int line, ascent, cap; };
-  for (const Expect& e : {Expect{FontSize::Small, 16, 13, 10}, Expect{FontSize::Text, 23, 18, 14},
-                          Expect{FontSize::Tile, 29, 23, 18}, Expect{FontSize::Large, 41, 33, 25}}) {
+  for (const Expect& e : {Expect{FontSize::Small, 17, 14, 11}, Expect{FontSize::Text, 22, 18, 14},
+                          Expect{FontSize::Tile, 29, 24, 19}, Expect{FontSize::Large, 38, 31, 25}}) {
     const Font& f = font(e.s);
     TEST_ASSERT_EQUAL_MESSAGE(e.line, f.lineHeight(), sizeName(e.s));
     TEST_ASSERT_EQUAL_MESSAGE(e.ascent, f.ascent, sizeName(e.s));

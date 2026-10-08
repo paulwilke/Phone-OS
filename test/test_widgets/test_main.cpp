@@ -1092,11 +1092,17 @@ void test_a_long_text_wraps_and_scrolls_by_line() {
 void test_a_text_scrolled_to_the_end_fills_a_taller_area_again() {
   TextBlock block;
   block.setText(kLongMessage);
-  for (int i = 0; i < 50; ++i) block.handle(Input::pressed(Key::Down), kBlockArea);
-  const Rect taller{kBlockArea.x, kBlockArea.y, kBlockArea.w, 220};
-  FrameBuffer fb;
-  block.draw(fb, taller);
-  TEST_ASSERT_EQUAL(block.lineCount(taller) - block.visibleLines(taller), block.firstLine());
+  // One area in which the text still overflows, and one that holds all of it: then it starts at its top.
+  for (int height : {kBlockArea.h + 22, 300}) {
+    for (int i = 0; i < 50; ++i) block.handle(Input::pressed(Key::Down), kBlockArea);
+    const Rect taller{kBlockArea.x, kBlockArea.y, kBlockArea.w, height};
+    const size_t total = block.lineCount(taller), visible = block.visibleLines(taller);
+    FrameBuffer fb;
+    block.draw(fb, taller);
+    TEST_ASSERT_EQUAL(total > visible ? total - visible : 0, block.firstLine());
+  }
+  TEST_ASSERT_TRUE(block.lineCount(kBlockArea) > block.visibleLines({0, 0, 240, kBlockArea.h + 22}));
+  TEST_ASSERT_TRUE(block.lineCount(kBlockArea) <= block.visibleLines({0, 0, 240, 300}));
 }
 
 void test_a_short_text_does_not_scroll_and_a_new_text_starts_at_the_top() {

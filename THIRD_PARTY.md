@@ -1,6 +1,6 @@
 # Third-party material
 
-The repository is under the MIT licence, copyright "PhonePlus contributors" ([LICENSE](LICENSE)). It stores one third-party work, the Lucida Sans bitmap fonts, and one file that is a copy (the board description, below). Everything else listed here is fetched by a build or read for facts and is not stored.
+The repository is under the MIT licence, copyright "PhonePlus contributors" ([LICENSE](LICENSE)). It stores one third-party work, the Adobe Helvetica bitmap fonts. Everything else listed here is fetched by a build or read for facts and is not stored.
 
 | Tool | Licence | Used for |
 |---|---|---|
@@ -14,15 +14,13 @@ The repository is under the MIT licence, copyright "PhonePlus contributors" ([LI
 
 | Work | Licence | Used for |
 |---|---|---|
-| Lucida Sans bitmap fonts `luBS10`, `luRS14`, `luBS18`, `luBS24` (Bigelow & Holmes; in `assets/fonts/*.bdf`, fetched from the `tools/font/bdf/` folder of [u8g2](https://github.com/olikraus/u8g2)) | the Lucida licence, [assets/fonts/LICENSE-Lucida-BH.txt](assets/fonts/LICENSE-Lucida-BH.txt): free for individual and commercial software, the glyphs must not be changed, the two notices below must appear in the user documentation and in the code comments | the letters of the display fonts; `src/ui/fonts/*.h` is generated from them and carries the notices as a comment |
+| Adobe Helvetica bitmap fonts `helvB10`, `helvR14`, `helvB18`, `helvB24` (X.org `font-adobe-100dpi` with Markus Kuhn's ISO 10646-1 extension; in `assets/fonts/*.bdf`, fetched from the `tools/font/bdf/` folder of [u8g2](https://github.com/olikraus/u8g2)) | Adobe's and Digital's permission notice, [assets/fonts/LICENSE-Adobe-Helvetica.txt](assets/fonts/LICENSE-Adobe-Helvetica.txt): use, copy, modify, distribute and sell for any purpose without fee, with the copyright notices and the permission notice kept in all copies and in the supporting documentation; the names of Adobe and Digital are not to be used in advertising | the letters of the display fonts; `src/ui/fonts/*.h` is generated from them and carries the notices as a comment |
 
-The notices the licence requires:
+The notices:
 
-(c) Copyright 1989 Sun Microsystems, Inc. Sun design patents pending in the U.S. and foreign countries. OPEN LOOK is a trademark of AT&T. Used by written permission of the owners.
+Copyright 1984-1989, 1994 Adobe Systems Incorporated. Copyright 1988, 1994 Digital Equipment Corporation. Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
 
-(c) Copyright Bigelow & Holmes 1986, 1985. Lucida is a registered trademark of Bigelow & Holmes. Permission to use the Lucida trademark is hereby granted only in association with the images and fonts described in this file.
-
-The `.bdf` files are the upstream files except for one comment line, from which the author's e-mail address was removed because this repository keeps no e-mail addresses (`scripts/privacy_check.py`). The generator moves a glyph into its cell where the source puts ink outside it, and changes no pixel; see [docs/ui-text.md](docs/ui-text.md). The interface symbols in `assets/fonts/symbols.txt` are our own and under the repository's licence.
+The `.bdf` files are the upstream files except for one comment line, from which Markus Kuhn's e-mail address was removed because this repository keeps no e-mail addresses (`scripts/privacy_check.py`). The generator moves a glyph into its cell where the source puts ink outside it, and changes no pixel; see [docs/ui-text.md](docs/ui-text.md). The generated fonts are not called Helvetica, because they also hold the interface symbols in `assets/fonts/symbols.txt`, which are our own and under the repository's licence.
 
 ### Fetched by the firmware build, not stored here
 
@@ -58,11 +56,11 @@ The documents were fetched by the owner's permission and are not in the reposito
 
 | Work | Licence | What was taken |
 |---|---|---|
-| [Meck](https://github.com/pelgraine/Meck), an MIT-licensed firmware for this board (state of 2026-09-15) | MIT, copyright Scott Powell / rippleradios.com (the copyright line is known from the notes of the earlier project; the verbatim licence file has not been compared) | `boards/t-deck_pro_max.json` **is a copy of Meck's board description** (unchanged); the pin numbers and bus addresses in `src/board/PinMap.h` and the key matrix of `src/board/KeyboardDecoder.cpp` were read from Meck's code and checked on the device; the register sequence of `src/board/Tca8418.cpp` follows Meck's except for one register, where we write the chip's default. No other file of Meck is in this repository. |
-| [T-Deck-MAX](https://github.com/Xinyuan-LilyGO/T-Deck-MAX), the manufacturer's repository | MIT (as stated by the earlier project; not compared) | the register sequences of the touch chip (`src/board/Cst66xx.cpp`) and the confirmation of the pin map: facts about the chip, written as our own code |
-| Adafruit_DRV2605 (Adafruit) | BSD, Adafruit's usual licence (not compared) | the order of the register writes in `src/board/Drv2605.cpp`, checked against the data sheet; our own code |
+| [Meck](https://github.com/pelgraine/Meck), a firmware for this board (state of 2026-09-15) | MIT, "Copyright (c) 2025 Scott Powell / rippleradios.com" (compared with Meck's `license.txt` on 2026-10-08) | the pin numbers and bus addresses in `src/board/PinMap.h` and the key matrix of `src/board/KeyboardDecoder.cpp` were read from Meck's code and checked on the device; the register sequence of `src/board/Tca8418.cpp` follows Meck's except for one register, where we write the chip's default. Facts, written as our own code: no file, line or comment of Meck is in this repository. |
+| [T-Deck-MAX](https://github.com/Xinyuan-LilyGO/T-Deck-MAX), the manufacturer's repository | MIT (the repository's licence, seen on 2026-10-08) | the register sequences of the touch chip (`src/board/Cst66xx.cpp`) and the confirmation of the pin map: facts about the chip, written as our own code |
+| [Adafruit_DRV2605](https://github.com/adafruit/Adafruit_DRV2605_Library) (Adafruit) | MIT (the repository's licence, seen on 2026-10-08) | the order of the register writes in `src/board/Drv2605.cpp`, checked against the data sheet; our own code |
 
-**State: not settled.** The board file is a copy, so Meck's copyright and permission notice have to accompany it, and this repository does not hold Meck's licence text, because it was not available to verify. The earlier project kept a reconstruction of the standard MIT text with the copyright line; it is not copied here because a reconstruction is not the licence file. This is open point 13 in [docs/open-points.md](docs/open-points.md): compare Meck's `LICENSE`, then add its text here, or replace the board file with one of our own. The rest of this table is facts (numbers, addresses, register values) expressed in code of our own.
+The board is PlatformIO's own `esp32-s3-devkitc-1`, set in `platformio.ini`; no board description of another project is stored here.
 
 ### Not used
 

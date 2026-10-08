@@ -223,7 +223,13 @@ void test_a_text_longer_than_the_page_scrolls_and_the_soft_keys_say_so() {
   page.enter();
   page.run(30);                                                         // searching again, with the last known position
   TEST_ASSERT_FALSE(page.screen.softKeys().scroll);                    // English fits
-  page.rig.language("qps-ploc");                                        // 40 % longer: it does not
+  // A catalog on the card may word the hint at any length; this one does not fit the page.
+  const std::string longer =
+      "[meta]\ncode = \"de\"\nname = \"German\"\nnative = \"Deutsch\"\nplural = \"one-other\"\n"
+      "[strings]\ngnss.indoors = \"Drinnen gibt es oft keinen Empfang. Geh an ein Fenster, auf einen Balkon "
+      "oder ganz nach draussen, wo der Himmel frei ist, und warte dort ein paar Minuten.\"\n";
+  TEST_ASSERT_TRUE(page.rig.translator.addUser(longer.data(), longer.size(), nullptr));
+  page.rig.language("de");
   page.draw();
   TEST_ASSERT_TRUE(page.screen.softKeys().scroll);
   const std::string top = page.rig.frame.toAscii(kContent);

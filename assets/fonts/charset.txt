@@ -3,7 +3,7 @@
 # Read by scripts/make_font.py (which draws every one of them in every font size), by
 # scripts/check_i18n.py (catalogs may use nothing else) and by the host tests (every
 # character has a glyph in every font). A character is added here, drawn in the fonts
-# (the glyph exists in the Lucida files, or the symbol is drawn in symbols.txt) and
+# (the glyph exists in the Helvetica files, or the symbol is drawn in symbols.txt) and
 # only then used in a catalog.
 #
 # Lines:

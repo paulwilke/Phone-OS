@@ -62,8 +62,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to work on a change.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The display fonts are the exception: the letters are Lucida Sans bitmap fonts under their own licence ([assets/fonts/LICENSE-Lucida-BH.txt](assets/fonts/LICENSE-Lucida-BH.txt), listed in [THIRD_PARTY.md](THIRD_PARTY.md)), and the licence requires these notices:
+MIT — see [LICENSE](LICENSE). The display fonts are the exception: the letters are Adobe's Helvetica bitmap fonts under their own permission notice ([assets/fonts/LICENSE-Adobe-Helvetica.txt](assets/fonts/LICENSE-Adobe-Helvetica.txt), listed in [THIRD_PARTY.md](THIRD_PARTY.md)):
 
-(c) Copyright 1989 Sun Microsystems, Inc. Sun design patents pending in the U.S. and foreign countries. OPEN LOOK is a trademark of AT&T. Used by written permission of the owners.
-
-(c) Copyright Bigelow & Holmes 1986, 1985. Lucida is a registered trademark of Bigelow & Holmes. Permission to use the Lucida trademark is hereby granted only in association with the images and fonts described in this file.
+Copyright 1984-1989, 1994 Adobe Systems Incorporated. Copyright 1988, 1994 Digital Equipment Corporation. Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.

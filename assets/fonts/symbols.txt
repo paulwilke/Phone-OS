@@ -1,15 +1,15 @@
 # Pixel art of the interface symbols, one set per font size (see charset.txt for the code points).
 #
-# The symbols are our own drawings; they are not part of Lucida and are not covered by its
-# licence. Each section is one font and names its capital height (the glyphs of the Lucida
+# The symbols are our own drawings; they are not part of Helvetica and are not covered by its
+# licence. Each section is one font and names its capital height (the glyphs of the Helvetica
 # font it belongs to are that many rows tall); `top` is the number of blank rows between the
 # top of the capitals and the top of the symbol, so that a symbol sits on the baseline area
 # of its line like a letter does. Rows are drawn with # (black) and . (white), all rows of a
 # symbol have the same length, and an empty line ends the symbol.
 
-font small cap 10
+font small cap 11
 
-glyph enter top 2
+glyph enter top 3
 ........##
 ........##
 ........##
@@ -19,7 +19,7 @@ glyph enter top 2
 .##.....##
 ..#.......
 
-glyph backspace top 0
+glyph backspace top 1
 ....###########
 ...#..........#
 ..#....#....#.#
@@ -31,21 +31,21 @@ glyph backspace top 0
 ...#..........#
 ....###########
 
-glyph up top 3
+glyph up top 4
 ....#....
 ...###...
 ..#####..
 .#######.
 #########
 
-glyph down top 3
+glyph down top 4
 #########
 .#######.
 ..#####..
 ...###...
 ....#....
 
-glyph telephone top 1
+glyph telephone top 2
 ####.....
 ####.....
 ####.....
@@ -56,7 +56,7 @@ glyph telephone top 1
 ....#####
 ......###
 
-glyph envelope top 3
+glyph envelope top 4
 ###########
 ###.....###
 #.##...##.#
@@ -65,7 +65,7 @@ glyph envelope top 3
 #.........#
 ###########
 
-glyph aeroplane top 2
+glyph aeroplane top 3
 #.........
 .###......
 ..#####...
@@ -75,7 +75,7 @@ glyph aeroplane top 2
 .###......
 #.........
 
-glyph bubble top 2
+glyph bubble top 3
 .#########.
 ###########
 ###########
@@ -85,7 +85,7 @@ glyph bubble top 2
 .##........
 .#.........
 
-glyph radio top 1
+glyph radio top 2
 .#######.
 #.......#
 ..#####..
@@ -96,7 +96,7 @@ glyph radio top 1
 ....#....
 ...###...
 
-glyph pin top 0
+glyph pin top 1
 ...###...
 .#######.
 .#######.
@@ -239,9 +239,9 @@ glyph pin top 1
 .....#.....
 .....#.....
 
-font tile cap 18
+font tile cap 19
 
-glyph enter top 2
+glyph enter top 3
 ..............###
 ..............###
 ..............###
@@ -257,7 +257,7 @@ glyph enter top 2
 ...##............
 ....#............
 
-glyph backspace top 0
+glyph backspace top 1
 ........###################
 .......####################
 ......#..................##
@@ -277,7 +277,7 @@ glyph backspace top 0
 .......####################
 ........###################
 
-glyph up top 5
+glyph up top 6
 ........#........
 .......###.......
 ......#####......
@@ -288,7 +288,7 @@ glyph up top 5
 .###############.
 #################
 
-glyph down top 5
+glyph down top 6
 #################
 .###############.
 ..#############..
@@ -299,7 +299,7 @@ glyph down top 5
 .......###.......
 ........#........
 
-glyph telephone top 1
+glyph telephone top 2
 ########.........
 ########.........
 ########.........
@@ -318,7 +318,7 @@ glyph telephone top 1
 ..........#######
 ............#####
 
-glyph envelope top 5
+glyph envelope top 6
 #####################
 #####################
 #####...........#####
@@ -333,7 +333,7 @@ glyph envelope top 5
 #####################
 #####################
 
-glyph aeroplane top 4
+glyph aeroplane top 5
 #.................
 .###..............
 ..#####...........
@@ -349,7 +349,7 @@ glyph aeroplane top 4
 .###..............
 #.................
 
-glyph bubble top 2
+glyph bubble top 3
 ..##############..
 .################.
 ##################
@@ -367,7 +367,7 @@ glyph bubble top 2
 .###..............
 .##...............
 
-glyph radio top 6
+glyph radio top 7
 #...............#
 #.....#####.....#
 ....#########....
@@ -381,7 +381,7 @@ glyph radio top 6
 .......###.......
 .......###.......
 
-glyph pin top 1
+glyph pin top 2
 ....#####....
 ...#######...
 ..#########..

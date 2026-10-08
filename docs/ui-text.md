@@ -6,27 +6,27 @@ Everything the interface writes goes through `src/ui/Text.h`, which draws UTF-8 
 
 | `FontSize` | Role | Source | Pixel size | Line height | Capital height |
 |---|---|---|---|---|---|
-| `Small` | status bar, soft keys | `luBS10.bdf`, bold | 14 | 16 | 10 |
-| `Text` | lists, messages | `luRS14.bdf` | 20 | 23 | 14 |
-| `Tile` | tiles of the home screen | `luBS18.bdf`, bold | 25 | 29 | 18 |
-| `Large` | clock, caller's name | `luBS24.bdf`, bold | 34 | 41 | 25 |
+| `Small` | status bar, soft keys | `helvB10.bdf`, bold | 14 | 17 | 11 |
+| `Text` | lists, messages | `helvR14.bdf` | 20 | 22 | 14 |
+| `Tile` | tiles of the home screen | `helvB18.bdf`, bold | 25 | 29 | 19 |
+| `Large` | clock, caller's name | `helvB24.bdf`, bold | 34 | 38 | 25 |
 
-The letters are the hand-pixelled Lucida Sans bitmap fonts by Bigelow & Holmes (100 dpi, taken from the `tools/font/bdf/` folder of the [u8g2](https://github.com/olikraus/u8g2) project). They are hand-drawn for pixels, which is what a panel without grey levels needs. The interface symbols are our own drawings.
+The letters are Adobe's hand-pixelled Helvetica bitmap fonts (100 dpi, from X.org's `font-adobe-100dpi` with Markus Kuhn's ISO 10646 extension, taken from the `tools/font/bdf/` folder of the [u8g2](https://github.com/olikraus/u8g2) project). They are hand-drawn for pixels, which is what a panel without grey levels needs. The interface symbols are our own drawings.
 
 `scripts/make_font.py` turns the sources in `assets/fonts/` into the data files `src/ui/fonts/Font*.h`; the files are checked in so that the firmware build needs no Python. After a change to a source run `python3 scripts/make_font.py --all`; CI runs `--check` and fails when a generated file is stale. The data format is `ui::Font` in `src/ui/Font.h`: packed bitmaps in the layout of `Display::drawBitmap`, a glyph table, and sorted code-point ranges that are searched by bisection.
 
 ### What the generator changes
 
-The pixels of the Lucida letters are never touched. Only where a glyph sits is corrected, so that the text engine can promise that the width of a string is also the width of its ink:
+The pixels of the letters are never touched. Only where a glyph sits is corrected, so that the text engine can promise that the width of a string is also the width of its ink:
 
-- A glyph whose ink starts left of the pen (the superscript digits `¹ ² ³` do in the source files, by up to eight pixels) is moved to the pen, and a glyph whose ink reaches past its advance (the capital Q in the small font) gets a wider advance.
-- A few accents of the capital letters reach above the font's ascent; the line grows by the missing rows (the large font's line is two rows taller than the font file says), so that nothing a font draws lies outside its line.
+- A glyph whose ink starts left of the pen (`j`, `Ð`, `î` and `€` do in some sizes, by one or two pixels) is moved to the pen, and a glyph whose ink reaches past its advance (`f` and `Î` in the small font, `©` and `®` in the large one) gets a wider advance.
+- The accents of the capital letters reach above the font's ascent; the line grows by the missing rows (one in the small font, two in the text and tile fonts, three in the large one), so that nothing a font draws lies outside its line.
 
 ## The character set
 
 `assets/fonts/charset.txt` is the one definition of what the interface can draw: printable Basic Latin (U+0020–U+007E), Latin-1 (U+00A0–U+00FF), `Œ œ Ÿ €`, and the ten interface symbols. The font generator, `scripts/check_i18n.py` (catalogs may use nothing else) and the host tests all read that file. A character is added to it, drawn in the fonts, and only then used in a catalog.
 
-The Lucida files already contain `Œ œ Ÿ €`; only the symbols are drawn by us, in `assets/fonts/symbols.txt`, one set per font size. Each is a block of `#` and `.` under a `glyph <name> top <rows>` line, where `top` is the number of blank rows between the top of the capitals and the top of the symbol.
+The Helvetica files already contain `Œ œ Ÿ €`; only the symbols are drawn by us, in `assets/fonts/symbols.txt`, one set per font size. Each is a block of `#` and `.` under a `glyph <name> top <rows>` line, where `top` is the number of blank rows between the top of the capitals and the top of the symbol.
 
 | Symbol | Code point | Name in `charset.txt` |
 |---|---|---|
@@ -40,7 +40,7 @@ The Lucida files already contain `Œ œ Ÿ €`; only the symbols are drawn by u
 | 📡 | U+1F4E1 | `radio` |
 | 📍 | U+1F4CD | `pin` |
 
-A catalog writes the symbol as that character. A character outside the set — or a byte sequence that is not UTF-8 — is drawn as Lucida's own box glyph, one per malformed sequence, so the fault is visible and the rest of the text is still there.
+A catalog writes the symbol as that character. A character outside the set — or a byte sequence that is not UTF-8 — is drawn as the font's own box glyph, one per malformed sequence, so the fault is visible and the rest of the text is still there.
 
 ## The text engine
 
@@ -67,8 +67,6 @@ All functions take a `ui::Font` (`ui::font(FontSize::Text)`) and UTF-8 text in a
 
 ## Notices
 
-(c) Copyright 1989 Sun Microsystems, Inc. Sun design patents pending in the U.S. and foreign countries. OPEN LOOK is a trademark of AT&T. Used by written permission of the owners.
+Copyright 1984-1989, 1994 Adobe Systems Incorporated. Copyright 1988, 1994 Digital Equipment Corporation. Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
 
-(c) Copyright Bigelow & Holmes 1986, 1985. Lucida is a registered trademark of Bigelow & Holmes. Permission to use the Lucida trademark is hereby granted only in association with the images and fonts described in this file.
-
-The Lucida licence is in `assets/fonts/LICENSE-Lucida-BH.txt`. Because the fonts here also carry our own symbols, the generated fonts are called `FontSmall`, `FontText`, `FontTile` and `FontLarge`, never Lucida.
+The fonts' permission notice is in `assets/fonts/LICENSE-Adobe-Helvetica.txt`: use, copying, change and distribution are allowed for any purpose, with the copyright notices and the permission notice kept. Because the fonts here also carry our own symbols, the generated fonts are called `FontSmall`, `FontText`, `FontTile` and `FontLarge`, never Helvetica.
