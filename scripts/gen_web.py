@@ -75,6 +75,12 @@ WEB_KEYS = [
     "web.files.cancel",
     "web.files.confirm-delete",
     "web.files.empty",
+    "web.files.show-hidden",
+    "web.files.remove-mac",
+    "web.files.confirm-remove-mac",
+    "web.files.removed-mac",
+    "web.files.mac-folders-left",
+    "web.files.unused-32",
     "web.log.refresh",
     "web.log.empty",
     "web.log.clear",
@@ -667,6 +673,11 @@ function fileRow(dir, e) {{
     td1.appendChild(openBtn);
   }} else {{
     td1.textContent = e.name;
+    if (dir === '/' && UNUSED_32.indexOf(e.name) >= 0) {{
+      var note = document.createElement('span'); note.className = 'hint';
+      note.textContent = ' ' + t('web.files.unused-32');
+      td1.appendChild(note);
+    }}
     td2.textContent = e.size;
     var path = joinPath(dir, e.name);
     var dlBtn = document.createElement('button'); dlBtn.className = 'action-btn btn-dl';
@@ -703,8 +714,17 @@ function fileRow(dir, e) {{
   return tr;
 }}
 
+// What a Mac leaves on a card: AppleDouble files ("._name") and four folders of Spotlight, the file system
+// events, the trash and scratch files. Hidden unless "show hidden files" is ticked (owner, 2026-10-08).
+// .metadata_never_index is a Mac file too, but it keeps Spotlight away from the card, so it stays and shows.
+var MAC_FOLDERS = ['.Spotlight-V100', '.fseventsd', '.Trashes', '.TemporaryItems'];
+function macLeftover(e) {{ return (!e.dir && e.name.indexOf('._') === 0) || (e.dir && MAC_FOLDERS.indexOf(e.name) >= 0); }}
+// Files of 3.2 that 4.0 neither reads nor writes (docs/upgrading.md); they may be deleted.
+var UNUSED_32 = ['energy.log', 'firmware.txt'];
+
 function loadFiles(dir) {{
   if (typeof dir === 'string') filesDir = dir;
+  var showHidden = document.getElementById('files-show-hidden').checked;
   var shown = filesDir;
   var tbody = document.getElementById('files-tbody');
   var emptyEl = document.getElementById('files-empty');
@@ -714,7 +734,7 @@ function loadFiles(dir) {{
   document.getElementById('files-path').textContent = shown;
   api('GET', '/api/files?path=' + encodeURIComponent(shown)).then(filesOk)
     .then(function(r) {{ return r.json(); }}).then(function(d) {{
-      var entries = d.entries || [];
+      var entries = (d.entries || []).filter(function(e) {{ return showHidden || !macLeftover(e); }});
       emptyEl.hidden = entries.length > 0;
       if (shown !== '/') tbody.appendChild(fileRow(shown, {{ up: true }}));
       entries.forEach(function(e) {{ tbody.appendChild(fileRow(shown, e)); }});
@@ -734,6 +754,39 @@ function loadFiles(dir) {{
     }};
     reader.readAsText(file);
   }};
+}}
+
+// "Remove Mac leftovers": the AppleDouble files ("._name") of the root and of the folders below it, two levels
+// deep, through the device's own delete route, which checks every path and logs every file it deletes. Exactly
+// those: never .metadata_never_index, nothing else under /config/. The four Mac folders stay: the device has no
+// route that deletes a folder, and the page names them so that a computer can remove them.
+function removeMacLeftovers() {{
+  if (!confirm(t('web.files.confirm-remove-mac'))) return;
+  filesError('');
+  var files = [], folders = [];
+  function walk(dir, depth) {{
+    return api('GET', '/api/files?path=' + encodeURIComponent(dir)).then(filesOk)
+      .then(function(r) {{ return r.json(); }}).then(function(d) {{
+        var below = [];
+        (d.entries || []).forEach(function(e) {{
+          if (!e.dir && e.name.indexOf('._') === 0) files.push(joinPath(dir, e.name));
+          else if (e.dir && MAC_FOLDERS.indexOf(e.name) >= 0) folders.push(joinPath(dir, e.name));
+          else if (e.dir && depth < 2) below.push(joinPath(dir, e.name));
+        }});
+        return below.reduce(function(p, sub) {{ return p.then(function() {{ return walk(sub, depth + 1); }}); }}, Promise.resolve());
+      }});
+  }}
+  walk('/', 0).then(function() {{
+    return files.reduce(function(p, path) {{
+      return p.then(function() {{ return api('DELETE', '/api/file?path=' + encodeURIComponent(path), {{}}).then(filesOk); }});
+    }}, Promise.resolve());
+  }}).then(function() {{
+    var said = t('web.files.removed-mac').replace('{{n}}', files.length);
+    if (folders.length) said += ' ' + t('web.files.mac-folders-left').replace('{{folders}}', folders.join(', '));
+    var st = document.getElementById('files-status');
+    st.textContent = said; st.hidden = false;
+    loadFiles();
+  }}).catch(filesFailed);
 }}
 
 function showEditor(path, text) {{
@@ -769,6 +822,8 @@ function loadLog() {{
   }}).catch(function() {{}});
 }}
 
+document.getElementById('files-show-hidden').addEventListener('change', function() {{ loadFiles(); }});
+document.getElementById('files-remove-mac').addEventListener('click', removeMacLeftovers);
 document.getElementById('log-refresh').addEventListener('click', loadLog);
 document.getElementById('log-clear').addEventListener('click', function() {{
   if (!confirm(t('web.log.confirm-clear'))) return;
@@ -982,6 +1037,11 @@ function init(state) {{
         '    <div id="panel-files" class="panel">',
         '      <p id="files-path"></p>',
         '      <p id="files-error" class="status-err" hidden></p>',
+        '      <p id="files-status" class="status-msg" hidden></p>',
+        '      <div class="form-actions" style="margin-bottom:.5rem">',
+        '        <label><input type="checkbox" id="files-show-hidden"> <span data-t="web.files.show-hidden"></span></label>',
+        '        <button id="files-remove-mac" class="btn-secondary action-btn" data-t="web.files.remove-mac"></button>',
+        "      </div>",
         "      <table>",
         "        <thead><tr>",
         '          <th data-t="web.files.path"></th>',

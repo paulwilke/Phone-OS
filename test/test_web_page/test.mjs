@@ -622,7 +622,12 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   await pg.settle();
   r = rows(pg);
   assert(listCalls(pg).at(-1) === '/api/files?path=/config', 'opening a directory asks for ?path=/config: ' + listCalls(pg).join(' '));
-  assert(r.map((x) => x.name).join('|') === '..|contacts.toml|._contacts.toml|secrets.toml|sub/', 'the directory lists its entries behind a ".." step, macOS leftovers included: ' + r.map((x) => x.name).join('|'));
+  assert(r.map((x) => x.name).join('|') === '..|contacts.toml|secrets.toml|sub/', 'the directory lists its entries behind a ".." step, the macOS leftover hidden: ' + r.map((x) => x.name).join('|'));
+  pg.els['files-show-hidden'].checked = true;                       // "show hidden files" shows it
+  pg.els['files-show-hidden'].listeners.change();
+  await pg.settle();
+  r = rows(pg);
+  assert(r.map((x) => x.name).join('|') === '..|contacts.toml|._contacts.toml|secrets.toml|sub/', 'ticked, the macOS leftover is listed: ' + r.map((x) => x.name).join('|'));
   assert(pg.els['files-path'].textContent === '/config', 'the path shows /config');
 
   // the actions of a file in that directory use /config/<name>
@@ -981,6 +986,50 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   names = walkO(pg.els['form-advanced']).filter((c) => c.tag === 'label' || c.tag === 'legend').map((c) => c.textContent);
   assert(names.includes('timezone') && names.includes('home'), 'a field without its label is named by its key in the file: ' + names.slice(0, 6).join(' | '));
   assert(!names.some((x) => /^config\./.test(x)), 'no raw key names a field');
+}
+
+// (p) what a Mac leaves on the card is hidden, and one button removes exactly its ._ files (owner, 2026-10-08);
+// files of 3.2 that 4.0 does not use are marked
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const tree = {
+    '/': [{ name: 'config', size: 0, dir: true }, { name: '._system.log', size: 4096, dir: false }, { name: '.Spotlight-V100', size: 0, dir: true },
+          { name: '.fseventsd', size: 0, dir: true }, { name: '.metadata_never_index', size: 0, dir: false }, { name: 'energy.log', size: 10, dir: false },
+          { name: 'firmware.txt', size: 4, dir: false }, { name: 'system.log', size: 30, dir: false }, { name: 'lang', size: 0, dir: true }],
+    '/config': [{ name: 'settings.toml', size: 300, dir: false }, { name: '._settings.toml', size: 4096, dir: false }, { name: '.Trashes', size: 0, dir: true }],
+    '/lang': [{ name: 'web', size: 0, dir: true }, { name: '._xx.toml', size: 4096, dir: false }],
+    '/lang/web': [{ name: '._xx.toml', size: 4096, dir: false }, { name: 'deeper', size: 0, dir: true }],
+    '/lang/web/deeper': [{ name: '._far.toml', size: 4096, dir: false }],
+    '/.fseventsd': [{ name: '._inside', size: 4096, dir: false }],
+  };
+  const onFetch = (path, opts, reply) => {
+    const url = new URL(path, 'http://device');
+    if (url.pathname === '/api/files') return reply(200, { path: url.searchParams.get('path'), entries: tree[url.searchParams.get('path')] || [] });
+    if (url.pathname === '/api/file' && opts.method === 'DELETE') return reply(200, { ok: true });
+    return null;
+  };
+  const walkP = (el, out = []) => { for (const c of el.children || []) { out.push(c); walkP(c, out); } return out; };
+  const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: { en, de }, rich: true, onFetch });
+  pg.dataT.find((e) => e.attrs['data-tab'] === 'files').listeners.click();
+  await pg.settle();
+  const names = pg.els['files-tbody'].children.map((tr) => walkP(tr.children[0]).filter((c) => c.tag === 'button').map((b) => b.textContent)[0] || tr.children[0].textContent);
+  assert(names.join('|') === 'config/|.metadata_never_index|energy.log|firmware.txt|system.log|lang/', 'the root hides ._ files and the four Mac folders, not .metadata_never_index: ' + names.join('|'));
+  const notes = pg.els['files-tbody'].children.map((tr) => walkP(tr.children[0]).filter((c) => c.className === 'hint').map((c) => c.textContent).join(''));
+  assert(notes[2].includes('(from 3.2, not used)') && notes[3].includes('(from 3.2, not used)') && notes[4] === '', 'energy.log and firmware.txt are marked as files of 3.2, system.log is not');
+
+  let asked = 0;
+  pg.context.confirm = () => { asked++; return false; };            // the parent says no
+  pg.els['files-remove-mac'].listeners.click();
+  await pg.settle();
+  assert(asked === 1 && !pg.calls.some((c) => c.method === 'DELETE'), 'nothing is removed without the confirmation');
+  pg.context.confirm = () => true;
+  pg.els['files-remove-mac'].listeners.click();
+  await pg.settle(); await pg.settle();
+  const deleted = pg.calls.filter((c) => c.method === 'DELETE').map((c) => decodeURIComponent(c.path.split('path=')[1])).sort();
+  assert(deleted.join('|') === '/._system.log|/config/._settings.toml|/lang/._xx.toml|/lang/web/._xx.toml',
+    'exactly the ._ files of the root and two levels below it are deleted, nothing inside a Mac folder, nothing else: ' + deleted.join('|'));
+  assert(pg.els['files-status'].textContent === '4 Mac files removed. Folders that only a computer can remove: /.Spotlight-V100, /.fseventsd, /config/.Trashes.',
+    'the parent reads how many and which folders are left: ' + pg.els['files-status'].textContent);
 }
 
 // ---------- summary ----------
