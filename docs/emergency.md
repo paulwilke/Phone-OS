@@ -20,6 +20,10 @@ The receiver is held through Positioning, with a reason for each use: `SosChoice
 
 SOS works in school time. Pressing opens a warning instead of the choice; `SosFlow::kOverrideTaps` (5) taps, each within ten seconds of the one before, send the emergency, and the last tap **lifts the school-time lock until the end of the current window** (logged: "Quiet hours lifted by emergency until 15:00"). A child who sent an emergency from a locked phone could neither be called back nor call. The next window locks again. Fewer taps do nothing, leaving the warning has no effect, and there is no automatic emergency in school time.
 
+## Several recipients
+
+An emergency or a pickup goes to every SOS recipient of the profile (`Profile::sosRecipients()`): the contacts ticked `sos = true` in `contacts.toml`, or else the first call target alone (owner, 2026-10-08). Every one gets the same text with the same position; the ping and the SOS page know the first recipient, the log says `SOS text to 2 of 2 recipients`. **Sent** as soon as one text is out; when the network refuses one of several texts afterwards, the child is told nothing (no notice, no vibration: help is on its way through the others) and the log says `SOS text refused for <name>; the others went out`; **failed** only when every text was refused. When the SOS page names another target than the first recipient, that one alone gets it. A query reply goes to its asker alone. Tests: `test_emergency` (EME-36 to EME-39).
+
 ## The outcome
 
 Told once, when the stage changes: **sent** is three short pulses, **failed** is short-long. A query reply never vibrates and has no notice; it is logged ("Remote query answer sent" / "FAILED"). Its **failure** is also written to the message history as the system entry `location-query-failed` naming the parent who asked, so the parents see on the device that the answer they waited for never left; a profile that keeps remote queries out of the history (`CommandNotice::Silent`) keeps this entry out too. A failed emergency is not such an entry: the child was told by vibration.

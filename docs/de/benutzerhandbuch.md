@@ -44,7 +44,7 @@ Ohne bekannte Uhrzeit gibt es keine Schulzeit: Das Gerät hat keine eigene Uhr u
 
 ## SOS
 
-Die Kachel **SOS** drücken. Das Gerät beginnt sofort, die Position zu suchen, damit sie bereit ist, wenn das Kind sich entschieden hat. Der Notfall geht an die Nummer des ersten Anrufknopfs (`[[tiles]]` mit `action = "call"`); setzen Sie die Person, die ihn bekommen soll, an die erste Stelle.
+Die Kachel **SOS** drücken. Das Gerät beginnt sofort, die Position zu suchen, damit sie bereit ist, wenn das Kind sich entschieden hat. Der Notfall geht an jeden Kontakt, der im Reiter **Kontakte** bei **SOS** angehakt ist (`sos = true` in `contacts.toml`), an alle mit demselben Text; ohne Haken geht er an die Nummer des ersten Anrufknopfs (`[[tiles]]` mit `action = "call"`). Er gilt als gesendet, sobald ein Text draußen ist; lehnt das Netz einen von mehreren Texten ab, erfährt das Kind nichts davon, das Protokoll sagt es.
 
 Außerhalb der Schulzeit bietet die Seite drei Möglichkeiten: "Notfall! Hier bin ich", "Hol mich hier ab" und "Abbrechen". Wählt das Kind nichts, zählt die Seite "Notfall in 40 s" herunter und schickt den Notfall dann selbst. **Zurück** oder **Abbrechen** sendet nichts. Der Text trägt den Namen des Kindes, einen Kartenlink und die Koordinaten mit ihrer Genauigkeit ("Position auf 12 m genau"); ohne Satellitenempfang sagt er das ("Ohne Position: kein GPS-Empfang") und geht nach der Suchzeit trotzdem ab. Die Seite zeigt die Schritte "Ortung läuft", "Position gefunden", "Gesendet" und an wen ("An (Name)", oder "wartet auf Netz"). Gibt es weder Netz noch Funk, sagt sie "Nicht gesendet" und bietet "Nochmal" an.
 
@@ -78,10 +78,10 @@ Der Rest steht auf der Elternseite oder in den drei Dateien auf der Karte. Die S
 | `settings.toml` | `[sms] language` | die Sprache der Texte, die das Gerät sendet |
 | `settings.toml` | `[features] free_text`, `radio`, `parent_tools` | Freitext und beliebige Empfänger; der Funk; die Kacheln **WLAN** und **Status** |
 | `settings.toml` | `[[quiet_hours]]` | die Schulzeit-Fenster |
-| `settings.toml` | `[[tiles]]` | die Anrufknöpfe; der erste ist der SOS-Empfänger |
+| `settings.toml` | `[[tiles]]` | die Anrufknöpfe; ohne einen bei SOS angehakten Kontakt ist der erste der SOS-Empfänger |
 | `settings.toml` | `[time] timezone` | die Zeitzone, für Schulzeit und Uhr |
 | `settings.toml` | `[battery] capacity_mah` | die Akkugröße, Voreinstellung 1500 |
-| `contacts.toml` | `[[contact]] number`, `name`, `role` | wer anrufen und schreiben darf |
+| `contacts.toml` | `[[contact]] number`, `name`, `role`, `sos` | wer anrufen und schreiben darf; wer das SOS bekommt |
 | `secrets.toml` | `sim_pin`, `web_password` | die SIM-PIN und das Passwort der Elternseite |
 
 Jeder Schlüssel ist in [configuration-reference.md](../configuration-reference.md) aufgeführt (englisch). Auf der Seite **Status** sagen "Konfiguration: 1 Problem" und das erste ("settings.toml: child.name prüfen"), dass etwas auf der Karte nicht verstanden wurde; die ganze Liste steht im Protokoll. Was nicht verstanden wurde, wird übergangen, und die Voreinstellung gilt.

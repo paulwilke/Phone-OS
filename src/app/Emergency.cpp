@@ -56,9 +56,43 @@ bool Emergency::startLocationReply(const std::string& phone) {
   return start(phone, SosPing::Kind::Query);
 }
 
+bool Emergency::sendText(const char* peer, const std::string& text) {
+  sentTo_.clear();
+  std::vector<std::string> to{peer};
+  if (!sos_.isQuery()) {
+    // The ping's peer is the first SOS recipient, unless the screen named another target: then that one alone.
+    const std::vector<std::string> all = profile_.sosRecipients();
+    if (!all.empty() && all.front() == peer) to = all;
+  }
+  for (const std::string& recipient : to) {
+    if (messaging_.sendText(recipient, text)) sentTo_.push_back(recipient);
+    else log_.log(std::string("SOS text not taken for ") + profile_.contacts.displayName(recipient.c_str()));
+  }
+  if (to.size() > 1)
+    log_.log("SOS text to " + std::to_string(sentTo_.size()) + " of " + std::to_string(to.size()) + " recipients");
+  return !sentTo_.empty();
+}
+
 bool Emergency::noteSendFailed(const std::string& phone) {
   const bool queryReply = sos_.stage() == SosPing::Stage::Done && sos_.isQuery() && sos_.peer() == phone;
-  sos_.noteSendFailed(phone.c_str());
+  if (sos_.stage() == SosPing::Stage::Done && !sos_.isQuery()) {
+    // One refused text of an emergency to several is not a failed emergency while another went out.
+    bool ours = false;
+    for (size_t i = 0; i < sentTo_.size() && !ours; ++i) {
+      if (sentTo_[i] != phone) continue;
+      sentTo_.erase(sentTo_.begin() + static_cast<long>(i));
+      ours = true;
+    }
+    if (!ours) return false;
+    if (!sentTo_.empty()) {
+      // The child is told nothing: help is on its way through the others, and a "failed" now would frighten.
+      log_.log(std::string("SOS text refused for ") + profile_.contacts.displayName(phone.c_str()) + "; the others went out");
+      return true;
+    }
+    sos_.noteSendFailed(sos_.peer().c_str());   // every text was refused: the emergency failed
+  } else {
+    sos_.noteSendFailed(phone.c_str());
+  }
   if (sos_.stage() == SosPing::Stage::Failed && lastStage_ == SosPing::Stage::Done) {
     // The stage changes here and not in poll(), so it is told here: Messaging has vibrated and
     // noticed this failure already (an emergency), or must stay silent (a query reply).

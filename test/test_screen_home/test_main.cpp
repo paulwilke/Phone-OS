@@ -159,6 +159,16 @@ void test_the_parents_switch_tiles_of_the_second_page_off() {
   TEST_ASSERT_EQUAL(0, empty.frame.blackPixels(Rect{content.x, content.bottom() - 18, content.w, 18}));
 }
 
+// A contact ticked "SOS" is somebody to reach: the SOS tile is there without any call button.
+void test_a_contact_ticked_for_sos_gives_the_sos_tile() {
+  Profile p = ProfileBuilder().callTargets({}).build();
+  DeviceRig without(p);
+  TEST_ASSERT_FALSE(has(flat(HomeScreen(without.context()).pages()), Kind::Sos));
+  p.sosContacts = {kParentOne};
+  DeviceRig with(p);
+  TEST_ASSERT_TRUE(has(flat(HomeScreen(with.context()).pages()), Kind::Sos));
+}
+
 void test_the_tools_always_fit_on_the_second_page() {
   // Every tool at once: eight, and a page holds nine. A tenth would be unreachable.
   DeviceRig rig(everything(), true);
@@ -611,6 +621,7 @@ int main(int, char**) {
   RUN_TEST(test_the_motion_tile_needs_a_motion_sensor);
   RUN_TEST(test_phone_text_and_sos_need_somebody_to_reach);
   RUN_TEST(test_the_parents_switch_tiles_of_the_second_page_off);
+  RUN_TEST(test_a_contact_ticked_for_sos_gives_the_sos_tile);
   RUN_TEST(test_the_tools_always_fit_on_the_second_page);
   RUN_TEST(test_down_goes_through_both_pages_and_wraps_and_the_page_follows);
   RUN_TEST(test_the_selection_is_kept_when_the_screen_is_left_and_come_back_to);

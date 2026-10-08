@@ -418,7 +418,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   };
   let pg = await runPage({ storedAuth: auth, storedLang: 'de', catalogs: catalogsH, helps });
   let hints = await hintsOf(pg);
-  assert(hints.length === 3 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')),
+  assert(hints.length === 4 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')),
     'every field of a contact has its German help text under it: ' + hints.join(' | '));
   assert(!hints.some((x) => /^config\./.test(x)), 'no raw help key under a field');
   assert(pg.calls.some((c) => c.path === '/api/lang/de/help' && c.authed), 'the help texts are asked for after the login, with the password');
@@ -441,7 +441,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   await pg.els['lang-select'].listeners.change.call(pg.els['lang-select']);
   await pg.settle();
   hints = await hintsOf(pg);
-  assert(hints.length === 3 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')), 'after a change in the menu the hints are in the new language');
+  assert(hints.length === 4 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')), 'after a change in the menu the hints are in the new language');
 }
 
 // (i) a list field is written as an array: an empty one is [], never "" (the device reported

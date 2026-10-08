@@ -44,7 +44,7 @@ Without a known time of day there is no school time: the device has no clock of 
 
 ## SOS
 
-Press the **SOS** tile. The device starts looking for the position at once, so that it is ready when the child has decided. The emergency goes to the number of the first call button (`[[tiles]]` with `action = "call"`); put the person who should receive it first.
+Press the **SOS** tile. The device starts looking for the position at once, so that it is ready when the child has decided. The emergency goes to every contact ticked **SOS** on the **Contacts** tab (`sos = true` in `contacts.toml`), all with the same text; without any tick it goes to the number of the first call button (`[[tiles]]` with `action = "call"`). It counts as sent as soon as one text is out; when the network refuses one of several texts the child is not told, the log says so.
 
 Outside school time the page offers three choices: "Emergency! I am here", "Come and get me" and "Cancel". If the child chooses nothing, the page counts "Emergency in 40 s" and then sends the emergency by itself. **Back** or **Cancel** sends nothing. The text carries the child's name, a map link and the coordinates with their accuracy ("Position accurate to 12 m"); with no satellite reception it says so ("No position: no GPS reception") and goes out anyway after the search time. The page shows the steps "Locating", "Position found", "Sent", and to whom ("To (name)", or "waits for network"). If there is no network and no radio it says "Not sent" and offers "Try again".
 
@@ -78,10 +78,10 @@ The rest is on the parents' page or in the three files on the card. The keys mos
 | `settings.toml` | `[sms] language` | the language of the texts the device sends |
 | `settings.toml` | `[features] free_text`, `radio`, `parent_tools` | free texts and any recipient; the radio; the Wi-Fi and **Status** tiles |
 | `settings.toml` | `[[quiet_hours]]` | the school-time windows |
-| `settings.toml` | `[[tiles]]` | the call buttons; the first is the SOS recipient |
+| `settings.toml` | `[[tiles]]` | the call buttons; without a contact ticked SOS the first is the SOS recipient |
 | `settings.toml` | `[time] timezone` | the time zone, for school time and the clock |
 | `settings.toml` | `[battery] capacity_mah` | the battery size, default 1500 |
-| `contacts.toml` | `[[contact]] number`, `name`, `role` | who may call and write |
+| `contacts.toml` | `[[contact]] number`, `name`, `role`, `sos` | who may call and write; who gets the SOS |
 | `secrets.toml` | `sim_pin`, `web_password` | the SIM PIN and the password of the parents' page |
 
 Every key is listed in [configuration-reference.md](configuration-reference.md). On the **Status** page, "Configuration: 1 problem" and the first one ("settings.toml: check child.name") tell that something on the card was not understood; the whole list is in the log. What was not understood is ignored and the default applies.

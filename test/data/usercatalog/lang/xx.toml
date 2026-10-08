@@ -315,6 +315,8 @@ config.contact.name.label             = "Name"
 config.contact.name.help              = "Name shown on the device."
 config.contact.role.label             = "Role"
 config.contact.role.help              = "parent: may query the device by SMS and gets through in school time. family: may call and write."
+config.contact.sos.label              = "SOS"
+config.contact.sos.help               = "The SOS goes to every contact ticked here. Without any tick it goes to the first call button."
 
 config.sim_pin.label                  = "SIM PIN"
 config.sim_pin.help                   = "4-8 digit PIN for the SIM card. Tried once per start. Leave empty if the PIN is disabled."

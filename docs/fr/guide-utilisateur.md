@@ -44,7 +44,7 @@ Sans heure connue, il n'y a pas d'heures de classe : l'appareil n'a pas d'horlog
 
 ## SOS
 
-Appuyer sur la tuile **SOS**. L'appareil commence aussitôt à chercher la position, pour qu'elle soit prête quand l'enfant aura décidé. L'urgence va au numéro du premier bouton d'appel (`[[tiles]]` avec `action = "call"`) ; mettez en premier la personne qui doit la recevoir.
+Appuyer sur la tuile **SOS**. L'appareil commence aussitôt à chercher la position, pour qu'elle soit prête quand l'enfant aura décidé. L'urgence va à chaque contact coché **SOS** dans l'onglet **Contacts** (`sos = true` dans `contacts.toml`), à tous avec le même texte ; sans coche, elle va au numéro du premier bouton d'appel (`[[tiles]]` avec `action = "call"`). Elle compte comme envoyée dès qu'un texte est parti ; si le réseau refuse l'un de plusieurs textes, l'enfant n'en sait rien, le journal le dit.
 
 Hors des heures de classe, la page offre trois choix : "Urgence ! Je suis ici", "Viens me chercher" et "Annuler". Si l'enfant ne choisit rien, la page compte "Urgence dans 40 s" puis envoie l'urgence toute seule. **Retour** ou **Annuler** n'envoie rien. Le texte porte le nom de l'enfant, un lien de carte et les coordonnées avec leur précision ("Position précise à 12 m") ; sans réception satellite, il le dit ("Sans position : pas de GPS") et part quand même après le temps de recherche. La page montre les étapes "Localisation", "Position trouvée", "Envoyé" et à qui ("À (nom)", ou "attend le réseau"). S'il n'y a ni réseau ni radio, elle dit "Non envoyé" et propose "Réessayer".
 
@@ -78,10 +78,10 @@ Le reste est sur la page des parents ou dans les trois fichiers de la carte. Les
 | `settings.toml` | `[sms] language` | la langue des textos que l'appareil envoie |
 | `settings.toml` | `[features] free_text`, `radio`, `parent_tools` | texte libre et destinataire quelconque ; la radio ; les tuiles **Wi-Fi** et **État** |
 | `settings.toml` | `[[quiet_hours]]` | les plages des heures de classe |
-| `settings.toml` | `[[tiles]]` | les boutons d'appel ; le premier est le destinataire du SOS |
+| `settings.toml` | `[[tiles]]` | les boutons d'appel ; sans contact coché SOS, le premier est le destinataire du SOS |
 | `settings.toml` | `[time] timezone` | le fuseau horaire, pour les heures de classe et l'horloge |
 | `settings.toml` | `[battery] capacity_mah` | la taille de la batterie, 1500 par défaut |
-| `contacts.toml` | `[[contact]] number`, `name`, `role` | qui peut appeler et écrire |
+| `contacts.toml` | `[[contact]] number`, `name`, `role`, `sos` | qui peut appeler et écrire ; qui reçoit le SOS |
 | `secrets.toml` | `sim_pin`, `web_password` | le PIN de la SIM et le mot de passe de la page des parents |
 
 Chaque clé est listée dans [configuration-reference.md](../configuration-reference.md) (en anglais). Sur la page **État**, "Configuration : 1 problème" et le premier ("settings.toml : vérifier child.name") disent que quelque chose sur la carte n'a pas été compris ; la liste complète est dans le journal. Ce qui n'a pas été compris est ignoré et la valeur par défaut s'applique.

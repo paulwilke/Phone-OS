@@ -18,6 +18,10 @@
 // The host must call leave() when the SOS screen closes, because in school time the flow has no
 // timeout of its own.
 //
+// **Several recipients.** An emergency or a pickup goes to every SOS recipient of the profile (the contacts
+// ticked "SOS", or else the first call target; owner, 2026-10-08). It counts as sent as soon as one text is
+// out, and as failed only when every one failed. The ping and the screen know the first recipient.
+//
 // **The outcome** of an emergency or pickup is told once by vibration (sent: three short, failed:
 // short-long); a query reply never vibrates, also not at its end. Its failure is logged and, unless
 // the profile keeps remote queries out of the history, written there as a system entry, so the
@@ -34,6 +38,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "../hal/Clock.h"
 #include "../hal/Haptic.h"
@@ -65,8 +70,8 @@ public:
   // False when a search runs already, or when the reply cannot start.
   bool startLocationReply(const std::string& phone);
 
-  // The modem accepted the text and the network then refused it. True when that was the reply to
-  // a query, whose failure the child must not see.
+  // The modem accepted the text and the network then refused it. True when the child must not see the
+  // failure: the reply to a query, or one text of an emergency to several while another went out.
   bool noteSendFailed(const std::string& phone);
 
   // Call from the main loop.
@@ -92,7 +97,7 @@ private:
 
   // SosPing::Host
   bool readFix(GnssFix& out) override { return positioning_.readFix(out); }
-  bool sendText(const char* peer, const std::string& text) override { return messaging_.sendText(peer, text); }
+  bool sendText(const char* peer, const std::string& text) override;
 
   bool start(const std::string& peer, SosPing::Kind kind);
   void recordQueryFailure(const std::string& peer);
@@ -111,4 +116,5 @@ private:
   SosPing sos_;
   SosFlow flow_;
   SosPing::Stage lastStage_ = SosPing::Stage::Idle;
+  std::vector<std::string> sentTo_;  // the texts of the last emergency or pickup that the modem took
 };

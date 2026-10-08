@@ -143,6 +143,8 @@ config.contact.name.label             = "Name"
 config.contact.name.help              = "Name, der auf dem Gerät erscheint."
 config.contact.role.label             = "Rolle"
 config.contact.role.help              = "parent: darf das Gerät per SMS abfragen; in der Schulzeit vibriert das Gerät nur bei einer SMS von einem Elternteil, jeder Anruf wird abgelehnt. family: darf anrufen und schreiben."
+config.contact.sos.label              = "SOS"
+config.contact.sos.help               = "Das SOS geht an jeden hier angehakten Kontakt. Ohne Haken geht es an den ersten Anrufknopf."
 config.contact.role.parent.label = "Elternteil"
 config.contact.role.family.label = "Familie"
 

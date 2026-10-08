@@ -5,6 +5,7 @@
 
 #include "../app/ContactBook.h"
 #include "../app/LogLevel.h"
+#include "../app/PhoneNumber.h"
 #include "../app/QuietHours.h"
 #include "../app/TimeZone.h"
 #include "../app/Toml.h"
@@ -449,7 +450,7 @@ void loadSettings(const toml::Value& root, Profile& p, std::vector<Diagnostic>& 
 
 static const char* kContactsTopLevel[] = {"contact", nullptr};
 
-void loadContacts(const toml::Value& root, phone::ContactBook& contacts,
+void loadContacts(const toml::Value& root, phone::ContactBook& contacts, std::vector<std::string>& sos,
                   std::vector<Diagnostic>& d) {
   checkTopLevel(d, root, "contacts", kContactsTopLevel);
 
@@ -480,6 +481,14 @@ void loadContacts(const toml::Value& root, phone::ContactBook& contacts,
       } else {
         d.push_back({Diagnostic::Code::WrongType, {"contacts", "contact.role", "string"}});
       }
+    }
+
+    bool forSos = false;
+    if (const toml::Value* sosVal = entry.find("sos")) checkBool(*sosVal, "contacts", "contact.sos", d, forSos);
+    if (forSos) {
+      bool twice = false;   // the same person written twice gets one text, as the contact book keeps one entry
+      for (const std::string& known : sos) twice = twice || phone::same(known.c_str(), number.c_str(), contacts.countryCode());
+      if (!twice) sos.push_back(number);
     }
 
     whitelistText += number;
@@ -604,7 +613,7 @@ ConfigLoader::Result ConfigLoader::load() const {
       r.diagnostics.push_back({Diagnostic::Code::SyntaxError,
         {"contacts", std::to_string(err.line), toml::codeName(err.code)}});
     } else {
-      loadContacts(root, r.profile.contacts, r.diagnostics);
+      loadContacts(root, r.profile.contacts, r.profile.sosContacts, r.diagnostics);
     }
   }
 

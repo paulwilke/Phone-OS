@@ -145,6 +145,8 @@ config.contact.name.label = "Name"
 config.contact.name.help = "Name shown on the device."
 config.contact.role.label = "Role"
 config.contact.role.help = "parent: may query the device by SMS; in school time only a text from a parent makes the device vibrate, and every call is rejected. family: may call and write."
+config.contact.sos.label = "SOS"
+config.contact.sos.help = "The SOS goes to every contact ticked here. Without any tick it goes to the first call button."
 config.contact.role.parent.label = "Parent"
 config.contact.role.family.label = "Family"
 

@@ -56,9 +56,9 @@ public:
     // A parent's query asks for the position: start the search and the reply. False when one is
     // running already.
     virtual bool startLocationReply(const std::string& phone) = 0;
-    // The network refused a message the modem had accepted. True when the message was the
-    // silent reply to a parent's query: the child is then told nothing (no history entry, notice
-    // or vibration).
+    // The network refused a message the modem had accepted. True when the child must be told nothing
+    // (no history entry, notice or vibration): the silent reply to a parent's query, or one text of an
+    // emergency to several while another went out.
     virtual bool smsSendFailed(const std::string& phone) = 0;
   };
 

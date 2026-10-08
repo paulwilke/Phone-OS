@@ -450,6 +450,32 @@ void test_the_home_section_switches_tiles_off() {
   TEST_ASSERT_FALSE(hasDiagArg(r.diagnostics, Diagnostic::Code::UnknownKey, "home"));
 }
 
+// A contact with `sos = true` gets the SOS (owner, 2026-10-08); the same person twice gets it once, a wrong type
+// is reported and counts as no tick.
+void test_contacts_ticked_for_sos_are_the_sos_recipients() {
+  FakeConfigStore store;
+  store.put("/config/contacts.toml",
+            "[[contact]]\nnumber = \"+491701111111\"\nname = \"Mum\"\nsos = true\n"
+            "[[contact]]\nnumber = \"+491702222222\"\nname = \"Dad\"\n"
+            "[[contact]]\nnumber = \"+493012345678\"\nname = \"Gran\"\nsos = true\n"
+            "[[contact]]\nnumber = \"01701111111\"\nname = \"Mum again\"\nsos = true\n"
+            "[[contact]]\nnumber = \"+491709999999\"\nname = \"Other\"\nsos = \"yes\"\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_EQUAL(2, r.profile.sosContacts.size());
+  TEST_ASSERT_EQUAL_STRING("+491701111111", r.profile.sosContacts[0].c_str());
+  TEST_ASSERT_EQUAL_STRING("+493012345678", r.profile.sosContacts[1].c_str());
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::WrongType, "contact.sos"));
+  TEST_ASSERT_TRUE(r.profile.sosRecipients() == r.profile.sosContacts);
+
+  FakeConfigStore none;                                                  // no tick: the first call button, as in 4.0
+  none.put("/config/contacts.toml", "[[contact]]\nnumber = \"+491701111111\"\n");
+  none.put("/config/settings.toml", "[[tiles]]\naction = \"call\"\ntarget = \"+491702222222\"\n");
+  auto plain = loadWith(none);
+  TEST_ASSERT_TRUE(plain.profile.sosContacts.empty());
+  TEST_ASSERT_EQUAL(1, plain.profile.sosRecipients().size());
+  TEST_ASSERT_EQUAL_STRING("+491702222222", plain.profile.sosRecipients()[0].c_str());
+}
+
 void test_wrong_type_is_reported() {
   FakeConfigStore store;
   store.put("/config/settings.toml", "[features]\nmessage_vibration = \"yes\"\n");
@@ -1141,6 +1167,7 @@ int main() {
   RUN_TEST(test_unknown_key_is_reported);
   RUN_TEST(test_unknown_top_level_section_is_reported);
   RUN_TEST(test_the_home_section_switches_tiles_off);
+  RUN_TEST(test_contacts_ticked_for_sos_are_the_sos_recipients);
   RUN_TEST(test_wrong_type_is_reported);
   RUN_TEST(test_bad_enum_is_reported);
   RUN_TEST(test_out_of_range_integer_is_reported);

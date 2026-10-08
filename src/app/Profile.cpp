@@ -14,8 +14,14 @@ bool Profile::mayReceiveFrom(const std::string& number) const { return mayCall(n
 
 std::string Profile::sosRecipient(const std::string& target) const {
   if (!target.empty()) return target;
+  const std::vector<std::string> all = sosRecipients();
+  return all.empty() ? std::string() : all.front();
+}
+
+std::vector<std::string> Profile::sosRecipients() const {
+  if (!sosContacts.empty()) return sosContacts;
   for (const std::string& t : callTargets) {
-    if (!t.empty()) return t;
+    if (!t.empty()) return {t};
   }
-  return std::string();
+  return {};
 }

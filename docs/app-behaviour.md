@@ -348,7 +348,7 @@ Tests in `test/test_emergency/`.
 | EME-19 | The SMS wording is in the SMS language of the profile, whatever the interface language | `test_the_sms_is_worded_in_the_sms_language` | — | done |
 | EME-20 | The child's name and the map template of the profile go into the text | `test_the_name_and_the_map_template_go_into_the_text` | — | done |
 | EME-21 | The host's leave() releases the receiver when the screen closes | `test_leave_releases_the_receiver` | — | done |
-| EME-22 | Without an explicit target the first call target is the recipient | `test_the_first_call_target_is_the_default_recipient` | — | done |
+| EME-22 | Without an explicit target and without a contact ticked `sos` the first call target is the recipient | `test_the_first_call_target_is_the_default_recipient` | — | done |
 | EME-23 | A second press keeps the countdown, and a press while a ping runs changes nothing | `test_pressing_sos_again_keeps_the_countdown_and_a_running_ping` | — | done |
 | EME-24 | A text the network refuses after the modem took it is vibrated as failed once, not twice | `test_a_text_the_network_refuses_is_vibrated_as_failed_once` | — | done |
 | EME-25 | A text that cannot even be queued fails the ping, vibrates once and releases the receiver | `test_a_text_that_cannot_even_be_queued_is_vibrated_as_failed` | — | done |
@@ -362,6 +362,10 @@ Tests in `test/test_emergency/`.
 | EME-33 | A query reply that cannot even be queued is also told in the history | `test_a_query_reply_that_cannot_even_be_queued_is_told_in_the_history` | — | done |
 | EME-34 | A query that the profile keeps out of the history keeps its failure out too (the log has it) | `test_a_query_that_is_kept_out_of_the_history_keeps_its_failure_out_too` | — | done |
 | EME-35 | A failed emergency is not written as a failed query | `test_a_failed_emergency_is_not_a_failed_query` | — | done |
+| EME-36 | The SOS goes to every contact ticked `sos`, not to the call button, with the same text, told once | `test_the_sos_goes_to_every_ticked_contact_and_not_to_the_call_button` | — | done |
+| EME-37 | One refused text of an SOS to several is no failure, and the child is not told | `test_one_refused_text_of_several_is_no_failure_and_the_child_is_not_told` | — | done |
+| EME-38 | An SOS to several fails only when every text was refused, vibrated once | `test_the_emergency_fails_only_when_every_text_was_refused` | — | done |
+| EME-39 | A query reply goes to its asker alone, whoever is ticked for the SOS | `test_a_query_reply_still_goes_to_its_asker_alone` | — | done |
 
 ## Connectivity
 

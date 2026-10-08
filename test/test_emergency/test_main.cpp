@@ -106,6 +106,58 @@ void test_the_first_call_target_is_the_default_recipient() {
   TEST_ASSERT_EQUAL_STRING(kParentTwo, r.lastSent().phone.c_str());
 }
 
+// ---- several recipients (owner, 2026-10-08: the SOS goes to every contact ticked "SOS") -----------------
+
+Profile twoForSos() {
+  Profile p = ProfileBuilder().childName("Alex").callTargets({kGrandma}).build();
+  p.sosContacts = {kParentOne, kParentTwo};
+  return p;
+}
+
+void test_the_sos_goes_to_every_ticked_contact_and_not_to_the_call_button() {
+  Rig r(twoForSos());
+  TEST_ASSERT_TRUE(r.emergency.begin());
+  r.emergency.choose(SosPing::Kind::Emergency);
+  r.run(30);
+  TEST_ASSERT_EQUAL(2, r.sentCount());
+  TEST_ASSERT_EQUAL_STRING(kParentOne, r.modem.sent()[0].phone.c_str());
+  TEST_ASSERT_EQUAL_STRING(kParentTwo, r.modem.sent()[1].phone.c_str());
+  TEST_ASSERT_TRUE(r.modem.sent()[0].body == r.modem.sent()[1].body);    // the same text, the same position
+  TEST_ASSERT_TRUE(SosPing::Stage::Done == r.emergency.ping().stage());
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Sent));                    // told once, not per recipient
+  TEST_ASSERT_TRUE(r.logged("SOS text to 2 of 2 recipients"));
+}
+
+void test_one_refused_text_of_several_is_no_failure_and_the_child_is_not_told() {
+  Rig r(twoForSos());
+  r.modem.failNextSms("+CMS ERROR: 304");                                   // the first text is refused later
+  r.emergency.begin();
+  r.emergency.choose(SosPing::Kind::Emergency);
+  r.run(30);
+  TEST_ASSERT_TRUE(SosPing::Stage::Done == r.emergency.ping().stage());
+  TEST_ASSERT_EQUAL(0, r.played(HapticPattern::Failed));
+  TEST_ASSERT_TRUE(r.logged("SOS text refused for Parent One; the others went out"));
+}
+
+void test_the_emergency_fails_only_when_every_text_was_refused() {
+  Rig r(twoForSos());
+  r.modem.failNextSms("+CMS ERROR: 304", 2);
+  r.emergency.begin();
+  r.emergency.choose(SosPing::Kind::Emergency);
+  r.run(30);
+  TEST_ASSERT_TRUE(SosPing::Stage::Failed == r.emergency.ping().stage());
+  TEST_ASSERT_EQUAL(1, r.played(HapticPattern::Failed));
+  TEST_ASSERT_TRUE(r.logged("SOS ping FAILED: the network refused the text"));
+}
+
+void test_a_query_reply_still_goes_to_its_asker_alone() {
+  Rig r(twoForSos());
+  r.modem.injectSms(kParentTwo, "#WhereAreYou", 1);
+  r.run(30);
+  TEST_ASSERT_EQUAL(1, r.sentCount());
+  TEST_ASSERT_EQUAL_STRING(kParentTwo, r.lastSent().phone.c_str());
+}
+
 void test_pressing_sos_starts_the_receiver_at_once() {
   Rig r;
   TEST_ASSERT_FALSE(r.receiverOn());
@@ -560,6 +612,10 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_without_a_recipient_sos_cannot_begin);
   RUN_TEST(test_the_first_call_target_is_the_default_recipient);
+  RUN_TEST(test_the_sos_goes_to_every_ticked_contact_and_not_to_the_call_button);
+  RUN_TEST(test_one_refused_text_of_several_is_no_failure_and_the_child_is_not_told);
+  RUN_TEST(test_the_emergency_fails_only_when_every_text_was_refused);
+  RUN_TEST(test_a_query_reply_still_goes_to_its_asker_alone);
   RUN_TEST(test_pressing_sos_starts_the_receiver_at_once);
   RUN_TEST(test_choosing_starts_the_ping);
   RUN_TEST(test_the_ping_sends_the_position);

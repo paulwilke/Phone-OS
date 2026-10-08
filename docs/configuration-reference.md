@@ -330,6 +330,7 @@ Takes effect on next start.
 |-----|------|---------|----------|-------|
 | `number` | phone_number | `—` | yes | restart |
 | `name` | string | `—` | no | restart |
+| `sos` | bool | `false` | no | restart |
 | `role` | enum: parent|family | `family` | no | restart |
 
 #### `number`
@@ -341,6 +342,12 @@ Takes effect on next start.
 #### `name`
 
 String, at most 40 characters.
+Takes effect on next start.
+
+#### `sos`
+
+Boolean (`true` or `false`).
+Default: `false`.
 Takes effect on next start.
 
 #### `role`

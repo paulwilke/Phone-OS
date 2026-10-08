@@ -41,6 +41,9 @@ struct Profile {
   // may be called even when they are not in the contact book, and the first one is who the SOS
   // button reaches when it has no explicit target.
   std::vector<std::string> callTargets;
+  // The contacts with `sos = true`, in the order of the file: the SOS goes to every one of them. Empty: the
+  // SOS goes to the first call target, as in 4.0.
+  std::vector<std::string> sosContacts;
   // The zone school time and the clock follow; nullptr = the clock keeps the offset it has.
   const tz::Zone* timeZone = nullptr;
 
@@ -90,9 +93,12 @@ struct Profile {
   // kept as one function so that messages and calls cannot drift apart. There is no switch.
   bool mayReceiveFrom(const std::string& number) const;
 
-  // Whom the SOS button reaches: `target` if given, otherwise the first call target; empty when
+  // Whom the SOS button reaches: `target` if given, otherwise the first of sosRecipients(); empty when
   // there is nobody, in which case there is no SOS button.
   std::string sosRecipient(const std::string& target) const;
+  // Everybody an SOS goes to: the ticked contacts, or else the first call target alone; empty when there
+  // is nobody.
+  std::vector<std::string> sosRecipients() const;
 
   // Is school time running? `epochUtc` 0 (time unknown) never locks. With `endMinute` the minute
   // of the day school time ends is returned.

@@ -734,6 +734,21 @@
               "field": ""
             },
             {
+              "name": "sos",
+              "type": "bool",
+              "required": false,
+              "secret": false,
+              "apply": "restart",
+              "default": "false",
+              "min_val": 0,
+              "max_val": 0,
+              "enums": "",
+              "label": "config.contact.sos.label",
+              "help": "config.contact.sos.help",
+              "field": "",
+              "widget": "checkbox"
+            },
+            {
               "name": "role",
               "type": "enum",
               "required": false,
