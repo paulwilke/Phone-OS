@@ -11,7 +11,7 @@ namespace ui {
 
 constexpr int kStatusBarHeight = 22;
 constexpr int kAlertBarHeight = 20;
-constexpr int kSoftKeysHeight = 28;
+constexpr int kSoftKeysHeight = 32;  // a little taller than the 28 of 4.0: easier to hit (owner, 2026-10-08)
 constexpr int kContentGap = 2;  // between the content and the soft keys
 
 struct ScreenLayout {

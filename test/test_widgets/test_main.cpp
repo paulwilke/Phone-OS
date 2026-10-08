@@ -173,64 +173,87 @@ void test_the_scroll_bar_shows_the_window_and_hides_when_all_is_visible() {
 
 // ---- soft keys ------------------------------------------------------------------------------
 
-void test_soft_key_slots_share_the_width() {
-  const Rect bar{0, 292, 240, 28};
-  SoftKeys two;
-  two.back = "Back";
+// Back has one place on every screen, whatever else the bar shows (owner, 2026-10-08: on the compose page Back had
+// the whole bar until something was typed and then jumped to the left half). The action ends at the right edge.
+void test_back_has_a_fixed_place_and_the_action_ends_at_the_right_edge() {
+  const Rect bar{0, 288, 240, 32};
+  const Rect back{0, 288, 94, 32};
+  SoftKeys alone;
+  alone.back = "Back";
+  SoftKeySlots s = softKeySlots(alone, bar);
+  TEST_ASSERT_TRUE(s.back == back);                                   // alone: still its place, not the whole bar
+  TEST_ASSERT_TRUE(s.action.empty() && s.up.empty() && s.down.empty());
+
+  SoftKeys two = alone;
   two.action = "Send";
-  SoftKeySlots s = softKeySlots(two, bar);
-  TEST_ASSERT_TRUE(s.back == (Rect{0, 292, 120, 28}));
-  TEST_ASSERT_TRUE(s.action == (Rect{120, 292, 120, 28}));
-  TEST_ASSERT_TRUE(s.up.empty() && s.down.empty());
+  s = softKeySlots(two, bar);
+  TEST_ASSERT_TRUE(s.back == back);                                   // the action came: Back stays
+  TEST_ASSERT_TRUE(s.action == (Rect{94, 288, 146, 32}));             // the action has the rest, to the right edge
 
   SoftKeys four = two;
   four.scroll = true;
   s = softKeySlots(four, bar);
-  TEST_ASSERT_TRUE(s.back == (Rect{0, 292, 94, 28}));
-  TEST_ASSERT_TRUE(s.up == (Rect{94, 292, 26, 28}));
-  TEST_ASSERT_TRUE(s.down == (Rect{120, 292, 26, 28}));
-  TEST_ASSERT_TRUE(s.action == (Rect{146, 292, 94, 28}));
+  TEST_ASSERT_TRUE(s.back == back);                                   // the arrows came: Back stays
+  TEST_ASSERT_TRUE(s.up == (Rect{94, 288, 26, 32}));
+  TEST_ASSERT_TRUE(s.down == (Rect{120, 288, 26, 32}));
+  TEST_ASSERT_TRUE(s.action == (Rect{146, 288, 94, 32}));
+
+  SoftKeys arrows = alone;
+  arrows.scroll = true;
+  TEST_ASSERT_TRUE(softKeySlots(arrows, bar).back == back);
+  arrows.wide = true;                                                 // wide is only for a bar with one button and no arrows
+  TEST_ASSERT_TRUE(softKeySlots(arrows, bar).back == back);
 }
 
-void test_a_single_button_gets_the_whole_width() {
-  const Rect bar{0, 292, 240, 28};
+// "Hang up" in a call is the whole bar: it must be easy to hit, and the volume has buttons of its own.
+void test_a_wide_single_button_gets_the_whole_bar() {
+  const Rect bar{0, 288, 240, 32};
   SoftKeys only;
-  only.action = "Hang up";
+  only.back = "Hang up";
+  only.wide = true;
   SoftKeySlots s = softKeySlots(only, bar);
-  TEST_ASSERT_TRUE(s.back.empty());
-  TEST_ASSERT_TRUE(s.action == (Rect{0, 292, 240, 28}));
-  only.scroll = true;  // volume arrows: still the rest, not less
-  s = softKeySlots(only, bar);
-  TEST_ASSERT_TRUE(s.action == (Rect{52, 292, 188, 28}));
+  TEST_ASSERT_TRUE(s.back == bar);
+  TEST_ASSERT_TRUE(s.action.empty());
+  SoftKeys action;
+  action.action = "Answer";
+  action.wide = true;
+  TEST_ASSERT_TRUE(softKeySlots(action, bar).action == bar);
+  action.back = "Reject";                                             // two buttons: the fixed places
+  TEST_ASSERT_TRUE(softKeySlots(action, bar).back == (Rect{0, 288, 94, 32}));
 }
+
+void test_the_soft_key_bar_is_a_little_taller_than_in_4_0() { TEST_ASSERT_EQUAL(32, kSoftKeysHeight); }
 
 void test_a_tap_acts_like_the_key_of_its_button() {
-  const Rect bar{0, 292, 240, 28};
+  const Rect bar{0, 288, 240, 32};
   SoftKeys two;
   two.back = "Back";
   two.action = "Send";
-  TEST_ASSERT_TRUE(softKeyAt(two, bar, 10, 310) == Key::Back);
-  TEST_ASSERT_TRUE(softKeyAt(two, bar, 230, 310) == Key::Select);
+  TEST_ASSERT_TRUE(softKeyAt(two, bar, 10, 300) == Key::Back);
+  TEST_ASSERT_TRUE(softKeyAt(two, bar, 230, 300) == Key::Select);
   TEST_ASSERT_FALSE(softKeyAt(two, bar, 10, 200).has_value());   // above the bar
   TEST_ASSERT_FALSE(softKeyAt(two, bar, 10, 320).has_value());   // below it
-  TEST_ASSERT_TRUE(softKeyAt(two, bar, 119, 292) == Key::Back);   // the edge between the two
-  TEST_ASSERT_TRUE(softKeyAt(two, bar, 120, 292) == Key::Select);
+  TEST_ASSERT_TRUE(softKeyAt(two, bar, 93, 288) == Key::Back);    // the edge between the two
+  TEST_ASSERT_TRUE(softKeyAt(two, bar, 94, 288) == Key::Select);
 
   SoftKeys four = two;
   four.scroll = true;
-  TEST_ASSERT_TRUE(softKeyAt(four, bar, 10, 310) == Key::Back);
-  TEST_ASSERT_TRUE(softKeyAt(four, bar, 100, 310) == Key::Up);
-  TEST_ASSERT_TRUE(softKeyAt(four, bar, 135, 310) == Key::Down);
-  TEST_ASSERT_TRUE(softKeyAt(four, bar, 230, 310) == Key::Select);
+  TEST_ASSERT_TRUE(softKeyAt(four, bar, 10, 300) == Key::Back);
+  TEST_ASSERT_TRUE(softKeyAt(four, bar, 100, 300) == Key::Up);
+  TEST_ASSERT_TRUE(softKeyAt(four, bar, 135, 300) == Key::Down);
+  TEST_ASSERT_TRUE(softKeyAt(four, bar, 230, 300) == Key::Select);
 
   SoftKeys none;
   TEST_ASSERT_FALSE(softKeyAt(none, bar, 10, 310).has_value());
   SoftKeys backOnly;
   backOnly.back = "Back";
-  TEST_ASSERT_TRUE(softKeyAt(backOnly, bar, 200, 310) == Key::Back);  // it owns the whole bar
+  TEST_ASSERT_TRUE(softKeyAt(backOnly, bar, 50, 310) == Key::Back);
+  TEST_ASSERT_FALSE(softKeyAt(backOnly, bar, 200, 310).has_value());  // its place only, not the whole bar
 }
 
-void test_a_button_label_gives_up_the_space_and_then_the_symbol_when_it_does_not_fit() {
+// The word with the symbol and a space, or the word alone: never the symbol pressed against the word, which 4.0
+// drew and which read as part of it (the French "Moins fort" of the call page touched its frame that way).
+void test_a_button_label_gives_up_the_symbol_when_it_does_not_fit_with_its_space() {
   const Font& f = font(FontSize::Small);
   const std::string word = "Cancel";
   const auto expected = [&](const Rect& slot, const std::string& label) {
@@ -241,12 +264,10 @@ void test_a_button_label_gives_up_the_space_and_then_the_symbol_when_it_does_not
     return fb;
   };
   const std::string spaced = std::string(symbol::kBackspace) + " " + word;
-  const std::string tight = std::string(symbol::kBackspace) + word;
-  TEST_ASSERT_TRUE(text::width(f, spaced) > text::width(f, tight) && text::width(f, tight) > text::width(f, word));
-  // The slot is the label's width plus the frame (2) and the margin (4); one pixel less and the next form is used.
+  TEST_ASSERT_TRUE(text::width(f, spaced) > text::width(f, word));
+  // The slot is the label's width plus the frame (2) and the margin (4); one pixel less and the word stands alone.
   const struct { int room; const std::string& label; } cases[] = {
-      {text::width(f, spaced), spaced}, {text::width(f, spaced) - 1, tight},
-      {text::width(f, tight), tight},   {text::width(f, tight) - 1, word}};
+      {text::width(f, spaced), spaced}, {text::width(f, spaced) - 1, word}, {text::width(f, word), word}};
   for (const auto& c : cases) {
     const Rect slot{0, 0, c.room + 6, 28};
     FrameBuffer drawn;
@@ -1290,10 +1311,11 @@ int main() {
   RUN_TEST(test_shapes_stay_inside_their_rectangle_even_when_it_is_tiny);
   RUN_TEST(test_a_radius_beyond_half_the_size_is_the_largest_that_fits);
   RUN_TEST(test_the_scroll_bar_shows_the_window_and_hides_when_all_is_visible);
-  RUN_TEST(test_soft_key_slots_share_the_width);
-  RUN_TEST(test_a_single_button_gets_the_whole_width);
+  RUN_TEST(test_back_has_a_fixed_place_and_the_action_ends_at_the_right_edge);
+  RUN_TEST(test_a_wide_single_button_gets_the_whole_bar);
+  RUN_TEST(test_the_soft_key_bar_is_a_little_taller_than_in_4_0);
   RUN_TEST(test_a_tap_acts_like_the_key_of_its_button);
-  RUN_TEST(test_a_button_label_gives_up_the_space_and_then_the_symbol_when_it_does_not_fit);
+  RUN_TEST(test_a_button_label_gives_up_the_symbol_when_it_does_not_fit_with_its_space);
   RUN_TEST(test_the_soft_keys_stay_inside_their_buttons_in_every_language);
   RUN_TEST(test_every_standard_soft_key_word_fits_either_button_with_and_without_the_arrows);
   RUN_TEST(test_the_battery_is_five_bars_rounded_up);

@@ -56,7 +56,7 @@ The open filter (`setOpenFilter`) lets a role that has no messages refuse the me
 
 ## Layout
 
-`ScreenLayout::standard()` (`Layout.h`) splits the 240 × 320 display into the status bar (22 pixels), the alert bar (20), the content, and the soft keys (28), with two pixels between content and soft keys. The alert bar keeps its place when it is empty: a bar that appears and disappears moves the content down and up, which on e-ink is two full redraws and a finger that hits another tile than the one it aimed at.
+`ScreenLayout::standard()` (`Layout.h`) splits the 240 × 320 display into the status bar (22 pixels), the alert bar (20), the content, and the soft keys (32; 28 until 4.0, a little taller to be hit more easily), with two pixels between content and soft keys. The alert bar keeps its place when it is empty: a bar that appears and disappears moves the content down and up, which on e-ink is two full redraws and a finger that hits another tile than the one it aimed at.
 
 ## Widgets
 
@@ -64,7 +64,7 @@ Every widget draws inside the rectangle it is given and nothing outside it; the 
 
 | Widget | What it is | User data it shortens |
 |---|---|---|
-| `SoftKeys` | the key bar: back on the left, optional ▲ ▼, the main action on the right; each button is a touch target (`softKeyAt`); when a label does not fit with its key symbol and a space, the space goes, then the symbol | none |
+| `SoftKeys` | the key bar: back on the left, optional ▲ ▼, the main action on the right; each button is a touch target (`softKeyAt`). **Back has a fixed place** on every screen, 94 pixels at the left whether arrows or an action are shown or not; the action ends at the right edge and also takes the arrows' place when there are none; a `wide` bar with one button (Hang up) gives it all of the bar. When a label does not fit with its key symbol and a space, the symbol goes (it is never pressed against the word) | none |
 | `StatusBar` | operator or status word, "GPS" while locating, date, battery as five bars; built from a `StatusModel`; changes rarely, because every change is a panel redraw | the operator's name (the GPS note and the date are never pushed out; the weekday goes first when space is short) |
 | alert bar | an inverted line with a message, or the reserved empty space | the whole message |
 | `TileGrid` | symbol above a short label in a grid of tiles over pages; selected tile inverted, others raised; page dots; Up/Down move through the tiles in reading order and wrap | none (a tile without a symbol wraps its label) |

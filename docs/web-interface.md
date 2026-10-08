@@ -78,8 +78,9 @@ What only the device can show: whether the log and contacts tabs load now, how m
 | PUT, POST | `/api/wifi-off` | Ask Wi-Fi to switch off (done after the answer has gone out) |
 | PUT, POST | `/api/wifi-extend` | Keep Wi-Fi on: restarts the idle time on purpose; answers with `seconds_left`; logged like every change |
 | GET | `/api/languages` | Installed language catalog list |
-| GET | `/api/lang/<code>` | `web.*` keys and the `config.*.label` keys of the form (the words of an enum's values too, see below), from the web set (`lang/web/<code>.toml` layered with `/lang/web/<code>.toml` of the card; English where a language has no web catalog) |
-| GET | `/api/lang/<code>/help` | The `config.*.help` keys of the form: a second answer, because the whole set of a language does not fit one response buffer with room to spare (`kResponseMax` 12288 bytes; shipped sets: French 10.2 KB, German 9.7 KB, English 9.0 KB together; split, the larger answer is 5.4 KB). The page asks for it right after the first one; if it fails, the fields simply have no hint (the page never shows a catalog key as text) |
+| GET | `/api/lang/<code>` | The `web.*` keys, from the web set (`lang/web/<code>.toml` layered with `/lang/web/<code>.toml` of the card; English where a language has no web catalog) |
+| GET | `/api/lang/<code>/labels` | The `config.*.label` keys of the form (the words of an enum's values too, see below) |
+| GET | `/api/lang/<code>/help` | The `config.*.help` keys of the form. A language comes in three answers because all of it does not fit one response buffer with room to spare (`kResponseMax` 12288 bytes; the shipped French set is 11.9 KB: words 2.4, labels 3.7, help 5.8; each answer must stay under 6000 bytes, `test_sim_web`). Two answers were enough until 4.1 brought the tabs, the weekday boxes and the tiles of `[home]`. The page asks for the labels and the help right after the words; when the labels fail a field is named by its key in the file (`timezone`), when the help fails it has no hint; the page never shows a catalog key as text |
 
 ### Security model
 

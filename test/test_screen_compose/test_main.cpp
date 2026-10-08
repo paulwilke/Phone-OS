@@ -118,7 +118,7 @@ void test_backspace_deletes_a_whole_character_and_on_an_empty_page_goes_back() {
   TEST_ASSERT_EQUAL_STRING("", page.screen.text().c_str());
   TEST_ASSERT_EQUAL(0, page.rig.nav.calls.size());
   TEST_ASSERT_EQUAL_STRING("Back", page.screen.softKeys().back.c_str());
-  TEST_ASSERT_TRUE(page.screen.softKeys().action.empty());
+  TEST_ASSERT_EQUAL_STRING("Templates", page.screen.softKeys().action.c_str());   // nothing to send: the templates
   page.key(Key::Back);
   TEST_ASSERT_EQUAL_STRING("back", page.rig.nav.last().c_str());
 }
@@ -221,8 +221,52 @@ void test_enter_sends_and_the_page_goes_home_with_nothing_left_behind() {
 
 void test_nothing_is_sent_with_nothing_written() {
   Page page;
-  TEST_ASSERT_FALSE(page.screen.handle(Input::pressed(Key::Select)));
+  page.key(Key::Select);                                          // with nothing typed, Enter opens the templates
   TEST_ASSERT_EQUAL(0, page.rig.modem.sent().size());
+}
+
+// Owner, 2026-10-08: with free text the ready-made messages were gone. They are one key away, less prominent than
+// the text, and the child still starts typing at once.
+void test_with_free_text_the_ready_made_messages_are_one_key_away_and_typing_starts_at_once() {
+  Page page;
+  TEST_ASSERT_TRUE(page.says("_"));                               // the page opens on the text, the cursor waits
+  TEST_ASSERT_EQUAL_STRING("Templates", page.screen.softKeys().action.c_str());
+  page.type("H");                                                 // typing at once, no step before it
+  TEST_ASSERT_EQUAL_STRING("H", page.screen.text().c_str());
+  TEST_ASSERT_EQUAL_STRING("Send", page.screen.softKeys().action.c_str());
+  page.key(Key::Back);                                            // empty again: the key is back
+  TEST_ASSERT_EQUAL_STRING("Templates", page.screen.softKeys().action.c_str());
+
+  // the first message is selected and so drawn inverted
+  const auto listed = [&](const char* words) { return page.says(words) || shows::text(page.rig.frame, words, FontSize::Text, kContent, true); };
+  page.key(Key::Select);                                          // the list of the page without free text
+  TEST_ASSERT_TRUE(listed("I am on my way") && listed("I have arrived"));
+  TEST_ASSERT_EQUAL_STRING("Send", page.screen.softKeys().action.c_str());
+  page.key(Key::Back);                                            // Back is the text again, not the page before
+  TEST_ASSERT_EQUAL(0, page.rig.nav.calls.size());
+  TEST_ASSERT_FALSE(listed("I am on my way"));
+  TEST_ASSERT_EQUAL_STRING("Templates", page.screen.softKeys().action.c_str());
+
+  page.key(Key::Select);
+  page.type("O");                                                 // a letter in the list: the text, with that letter
+  TEST_ASSERT_EQUAL_STRING("O", page.screen.text().c_str());
+  TEST_ASSERT_FALSE(listed("I am on my way"));
+  page.key(Key::Back);
+
+  page.key(Key::Select);                                          // choosing one sends it, in the parents' language
+  page.key(Key::Select);
+  TEST_ASSERT_EQUAL(1, page.rig.modem.sent().size());
+  TEST_ASSERT_EQUAL_STRING("I am on my way", page.rig.modem.sent()[0].body.c_str());
+  TEST_ASSERT_EQUAL_STRING("home", page.rig.nav.last().c_str());
+}
+
+void test_the_page_opens_on_the_text_even_when_the_list_was_open_before() {
+  Page page;
+  page.key(Key::Select);
+  page.screen.onEnter();
+  page.screen.render(page.rig.frame);
+  TEST_ASSERT_FALSE(page.says("I am on my way") || shows::text(page.rig.frame, "I am on my way", FontSize::Text, kContent, true));
+  TEST_ASSERT_EQUAL_STRING("Templates", page.screen.softKeys().action.c_str());
 }
 
 void test_without_a_network_the_message_waits_and_the_page_still_goes_home() {
@@ -369,7 +413,7 @@ void test_the_soft_keys_work_by_touch() {
 
 void test_the_page_is_drawn_inside_the_screen_in_every_language() {
   languages::forEach([](const std::string& language, i18n::Translator&) {
-    for (int kind = 0; kind < 5; ++kind) {
+    for (int kind = 0; kind < 6; ++kind) {
       DeviceRig rig(kind == 4 ? ProfileBuilder().freeText(false).build() : freeText());
       rig.language(language);
       ComposeScreen page(rig.context());
@@ -379,6 +423,7 @@ void test_the_page_is_drawn_inside_the_screen_in_every_language() {
       page.onEnter();
       rig.poll();
       if (kind == 1) for (char c : std::string(160, 'w')) page.handle(Input::text(c));
+      if (kind == 5) page.handle(Input::pressed(Key::Select));             // free text, the templates opened
       if (kind == 2) {
         for (char c : std::string("m")) page.handle(Input::text(c));
         page.handle(Input::text(0xE4));
@@ -404,6 +449,13 @@ void test_the_pictures_in_english_and_german() {
     page.handle(Input::text(0xE4));
     page.render(rig.frame);
     golden::expect(rig.frame, std::string("compose_wide_") + language);
+    DeviceRig empty(freeText());
+    empty.language(language);
+    ComposeScreen fresh(empty.context());
+    fresh.onEnter();
+    empty.poll();
+    fresh.render(empty.frame);
+    golden::expect(empty.frame, std::string("compose_empty_") + language);    // the key "Templates"
     DeviceRig canned(ProfileBuilder().freeText(false).build());
     canned.language(language);
     ComposeScreen list(canned.context());
@@ -431,6 +483,8 @@ int main(int, char**) {
   RUN_TEST(test_what_the_history_keeps_is_the_second_limit);
   RUN_TEST(test_enter_sends_and_the_page_goes_home_with_nothing_left_behind);
   RUN_TEST(test_nothing_is_sent_with_nothing_written);
+  RUN_TEST(test_with_free_text_the_ready_made_messages_are_one_key_away_and_typing_starts_at_once);
+  RUN_TEST(test_the_page_opens_on_the_text_even_when_the_list_was_open_before);
   RUN_TEST(test_without_a_network_the_message_waits_and_the_page_still_goes_home);
   RUN_TEST(test_when_the_core_cannot_take_the_message_the_text_stays);
   RUN_TEST(test_school_time_does_not_stop_a_message);

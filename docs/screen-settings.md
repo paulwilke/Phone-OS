@@ -8,6 +8,7 @@ Code: `src/ui/screens/SettingsScreen.{h,cpp}` with the widget `src/ui/OptionRows
 | Message vibration, on / off | always | switches; switching it **on** buzzes once with the pattern of a message, so that whoever wants it feels it |
 | Wi-Fi, on / off | `parentTools` and the core has Wi-Fi (the condition of the Wi-Fi tile) | opens the Wi-Fi page |
 | Language, by its own name | always | opens the language page |
+| Switch off, "press twice" | always | the first press asks ("press again: off"), the second switches the device off; any other input, another box or leaving the page takes the first back. On the cable the box says "unplug USB first" and does nothing: USB keeps the board alive. Owner, 2026-10-08: switching off was only on the parents' status page, and a device that is off uses no power |
 
 The values are read from the core when the page is drawn and nothing is kept: a volume changed by a call, or a Wi-Fi that switched itself off, shows at the next frame. Message vibration is held by the core, and the runtime writes it to `settings.toml` on the card, so it lasts ([runtime.md](runtime.md); the scenario `settings-page` checks the file and the restart).
 

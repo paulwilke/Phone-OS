@@ -5,7 +5,10 @@
 //
 //   [ <backspace> Back ][ up ][ down ][ Send <enter> ]
 //
-// Back is always on the left and the main action always on the right, so a thumb finds them.
+// Back is always on the left and the main action always on the right, so a thumb finds them. Back has
+// a fixed place: the same on every screen, whether the arrows or an action are shown or not, and a
+// key that comes or goes never moves it (owner, 2026-10-08: on the compose page Back moved to
+// the left once something was typed, because it had the whole bar before).
 // Each button is also a touch target: a tap acts like the key (keyAt). A label is a fixed
 // word from the catalog and is never shortened; if it does not fit its button, the layout or
 // the word is wrong, and the layout tests in every language find it.
@@ -22,12 +25,15 @@ struct SoftKeys {
   std::string back;     // label of the back button; empty = no button
   bool scroll = false;  // show the up and down buttons
   std::string action;   // label of the main action; empty = no button
+  // The one button of the bar takes all of it: "Hang up" in a call, which must be easy to hit. Only
+  // for a bar with exactly one button and no arrows; otherwise the places are the fixed ones.
+  bool wide = false;
 };
 
 // Where the buttons of `keys` go in `bar`. A button that is not shown has an empty rectangle.
-// The arrows get 26 pixels each; Back and the action share the rest, and when one of them is
-// missing the other gets all of it (a call screen with only "Hang up" must not be squeezed by
-// volume arrows).
+// The arrows get 26 pixels each in the middle; Back has the part left of them, whether the arrows
+// are shown or not. The action ends at the right edge: right of the arrows, or from the middle
+// when there are none. A `wide` bar with one button gives it all of the bar.
 struct SoftKeySlots {
   Rect back, up, down, action;
 };

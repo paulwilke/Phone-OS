@@ -3,6 +3,7 @@
 #include <string>
 
 #include "ui/Fonts.h"
+#include "ui/SoftKeys.h"
 #include "ui/Symbols.h"
 #include "ui/Text.h"
 #include "ui/Wording.h"
@@ -12,6 +13,7 @@ namespace ui {
 namespace {
 
 constexpr int kBoxWidth = 22, kBoxGap = 6, kBoxHeight = 18;
+constexpr int kVolumeButtonHeight = 32;   // as tall as the soft keys: a finger finds them the same way
 
 // The largest of the fonts that holds the whole text in `width`; a number must be there in full.
 const Font& fontThatFits(const std::string& words, int width) {
@@ -75,7 +77,9 @@ void CallScreen::draw(Display& display, const Rect& area) {
     }
   }
 
-  // The volume, during a call only: boxes, filled up to the level.
+  quieter_ = louder_ = Rect{};
+  // The volume, during a call only: boxes, filled up to the level, and below them the two buttons that change it
+  // (owner, 2026-10-08: by touch, in the middle of the page).
   if (now == Phase::Connected && state().volumeAdjustable) {
     const std::string label = t().get("call.volume");
     for (std::string_view line : text::wrap(body, label, width)) {
@@ -91,16 +95,26 @@ void CallScreen::draw(Display& display, const Rect& area) {
       else display.outlineRect(box, true);
       x += kBoxWidth + kBoxGap;
     }
+    y += kBoxHeight + 10;
+    // The two buttons share the width of the page, wider than the row of boxes: a finger, and "Moins fort".
+    const int left = area.x + 8, width = area.w - 16;
+    const int half = (width - kBoxGap) / 2;
+    quieter_ = {left, y, half, kVolumeButtonHeight};
+    louder_ = {left + width - half, y, half, kVolumeButtonHeight};
+    drawSoftKeyButton(display, quieter_, t().get("call.quieter"), symbol::kDown, true);
+    drawSoftKeyButton(display, louder_, t().get("call.louder"), symbol::kUp, false);
   }
 }
 
 SoftKeys CallScreen::keys() {
   SoftKeys keys;
   switch (phase()) {
-    case Phase::Dialling: keys.back = t().get("call.hangup"); break;
+    // Hang up is the whole bar: it must be easy to hit. The volume has buttons of its own on the page, and
+    // the keys Up and Down change it as before.
+    case Phase::Dialling:
     case Phase::Connected:
       keys.back = t().get("call.hangup");
-      keys.scroll = state().volumeAdjustable;
+      keys.wide = true;
       break;
     case Phase::Ringing:
       keys.back = t().get("call.reject");
@@ -112,6 +126,10 @@ SoftKeys CallScreen::keys() {
 }
 
 bool CallScreen::onInput(const Input& input, const Rect&) {
+  if (input.kind == Input::Kind::Touch && phase() == Phase::Connected) {
+    if (quieter_.contains(input.x, input.y)) return app().changeVolume(-1);
+    if (louder_.contains(input.x, input.y)) return app().changeVolume(+1);
+  }
   if (input.isKey(Key::Select) && phase() == Phase::Ringing) {
     app().answer();
     return true;

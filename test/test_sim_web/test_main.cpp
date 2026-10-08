@@ -226,10 +226,11 @@ void test_the_page_can_be_had_in_every_shipped_language() {
   TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz").status);
 }
 
-// The form asks for the label and the help text of every field. The help texts come as a second answer
-// (/api/lang/<code>/help) because all of a language in one answer is too tight for the response buffer;
-// both answers must fit it with room for a longer user catalog, and between them they carry every key
-// the form uses, so that the page never shows a raw key.
+// The form asks for the label and the help text of every field. A language comes in three answers: the page's
+// words (/api/lang/<code>), the labels of the form (/labels) and the help texts (/help), because all of it in one
+// answer is too tight for the response buffer, and two were too tight once 4.1 added the settings tabs, the
+// weekday boxes and the tiles of [home]. Each must fit with room for a longer user catalog, and between them they
+// carry every key the form uses, so that the page never shows a raw key.
 void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare() {
   std::ifstream in("config/form_generated.json");
   std::stringstream form;
@@ -243,17 +244,22 @@ void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_eac
   TEST_ASSERT_TRUE(keys.size() > 80);
   Web w;
   for (const char* code : {"en", "de", "fr"}) {
-    const Reply main = w.get(std::string("/api/lang/") + code);
+    const Reply words = w.get(std::string("/api/lang/") + code);
+    const Reply labels = w.get(std::string("/api/lang/") + code + "/labels");
     const Reply help = w.get(std::string("/api/lang/") + code + "/help");
-    TEST_ASSERT_EQUAL(200, main.status);
+    TEST_ASSERT_EQUAL(200, words.status);
+    TEST_ASSERT_EQUAL(200, labels.status);
     TEST_ASSERT_EQUAL(200, help.status);
     // Each answer uses at most 6000 of the 12288 bytes of the buffer: twice the room for a catalog whose
-    // sentences are longer, which a single answer (about 10.2 KB in French) would not have.
-    TEST_ASSERT_TRUE_MESSAGE(main.body.size() < 6000, code);
+    // sentences are longer, which a single answer (about 11.9 KB in French) would not have.
+    TEST_ASSERT_TRUE_MESSAGE(words.body.size() < 6000, code);
+    TEST_ASSERT_TRUE_MESSAGE(labels.body.size() < 6000, code);
     TEST_ASSERT_TRUE_MESSAGE(help.body.size() < 6000, code);
+    TEST_ASSERT_TRUE_MESSAGE(words.has("\"web.tab.basics\":") && !words.has("\"config."), code);   // each answer its own part
+    TEST_ASSERT_TRUE_MESSAGE(!labels.has("\"web.") && !labels.has(".help\":"), code);
     for (const std::string& key : keys) {
       const bool isHelp = key.size() > 6 && key.compare(key.size() - 6, 6, ".help\"") == 0;
-      TEST_ASSERT_TRUE_MESSAGE((isHelp ? help : main).has(key + ":"), (std::string(code) + " " + key).c_str());
+      TEST_ASSERT_TRUE_MESSAGE((isHelp ? help : labels).has(key + ":"), (std::string(code) + " " + key).c_str());
     }
   }
 }
@@ -263,6 +269,8 @@ void test_the_help_texts_need_the_password_and_a_known_language() {
   Web w;
   TEST_ASSERT_EQUAL(401, w.get("/api/lang/en/help", "").status);
   TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz/help").status);
+  TEST_ASSERT_EQUAL(401, w.get("/api/lang/en/labels", "").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz/labels").status);
 }
 
 // The page's words are in memory while the page can be reached and let go when Wi-Fi goes off.

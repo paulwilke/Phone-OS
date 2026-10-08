@@ -13,23 +13,29 @@ constexpr int kArrowWidth = 26;
 }  // namespace
 
 SoftKeySlots softKeySlots(const SoftKeys& keys, const Rect& bar) {
-  const int arrow = keys.scroll ? kArrowWidth : 0;
-  const int rest = bar.w - 2 * arrow;
   const bool hasBack = !keys.back.empty(), hasAction = !keys.action.empty();
-  const int left = hasBack ? (hasAction ? rest / 2 : rest) : 0;
-  const int right = hasAction ? rest - left : 0;
-
   SoftKeySlots s;
-  s.back = {bar.x, bar.y, left, bar.h};
-  s.up = {bar.x + left, bar.y, arrow, bar.h};
-  s.down = {bar.x + left + arrow, bar.y, arrow, bar.h};
-  s.action = {bar.x + left + 2 * arrow, bar.y, right, bar.h};
+  if (keys.wide && !keys.scroll && hasBack != hasAction) {
+    (hasBack ? s.back : s.action) = bar;
+    return s;
+  }
+  const int side = (bar.w - 2 * kArrowWidth) / 2;
+  const int middle = bar.x + side;
+  if (hasBack) s.back = {bar.x, bar.y, side, bar.h};
+  if (keys.scroll) {
+    s.up = {middle, bar.y, kArrowWidth, bar.h};
+    s.down = {middle + kArrowWidth, bar.y, kArrowWidth, bar.h};
+  }
+  // The action ends at the right edge; without arrows it also takes their place, because its words are the
+  // long ones (the German word for "reset") and the place of Back does not depend on it.
+  const int actionX = keys.scroll ? middle + 2 * kArrowWidth : middle;
+  if (hasAction) s.action = {actionX, bar.y, bar.right() - actionX, bar.h};
   return s;
 }
 
-// The word and the symbol are separated by a space. When that does not fit, the space goes,
-// and when that does not fit either, the symbol: a bar with scroll arrows leaves the buttons
-// little room, and the whole word matters more than the picture of the key.
+// The word and the symbol are separated by a space. When that does not fit, the symbol goes: the
+// whole word matters more than the picture of the key, and a symbol pressed against a word (as
+// 4.0 drew it) reads as part of it.
 void drawSoftKeyButton(Display& display, const Rect& slot, const std::string& word, const char* symbol,
                        bool symbolFirst) {
   if (slot.empty()) return;
@@ -42,7 +48,6 @@ void drawSoftKeyButton(Display& display, const Rect& slot, const std::string& wo
     return symbolFirst ? std::string(symbol) + gap + word : word + gap + symbol;
   };
   std::string label = with(" ");
-  if (text::width(font, label) > room) label = with("");
   if (text::width(font, label) > room && !word.empty()) label = word;
   const int top = box.y + (box.h - font.lineHeight()) / 2 + 1;
   text::drawCentered(display, font, {box.x + 2, box.y, room, box.h}, top, label);

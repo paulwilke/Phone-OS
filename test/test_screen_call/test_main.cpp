@@ -149,6 +149,8 @@ void test_a_number_that_does_not_fit_the_large_font_is_drawn_smaller_not_shorten
 
 // ---- connected and the volume --------------------------------------------------------------------
 
+// Owner, 2026-10-08: "Hang up" is the whole key bar, and the volume has buttons on the page; the keys Up and Down
+// change it as before, so the call works without touch too.
 void test_a_connected_call_shows_the_volume_as_boxes_and_the_arrows_change_it() {
   Page page;
   page.rig.core.setDefaultVolume(4);
@@ -157,7 +159,10 @@ void test_a_connected_call_shows_the_volume_as_boxes_and_the_arrows_change_it() 
   TEST_ASSERT_TRUE(says(page.rig.frame, "In call", FontSize::Text));
   TEST_ASSERT_TRUE(says(page.rig.frame, "Volume", FontSize::Text));
   TEST_ASSERT_EQUAL_STRING("Hang up", page.screen.softKeys().back.c_str());
-  TEST_ASSERT_TRUE(page.screen.softKeys().scroll);
+  TEST_ASSERT_FALSE(page.screen.softKeys().scroll);
+  TEST_ASSERT_TRUE(softKeySlots(page.screen.softKeys(), ScreenLayout::standard().softKeys).back == ScreenLayout::standard().softKeys);
+  TEST_ASSERT_TRUE(says(page.rig.frame, "Quieter", FontSize::Small));
+  TEST_ASSERT_TRUE(says(page.rig.frame, "Louder", FontSize::Small));
   TEST_ASSERT_EQUAL(4, page.rig.core.state().volume);
   TEST_ASSERT_EQUAL(4, filledBoxes(page.rig.frame));
 
@@ -305,9 +310,9 @@ void test_with_no_call_the_page_says_so_and_back_goes_back() {
 // ---- soft keys by touch and the words in each language ---------------------------------------------
 
 void test_the_buttons_work_by_touch_and_have_their_words_in_every_language() {
-  const struct { const char* code; const char* hangUp; const char* reject; const char* answer; } words[] = {
-      {"en", "Hang up", "Reject", "Answer"}, {"de", "Auflegen", "Ablehnen", "Annehmen"},
-      {"fr", "Raccrocher", "Refuser", "R\xC3\xA9" "pondre"}};
+  const struct { const char* code; const char* hangUp; const char* reject; const char* answer; const char* quieter; const char* louder; } words[] = {
+      {"en", "Hang up", "Reject", "Answer", "Quieter", "Louder"}, {"de", "Auflegen", "Ablehnen", "Annehmen", "Leiser", "Lauter"},
+      {"fr", "Raccrocher", "Refuser", "R\xC3\xA9" "pondre", "Moins fort", "Plus fort"}};
   for (const auto& w : words) {
     Page ringing;
     ringing.rig.language(w.code);
@@ -321,8 +326,17 @@ void test_the_buttons_work_by_touch_and_have_their_words_in_every_language() {
     ringing.draw();
     TEST_ASSERT_EQUAL_STRING(w.hangUp, ringing.screen.softKeys().back.c_str());
     const SoftKeySlots inCall = softKeySlots(ringing.screen.softKeys(), ScreenLayout::standard().softKeys);
-    TEST_ASSERT_TRUE(ringing.screen.handle(Input::touch(inCall.up.x + 3, inCall.up.y + 3)));      // louder by the arrow
-    TEST_ASSERT_TRUE(ringing.screen.handle(Input::touch(inCall.back.x + 3, inCall.back.y + 3)));  // hang up
+    TEST_ASSERT_TRUE(inCall.back == ScreenLayout::standard().softKeys);                           // hang up is the whole bar
+    const int before = ringing.rig.core.state().volume;
+    const auto louder = shows::where(ringing.rig.frame, w.louder, FontSize::Small);
+    const auto quieter = shows::where(ringing.rig.frame, w.quieter, FontSize::Small);
+    TEST_ASSERT_TRUE_MESSAGE(louder.has_value(), (std::string(w.code) + " louder").c_str());
+    TEST_ASSERT_TRUE_MESSAGE(quieter.has_value(), (std::string(w.code) + " quieter").c_str());
+    TEST_ASSERT_TRUE(ringing.screen.handle(Input::touch(louder->x + 2, louder->y + 2)));         // louder by touch
+    TEST_ASSERT_EQUAL(before + 1, ringing.rig.core.state().volume);
+    TEST_ASSERT_TRUE(ringing.screen.handle(Input::touch(quieter->x + 2, quieter->y + 2)));       // and quieter
+    TEST_ASSERT_EQUAL(before, ringing.rig.core.state().volume);
+    TEST_ASSERT_TRUE(ringing.screen.handle(Input::touch(inCall.back.right() - 3, inCall.back.y + 3)));  // hang up, at the right end
     ringing.rig.poll();
     TEST_ASSERT_FALSE(ringing.rig.core.state().callActive);
   }

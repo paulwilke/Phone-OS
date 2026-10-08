@@ -3,7 +3,7 @@
 # answers while it runs, the page's own use keeps it on past the idle time, and "Off" on the device's page ends it.
 advance 5s
 check wifi off
-key down down down down down down down down down select
+key down down down down down down down down down down select
 check screen wifi
 see wifi.title
 see wifi.is-off

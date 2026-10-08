@@ -4,9 +4,9 @@ Code: `src/ui/screens/CallScreen.{h,cpp}`; tests in `test/test_screen_call/`. It
 
 | Phase | Title | Back is | Action |
 |---|---|---|---|
-| dialling | Calling ... | Hang up | |
+| dialling | Calling ... | Hang up, the whole bar | |
 | ringing | Incoming call | Reject | Answer |
-| connected | In call | Hang up | the arrows are the volume |
+| connected | In call | Hang up, the whole bar | the volume has buttons on the page |
 | failed | Call failed, with the name and why | Back | |
 | no call | No call | Back | |
 
@@ -14,7 +14,7 @@ Code: `src/ui/screens/CallScreen.{h,cpp}`; tests in `test/test_screen_call/`. It
 
 **A call that did not happen stays on the page until Back.** The core clears the call and tells why in the notice; the page shows "Call failed", the name and the reason (busy, no answer, no network, network allows SMS only, calls not ready, modem restarted, did not connect) for as long as that notice is up, then reads "No call". The page does not close itself: closing is the host's decision, and it leaves the failure to be read. A call that was only missed is no failure.
 
-**Volume:** during a connected call, seven boxes, filled up to the level; the arrows change it and stop at both ends (a step that changes nothing is not "used"). Before the call is connected, or with a modem that cannot set the volume, there are no boxes and the arrows do nothing.
+**Volume:** during a connected call, seven boxes, filled up to the level, and below them two buttons, **Quieter** and **Louder** (`call.quieter`, `call.louder`), which share the width of the page; a tap on one changes the volume, as do the keys Up and Down, and both stop at both ends (a step that changes nothing is not "used"). Before the call is connected, or with a modem that cannot set the volume, there are no boxes and no buttons. **Hang up is the whole key bar** (`SoftKeys::wide`), easy to hit (owner, 2026-10-08).
 
 **Lock:** a call in progress keeps the device from locking (`preventsAutoLock`), proven with a real stack.
 
@@ -22,4 +22,4 @@ Back during dialling, ringing or a call hangs up or rejects and does not leave; 
 
 ## Tests
 
-`test_screen_call`: every phase's words, name and buttons; answer, reject, hang up; a number that is no contact, and a stranger and a hidden number that are not on the page at all; the number in the next smaller font; the volume (boxes, both ends, none before the call); every failure reason in three languages; the failure going by with the notice; a missed call; touch on the buttons and the arrows in three languages; the lock; layout in four languages; pictures in English and German.
+`test_screen_call`: every phase's words, name and buttons; answer, reject, hang up; a number that is no contact, and a stranger and a hidden number that are not on the page at all; the number in the next smaller font; the volume (boxes, both ends, none before the call); every failure reason in three languages; the failure going by with the notice; a missed call; touch on the buttons, Hang up at the right end of the bar, Quieter and Louder found by their words in three languages; the lock; layout in four languages; pictures in English and German.

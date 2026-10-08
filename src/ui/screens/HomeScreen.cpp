@@ -24,16 +24,19 @@ std::vector<std::vector<HomeScreen::Kind>> HomeScreen::pages() const {
   if (!profile.sosRecipient(std::string()).empty()) child.push_back(Kind::Sos);
   child.push_back(Kind::Inbox);
   if (profile.radioAllowed) child.push_back(Kind::Radio);
+  child.push_back(Kind::Light);   // the child's: it lights the way in the dark (owner, 2026-10-08)
 
-  device.push_back(Kind::Network);
-  device.push_back(Kind::Gps);
-  device.push_back(Kind::Clock);
-  device.push_back(Kind::Settings);
-  if (profile.parentTools && context().app.wifi() != nullptr) device.push_back(Kind::Wifi);
-  if (context().motionSensor) device.push_back(Kind::Motion);
-  device.push_back(Kind::Tests);
-  if (profile.parentTools) device.push_back(Kind::Status);
-  device.push_back(Kind::Light);
+  // The device's page; the parents may switch each tile off ([home] in settings.toml).
+  const HomeTiles& shown = profile.home;
+  if (shown.network) device.push_back(Kind::Network);
+  if (shown.gps) device.push_back(Kind::Gps);
+  if (shown.clock) device.push_back(Kind::Clock);
+  if (shown.settings) device.push_back(Kind::Settings);
+  if (shown.wifi && profile.parentTools && context().app.wifi() != nullptr) device.push_back(Kind::Wifi);
+  if (shown.motion && context().motionSensor) device.push_back(Kind::Motion);
+  if (shown.tests) device.push_back(Kind::Tests);
+  if (shown.status && profile.parentTools) device.push_back(Kind::Status);
+  if (device.empty()) return {child};   // no second page and no dots for it
   return {child, device};
 }
 
@@ -89,11 +92,9 @@ void HomeScreen::draw(Display& display, const Rect& area) {
   grid_.draw(display, area);
 }
 
-SoftKeys HomeScreen::keys() {
-  SoftKeys keys;
-  keys.scroll = order_.size() > 1;
-  return keys;
-}
+// No arrows: the tiles are touched, the page dots turn the page, and the keys Up and Down still move the
+// selection (owner, 2026-10-08: the arrows only took room).
+SoftKeys HomeScreen::keys() { return SoftKeys{}; }
 
 bool HomeScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {

@@ -594,8 +594,8 @@ void test_see_finds_a_word_by_its_catalog_key_in_every_language_and_says_what_is
     TEST_ASSERT_TRUE_MESSAGE(s.run("see home.sos"), language);
   }
   s.run("language en");
-  TEST_ASSERT_FALSE(s.run("see home.light"));                       // a tile of the second page: not on the screen
-  TEST_ASSERT_TRUE(contains(s.output(), "does not say \"Light\""));
+  TEST_ASSERT_FALSE(s.run("see home.clock"));                       // a tile of the second page: not on the screen
+  TEST_ASSERT_TRUE(contains(s.output(), "does not say \"Clock\""));
   TEST_ASSERT_TRUE(s.run("see-not home.motion"));
   TEST_ASSERT_FALSE(s.run("see-not home.phone"));
   TEST_ASSERT_FALSE(s.run("see no.such.key"));
@@ -736,10 +736,11 @@ void test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data
   options.dataDir = data.string();
   options.workDir = (data.parent_path() / "crawl-work").string();
   sim::Crawler crawler(options, "sim/demo/world.txt");
-  // Home, the options tile, the language row, German: the choice is written to the card of that replay.
-  std::vector<std::string> path(8, "down");
+  // Home, the options tile (behind the six tiles of the first page and three of the second), the language row
+  // (third, above switching off), German: the choice is written to the card of that replay.
+  std::vector<std::string> path(9, "down");
   path.push_back("select");
-  for (const char* key : {"down", "down", "down", "select", "up", "select"}) path.push_back(key);
+  for (const char* key : {"down", "down", "select", "up", "select"}) path.push_back(key);
   std::unique_ptr<sim::Simulator> chosen = crawler.reach(path, "");
   TEST_ASSERT_EQUAL_STRING("de", chosen->translator().language().c_str());
   TEST_ASSERT_TRUE(chosen->card().root() != data);

@@ -9,7 +9,10 @@
 #include <app/SystemEntry.h>
 #include <ui/Fonts.h>
 #include <ui/Text.h>
+#include <board/Cst66xx.h>
 #include <ui/screens/HomeScreen.h>
+
+#include <optional>
 
 using namespace people;
 using namespace ui;
@@ -55,13 +58,14 @@ Profile inSchool() { return ProfileBuilder().childName("Alex").schoolTime("tue",
 
 // ---- which tiles exist -----------------------------------------------------------------------
 
-void test_a_child_device_has_four_tiles_in_front_and_the_tools_behind() {
+// The light is the child's (owner, 2026-10-08): it is on the first page, behind the inbox.
+void test_a_child_device_has_five_tiles_in_front_and_the_tools_behind() {
   DeviceRig rig;
   HomeScreen home(rig.context());
   const auto pages = home.pages();
   TEST_ASSERT_EQUAL(2, pages.size());
-  const std::vector<Kind> front = {Kind::Phone, Kind::Text, Kind::Sos, Kind::Inbox};
-  const std::vector<Kind> back = {Kind::Network, Kind::Gps, Kind::Clock, Kind::Settings, Kind::Tests, Kind::Light};
+  const std::vector<Kind> front = {Kind::Phone, Kind::Text, Kind::Sos, Kind::Inbox, Kind::Light};
+  const std::vector<Kind> back = {Kind::Network, Kind::Gps, Kind::Clock, Kind::Settings, Kind::Tests};
   TEST_ASSERT_TRUE(pages[0] == front);
   TEST_ASSERT_TRUE(pages[1] == back);
 }
@@ -71,7 +75,7 @@ void test_the_radio_tile_is_in_front_and_only_when_the_profile_allows_the_radio(
   TEST_ASSERT_FALSE(has(flat(HomeScreen(without.context()).pages()), Kind::Radio));
   DeviceRig with(ProfileBuilder().radio(true).build());
   const auto pages = HomeScreen(with.context()).pages();
-  TEST_ASSERT_TRUE(pages[0].back() == Kind::Radio);          // behind the inbox, on the first page
+  TEST_ASSERT_TRUE(pages[0][pages[0].size() - 2] == Kind::Radio);   // behind the inbox, before the light, on the first page
   TEST_ASSERT_FALSE(has(pages[1], Kind::Radio));
 }
 
@@ -124,13 +128,44 @@ void test_phone_text_and_sos_need_somebody_to_reach() {
   TEST_ASSERT_FALSE(has(contacts, Kind::Sos));
 }
 
+// The parents choose which tiles of the second page the child sees ([home] in settings.toml, owner, 2026-10-08);
+// the first page is the child's and stays. Wi-Fi and Status need the parent tools besides.
+void test_the_parents_switch_tiles_of_the_second_page_off() {
+  Profile p = everything();
+  p.home.gps = false;
+  p.home.tests = false;
+  p.home.wifi = false;
+  DeviceRig rig(p);
+  const auto pages = HomeScreen(rig.context()).pages();
+  TEST_ASSERT_FALSE(has(pages[1], Kind::Gps));
+  TEST_ASSERT_FALSE(has(pages[1], Kind::Tests));
+  TEST_ASSERT_FALSE(has(pages[1], Kind::Wifi));
+  TEST_ASSERT_TRUE(has(pages[1], Kind::Network) && has(pages[1], Kind::Status) && has(pages[1], Kind::Settings));
+  TEST_ASSERT_TRUE(has(pages[0], Kind::Light));              // the child's page is not switched here
+
+  Profile child = ProfileBuilder().build();
+  child.home.status = true;                                  // on, but without the parent tools still not shown
+  DeviceRig noTools(child);
+  TEST_ASSERT_FALSE(has(flat(HomeScreen(noTools.context()).pages()), Kind::Status));
+
+  Profile none = everything();
+  none.home = HomeTiles{false, false, false, false, false, false, false, false};
+  DeviceRig empty(none);
+  HomeScreen home(empty.context());
+  TEST_ASSERT_EQUAL(1, home.pages().size());                 // all off: one page, and no dots
+  empty.poll();
+  home.render(empty.frame);
+  const Rect content = ScreenLayout::standard().content;
+  TEST_ASSERT_EQUAL(0, empty.frame.blackPixels(Rect{content.x, content.bottom() - 18, content.w, 18}));
+}
+
 void test_the_tools_always_fit_on_the_second_page() {
-  // Every tool at once: nine, and a page holds nine. A tenth would be unreachable.
+  // Every tool at once: eight, and a page holds nine. A tenth would be unreachable.
   DeviceRig rig(everything(), true);
   ScreenContext all = rig.context();
   all.motionSensor = true;
   const auto pages = HomeScreen(all).pages();
-  TEST_ASSERT_EQUAL(9, pages[1].size());
+  TEST_ASSERT_EQUAL(8, pages[1].size());
   TEST_ASSERT_TRUE(pages[1].size() <= 9);
   TEST_ASSERT_TRUE(pages[0].size() <= 9);
 }
@@ -144,25 +179,25 @@ void test_down_goes_through_both_pages_and_wraps_and_the_page_follows() {
   home.render(rig.frame);
   TEST_ASSERT_TRUE(Kind::Phone == home.selected());
   TEST_ASSERT_EQUAL(0, home.page());
-  press(home, Key::Down, 3);
-  TEST_ASSERT_TRUE(Kind::Inbox == home.selected());
+  press(home, Key::Down, 4);
+  TEST_ASSERT_TRUE(Kind::Light == home.selected());
   TEST_ASSERT_EQUAL(0, home.page());
   press(home, Key::Down);                                    // the first tool: the second page
   TEST_ASSERT_TRUE(Kind::Network == home.selected());
   TEST_ASSERT_EQUAL(1, home.page());
-  press(home, Key::Down, 5);
-  TEST_ASSERT_TRUE(Kind::Light == home.selected());
+  press(home, Key::Down, 4);
+  TEST_ASSERT_TRUE(Kind::Tests == home.selected());
   press(home, Key::Down);                                    // and round to the start
   TEST_ASSERT_TRUE(Kind::Phone == home.selected());
   TEST_ASSERT_EQUAL(0, home.page());
   press(home, Key::Up);                                      // backwards to the last
-  TEST_ASSERT_TRUE(Kind::Light == home.selected());
+  TEST_ASSERT_TRUE(Kind::Tests == home.selected());
 }
 
 void test_the_selection_is_kept_when_the_screen_is_left_and_come_back_to() {
   DeviceRig rig;
   HomeScreen home(rig.context());
-  press(home, Key::Down, 4);                                 // the network tile, on the second page
+  press(home, Key::Down, 5);                                 // the network tile, on the second page
   home.onLeave();
   home.onEnter();
   TEST_ASSERT_TRUE(Kind::Network == home.selected());
@@ -222,7 +257,7 @@ void test_the_text_tile_asks_for_the_recipient_first() {
 void test_the_light_tile_switches_the_front_light_and_says_so() {
   DeviceRig rig;
   HomeScreen home(rig.context());
-  press(home, Key::Down, 9);                                 // 4 + 5 tools: the light is the last tile
+  press(home, Key::Down, 4);                                 // the light is the last tile of the first page
   TEST_ASSERT_TRUE(Kind::Light == home.selected());
   TEST_ASSERT_FALSE(rig.core.state().frontlight);
   home.handle(Input::pressed(Key::Select));
@@ -343,32 +378,89 @@ void test_system_entries_count_as_unread_on_the_tile() {
 
 // ---- soft keys and touch ----------------------------------------------------------------------
 
-void test_the_soft_keys_show_the_arrows_only() {
+// No arrows on the home screen (owner, 2026-10-08: they only took room); the tiles are touched and the dots turn
+// the page. The device stays usable without touch: Down reaches every tile of both pages once and comes round,
+// Select opens the tile.
+void test_the_soft_keys_have_no_arrows_and_the_keys_still_reach_every_tile() {
   DeviceRig rig;
   HomeScreen home(rig.context());
   rig.poll();
   home.render(rig.frame);
-  TEST_ASSERT_TRUE(home.softKeys().scroll);
-  TEST_ASSERT_TRUE(home.softKeys().back.empty());
-  TEST_ASSERT_TRUE(home.softKeys().action.empty());
-  const SoftKeySlots slots = softKeySlots(home.softKeys(), ScreenLayout::standard().softKeys);
-  TEST_ASSERT_FALSE(slots.up.empty());
-  TEST_ASSERT_FALSE(slots.down.empty());
-  TEST_ASSERT_TRUE(slots.back.empty());
-  TEST_ASSERT_TRUE(slots.action.empty());
+  const SoftKeys keys = home.softKeys();
+  TEST_ASSERT_FALSE(keys.scroll);
+  TEST_ASSERT_TRUE(keys.back.empty() && keys.action.empty());
+  std::vector<Kind> seen;
+  bool secondPage = false;
+  do {
+    for (Kind k : seen) TEST_ASSERT_FALSE(k == home.selected());     // every tile once
+    seen.push_back(home.selected());
+    secondPage = secondPage || home.page() == 1;
+    home.handle(Input::pressed(Key::Down));
+  } while (home.selected() != seen.front() && seen.size() < 30);
+  TEST_ASSERT_TRUE(secondPage);
+  TEST_ASSERT_TRUE(seen.size() > 9);
+  home.handle(Input::pressed(Key::Down));                             // the second tile: Text
+  home.handle(Input::pressed(Key::Select));
+  TEST_ASSERT_TRUE(rig.nav.opened(screen::kRecipient));
 }
 
-void test_a_tap_on_the_arrows_moves_the_selection() {
+namespace {
+// The nine bytes the touch chip sends for a finger at (x, y), or for no finger (Cst66xx.h).
+board::cst66xx::Report chipReport(int x, int y, bool down) {
+  uint8_t buf[9] = {};
+  buf[2] = 0xFF;
+  buf[3] = 0x01;
+  buf[4] = (uint8_t)(x & 0xFF);
+  buf[5] = (uint8_t)(y & 0xFF);
+  buf[6] = 40;
+  buf[7] = (uint8_t)(((x >> 8) & 0x0F) | (((y >> 8) & 0x0F) << 4));
+  buf[8] = down ? 0x60 : 0x00;
+  const uint16_t sum = board::cst66xx::checksum(&buf[4], 5);
+  buf[0] = (uint8_t)(sum & 0xFF);
+  buf[1] = (uint8_t)(sum >> 8);
+  return board::cst66xx::parseReport(buf, sizeof buf);
+}
+
+// A finger lands at (x, y) and goes up again: the input the device's own translation makes of it.
+Input fingerAt(board::TouchDecoder& decoder, int x, int y) {
+  Input in;
+  TEST_ASSERT_TRUE(decoder.decode(chipReport(x, y, true), in));
+  Input none;
+  decoder.decode(chipReport(x, y, false), none);
+  return in;
+}
+}  // namespace
+
+// The page dots of 4.0 were six pixels side by side in the middle, twelve pixels of target each (owner,
+// 2026-10-08: hard to hit). Now the strip under the tiles is cut in two: its left half is the first page, its
+// right half the second, as tall as before. Checked through the touch chip's own coordinates, up to the edges.
+void test_the_page_dots_are_wide_targets_that_turn_the_page_through_the_touch_chip() {
   DeviceRig rig;
   HomeScreen home(rig.context());
   rig.poll();
   home.render(rig.frame);
-  const SoftKeySlots slots = softKeySlots(home.softKeys(), ScreenLayout::standard().softKeys);
-  home.handle(Input::touch(slots.down.x + 2, slots.down.y + 2));
-  TEST_ASSERT_TRUE(Kind::Text == home.selected());
-  home.handle(Input::touch(slots.up.x + 2, slots.up.y + 2));
-  TEST_ASSERT_TRUE(Kind::Phone == home.selected());
-  TEST_ASSERT_EQUAL(0, rig.nav.calls.size());
+  const Rect content = ScreenLayout::standard().content;
+  TileGrid grid(3, 3);
+  grid.setPages({std::vector<Tile>(4), std::vector<Tile>(6)});
+  TEST_ASSERT_TRUE(grid.dotTarget(content, 0) == (Rect{content.x, content.bottom() - 18, content.w / 2, 18}));
+  TEST_ASSERT_TRUE(grid.dotTarget(content, 1) == (Rect{content.x + content.w / 2, content.bottom() - 18, content.w - content.w / 2, 18}));
+
+  board::TouchDecoder decoder;
+  const int y = content.bottom() - 9;
+  // the right half near the middle, its right edge, and a reading beyond the panel (clamped by the decoder)
+  for (int x : {content.w / 2 + 1, content.w - 1, content.w + 20}) {
+    TEST_ASSERT_TRUE(home.handle(fingerAt(decoder, x, y)));
+    TEST_ASSERT_EQUAL(1, home.page());
+    TEST_ASSERT_TRUE(Kind::Network == home.selected());                // the first tile of that page
+    TEST_ASSERT_EQUAL(0, rig.nav.calls.size());                        // a dot is not a tile
+    TEST_ASSERT_TRUE(home.handle(fingerAt(decoder, 1, y)));            // the left edge: the first page
+    TEST_ASSERT_EQUAL(0, home.page());
+  }
+  // the top and bottom rows of the strip still count; a finger just above it is on the tiles' side
+  TEST_ASSERT_TRUE(home.handle(fingerAt(decoder, 200, content.bottom() - 18)));
+  TEST_ASSERT_EQUAL(1, home.page());
+  home.handle(fingerAt(decoder, 10, content.bottom() - 1));
+  TEST_ASSERT_EQUAL(0, home.page());
 }
 
 void test_a_tap_on_a_tile_opens_it_and_a_tap_beside_the_tiles_does_nothing() {
@@ -430,10 +522,10 @@ void test_every_label_fits_its_tile_in_the_shipped_languages() {
 }
 
 void test_the_tiles_say_their_words_in_the_language_of_the_moment() {
-  const struct { const char* code; const char* front[4]; const char* tools[6]; } words[] = {
-      {"en", {"Phone", "Text", "SOS", "Inbox"}, {"Network", "GPS", "Clock", "Settings", "Tests", "Light"}},
-      {"de", {"Telefon", "Text", "SOS", "Eingang"}, {"Netz", "GPS", "Uhr", "Option", "Tests", "Licht"}},
-      {"fr", {"Appels", "\xC3\x89" "crire", "SOS", "Courrier"}, {"R\xC3\xA9seau", "GPS", "Heure", "Options", "Tests", "Lumi\xC3\xA8re"}}};
+  const struct { const char* code; const char* front[5]; const char* tools[5]; } words[] = {
+      {"en", {"Phone", "Text", "SOS", "Inbox", "Light"}, {"Network", "GPS", "Clock", "Settings", "Tests"}},
+      {"de", {"Telefon", "Text", "SOS", "Eingang", "Licht"}, {"Netz", "GPS", "Uhr", "Option", "Tests"}},
+      {"fr", {"Appels", "\xC3\x89" "crire", "SOS", "Courrier", "Lumi\xC3\xA8re"}, {"R\xC3\xA9seau", "GPS", "Heure", "Options", "Tests"}}};
   for (const auto& w : words) {
     DeviceRig rig;
     rig.language(w.code);
@@ -447,7 +539,7 @@ void test_the_tiles_say_their_words_in_the_language_of_the_moment() {
                          shows::text(rig.frame, label, FontSize::Small, content, true);
       TEST_ASSERT_TRUE_MESSAGE(shown, (std::string(w.code) + " " + label).c_str());
     }
-    press(home, Key::Down, 4);
+    press(home, Key::Down, 5);
     home.render(rig.frame);
     for (const char* label : w.tools) {
       const bool shown = shows::text(rig.frame, label, FontSize::Small, content) ||
@@ -512,12 +604,13 @@ void test_a_notice_does_not_move_the_tiles() {
 
 int main(int, char**) {
   UNITY_BEGIN();
-  RUN_TEST(test_a_child_device_has_four_tiles_in_front_and_the_tools_behind);
+  RUN_TEST(test_a_child_device_has_five_tiles_in_front_and_the_tools_behind);
   RUN_TEST(test_the_radio_tile_is_in_front_and_only_when_the_profile_allows_the_radio);
   RUN_TEST(test_status_and_wifi_are_the_parents_tools);
   RUN_TEST(test_the_wifi_tile_needs_a_wifi_to_switch);
   RUN_TEST(test_the_motion_tile_needs_a_motion_sensor);
   RUN_TEST(test_phone_text_and_sos_need_somebody_to_reach);
+  RUN_TEST(test_the_parents_switch_tiles_of_the_second_page_off);
   RUN_TEST(test_the_tools_always_fit_on_the_second_page);
   RUN_TEST(test_down_goes_through_both_pages_and_wraps_and_the_page_follows);
   RUN_TEST(test_the_selection_is_kept_when_the_screen_is_left_and_come_back_to);
@@ -533,8 +626,8 @@ int main(int, char**) {
   RUN_TEST(test_after_school_time_the_phone_tile_opens_again);
   RUN_TEST(test_the_inbox_tile_shows_how_many_are_unread_and_nothing_when_none);
   RUN_TEST(test_system_entries_count_as_unread_on_the_tile);
-  RUN_TEST(test_the_soft_keys_show_the_arrows_only);
-  RUN_TEST(test_a_tap_on_the_arrows_moves_the_selection);
+  RUN_TEST(test_the_soft_keys_have_no_arrows_and_the_keys_still_reach_every_tile);
+  RUN_TEST(test_the_page_dots_are_wide_targets_that_turn_the_page_through_the_touch_chip);
   RUN_TEST(test_a_tap_on_a_tile_opens_it_and_a_tap_beside_the_tiles_does_nothing);
   RUN_TEST(test_a_tap_on_a_tile_of_the_other_page_is_not_possible_and_the_dots_switch_pages);
   RUN_TEST(test_every_label_fits_its_tile_in_the_shipped_languages);

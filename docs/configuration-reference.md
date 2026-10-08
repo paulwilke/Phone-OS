@@ -202,6 +202,67 @@ Takes effect on next start.
 String, at most 32 characters.
 Takes effect on next start.
 
+### `[home]`
+
+| Key | Type | Default | Required | Apply |
+|-----|------|---------|----------|-------|
+| `network` | bool | `true` | no | restart |
+| `gps` | bool | `true` | no | restart |
+| `clock` | bool | `true` | no | restart |
+| `settings` | bool | `true` | no | restart |
+| `wifi` | bool | `true` | no | restart |
+| `motion` | bool | `true` | no | restart |
+| `tests` | bool | `true` | no | restart |
+| `status` | bool | `true` | no | restart |
+
+#### `network`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `gps`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `clock`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `settings`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `wifi`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `motion`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `tests`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
+#### `status`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
+
 ### `[[quiet_hours]]`
 
 Without any `[[quiet_hours]]` entry the device uses one built-in entry: `days = "mon-fri"`, `from = "08:00"`, `to = "12:30"`, `enabled = false`.

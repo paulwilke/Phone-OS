@@ -9,6 +9,10 @@
 //   Wi-Fi             opens the Wi-Fi page. Only for the parents' tools, and only where the device has
 //                     Wi-Fi; the same condition as the Wi-Fi tile of the home page.
 //   language          opens the language page; the box says the language now in use.
+//   switch off        two presses switch the device off (the first says "press again"); any other input,
+//                     or another row, takes the first press back. On a cable the answer is "unplug USB
+//                     first" and nothing happens: USB keeps the board alive. Owner, 2026-10-08: switching
+//                     off was only on the parents' status page, and a device that is off uses no power.
 //
 // The page changes nothing it does not show: every value is read from the core's state or profile at the
 // moment it is drawn.
@@ -24,7 +28,10 @@ class SettingsScreen : public AppScreen {
 public:
   using AppScreen::AppScreen;
 
-  void onEnter() override { rows_.resetSelection(); }
+  void onEnter() override {
+    rows_.resetSelection();
+    offArmed_ = false;
+  }
 
 protected:
   void draw(Display& display, const Rect& area) override;
@@ -32,7 +39,7 @@ protected:
   bool onInput(const Input& input, const Rect& area) override;
 
 private:
-  enum class Kind { Volume, Vibration, Wifi, Language };
+  enum class Kind { Volume, Vibration, Wifi, Language, PowerOff };
 
   std::vector<Kind> kinds();
   void rebuild();
@@ -41,6 +48,7 @@ private:
 
   OptionRows rows_;
   std::vector<Kind> shown_;
+  bool offArmed_ = false;  // the first press of "switch off" was made
 };
 
 }  // namespace ui

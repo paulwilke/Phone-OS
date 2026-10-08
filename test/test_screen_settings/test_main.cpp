@@ -166,7 +166,46 @@ void test_the_arrows_move_the_focus_and_stop_at_the_ends() {
   page.key(Key::Up);
   TEST_ASSERT_TRUE(page.says("Volume in calls", "4 of 7", true));
   page.down(10);
-  TEST_ASSERT_TRUE(page.says("Language", "English", true));
+  TEST_ASSERT_TRUE(page.says("Switch off", "press twice", true));    // the last box
+}
+
+// Owner, 2026-10-08: switching off was only on the parents' status page, and a device that is off uses no power.
+// The last box switches off with two presses; anything else takes the first back.
+void test_the_last_box_switches_off_with_two_presses() {
+  Page page;
+  page.down(10);
+  TEST_ASSERT_TRUE(page.says("Switch off", "press twice", true));
+  page.key(Key::Select);
+  TEST_ASSERT_FALSE(page.rig.core.powerOffRequested());
+  TEST_ASSERT_TRUE(page.says("Switch off", "press again: off", true));
+  page.key(Key::Select);
+  TEST_ASSERT_TRUE(page.rig.core.powerOffRequested());
+
+  Page other;
+  other.down(10);
+  other.key(Key::Select);
+  other.key(Key::Up);                                                // another box: the first press is taken back
+  other.key(Key::Down);
+  TEST_ASSERT_TRUE(other.says("Switch off", "press twice", true));
+  other.key(Key::Select);
+  TEST_ASSERT_FALSE(other.rig.core.powerOffRequested());
+  other.screen.onLeave();                                            // leaving the page takes it back too
+  other.screen.onEnter();
+  other.down(10);
+  other.key(Key::Select);
+  TEST_ASSERT_FALSE(other.rig.core.powerOffRequested());
+}
+
+// On the cable the board stays on whatever the device does: the box says to unplug and nothing is asked.
+void test_on_the_cable_the_box_says_unplug_first_and_does_nothing() {
+  Page page;
+  page.rig.power.plugIn(ChargeState::Charging);
+  page.rig.poll();
+  page.down(10);
+  TEST_ASSERT_TRUE(page.says("Switch off", "unplug USB first", true));
+  page.key(Key::Select);
+  page.key(Key::Select);
+  TEST_ASSERT_FALSE(page.rig.core.powerOffRequested());
 }
 
 void test_back_goes_back_and_the_soft_keys_say_what_they_do() {
@@ -239,6 +278,8 @@ int main(int, char**) {
   RUN_TEST(test_the_wifi_and_language_boxes_open_their_pages);
   RUN_TEST(test_the_language_box_names_the_language_in_use_by_its_own_name);
   RUN_TEST(test_the_arrows_move_the_focus_and_stop_at_the_ends);
+  RUN_TEST(test_the_last_box_switches_off_with_two_presses);
+  RUN_TEST(test_on_the_cable_the_box_says_unplug_first_and_does_nothing);
   RUN_TEST(test_back_goes_back_and_the_soft_keys_say_what_they_do);
   RUN_TEST(test_a_tap_on_a_box_changes_it);
   RUN_TEST(test_the_pages_open_afresh_with_the_focus_on_the_first_box);

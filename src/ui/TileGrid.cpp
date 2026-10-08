@@ -13,7 +13,9 @@ namespace {
 constexpr int kGap = 4;
 constexpr int kRadius = 4;
 constexpr int kDotsStrip = 18;  // at the bottom, for the page dots; always reserved so tiles do not move
-constexpr int kDot = 6;
+// A dot is a short bar: wide enough to be seen as a target, hardly taller than the six pixels of 4.0.
+constexpr int kDotWidth = 28;
+constexpr int kDotHeight = 7;
 
 }  // namespace
 
@@ -73,11 +75,15 @@ Rect TileGrid::tileRect(const Rect& area, size_t index) const {
   return {area.x + kGap + col * (cellW + kGap), area.y + kGap + row * (cellH + kGap), cellW, cellH};
 }
 
+// The strip under the tiles is cut into one part per page, and the whole part is the dot's target: with two
+// pages the left half of the strip shows the first page and the right half the second (owner, 2026-10-08: the
+// dots of 4.0, twelve pixels wide side by side in the middle, were hard to hit).
 Rect TileGrid::dotTarget(const Rect& area, size_t page) const {
   if (pages_.size() < 2 || page >= pages_.size()) return Rect{};
-  const int total = static_cast<int>(pages_.size()) * kDot + (static_cast<int>(pages_.size()) - 1) * kDot;
-  const int x0 = area.x + (area.w - total) / 2;
-  return {x0 + static_cast<int>(page) * 2 * kDot - kDot / 2, area.bottom() - kDotsStrip, 2 * kDot, kDotsStrip};
+  const int n = static_cast<int>(pages_.size());
+  const int x0 = area.x + area.w * static_cast<int>(page) / n;
+  const int x1 = area.x + area.w * (static_cast<int>(page) + 1) / n;
+  return {x0, area.bottom() - kDotsStrip, x1 - x0, kDotsStrip};
 }
 
 bool TileGrid::handle(const Input& input, const Rect& area, bool* chosen) {
@@ -153,11 +159,10 @@ void TileGrid::draw(Display& display, const Rect& area) const {
     drawTile(display, tileRect(area, first + i), pages_[shown][i], first + i == selected_);
 
   if (pages_.size() > 1) {
-    const int total = static_cast<int>(pages_.size()) * kDot + (static_cast<int>(pages_.size()) - 1) * kDot;
-    const int x0 = area.x + (area.w - total) / 2;
-    const int y = area.bottom() - (kDotsStrip + kDot) / 2;
+    const int y = area.bottom() - (kDotsStrip + kDotHeight) / 2;
     for (size_t p = 0; p < pages_.size(); ++p) {
-      const Rect dot{x0 + static_cast<int>(p) * 2 * kDot, y, kDot, kDot};
+      const Rect target = dotTarget(area, p);
+      const Rect dot{target.x + (target.w - kDotWidth) / 2, y, kDotWidth, kDotHeight};
       if (p == shown) display.fillRect(dot, true);
       else display.outlineRect(dot, true);
     }

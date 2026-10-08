@@ -95,6 +95,20 @@ config.radio.name.help                = "Nom de cet appareil dans le réseau rad
 config.radio.peer.label               = "Correspondant par défaut"
 config.radio.peer.help                = "Nom de l'appareil auquel vont les messages radio quand aucun destinataire n'est choisi."
 
+# Home screen: which tiles of the second page the child sees
+config.home.label                     = "Écran d'accueil : seconde page"
+config.home.network.label             = "Tuile \"Réseau\""
+config.home.gps.label                 = "Tuile \"GPS\""
+config.home.clock.label               = "Tuile \"Heure\""
+config.home.settings.label            = "Tuile \"Options\""
+config.home.wifi.label                = "Tuile \"Wi-Fi\""
+config.home.motion.label              = "Tuile \"Mouv.\""
+config.home.tests.label               = "Tuile \"Tests\""
+config.home.status.label              = "Tuile \"État\""
+config.home.wifi.help                 = "Visible seulement si les outils des parents sont activés. Sans elle, la page des parents reste accessible par le câble USB."
+config.home.motion.help               = "Visible seulement sur un appareil avec un capteur de mouvement."
+config.home.status.help               = "Visible seulement si les outils des parents sont activés."
+
 config.quiet_hours.label              = "Heures de classe"
 config.quiet_hours.help               = "Plages horaires pendant lesquelles l'appareil est verrouillé. Ajouter une entrée par plage."
 config.quiet_hours.days.label         = "Jours"

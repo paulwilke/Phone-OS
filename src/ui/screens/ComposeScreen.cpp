@@ -51,6 +51,7 @@ size_t ComposeScreen::limit() const {
 }
 
 void ComposeScreen::onEnter() {
+  templatesShown_ = false;   // the page opens on the text; the list is the child's choice each time
   if (!session().recipient.empty()) return;
   // Nobody chosen (the key under the screen opens this page directly): the first person the child
   // may write to.
@@ -171,6 +172,7 @@ SoftKeys ComposeScreen::keys() {
   }
   keys.back = t().get(text_.empty() ? "key.back" : "key.delete");
   if (!text_.empty() && !session().recipient.empty()) keys.action = t().get("key.send");
+  else if (text_.empty()) keys.action = t().get("key.templates");
   return keys;
 }
 
@@ -192,6 +194,12 @@ bool ComposeScreen::onInput(const Input& input, const Rect& area) {
   }
   if (canned()) {
     fillCanned();
+    if (templatesShown_ && (input.isKey(Key::Back) || input.kind == Input::Kind::Text)) {
+      // Back to the text; a letter is not lost, it is the first of the text.
+      templatesShown_ = false;
+      if (input.kind == Input::Kind::Text) type(input.character);
+      return true;
+    }
     if (input.isKey(Key::Back)) {
       nav().back();
       return true;
@@ -211,7 +219,14 @@ bool ComposeScreen::onInput(const Input& input, const Rect& area) {
     else deleteLast();
     return true;
   }
-  if (input.isKey(Key::Select)) return send(text_);
+  if (input.isKey(Key::Select)) {
+    if (text_.empty()) {
+      templatesShown_ = true;
+      list_.resetSelection();
+      return true;
+    }
+    return send(text_);
+  }
   return false;
 }
 

@@ -47,8 +47,9 @@ public:
 
   // Where the tile with the global index `index` is drawn in `area`.
   Rect tileRect(const Rect& area, size_t index) const;
-  // The touch target of the dot of `page`: the dot with the room around it, because a finger does
-  // not hit six pixels. Empty when there is only one page, where no dots are drawn.
+  // The touch target of the dot of `page`: its part of the strip under the tiles, the whole width cut
+  // into one part per page, because a finger does not hit a dot. Empty when there is only one page,
+  // where no dots are drawn.
   Rect dotTarget(const Rect& area, size_t page) const;
 
   // Used when the input moved the selection or chose a tile; `chosen` is set to the index of

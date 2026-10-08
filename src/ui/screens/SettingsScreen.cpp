@@ -10,6 +10,7 @@ std::vector<SettingsScreen::Kind> SettingsScreen::kinds() {
   kinds.push_back(Kind::Vibration);
   if (context().app.profile().parentTools && context().app.wifi() != nullptr) kinds.push_back(Kind::Wifi);
   kinds.push_back(Kind::Language);
+  kinds.push_back(Kind::PowerOff);
   return kinds;
 }
 
@@ -35,6 +36,12 @@ void SettingsScreen::rebuild() {
         rows.push_back({t().get("language.title"), name});
         break;
       }
+      case Kind::PowerOff:
+        rows.push_back({t().get("settings.power-off"),
+                        t().get(state().externalPower ? "settings.power-off-cable"
+                                : offArmed_            ? "settings.power-off-again"
+                                                       : "settings.power-off-press")});
+        break;
     }
   }
   rows_.setRows(std::move(rows));
@@ -67,6 +74,8 @@ bool SettingsScreen::onInput(const Input& input, const Rect& area) {
   rebuild();
   bool chosen = false;
   const bool used = rows_.handle(input, rowsArea(area), &chosen);
+  // Only a second press on the same row switches off: anything else takes the first one back.
+  if (!(chosen && shown_[rows_.selected()] == Kind::PowerOff)) offArmed_ = false;
   if (chosen) activate(shown_[rows_.selected()]);
   return used;
 }
@@ -86,6 +95,15 @@ void SettingsScreen::activate(Kind kind) {
       return;
     case Kind::Wifi: nav().open(screen::kWifi); return;
     case Kind::Language: nav().open(screen::kLanguage); return;
+    case Kind::PowerOff:
+      if (state().externalPower) return;   // the row says to unplug first; the board would stay on anyway
+      if (!offArmed_) {
+        offArmed_ = true;
+        return;
+      }
+      offArmed_ = false;
+      app().requestPowerOff();             // the application clears the display and then switches off
+      return;
   }
 }
 

@@ -20,6 +20,19 @@
 #include "TimeZone.h"
 #include "WifiSettings.h"
 
+// Which tiles of the home screen's second page the child sees ([home] in settings.toml). All are shown unless the
+// parents switch one off; Wi-Fi and Status still need the parent tools, Motion a motion sensor.
+struct HomeTiles {
+  bool network = true;
+  bool gps = true;
+  bool clock = true;
+  bool settings = true;
+  bool wifi = true;
+  bool motion = true;
+  bool tests = true;
+  bool status = true;
+};
+
 struct Profile {
   // --- people and time ---
   phone::ContactBook contacts;
@@ -35,6 +48,7 @@ struct Profile {
   bool freeText = false;       // may write free text and choose any recipient
   bool radioAllowed = false;   // the long-range radio may be used (it still starts only on request)
   bool parentTools = false;    // settings and Wi-Fi are shown on the device
+  HomeTiles home;
 
   // --- vibration ---
   bool messageVibration = true;

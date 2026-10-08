@@ -277,12 +277,15 @@ void WebApi::handle(const http::Request& req, http::Response& res, uint32_t now)
     if (strcmp(p, "/backup")   == 0) return backup(res);
     if (strcmp(p, "/languages") == 0) return languages(res);
     if (strncmp(p, "/lang/", 6) == 0) {
-      // "/lang/<code>/help": the help texts of the form, a second answer (see langCatalog).
+      // "/lang/<code>", "/lang/<code>/labels" and "/lang/<code>/help": three answers (see langCatalog).
       const std::string rest(p + 6);
-      const std::string suffix = "/help";
-      if (rest.size() > suffix.size() && rest.compare(rest.size() - suffix.size(), suffix.size(), suffix) == 0)
-        return langCatalog(rest.substr(0, rest.size() - suffix.size()).c_str(), res, true);
-      return langCatalog(rest.c_str(), res, false);
+      for (const auto& part : {std::make_pair(std::string("/labels"), CatalogPart::Labels),
+                               std::make_pair(std::string("/help"), CatalogPart::Help)}) {
+        const std::string& suffix = part.first;
+        if (rest.size() > suffix.size() && rest.compare(rest.size() - suffix.size(), suffix.size(), suffix) == 0)
+          return langCatalog(rest.substr(0, rest.size() - suffix.size()).c_str(), res, part.second);
+      }
+      return langCatalog(rest.c_str(), res, CatalogPart::Words);
     }
   } else if (isMethod(req, "PUT") || isMethod(req, "POST")) {
     if (strcmp(p, "/settings") == 0) return putConfigJson(kSettingsPath, req, res);
@@ -666,7 +669,7 @@ void WebApi::languages(http::Response& res) {
   jsonResp(res, 200, resp_);
 }
 
-void WebApi::langCatalog(const char* code, http::Response& res, bool help) {
+void WebApi::langCatalog(const char* code, http::Response& res, CatalogPart part) {
   if (*code == '\0') return jsonError(res, 400, "Language code missing");
 
   // The page can be had in every language the device has, and in one only the page has (a user
@@ -677,10 +680,12 @@ void WebApi::langCatalog(const char* code, http::Response& res, bool help) {
   for (const auto& web : translator_.webLanguages()) found = found || web == code;
   if (!found) return jsonError(res, 404, "Language not found");
 
-  // The page's words come in two answers because one buffer (kResponseMax, 12288 bytes) is too tight
-  // for all of them: the shipped French set is about 10.2 KB (web 2.2, labels 2.6, help 5.4), a user
-  // catalog with longer sentences would not fit, and the whole language would then be a 500. Words and
-  // labels are what the page needs to be usable; the help texts under the fields come second.
+  // The page's words come in three answers because one buffer (kResponseMax, 12288 bytes) is too tight
+  // for all of them: the shipped French set is about 11.9 KB (words 2.4, labels 3.7, help 5.8 in 4.1), a user
+  // catalog with longer sentences would not fit, and the whole language would then be a 500. Two answers were
+  // enough until 4.1 brought the settings tabs, the weekday boxes and the tiles of [home] (each answer must keep
+  // half of the buffer free: test_sim_web). Words and labels are what the page needs to be usable; the help
+  // texts under the fields come last.
   const std::string codeStr(code);
   const auto webKeys = translator_.webTextsByPrefix(codeStr, "web.");
   const auto cfgKeys = translator_.webTextsByPrefix(codeStr, "config.");
@@ -696,13 +701,15 @@ void WebApi::langCatalog(const char* code, http::Response& res, bool help) {
     puts(":");
     appendJsonStr(resp_, sizeof(resp_), n, v);
   };
-  if (!help) {
+  if (part == CatalogPart::Words) {
     for (const auto& kv : webKeys) emit(kv.first, kv.second);
   }
-  const std::string want = help ? ".help" : ".label";
-  for (const auto& kv : cfgKeys) {
-    if (kv.first.size() < want.size() || kv.first.compare(kv.first.size() - want.size(), want.size(), want) != 0) continue;
-    emit(kv.first, kv.second);
+  const std::string want = part == CatalogPart::Help ? ".help" : ".label";
+  if (part != CatalogPart::Words) {
+    for (const auto& kv : cfgKeys) {
+      if (kv.first.size() < want.size() || kv.first.compare(kv.first.size() - want.size(), want.size(), want) != 0) continue;
+      emit(kv.first, kv.second);
+    }
   }
   if (n + 1 >= sizeof(resp_)) return jsonError(res, 500, "Response too large");
   puts("}");

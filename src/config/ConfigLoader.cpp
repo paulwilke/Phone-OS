@@ -229,6 +229,16 @@ void applyFeatures(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& 
   if (const toml::Value* v = sec.find("modem_sleep"))       checkBool(*v, "settings", "features.modem_sleep", d, p.modemSleep);
 }
 
+void applyHome(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
+  const struct { const char* key; const char* path; bool HomeTiles::*field; } tiles[] = {
+      {"network", "home.network", &HomeTiles::network}, {"gps", "home.gps", &HomeTiles::gps},
+      {"clock", "home.clock", &HomeTiles::clock},       {"settings", "home.settings", &HomeTiles::settings},
+      {"wifi", "home.wifi", &HomeTiles::wifi},          {"motion", "home.motion", &HomeTiles::motion},
+      {"tests", "home.tests", &HomeTiles::tests},       {"status", "home.status", &HomeTiles::status}};
+  for (const auto& tile : tiles)
+    if (const toml::Value* v = sec.find(tile.key)) checkBool(*v, "settings", tile.path, d, p.home.*tile.field);
+}
+
 void applyRemoteQueries(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
   if (const toml::Value* v = sec.find("notice")) {
     std::string val;
@@ -348,7 +358,7 @@ void applyTileEntry(const toml::Value& entry, std::vector<std::string>& callTarg
 
 static const char* kSettingsTopLevel[] = {
   "child", "display", "modem", "battery", "interface", "sms", "features", "remote_queries",
-  "time", "log", "wifi", "radio", "mesh", "quiet_hours", "tiles", nullptr
+  "time", "log", "wifi", "radio", "mesh", "home", "quiet_hours", "tiles", nullptr
 };
 
 void loadSettings(const toml::Value& root, Profile& p, std::vector<Diagnostic>& d) {
@@ -381,6 +391,10 @@ void loadSettings(const toml::Value& root, Profile& p, std::vector<Diagnostic>& 
   if (const toml::Value* s = root.find("features")) {
     checkLeafKeys(d, *s, "settings", "features");
     applyFeatures(*s, p, d);
+  }
+  if (const toml::Value* s = root.find("home")) {
+    checkLeafKeys(d, *s, "settings", "home");
+    applyHome(*s, p, d);
   }
   if (const toml::Value* s = root.find("remote_queries")) {
     checkLeafKeys(d, *s, "settings", "remote_queries");

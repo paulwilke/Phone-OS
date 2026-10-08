@@ -45,6 +45,16 @@ auto_off_minutes = 10  # restart
 name = "phoneplus"  # restart
 peer = ""  # restart
 
+[home]
+network = true  # restart
+gps = true  # restart
+clock = true  # restart
+settings = true  # restart
+wifi = true  # restart
+motion = true  # restart
+tests = true  # restart
+status = true  # restart
+
 [[quiet_hours]]
 days = "mon-fri"
 from = "08:00"

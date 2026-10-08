@@ -361,12 +361,16 @@ function writeDays(days) {{
 }}
 
 // noHint: the field stands in a compact row (a school-time window); its section says once what it is for.
+// The name of a field or a box: its catalog word, or, when the labels did not arrive, its name in the file
+// ("timezone"), which a parent can read; a raw catalog key never is.
+function label(key, name) {{ return T[key] !== undefined ? T[key] : name; }}
+
 function buildField(key, value, namePrefix, noHint) {{
   var wrap = document.createElement('div'); wrap.className = 'field';
   var days = key.type === 'weekday_set' ? parseDays(value) : null;
   // Seven boxes are not one control: a <label> around them would tick Monday at every click on a day's word.
   var lbl = document.createElement(days ? 'div' : 'label');
-  lbl.textContent = t(key.label);
+  lbl.textContent = label(key.label, key.name);
   wrap.appendChild(lbl);
   var input;
   if (days) {{
@@ -469,7 +473,7 @@ function buildSection(section, sectionData, changed) {{
   // a field back from its own section's box, never the first of that name in the form.
   fs.setAttribute('data-section', section.id);
   var leg = document.createElement('legend');
-  leg.textContent = t(section.label);
+  leg.textContent = label(section.label, section.id);
   if (section.label) fs.appendChild(leg);
   // A compact section says once what its entries are for, in place of a hint under every field.
   if (compactSection(section) && section.help && T[section.help] !== undefined) {{
@@ -806,11 +810,17 @@ function loadLang(code) {{
     if (r.status === 404 && code !== 'en') return loadLang('en');
     if (!r.ok) throw new Error('lang ' + r.status);
     return r.json().then(function(d) {{
-      // The help texts under the form fields are a second answer: all of a language does not fit one
-      // response buffer on the device. Without them the page works, the fields only have no hint.
-      return api('GET', '/api/lang/' + code + '/help').then(function(h) {{
-        return h.ok ? h.json() : {{}};
-      }}).catch(function() {{ return {{}}; }}).then(function(help) {{
+      // A language comes in three answers, because all of it does not fit one response buffer on the
+      // device: the page's words, the labels of the form, the help texts under its fields. Without the
+      // labels a field is named by its key in the file (label()), without the help texts it has no hint.
+      return api('GET', '/api/lang/' + code + '/labels').then(function(l) {{
+        return l.ok ? l.json() : {{}};
+      }}).catch(function() {{ return {{}}; }}).then(function(labels) {{
+        for (var k in labels) d[k] = labels[k];
+        return api('GET', '/api/lang/' + code + '/help').then(function(h) {{
+          return h.ok ? h.json() : {{}};
+        }}).catch(function() {{ return {{}}; }});
+      }}).then(function(help) {{
         for (var k in help) d[k] = help[k];
         T = d; currentLang = code; applyTranslations();
       }});

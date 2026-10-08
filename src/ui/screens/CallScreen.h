@@ -6,7 +6,8 @@
 //
 //   dialling   "Calling ..."   Back is "Hang up"
 //   ringing    "Incoming call" Back is "Reject", the action is "Answer"
-//   connected  "In call"       Back is "Hang up", the arrows are the volume
+//   connected  "In call"       Hang up is the whole key bar; the volume has two buttons on the page,
+//                              "Quieter" and "Louder", and the keys Up and Down change it too
 //   no call    "No call"       Back goes back
 //   failed     "Call failed"   and why: the name, and "busy", "no answer", "no network", ...
 //
@@ -42,6 +43,10 @@ protected:
 private:
   enum class Phase { Dialling, Ringing, Connected, Failed, None };
   Phase phase() const;
+
+  // Where the volume buttons were drawn last; empty when there are none. A tap is matched against the picture
+  // the child saw.
+  Rect quieter_, louder_;
 };
 
 }  // namespace ui

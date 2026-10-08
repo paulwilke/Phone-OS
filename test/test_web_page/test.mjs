@@ -251,7 +251,7 @@ function richElement(tag) {
   return el;
 }
 
-async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false, rich = false, settings = {}, onFetch = null, fileReader = null }) {
+async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false, labelsFail = false, rich = false, settings = {}, onFetch = null, fileReader = null }) {
   const store = {};
   if (storedAuth) store.pp_auth = storedAuth;
   if (storedLang) store.pp_lang = storedLang;
@@ -279,11 +279,18 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     if (onFetch) { const r = onFetch(path, opts, reply); if (r) return r; }
     if (path === '/api/state') return reply(200, deviceLang ? { language: deviceLang } : {});
     if (path === '/api/languages') return reply(200, Object.keys(catalogs).map((c) => ({ code: c, name: c, native: c })));
-    const l = path.match(/^\/api\/lang\/(.+)$/);
+    // The device's three answers of a language (WebApi::langCatalog): the words of the page, the labels of the
+    // form, the help texts. A test's catalog is split the same way; its help texts are `helps` when it has them.
+    const pick = (cat, keep) => Object.fromEntries(Object.entries(cat).filter(([k]) => keep(k)));
+    const isLabel = (k) => k.startsWith('config.') && k.endsWith('.label');
+    const lb = path.match(/^\/api\/lang\/(.+)\/labels$/);
     const h = path.match(/^\/api\/lang\/(.+)\/help$/);
+    const l = !lb && !h && path.match(/^\/api\/lang\/(.+)$/);
+    if (lb && labelsFail) return reply(500, { error: 'Response too large' });
+    if (lb) return catalogs[lb[1]] ? reply(200, pick(catalogs[lb[1]], isLabel)) : reply(404, { error: 'Unknown language' });
     if (h && helpFails) return reply(500, { error: 'Response too large' });
     if (h) return catalogs[h[1]] ? reply(200, helps[h[1]] || {}) : reply(404, { error: 'Unknown language' });
-    if (l && !h) return catalogs[l[1]] ? reply(200, catalogs[l[1]]) : reply(404, { error: 'Unknown language' });
+    if (l) return catalogs[l[1]] ? reply(200, pick(catalogs[l[1]], (k) => !k.startsWith('config.'))) : reply(404, { error: 'Unknown language' });
     if (path === '/api/settings' && opts.method !== 'PUT') return reply(200, settings);
     if (path === '/api/contacts') return reply(200, { contact: [{ number: '+491701111111', name: 'Parent One', role: 'parent' }] });
     return reply(200, {});
@@ -950,6 +957,30 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     const t = await open([{ days: 'mon', from: '8:00', to: '12:30', enabled: true }]);
     assert(t.entries()[0].querySelector('[name="from"]').type === 'text', '"8:00" stays a text field, not an empty time field');
   }
+}
+
+// (o) a language comes in three answers (words, labels of the form, help texts): two did not fit the device's
+// buffer with room to spare once 4.1 added the tabs, the weekday boxes and the tiles of [home]
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const walkO = (el, out = []) => { for (const c of el.children || []) { out.push(c); walkO(c, out); } return out; };
+  const openAdvanced = async (extra) => {
+    const pg = await runPage({ storedAuth: auth, storedLang: 'de', catalogs: { en, de }, rich: true, ...extra });
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'advanced').listeners.click();
+    await pg.settle();
+    return pg;
+  };
+  let pg = await openAdvanced({});
+  assert(pg.calls.some((c) => c.path === '/api/lang/de/labels' && c.authed), 'the labels are asked for after the login, with the password');
+  let names = walkO(pg.els['form-advanced']).filter((c) => c.tag === 'label' || c.tag === 'legend').map((c) => c.textContent);
+  assert(names.includes(de['config.time.timezone.label']) && names.includes(de['config.home.label']), 'the fields carry their German labels: ' + names.slice(0, 4).join(' | '));
+  // the labels do not arrive: the tabs keep their words, a field is named by its key in the file, never a raw key
+  pg = await openAdvanced({ labelsFail: true });
+  const tabs = pg.dataT.filter((e) => e.attrs['data-tab']).map((e) => e.textContent);
+  assert(tabs.includes('Erweitert'), 'without labels the tabs are still German: ' + tabs.join('|'));
+  names = walkO(pg.els['form-advanced']).filter((c) => c.tag === 'label' || c.tag === 'legend').map((c) => c.textContent);
+  assert(names.includes('timezone') && names.includes('home'), 'a field without its label is named by its key in the file: ' + names.slice(0, 6).join(' | '));
+  assert(!names.some((x) => /^config\./.test(x)), 'no raw key names a field');
 }
 
 // ---------- summary ----------

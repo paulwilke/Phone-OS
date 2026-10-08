@@ -95,6 +95,20 @@ config.radio.name.help                = "Name dieses Geräts im Langstreckenfunk
 config.radio.peer.label               = "Standardempfänger"
 config.radio.peer.help                = "Name des Geräts, an das Funknachrichten gehen, wenn kein Empfänger gewählt wird."
 
+# Home screen: which tiles of the second page the child sees
+config.home.label                     = "Startbildschirm: zweite Seite"
+config.home.network.label             = "Kachel \"Netz\""
+config.home.gps.label                 = "Kachel \"GPS\""
+config.home.clock.label               = "Kachel \"Uhr\""
+config.home.settings.label            = "Kachel \"Option\""
+config.home.wifi.label                = "Kachel \"WLAN\""
+config.home.motion.label              = "Kachel \"Lage\""
+config.home.tests.label               = "Kachel \"Tests\""
+config.home.status.label              = "Kachel \"Status\""
+config.home.wifi.help                 = "Nur sichtbar, wenn die Elternwerkzeuge an sind. Ohne sie ist die Elternseite weiter über das USB-Kabel erreichbar."
+config.home.motion.help               = "Nur sichtbar auf einem Gerät mit Bewegungssensor."
+config.home.status.help               = "Nur sichtbar, wenn die Elternwerkzeuge an sind."
+
 config.quiet_hours.label              = "Schulzeiten"
 config.quiet_hours.help               = "Zeitfenster, in denen das Gerät gesperrt ist. Pro Fenster einen Eintrag anlegen."
 config.quiet_hours.days.label         = "Tage"

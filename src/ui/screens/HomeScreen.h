@@ -1,9 +1,9 @@
 #pragma once
 
 // The home screen: a grid of tiles, three columns, two pages. The first page is the child's —
-// phone, text, SOS, inbox, radio —, the second is the device's: network, GPS, clock, settings,
-// Wi-Fi, motion, tests, status, light. What a child needs every day is in front, what is looked at
-// once a month is behind, and the dots under the tiles say there is a second page.
+// phone, text, SOS, inbox, radio, light —, the second is the device's: network, GPS, clock,
+// settings, Wi-Fi, motion, tests, status. What a child needs every day is in front, what is looked
+// at once a month is behind, and the dots under the tiles say there is a second page.
 //
 // Which tiles exist follows the profile and the device, and never anything the child can change:
 //   * phone and text need somebody to call or write to (a contact, or a call target);
@@ -11,15 +11,19 @@
 //     no SOS tile, and it is never left out otherwise;
 //   * the radio tile needs the profile to allow the radio;
 //   * Wi-Fi and status are the parents' tools (`parentTools`), and Wi-Fi also needs a Wi-Fi to
-//     switch; the motion tile needs a motion sensor (`ScreenContext::motionSensor`).
+//     switch; the motion tile needs a motion sensor (`ScreenContext::motionSensor`);
+//   * every tile of the second page can be switched off by the parents (`[home]` in settings.toml,
+//     `Profile::home`); with all of them off there is no second page. Without the Wi-Fi tile the
+//     parents' page is still reached over the USB cable (scripts/webbridge.py).
 //
 // The tile order is fixed: the profile has the numbers the call actions reach, not an order of
 // tiles. The words are short because a column is 74 pixels wide (68 inside the tile): a label of
 // a shipped language that is wider is a layout bug, found by the layout tests. The pseudo-language
 // is longer than any real one on purpose and is exempt from that one rule.
 //
-// Soft keys show the arrows only: the tiles are the buttons, and a bar that names the action of
-// the tile under the selection changes with every step and costs a redraw of the panel each time.
+// The soft keys are empty: the tiles are the buttons, the dots turn the page, and the keys Up and
+// Down still move the selection (owner, 2026-10-08: the arrows only took room). A bar that named
+// the action of the tile under the selection would change with every step and cost a redraw.
 // Back locks the device: without it the child could not lock it before it goes into the pocket.
 //
 // School time: the phone tile does not open the phone page; it says "School time until 15:00" and

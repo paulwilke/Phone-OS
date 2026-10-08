@@ -184,6 +184,14 @@ field   = ""
 
 [[section]]
 file    = "settings"
+name    = "home"
+list    = false
+label   = "config.home.label"
+help    = ""
+field   = ""
+
+[[section]]
+file    = "settings"
 name    = "quiet_hours"
 list    = true
 label   = "config.quiet_hours.label"
@@ -564,6 +572,132 @@ max_val = 32
 label   = "config.radio.peer.label"
 help    = "config.radio.peer.help"
 field   = "radioPeer"
+apply   = "restart"
+secret  = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Keys — settings.toml / [home]
+# Which tiles of the home screen's second page the child sees (owner, 2026-10-08). The first page is the
+# child's and is not switched here; Wi-Fi and Status need the parent tools as well, Motion a motion sensor.
+# ---------------------------------------------------------------------------
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "network"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.network.label"
+help    = ""
+field   = "home.network"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "gps"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.gps.label"
+help    = ""
+field   = "home.gps"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "clock"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.clock.label"
+help    = ""
+field   = "home.clock"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "settings"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.settings.label"
+help    = ""
+field   = "home.settings"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "wifi"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.wifi.label"
+help    = "config.home.wifi.help"
+field   = "home.wifi"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "motion"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.motion.label"
+help    = "config.home.motion.help"
+field   = "home.motion"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "tests"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.tests.label"
+help    = ""
+field   = "home.tests"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "home"
+group   = "advanced"
+name    = "status"
+type    = "bool"
+default = "true"
+widget  = "checkbox"
+label   = "config.home.status.label"
+help    = "config.home.status.help"
+field   = "home.status"
 apply   = "restart"
 secret  = false
 required = false

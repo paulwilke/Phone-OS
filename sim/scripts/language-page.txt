@@ -15,11 +15,12 @@ see home.phone
 see home.inbox
 see weekday.tue
 
-# Home, down to the options tile, into the options, down to the language row, into the language page.
-key down down down down down down down down select
+# Home, down to the options tile, into the options, down to the language row (the third: volume, vibration,
+# language; switching off is below it), into the language page.
+key down down down down down down down down down select
 check screen settings
 see settings.title
-key down down down select
+key down down select
 check screen language
 see language.title
 check settings-has language = "en"
@@ -42,7 +43,7 @@ key home
 
 # French from the same page, then English: each the choice of the child, each written back.
 key select
-key down down down select
+key down down select
 key down down select
 check language fr
 key back back
@@ -54,7 +55,7 @@ see system.missed-call name=Parent One
 say-not Anruf
 key home
 key select
-key down down down select
+key down down select
 key up select
 check language en
 key back back

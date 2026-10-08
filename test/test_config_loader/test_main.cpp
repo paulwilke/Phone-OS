@@ -431,6 +431,25 @@ void test_unknown_top_level_section_is_reported() {
   TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::UnknownKey, "typo_section"));
 }
 
+// [home] switches tiles of the home screen's second page off (owner, 2026-10-08); a card without it shows them all.
+void test_the_home_section_switches_tiles_off() {
+  FakeConfigStore none;
+  none.put("/config/settings.toml", "[child]\nname = \"Alex\"\n");
+  const auto all = loadWith(none).profile.home;
+  TEST_ASSERT_TRUE(all.network && all.gps && all.clock && all.settings && all.wifi && all.motion && all.tests && all.status);
+
+  FakeConfigStore store;
+  store.put("/config/settings.toml", "[home]\ngps = false\ntests = false\nstatus = \"no\"\nlight = false\n");
+  auto r = loadWith(store);
+  TEST_ASSERT_FALSE(r.profile.home.gps);
+  TEST_ASSERT_FALSE(r.profile.home.tests);
+  TEST_ASSERT_TRUE(r.profile.home.network && r.profile.home.settings);
+  TEST_ASSERT_TRUE(r.profile.home.status);                                                     // a wrong type keeps the default
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::WrongType, "home.status"));
+  TEST_ASSERT_TRUE(hasDiagArg(r.diagnostics, Diagnostic::Code::UnknownKey, "home.light"));    // the light is the child's, not switched here
+  TEST_ASSERT_FALSE(hasDiagArg(r.diagnostics, Diagnostic::Code::UnknownKey, "home"));
+}
+
 void test_wrong_type_is_reported() {
   FakeConfigStore store;
   store.put("/config/settings.toml", "[features]\nmessage_vibration = \"yes\"\n");
@@ -1121,6 +1140,7 @@ int main() {
   RUN_TEST(test_syntax_error_is_reported_with_file_and_line);
   RUN_TEST(test_unknown_key_is_reported);
   RUN_TEST(test_unknown_top_level_section_is_reported);
+  RUN_TEST(test_the_home_section_switches_tiles_off);
   RUN_TEST(test_wrong_type_is_reported);
   RUN_TEST(test_bad_enum_is_reported);
   RUN_TEST(test_out_of_range_integer_is_reported);
