@@ -100,4 +100,5 @@ private:
   // The modem has named a network since it was last switched on: a network lost after that is "no
   // network", not "connecting" (a child must see that nobody can reach the device).
   bool namedSinceOn_ = false;
+  void noteModem();
 };

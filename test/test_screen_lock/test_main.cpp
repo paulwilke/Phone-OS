@@ -136,10 +136,10 @@ void test_it_says_what_the_device_is_connected_to_and_how() {
   TEST_ASSERT_TRUE(says(rig.frame, "SMS only"));
   TEST_ASSERT_FALSE(says(rig.frame, "Connected"));
 
-  rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);       // the network is there, the IMS is not
+  rig.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);       // the network is there, the IMS is not yet
   rig.poll();
   lock.render(rig.frame);
-  TEST_ASSERT_TRUE(says(rig.frame, "No calls yet"));
+  TEST_ASSERT_TRUE(says(rig.frame, "Connecting ..."));                       // 4.0.2: was "No calls yet"
   TEST_ASSERT_FALSE(says(rig.frame, "Connected"));
 
   rig.modem.setNetwork("", 0);
@@ -147,6 +147,14 @@ void test_it_says_what_the_device_is_connected_to_and_how() {
   lock.render(rig.frame);
   TEST_ASSERT_TRUE(says(rig.frame, "No network", FontSize::Tile));
   TEST_ASSERT_TRUE(says(rig.frame, "Not connected"));
+
+  rig.modem.shutdown();                                                      // switched on again: on its way
+  rig.poll();
+  rig.modem.begin();
+  rig.poll();
+  lock.render(rig.frame);
+  TEST_ASSERT_TRUE(says(rig.frame, "Connecting ...", FontSize::Tile));
+  TEST_ASSERT_TRUE(says(rig.frame, "Not connected"));                        // nobody can reach it yet
 }
 
 void test_it_says_it_in_german_and_french() {

@@ -5,6 +5,15 @@
 
 void Connectivity::poll() {
   if (wifi_) wifi_->poll(clock_.uptimeSeconds());
+  noteModem();
+}
+
+// Whether the modem has named a network since it was last switched on. Watched at every step, not only when
+// the label is drawn, so that a restart of the modem between two pictures is not missed.
+void Connectivity::noteModem() {
+  const ModemState state = modem_.state();
+  if (state == ModemState::Off || state == ModemState::PoweringOn || state == ModemState::Initializing) namedSinceOn_ = false;
+  if (!modem_.operatorName().empty()) namedSinceOn_ = true;
 }
 
 bool Connectivity::setCellularEnabled(bool on) {
@@ -26,8 +35,7 @@ Connectivity::NetworkLabel Connectivity::networkLabel() {
   NetworkLabel label;
   const std::string op = modem_.operatorName();
   const ModemState state = modem_.state();
-  if (state == ModemState::Off || state == ModemState::PoweringOn || state == ModemState::Initializing) namedSinceOn_ = false;
-  if (!op.empty()) namedSinceOn_ = true;
+  noteModem();
   // Owner, 2026-10-08: after switching on, the status line said "Network" and "No calls yet" before the
   // operator's name. While the modem is on its way it says "Connecting".
   const bool modemOn = cellularEnabled() && state != ModemState::Off && state != ModemState::Error;
