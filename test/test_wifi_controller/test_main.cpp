@@ -175,6 +175,22 @@ void test_activity_postpones_the_shutdown() {
   TEST_ASSERT_EQUAL_UINT32(0, r.ctl.secondsLeft(600));   // past the limit, before the next poll
 }
 
+// Seen on the device: the page's clock stood a second ahead of the controller's, and the first request
+// after the login switched Wi-Fi off as if it had been idle for the whole unsigned range.
+void test_an_activity_a_second_ahead_of_the_controllers_clock_keeps_wifi_on() {
+  Rig r;
+  r.ctl.request(WifiMode::AccessPoint, 100);
+  r.ctl.noteActivity(101);
+  r.ctl.poll(100);
+  TEST_ASSERT_TRUE(r.ctl.active());
+  TEST_ASSERT_EQUAL_UINT32(300, r.ctl.secondsLeft(100));
+  r.ctl.poll(101 + 299);
+  TEST_ASSERT_TRUE(r.ctl.active());
+  r.ctl.poll(101 + 300);
+  TEST_ASSERT_FALSE(r.ctl.active());
+  TEST_ASSERT_TRUE(r.ctl.reason() == WifiReason::SwitchedOffByItself);
+}
+
 void test_a_lost_connection_is_retried() {
   Rig r;
   r.ctl.request(WifiMode::Station, 0);
@@ -366,6 +382,7 @@ int main() {
   RUN_TEST(test_the_password_is_forgotten_when_off);
   RUN_TEST(test_it_switches_itself_off_after_the_idle_time);
   RUN_TEST(test_activity_postpones_the_shutdown);
+  RUN_TEST(test_an_activity_a_second_ahead_of_the_controllers_clock_keeps_wifi_on);
   RUN_TEST(test_a_lost_connection_is_retried);
   RUN_TEST(test_a_lost_connection_starts_again_from_the_first_network);
   RUN_TEST(test_one_reading_that_is_not_connected_does_not_restart_the_network);

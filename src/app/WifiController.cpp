@@ -68,7 +68,7 @@ bool WifiController::request(WifiMode mode, uint32_t now) {
 uint32_t WifiController::secondsLeft(uint32_t now) const {
   if (!active()) return 0;
   const uint32_t limit = settings_.autoOffMinutes * 60u;
-  const uint32_t used = now - lastActivity_;
+  const uint32_t used = idleSeconds(now);
   return used >= limit ? 0 : limit - used;
 }
 
@@ -76,7 +76,7 @@ void WifiController::poll(uint32_t now) {
   if (!active()) return;
 
   // The switch-off timer applies in every phase.
-  if (now - lastActivity_ >= settings_.autoOffMinutes * 60u) {
+  if (idleSeconds(now) >= settings_.autoOffMinutes * 60u) {
     stop(WifiReason::SwitchedOffByItself);
     return;
   }
@@ -152,4 +152,13 @@ bool WifiController::mayLogGlitch(uint32_t now) {
   }
   ++logsInWindow_;
   return true;
+}
+
+// The page notes its activity with the time of the host's loop, the controller is polled with the clock's
+// uptime; the two may stand a second apart either way (seen on the device 2026-10-07: the clock's uptime
+// starts when the clock is made, the loop's at boot). An activity "in the future" is an activity now: in
+// unsigned arithmetic it read as about 136 years without use and switched Wi-Fi off at the first request
+// after the login.
+uint32_t WifiController::idleSeconds(uint32_t now) const {
+  return now > lastActivity_ ? now - lastActivity_ : 0;
 }

@@ -92,6 +92,7 @@ private:
   WifiPhase phase_ = WifiPhase::Off;
   size_t netIndex_ = 0;
   uint32_t attemptStarted_ = 0;
+  uint32_t idleSeconds(uint32_t now) const;
   uint32_t lastActivity_ = 0;
   std::string ssid_, apPassword_;
   WifiReason reason_ = WifiReason::None;
