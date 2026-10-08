@@ -1879,6 +1879,6 @@ web.auth.locked          = "Trop de tentatives, attendez une minute."
 web.lang.label           = "Langue"
 )phoneplus_toml");
 
-constexpr std::string_view kVersion("4.0.2");
+constexpr std::string_view kVersion("4.1.0");
 
 }  // namespace shipped

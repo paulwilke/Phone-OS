@@ -2,6 +2,31 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.0
+
+The interface, tidied after the owner's test of 4.0 on the device (2026-10-07/08). The notes for the parents and the child, and what to try on the device, are in [docs/release-4.1.md](docs/release-4.1.md); the acceptance test to go through each time is [docs/de/abnahmetest.md](docs/de/abnahmetest.md).
+
+### The parents' page
+
+- **The settings are on three tabs**: Basics, School time and Advanced. Which key is on which tab is data of `config/schema.toml`; saving one tab keeps what the others hold. Host-tested and tried in the simulator.
+- **Fixed: the settings form saved the interface language as the language of the texts** (and the child's name as the radio name): two keys of the same name were read from the wrong section. Host-tested.
+- **School-time windows are compact and their days are ticked** (Mo to Su), from and to are time fields. Host-tested.
+- **The Files tab hides what a Mac leaves on the card**, and "Remove Mac leftovers" deletes its `._` files; `energy.log` and `firmware.txt` are marked as files of 3.2. Host-tested.
+- **The backup is a ZIP archive** of `settings.toml` and `contacts.toml`, byte for byte, and the restore works: in 4.0 the page sent it to a route the device does not have. A backup of 4.0 is still restored. Host-tested; checked with `unzip` against the simulator.
+- **The tiles of the home screen's second page can be switched off** (`[home]`, tab Advanced).
+- **A contact can be ticked "SOS"**: the SOS goes to every ticked contact; without a tick, to the first call button as before. Sent as soon as one text is out, failed only when all were refused. Host-tested.
+- **A language comes in three answers** (words, labels, help) so that each keeps half of the device's response buffer free.
+
+### The device
+
+- **Back has one place on every screen**, on the left; the soft-key bar is 4 pixels taller.
+- **The home screen has no arrows**; the page dots are the two halves of the strip under the tiles; the light is on the first page.
+- **In a call**, Hang up is the whole bar and the volume has the buttons Quieter and Louder on the screen.
+- **With free text**, the ready-made messages are behind the key Templates; typing starts at once.
+- **The options can switch the device off** (two presses; not on the cable).
+
+Host-tested and run in the simulator; not verified on the device.
+
 ## 4.0.2
 
 - **The status line names the network again** ("Telekom", "Orange"). The modem answered the question for the operator with a blank, so the line said only "Network". The device now asks for the network's code when the name is blank and turns the code into the operator's name (Germany, its neighbours and the usual holiday countries; elsewhere the code). The log says `Cellular: network Telekom` when the network changes. Host-tested; verified on the device (2026-10-08).
