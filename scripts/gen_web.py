@@ -831,30 +831,34 @@ document.getElementById('log-clear').addEventListener('click', function() {{
 }});
 
 // ---------- Backup ----------
+// The backup is a ZIP archive of settings.toml and contacts.toml as the device has them (WebApi::backup), saved
+// as it comes; a restore sends the file back as it is, and the device checks everything before it writes.
+// 4.0 sent its restore to /api/backup, a route the device does not have, so restoring never worked there.
 document.getElementById('backup-export').addEventListener('click', function() {{
-  api('GET', '/api/backup').then(function(r) {{ return r.json(); }}).then(function(d) {{
+  var status = document.getElementById('backup-status');
+  status.textContent = '';
+  fetch('/api/backup', {{ headers: {{ Authorization: authHeader }} }}).then(function(r) {{
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }}).then(function(blob) {{
     var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)],
-      {{ type: 'application/json' }}));
-    a.download = 'phoneplus-backup.json'; a.click();
-  }});
+    a.href = URL.createObjectURL(blob);
+    a.download = 'phoneplus-backup.zip'; a.click();
+  }}).catch(function(e) {{ status.textContent = t('web.form.error') + ': ' + e.message; }});
 }});
 document.getElementById('backup-restore').addEventListener('click', function() {{
   var input = document.getElementById('backup-import-input');
   if (!input.files.length) return;
+  var status = document.getElementById('backup-status');
   var reader = new FileReader();
   reader.onload = function(e) {{
-    try {{
-      var data = JSON.parse(e.target.result);
-      api('POST', '/api/backup', data).then(function(r) {{ return r.json(); }}).then(function(d) {{
-        var el = document.getElementById('backup-status');
-        el.textContent = d.ok ? t('web.backup.restored') : (t('web.form.error') + ': ' + (d.error || ''));
-      }});
-    }} catch(ex) {{
-      document.getElementById('backup-status').textContent = t('web.form.error');
-    }}
+    var opts = {{ method: 'POST', headers: {{ Authorization: authHeader, 'X-Phoneplus': '1',
+        'Content-Type': 'application/zip' }}, body: e.target.result }};
+    fetch('/api/restore', opts).then(function(r) {{ return r.json(); }}).then(function(d) {{
+      status.textContent = d.ok ? t('web.backup.restored') : (t('web.form.error') + ': ' + (d.error || ''));
+    }}).catch(function() {{ status.textContent = t('web.form.error'); }});
   }};
-  reader.readAsText(input.files[0]);
+  reader.readAsArrayBuffer(input.files[0]);
 }});
 
 // ---------- Language ----------
@@ -1087,7 +1091,7 @@ function init(state) {{
         '      <div style="margin-top:1rem">',
         '        <label>',
         '          <span data-t="web.backup.import"></span>',
-        '          <input type="file" id="backup-import-input" accept=".json"',
+        '          <input type="file" id="backup-import-input" accept=".zip,.json"',
         '                 style="display:block;margin-top:.3rem">',
         "        </label>",
         '        <button id="backup-restore" class="btn-secondary action-btn"',

@@ -75,6 +75,9 @@ private:
   void deleteFile(const http::Request& req, http::Response& res);
   void backup(http::Response& res);
   void restore(const http::Request& req, http::Response& res);
+  // The JSON bundle of 4.0 ({"format":"phoneplus-backup-2",...}), still read in 4.1 so that a backup made
+  // with 4.0 can be restored once; 4.1 writes a ZIP archive.
+  void restoreJson(const http::Request& req, http::Response& res);
 
   // Validates a config file before writing. Returns false and sets `why` on
   // hard errors; soft problems accumulate in `warnings`.
@@ -99,8 +102,19 @@ private:
   char resp_[kResponseMax];
   char scratch_[kMaxConfigFile + 1];
   char scratch2_[kMaxConfigFile + 1];
+  // The backup archive while it is being sent: two files of at most kMaxConfigFile and about 250 bytes of
+  // ZIP, more than resp_ holds.
+  std::string archive_;
 
   static constexpr const char* kSettingsPath = "/config/settings.toml";
   static constexpr const char* kContactsPath = "/config/contacts.toml";
   static constexpr const char* kSecretsPath  = "/config/secrets.toml";
+  // The files a backup carries, and their names in the archive. secrets.toml is not among them (rule 5: the
+  // backup never carries the passwords).
+  struct BackupFile {
+    const char* path;
+    const char* name;
+  };
+  static constexpr BackupFile kBackupFiles[] = {{kSettingsPath, "config/settings.toml"},
+                                                {kContactsPath, "config/contacts.toml"}};
 };

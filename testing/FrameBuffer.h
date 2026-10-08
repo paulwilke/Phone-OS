@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include <ui/Crc32.h>
+#include <app/Crc32.h>
 #include <ui/Display.h>
 
 class FrameBuffer : public ui::Display {
@@ -111,7 +111,7 @@ public:
   uint32_t crc() const {
     const std::vector<uint8_t> data = packed();
     const uint8_t size[4] = {(uint8_t)(w_ >> 8), (uint8_t)w_, (uint8_t)(h_ >> 8), (uint8_t)h_};
-    return ui::crc32(data.data(), data.size(), ui::crc32(size, 4));
+    return checksum::crc32(data.data(), data.size(), checksum::crc32(size, 4));
   }
   bool operator==(const FrameBuffer& o) const { return w_ == o.w_ && h_ == o.h_ && bits_ == o.bits_; }
 

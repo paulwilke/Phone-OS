@@ -249,7 +249,7 @@ void test_the_crc_sees_a_single_pixel_anywhere_and_the_size() {
 
 void test_crc32_of_a_known_text() {
   const uint8_t text[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-  TEST_ASSERT_EQUAL_UINT32(0xCBF43926u, ui::crc32(text, sizeof(text)));  // the standard check value
+  TEST_ASSERT_EQUAL_UINT32(0xCBF43926u, checksum::crc32(text, sizeof(text)));  // the standard check value
 }
 
 // ---- golden files --------------------------------------------------------------------------

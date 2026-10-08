@@ -47,7 +47,7 @@ Decoded decode(const std::vector<uint8_t>& png) {
     const uint32_t length = be32(&png[at]);
     if (at + 12 + length > png.size()) return fail("chunk longer than the file");
     const std::string type(reinterpret_cast<const char*>(&png[at + 4]), 4);
-    if (ui::crc32(&png[at + 4], 4 + length) != be32(&png[at + 8 + length])) return fail("crc of " + type);
+    if (checksum::crc32(&png[at + 4], 4 + length) != be32(&png[at + 8 + length])) return fail("crc of " + type);
     const uint8_t* data = &png[at + 8];
     if (type == "IHDR") {
       if (length != 13 || data[8] != 1 || data[9] != 0 || data[10] != 0 || data[11] != 0 || data[12] != 0) return fail("IHDR");

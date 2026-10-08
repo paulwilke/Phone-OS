@@ -25,6 +25,7 @@
 #include <hal/ConfigStore.h>
 #include <i18n/Translator.h>
 #include <web/WebApi.h>
+#include <web/Zip.h>
 
 namespace {
 
@@ -151,6 +152,11 @@ struct Fixture {
   // method path [body]; auth: nullptr = no header
   int call(const char* method, const char* path, const char* b = "",
            const char* auth = nullptr, bool csrf = true, uint32_t now = 1000) {
+    return callBytes(method, path, std::string(b), auth, csrf, now);
+  }
+  // A body of bytes, NUL included (the backup archive).
+  int callBytes(const char* method, const char* path, const std::string& b,
+                const char* auth = nullptr, bool csrf = true, uint32_t now = 1000) {
     http::Request r{};
     strncpy(r.method, method, sizeof(r.method) - 1);
     const char* q = strchr(path, '?');
@@ -162,8 +168,8 @@ struct Fixture {
     }
     if (auth) strncpy(r.authorization, auth, sizeof(r.authorization) - 1);
     if (csrf) strcpy(r.custom, "1");
-    r.body = b;
-    r.contentLength = strlen(b);
+    r.body = b.data();
+    r.contentLength = b.size();
     res = http::Response{};
     api.handle(r, res, now);
     body.assign(res.body ? res.body : "", res.length);
@@ -574,6 +580,33 @@ void test_backup_has_settings_and_contacts_but_no_secrets() {
   TEST_ASSERT_TRUE(f.has("Alex"));
   TEST_ASSERT_FALSE(f.has("TOPSECRETWORT"));
   TEST_ASSERT_FALSE(f.has("WLANGEHEIM1"));
+  TEST_ASSERT_FALSE(f.has("secrets.toml"));
+}
+
+// 4.1: the backup is a ZIP archive whose files are stored byte for byte (owner, 2026-10-08), so that no
+// character of a file can break it; a Mac opens it with a double click.
+void test_the_backup_is_a_zip_archive_of_the_files_as_they_are() {
+  Fixture f;
+  const std::string settings = "[child]\nname = \"\xC3\x89lise \\\"Ann\\\"\"\r\n# { } , \\ \t \xE2\x82\xAC\n";
+  f.store.files["/config/settings.toml"] = settings;
+  f.store.files["/config/contacts.toml"] = "[[contact]]\nnumber = \"+491701111111\"\n";
+  TEST_ASSERT_EQUAL(200, f.get("/api/backup"));
+  TEST_ASSERT_EQUAL_STRING("application/zip", f.res.contentType);
+  TEST_ASSERT_TRUE(f.body.compare(0, 4, "PK\x03\x04") == 0);
+  TEST_ASSERT_TRUE(std::string(f.res.extraHeader).find("phoneplus-backup.zip") != std::string::npos);
+  std::vector<zip::Entry> entries;
+  std::string why;
+  TEST_ASSERT_TRUE(zip::read(f.body.data(), f.body.size(), 4096, 8, entries, why));
+  TEST_ASSERT_EQUAL(2, entries.size());
+  TEST_ASSERT_EQUAL_STRING("config/settings.toml", entries[0].name.c_str());
+  TEST_ASSERT_TRUE(entries[0].data == settings);                      // byte for byte
+  TEST_ASSERT_EQUAL_STRING("config/contacts.toml", entries[1].name.c_str());
+  TEST_ASSERT_TRUE(f.body.size() < settings.size() + 64 + 300);       // stored, a few hundred bytes of ZIP
+
+  f.store.files.erase("/config/contacts.toml");                        // a file the card does not have is not in it
+  f.get("/api/backup");
+  TEST_ASSERT_TRUE(zip::read(f.body.data(), f.body.size(), 4096, 8, entries, why));
+  TEST_ASSERT_EQUAL(1, entries.size());
 }
 
 void test_backup_roundtrip() {
@@ -584,11 +617,12 @@ void test_backup_roundtrip() {
   const std::string backup = f.body;
   f.store.files.erase("/config/settings.toml");
   f.store.files.erase("/config/contacts.toml");
-  TEST_ASSERT_EQUAL(200, f.call("POST", "/api/restore", backup.c_str(), kAuth));
+  TEST_ASSERT_EQUAL(200, f.callBytes("POST", "/api/restore", backup, kAuth));
   TEST_ASSERT_EQUAL_STRING("[child]\nname = \"Alex\"\n",
                             f.store.files["/config/settings.toml"].c_str());
   TEST_ASSERT_EQUAL_STRING("[[contact]]\nnumber = \"+491\"\n",
                             f.store.files["/config/contacts.toml"].c_str());
+  TEST_ASSERT_TRUE(f.log.contains("WEB: /config/settings.toml written"));
 }
 
 // Rule 5 counter-check: restore rejects foreign files without writing anything.
@@ -599,7 +633,38 @@ void test_restore_rejects_foreign_files_and_writes_nothing() {
   TEST_ASSERT_EQUAL(422,
     f.call("POST", "/api/restore",
            "{\"format\":\"phoneplus-backup-2\",\"settings.toml\":\"[kaputt\"}", kAuth));
+  const std::string good = "[child]\nname = \"Alex\"\n";
+  const struct { const char* why; std::string archive; } bad[] = {
+      {"not a ZIP file", "hello, not an archive"},
+      {"the secrets file", zip::write({{"config/settings.toml", good}, {"config/secrets.toml", kSecrets}}, 0)},
+      {"another file", zip::write({{"config/._settings.toml", good}}, 0)},
+      {"a file twice", zip::write({{"config/settings.toml", good}, {"config/settings.toml", good}}, 0)},
+      {"a file the device would refuse", zip::write({{"config/settings.toml", good}, {"config/contacts.toml", "[[contact"}}, 0)},
+      {"a file over 4096 bytes", zip::write({{"config/settings.toml", "# " + std::string(4100, 'x') + "\n"}}, 0)},
+      {"an empty archive", zip::write({}, 0)},
+  };
+  for (const auto& b : bad) TEST_ASSERT_EQUAL_MESSAGE(422, f.callBytes("POST", "/api/restore", b.archive, kAuth), b.why);
+  // a compressed entry (method 8, as the Mac's own "Compress" writes), a wrong checksum and a cut archive
+  std::string compressed = zip::write({{"config/settings.toml", good}}, 0);
+  compressed[8] = 8;
+  std::string damaged = zip::write({{"config/settings.toml", good}}, 0);
+  damaged[30 + 20 + 2] ^= 1;
+  const std::string cut = zip::write({{"config/settings.toml", good}}, 0).substr(0, 40);
+  TEST_ASSERT_EQUAL(422, f.callBytes("POST", "/api/restore", compressed, kAuth));
+  TEST_ASSERT_TRUE(f.has("compressed"));                                // the reason names it
+  TEST_ASSERT_EQUAL(422, f.callBytes("POST", "/api/restore", damaged, kAuth));
+  TEST_ASSERT_TRUE(f.has("checksum"));
+  TEST_ASSERT_EQUAL(422, f.callBytes("POST", "/api/restore", cut, kAuth));
+  TEST_ASSERT_TRUE(f.has("cut off"));
   TEST_ASSERT_EQUAL(0, f.store.writes);
+}
+
+// A backup of 4.0 (the JSON bundle) is still restored in 4.1, once, so that nobody's backup is lost.
+void test_a_backup_of_4_0_is_still_restored() {
+  Fixture f;
+  const std::string bundle = "{\"format\":\"phoneplus-backup-2\",\"settings.toml\":\"[child]\\nname = \\\"Alex\\\"\\n\",\"contacts.toml\":\"\"}";
+  TEST_ASSERT_EQUAL(200, f.call("POST", "/api/restore", bundle.c_str(), kAuth));
+  TEST_ASSERT_EQUAL_STRING("[child]\nname = \"Alex\"\n", f.store.files["/config/settings.toml"].c_str());
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -787,7 +852,9 @@ int main() {
   RUN_TEST(test_logs_may_be_deleted);
   RUN_TEST(test_every_change_is_logged_but_never_with_content);
   RUN_TEST(test_backup_has_settings_and_contacts_but_no_secrets);
+  RUN_TEST(test_the_backup_is_a_zip_archive_of_the_files_as_they_are);
   RUN_TEST(test_backup_roundtrip);
+  RUN_TEST(test_a_backup_of_4_0_is_still_restored);
   RUN_TEST(test_restore_rejects_foreign_files_and_writes_nothing);
   RUN_TEST(test_restart_and_wifi_off_reach_the_host);
   RUN_TEST(test_every_authenticated_request_restarts_the_idle_time);

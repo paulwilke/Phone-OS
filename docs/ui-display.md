@@ -1,6 +1,6 @@
 # Display and frame buffer
 
-Code: `src/ui/Display.h`, `src/ui/Crc32.h`, `testing/FrameBuffer.h`, `testing/Golden.h`; tests in `test/test_frame_buffer/`. Pure C++17; the layer check keeps `src/ui/` free of application and hardware includes.
+Code: `src/ui/Display.h`, `src/app/Crc32.h`, `testing/FrameBuffer.h`, `testing/Golden.h`; tests in `test/test_frame_buffer/`. Pure C++17; the layer check keeps `src/ui/` free of application and hardware includes.
 
 ## The panel
 
@@ -13,7 +13,7 @@ The interface everything draws on: `width()`, `height()`, `beginFrame()`, `endFr
 - **The caller clips.** The display does not scale, wrap or shorten; a pixel outside the screen is dropped.
 - **Bitmaps** are packed in rows that each start at a byte boundary (`(w + 7) / 8` bytes per row), the leftmost pixel in the top bit. Only the **set** bits are drawn, in the given colour; clear bits leave the background alone, so a glyph can be drawn on anything.
 - A frame is drawn between `beginFrame()` and `endFrame()`; a driver may hold the image back and decide at `endFrame()` how to refresh the panel.
-- `ui::crc32()` is the checksum the refresh logic compares: an unchanged picture costs no refresh.
+- `checksum::crc32()` is the checksum the refresh logic compares: an unchanged picture costs no refresh.
 
 ## `FrameBuffer`
 

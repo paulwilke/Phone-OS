@@ -1032,6 +1032,35 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     'the parent reads how many and which folders are left: ' + pg.els['files-status'].textContent);
 }
 
+// (q) the backup is a ZIP file of the device, downloaded with the password; a restore sends the chosen file back
+// as it is to /api/restore (4.0 sent it to /api/backup, a route the device does not have)
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const archive = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 1, 2]);
+  let restored = null;
+  const onFetch = (path, opts, reply) => {
+    if (path === '/api/backup') return { ok: true, status: 200, blob: async () => ({ zip: true }) };
+    if (path === '/api/restore') { restored = opts; return reply(200, { ok: true }); }
+    return null;
+  };
+  const fileReader = function () { this.readAsArrayBuffer = () => this.onload({ target: { result: archive.buffer } }); this.readAsText = () => { throw new Error('a backup is no text'); }; };
+  const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: { en, de }, onFetch, fileReader });
+  let saved = null;
+  pg.context.document.createElement = (tag) => (tag === 'a' ? { click() { saved = this.download; } } : fakeElement(tag));
+  pg.els['backup-export'].listeners.click();
+  await pg.settle();
+  assert(pg.calls.some((c) => c.path === '/api/backup' && c.authed), 'the backup is asked for with the password');
+  assert(saved === 'phoneplus-backup.zip', 'and saved as phoneplus-backup.zip: ' + saved);
+  pg.document.getElementById('backup-import-input').files = [{ name: 'phoneplus-backup.zip' }];
+  pg.els['backup-restore'].listeners.click();
+  await pg.settle();
+  assert(restored && restored.method === 'POST' && restored.headers['X-Phoneplus'] === '1' && restored.body === archive.buffer,
+    'the restore sends the file as it is, with the header, to /api/restore');
+  assert(!pg.calls.some((c) => c.path === '/api/backup' && c.method === 'POST'), 'nothing is posted to /api/backup');
+  assert(pg.els['backup-status'].textContent === 'Restored.', 'the page says Restored.: ' + pg.els['backup-status'].textContent);
+  assert(/accept="\.zip,\.json"/.test(html), 'the file choice takes the archive and a backup of 4.0');
+}
+
 // ---------- summary ----------
 console.log(`\n${pass + fail} checks: ${pass} passed, ${fail} failed.`);
 if (fail > 0) process.exit(1);

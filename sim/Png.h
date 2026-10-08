@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <ui/Crc32.h>
+#include <app/Crc32.h>
 
 namespace sim {
 
@@ -30,7 +30,7 @@ inline void chunk(std::vector<uint8_t>& out, const char (&type)[5], const std::v
   const size_t start = out.size();
   out.insert(out.end(), type, type + 4);
   out.insert(out.end(), data.begin(), data.end());
-  put32(out, ui::crc32(out.data() + start, out.size() - start));
+  put32(out, checksum::crc32(out.data() + start, out.size() - start));
 }
 
 inline uint32_t adler32(const std::vector<uint8_t>& data) {

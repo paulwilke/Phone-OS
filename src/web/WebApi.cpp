@@ -9,6 +9,7 @@
 #include "../config/ConfigLoader.h"
 #include "../config/Diagnostic.h"
 #include "Json.h"
+#include "Zip.h"
 
 namespace {
 
@@ -597,27 +598,60 @@ void WebApi::deleteFile(const http::Request& req, http::Response& res) {
 // Backup and restore
 // ---------------------------------------------------------------------------
 
+// A ZIP archive of the configuration the page edits, byte for byte (owner, 2026-10-08: no character of a file
+// can break the format, and a Mac opens it with a double click). A file the card does not have is not in it.
 void WebApi::backup(http::Response& res) {
-  std::string settingsText, contactsText;
-  store_.read(kSettingsPath, settingsText, kMaxConfigFile);
-  store_.read(kContactsPath, contactsText, kMaxConfigFile);
-
-  size_t n = 0;
-  auto puts = [&](const char* s) { while (*s && n + 1 < sizeof(resp_)) resp_[n++] = *s++; };
-  puts("{\"format\":\"phoneplus-backup-2\",\"settings.toml\":");
-  if (!appendJsonStr(resp_, sizeof(resp_), n, settingsText)) return jsonError(res, 500, "Backup too large");
-  puts(",\"contacts.toml\":");
-  if (!appendJsonStr(resp_, sizeof(resp_), n, contactsText)) return jsonError(res, 500, "Backup too large");
-  puts("}");
-  if (n + 1 >= sizeof(resp_)) return jsonError(res, 500, "Backup too large");
-  resp_[n] = '\0';
-
-  jsonResp(res, 200, resp_);
-  res.extraHeader = "Content-Disposition: attachment; filename=\"phoneplus-backup.json\"";
+  std::vector<zip::Entry> entries;
+  for (const BackupFile& f : kBackupFiles) {
+    std::string text;
+    if (store_.fileSize(f.path) < 0 || !store_.read(f.path, text, kMaxConfigFile)) continue;
+    entries.push_back({f.name, std::move(text)});
+  }
+  archive_ = zip::write(entries, app_.epochUtc());
+  res.status = 200;
+  res.contentType = "application/zip";
+  res.body = archive_.data();
+  res.length = archive_.size();
+  res.extraHeader = "Content-Disposition: attachment; filename=\"phoneplus-backup.zip\"";
 }
 
+// The checks of 4.0's restore, for the archive: the request's size (http::kMaxBody), each file's size
+// (kMaxConfigFile), only the known files and each once, every file validated as the device would read it
+// before anything is written, and each written through the card's safe write.
 void WebApi::restore(const http::Request& req, http::Response& res) {
   if (req.contentLength == 0) return jsonError(res, 400, "Empty body");
+  if (req.body[0] == '{') return restoreJson(req, res);
+
+  std::vector<zip::Entry> entries;
+  std::string why;
+  if (!zip::read(req.body, req.contentLength, kMaxConfigFile, 8, entries, why)) return jsonError(res, 422, why.c_str());
+  const char* paths[2] = {nullptr, nullptr};
+  const zip::Entry* files[2] = {nullptr, nullptr};
+  for (const zip::Entry& e : entries) {
+    size_t i = 0;
+    while (i < 2 && e.name != kBackupFiles[i].name) ++i;
+    if (i == 2) {
+      snprintf(resp_, sizeof(resp_), "%.60s is not a file a backup restores", e.name.c_str());
+      std::string reason(resp_);
+      return jsonError(res, 422, reason.c_str());
+    }
+    if (files[i]) return jsonError(res, 422, "A file is in the archive twice");
+    files[i] = &e;
+    paths[i] = kBackupFiles[i].path;
+  }
+  std::string warnings;
+  for (size_t i = 0; i < 2; ++i) {
+    if (!files[i]) continue;
+    std::string w;
+    if (!checkConfigText(paths[i], files[i]->data.data(), files[i]->data.size(), why, w))
+      return jsonError(res, 422, (std::string(kBackupFiles[i].name) + ": " + why).c_str());
+    if (!w.empty()) warnings += (warnings.empty() ? "" : "; ") + w;
+  }
+  for (size_t i = 0; i < 2; ++i)
+    if (files[i] && !commit(paths[i], files[i]->data.data(), files[i]->data.size(), res, warnings)) return;
+}
+
+void WebApi::restoreJson(const http::Request& req, http::Response& res) {
 
   char format[48];
   if (!web::json::getString(req.body, req.contentLength, "format", format, sizeof(format)) ||

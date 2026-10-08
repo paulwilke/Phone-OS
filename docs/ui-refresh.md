@@ -20,7 +20,7 @@ A **partial** refresh is quick and does not flash, but leaves faint ghosts of ea
 
 ## Tracker and controller
 
-`FrameTracker` keeps the CRC-32 of the picture on the panel (`ui::crc32` over the packed picture, the same function `FrameBuffer::crc()` uses) and says whether a new frame differs. The first frame always does: nothing is known about the panel at start-up.
+`FrameTracker` keeps the CRC-32 of the picture on the panel (`checksum::crc32` over the packed picture, the same function `FrameBuffer::crc()` uses) and says whether a new frame differs. The first frame always does: nothing is known about the panel at start-up.
 
 `RefreshController` is what the driver uses: `present(crc, nowMs)` runs the tracker and the policy and calls `Panel::refreshPartial()` or `Panel::refreshFull()` (or neither). **The first frame is always a full refresh**, and so is the first after `invalidate()` (the panel was powered off and its content is unknown), changed or not. `stats()` counts frames, skipped frames, partial and full refreshes.
 

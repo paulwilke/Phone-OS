@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "../ui/Crc32.h"
+#include "../app/Crc32.h"
 #include "Uc8253.h"
 
 namespace board {
@@ -71,7 +71,7 @@ void EinkDisplay::finish() {
 void EinkDisplay::endFrame() {
   if (!configured_) return;
   hung_ = false;
-  controller_.present(ui::crc32(drawn_.data(), drawn_.size()), millis_.millis32());
+  controller_.present(checksum::crc32(drawn_.data(), drawn_.size()), millis_.millis32());
   if (hung_) controller_.invalidate();
 }
 

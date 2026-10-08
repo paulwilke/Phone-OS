@@ -3,7 +3,7 @@
 // Remembers the checksum of the picture on the panel and says whether the next frame is a
 // change. The first frame always is one: the panel's content is not known.
 //
-// The checksum is ui::crc32 of the packed picture; two different pictures with the same
+// The checksum is checksum::crc32 of the packed picture; two different pictures with the same
 // checksum would be taken for one, and the panel would miss an update. For a 240 x 320 picture
 // that is a one-in-four-billion chance per change, and the next change corrects it.
 
