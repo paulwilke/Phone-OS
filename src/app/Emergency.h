@@ -97,6 +97,7 @@ private:
 
   // SosPing::Host
   bool readFix(GnssFix& out) override { return positioning_.readFix(out); }
+  bool lastKnownFix(GnssFix& out, uint32_t& ageSeconds) override { return positioning_.lastKnownFix(out, &ageSeconds); }
   bool sendText(const char* peer, const std::string& text) override;
 
   bool start(const std::string& peer, SosPing::Kind kind);

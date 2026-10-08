@@ -2,6 +2,12 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.1
+
+- **An SOS without a position carries the last known one**, said as such and with its age ("No GPS. LAST KNOWN position, 25 min ago", "LETZTE BEKANNTE Position vor 25 Min."), so that nobody takes it for the present place. Seen on the device 2026-10-08: an SOS from inside a house went out without any place. The last position is kept while the device runs (from the start-up fix, an SOS, a query, the GPS page), not across switching off. Host-tested; not verified on the device.
+- **The splash picture is back**: "PhonePlus", "T-Deck Pro MAX" and the version while the device starts, as in 3.x. Compiled; not verified on the device.
+- **Switching off shows "Switched off"** before the battery is disconnected: e-ink keeps its last picture, and a device that went off showing a page looked on. With a cable the switch-off is refused at once, with the notice, without shutting the modem down (it was asked again and again before); every request is logged ("Power: switch off asked for"). Compiled and host-tested where it can be; not verified on the device.
+
 ## 4.1.0
 
 The interface, tidied after the owner's test of 4.0 on the device (2026-10-07/08). The notes for the parents and the child, and what to try on the device, are in [docs/release-4.1.md](docs/release-4.1.md); the acceptance test to go through each time is [docs/de/abnahmetest.md](docs/de/abnahmetest.md).

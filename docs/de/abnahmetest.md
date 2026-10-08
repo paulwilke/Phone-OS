@@ -8,7 +8,7 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 
 | Nr. | Schritt | Erwartung | Datum | Ergebnis |
 |---|---|---|---|---|
-| 1.1 | Neue Firmware aufspielen, Gerät startet | erstes Bild vollständig, Statusseite (Kachel **Status**) zeigt die neue Version | | |
+| 1.1 | Neue Firmware aufspielen, Gerät startet | zuerst das Startbild "PhonePlus, T-Deck Pro MAX, Version ...", dann der Startbildschirm; Statusseite (Kachel **Status**) zeigt die neue Version | | |
 | 1.2 | Gleich nach dem Start auf die Statuszeile oben links sehen | "Verbinde ..." bis Netz und Anrufe bereit sind, kein Springen zwischen "Netz", "Kein Netz" und "Noch keine Anrufe" | | |
 | 1.3 | Etwa eine Minute warten | oben links der Netzbetreiber ("Telekom"), Kachel **Netz**: "IMS: ja" | | |
 | 1.4 | GPS-Anzeige oben | "GPS" nur in den ersten Minuten nach dem Start (Start-Fix) und während eines SOS, sonst nicht | | |
@@ -47,14 +47,15 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 |---|---|---|---|---|
 | 5.1 | Draußen **SOS**, nichts wählen | nach 40 s geht der Notruf von selbst; beide angehakten Kontakte bekommen denselben Text mit Position und Genauigkeit | | |
 | 5.2 | Protokoll lesen (Reiter **Protokoll**) | "SOS text to 2 of 2 recipients", "SOS ping sent" | | |
-| 5.3 | Gerät aus und wieder an, gleich **SOS** | Notruf geht nach etwa 40 s mit Position, spätestens nach 2 Minuten (ohne Position mit Wartezeit) | | |
+| 5.3 | Gerät aus und wieder an, gleich **SOS** | Notruf geht nach etwa 40 s mit Position, spätestens etwa 160 s nach dem Drücken (40 s Auswahl, dann bis zu 120 s Suche) | | |
+| 5.4 | Erst draußen eine Position bekommen (GPS-Seite oder SOS), dann im Haus **SOS** | ohne aktuelle Position geht die **LETZTE BEKANNTE Position** mit, mit Alter ("vor 12 Min.") und Genauigkeit | | |
 
 ## 6. Optionen
 
 | Nr. | Schritt | Erwartung | Datum | Ergebnis |
 |---|---|---|---|---|
 | 6.1 | Kachel **Option**, ganz nach unten | letztes Kästchen **Ausschalten**, am Kabel "erst USB abziehen" und nichts passiert | | |
-| 6.2 | Kabel ab, **Ausschalten** zweimal drücken | erst "noch einmal: aus", dann geht das Gerät aus | | |
+| 6.2 | Kabel ab, **Ausschalten** zweimal drücken | erst "noch einmal: aus", dann das Bild "PhonePlus ... Ausgeschaltet", dann ist das Gerät aus (Licht aus, keine Reaktion auf Tasten) | | |
 | 6.3 | Mit der seitlichen Taste einschalten | Gerät startet wieder | | |
 
 ## 7. Schulzeit

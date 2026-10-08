@@ -55,7 +55,10 @@ public:
   // (e-ink keeps its last picture without power, and a switched-off device that still shows the
   // status page looks like a hanging one). If it does not work — a cable feeds the board — the
   // request is dropped and a notice says why.
-  void requestPowerOff() { powerOffRequested_ = true; }
+  void requestPowerOff() {
+    if (!powerOffRequested_) log_.log("Power: switch off asked for");   // so that the log shows every attempt
+    powerOffRequested_ = true;
+  }
   bool powerOffRequested() const { return powerOffRequested_; }
   void notePowerOffFailed();
 

@@ -16,8 +16,9 @@ bool Emergency::begin(const std::string& target) {
 // itself, so that SosPing fills it with the position later.
 static std::string raw(i18n::Translator& translator, const std::string& language, const char* key) {
   const i18n::Arg args[] = {{"name", "{name}"},     {"head", "{head}"},         {"map", "{map}"},
-                            {"coordinates", "{coordinates}"}, {"accuracy", "{accuracy}"}, {"seconds", "{seconds}"}};
-  return translator.getIn(language, key, args, 6);
+                            {"coordinates", "{coordinates}"}, {"accuracy", "{accuracy}"}, {"seconds", "{seconds}"},
+                            {"age", "{age}"}, {"n", "{n}"}};
+  return translator.getIn(language, key, args, 8);
 }
 
 SosPing::Wording Emergency::wording() {
@@ -32,6 +33,11 @@ SosPing::Wording Emergency::wording() {
   w.position = raw(translator_, language, "sms.sos.position");
   w.positionNoMap = raw(translator_, language, "sms.sos.position-no-map");
   w.noGps = raw(translator_, language, "sms.sos.no-gps");
+  w.lastKnown = raw(translator_, language, "sms.sos.last-known");
+  w.lastKnownNoMap = raw(translator_, language, "sms.sos.last-known-no-map");
+  w.ageMinutes = raw(translator_, language, "sms.sos.age-minutes");
+  w.ageHours = raw(translator_, language, "sms.sos.age-hours");
+  w.ageDays = raw(translator_, language, "sms.sos.age-days");
   return w;
 }
 

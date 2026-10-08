@@ -158,6 +158,24 @@ void test_a_query_reply_still_goes_to_its_asker_alone() {
   TEST_ASSERT_EQUAL_STRING(kParentTwo, r.lastSent().phone.c_str());
 }
 
+// Owner, 2026-10-08: an SOS from inside a house went out without any place. The core hands the last position the
+// receiver had to the ping, which says it as the last known one, with its age.
+void test_an_sos_without_a_position_carries_the_last_known_one() {
+  Rig r;
+  r.emergency.begin();
+  r.emergency.choose(SosPing::Kind::Emergency);
+  r.run(30);                                                         // a first SOS outside: a position
+  TEST_ASSERT_TRUE(contains(r.lastSent().body, "48.10000,11.50000"));
+  r.gnss.never();                                                    // indoors, ten minutes later
+  r.run(600);
+  r.emergency.begin();
+  r.emergency.choose(SosPing::Kind::Emergency);
+  r.run(130);
+  const std::string& text = r.lastSent().body;
+  TEST_ASSERT_TRUE_MESSAGE(contains(text, "LAST KNOWN position, 13 min ago"), text.c_str());
+  TEST_ASSERT_TRUE_MESSAGE(contains(text, "48.10000,11.50000"), text.c_str());
+}
+
 void test_pressing_sos_starts_the_receiver_at_once() {
   Rig r;
   TEST_ASSERT_FALSE(r.receiverOn());
@@ -612,6 +630,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_without_a_recipient_sos_cannot_begin);
   RUN_TEST(test_the_first_call_target_is_the_default_recipient);
+  RUN_TEST(test_an_sos_without_a_position_carries_the_last_known_one);
   RUN_TEST(test_the_sos_goes_to_every_ticked_contact_and_not_to_the_call_button);
   RUN_TEST(test_one_refused_text_of_several_is_no_failure_and_the_child_is_not_told);
   RUN_TEST(test_the_emergency_fails_only_when_every_text_was_refused);

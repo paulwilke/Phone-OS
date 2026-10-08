@@ -225,6 +225,7 @@ notice.cellular-switched-on    = "Mobilfunk an"
 notice.cellular-switched-off   = "Mobilfunk aus"
 notice.wifi-battery-low        = "Akku zu leer für WLAN"
 notice.power-off-refused       = "Ausschalten nur ohne Kabel"
+power.switched-off             = "Ausgeschaltet"
 notice.light-on                = "Licht an"
 notice.light-off               = "Licht aus"
 
@@ -395,6 +396,11 @@ sms.sos.location-anonymous  = "Standort des Geräts"
 sms.sos.position            = "{head}. Koordinaten hier:\n{map}\n{coordinates}, auf {accuracy} m genau"
 sms.sos.position-no-map     = "{head}. Koordinaten hier:\n{coordinates}\nauf {accuracy} m genau"
 sms.sos.no-gps              = "{head}.\nKein GPS-Empfang nach {seconds} s."
+sms.sos.last-known          = "{head}.\nKein GPS. LETZTE BEKANNTE Position vor {age}:\n{map}\n{accuracy} m genau"
+sms.sos.last-known-no-map   = "{head}.\nKein GPS. LETZTE BEKANNTE Position vor {age}:\n{coordinates}\n{accuracy} m genau"
+sms.sos.age-minutes         = "{n} Min."
+sms.sos.age-hours           = "{n} Std."
+sms.sos.age-days            = "{n} Tg."
 
 sms.command.where = "#WoBistDu"
 )phoneplus_toml");
@@ -619,6 +625,7 @@ notice.cellular-switched-on = "Cellular on"
 notice.cellular-switched-off = "Cellular off"
 notice.wifi-battery-low = "Battery too low for Wi-Fi"
 notice.power-off-refused = "Switch off only without cable"
+power.switched-off = "Switched off"
 notice.light-on = "Light on"
 notice.light-off = "Light off"
 
@@ -784,6 +791,11 @@ sms.sos.location-anonymous = "Location of the device"
 sms.sos.position = "{head}. Coordinates here:\n{map}\n{coordinates}, accurate to {accuracy} m"
 sms.sos.position-no-map = "{head}. Coordinates here:\n{coordinates}\naccurate to {accuracy} m"
 sms.sos.no-gps = "{head}.\nNo GPS signal after {seconds} s."
+sms.sos.last-known = "{head}.\nNo GPS. LAST KNOWN position, {age} ago:\n{map}\naccurate to {accuracy} m"
+sms.sos.last-known-no-map = "{head}.\nNo GPS. LAST KNOWN position, {age} ago:\n{coordinates}\naccurate to {accuracy} m"
+sms.sos.age-minutes = "{n} min"
+sms.sos.age-hours = "{n} h"
+sms.sos.age-days = "{n} d"
 
 sms.command.where = "#WhereAreYou"
 )phoneplus_toml");
@@ -1007,6 +1019,7 @@ notice.cellular-switched-on    = "Réseau mobile activé"
 notice.cellular-switched-off   = "Réseau mobile coupé"
 notice.wifi-battery-low        = "Batterie faible : pas de Wi-Fi"
 notice.power-off-refused       = "Débranchez avant d'éteindre"
+power.switched-off             = "Éteint"
 notice.light-on                = "Lumière allumée"
 notice.light-off               = "Lumière éteinte"
 
@@ -1177,6 +1190,11 @@ sms.sos.location-anonymous  = "Position de l'appareil"
 sms.sos.position            = "{head}. Coordonnées ici :\n{map}\n{coordinates}, précision {accuracy} m"
 sms.sos.position-no-map     = "{head}. Coordonnées ici :\n{coordinates}\nprécision {accuracy} m"
 sms.sos.no-gps              = "{head}.\nPas de signal GPS après {seconds} s."
+sms.sos.last-known          = "{head}.\nDERNIERE position connue, il y a {age} :\n{map}\nprécision {accuracy} m"
+sms.sos.last-known-no-map   = "{head}.\nDERNIERE position connue, il y a {age} :\n{coordinates}\nprécision {accuracy} m"
+sms.sos.age-minutes         = "{n} min"
+sms.sos.age-hours           = "{n} h"
+sms.sos.age-days            = "{n} j"
 
 sms.command.where = "#OuEsTu"
 )phoneplus_toml");
@@ -1879,6 +1897,6 @@ web.auth.locked          = "Trop de tentatives, attendez une minute."
 web.lang.label           = "Langue"
 )phoneplus_toml");
 
-constexpr std::string_view kVersion("4.1.0");
+constexpr std::string_view kVersion("4.1.1");
 
 }  // namespace shipped

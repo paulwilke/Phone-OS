@@ -32,7 +32,8 @@ unsigned SosPing::accuracyMeters(float hdop) {
 }
 
 std::string SosPing::buildText(const Wording& w, const std::string& who, const std::string& mapTemplate,
-                               const GnssFix& fix, bool haveFix, unsigned waited, Kind kind) {
+                               const GnssFix& fix, bool haveFix, unsigned waited, Kind kind,
+                               const GnssFix* lastKnown, uint32_t lastKnownAge) {
   // The name tells in three words who is meant; the receiver of the message often
   // sees only an unknown number.
   const bool named = !who.empty();
@@ -45,17 +46,33 @@ std::string SosPing::buildText(const Wording& w, const std::string& who, const s
   const i18n::Arg nameArg[] = {{"name", who.c_str()}};
   const std::string headText = fill(*head, nameArg, 1);
 
-  if (!haveFix) {
+  const bool remembered = !haveFix && lastKnown && usable(*lastKnown);
+  if (!haveFix && !remembered) {
     const i18n::Arg args[] = {{"head", headText.c_str()}, {"seconds", waited}};
     return fill(w.noGps, args, 2);
   }
 
+  const GnssFix& where = remembered ? *lastKnown : fix;
   char map[96];
-  const bool haveMap = maplink::build(mapTemplate.c_str(), fix.lat, fix.lon, map, sizeof(map)) == maplink::Result::Ok;
+  const bool haveMap = maplink::build(mapTemplate.c_str(), where.lat, where.lon, map, sizeof(map)) == maplink::Result::Ok;
   char lat[24], lon[24];
-  maplink::formatDegrees(fix.lat, lat, sizeof(lat));
-  maplink::formatDegrees(fix.lon, lon, sizeof(lon));
+  maplink::formatDegrees(where.lat, lat, sizeof(lat));
+  maplink::formatDegrees(where.lon, lon, sizeof(lon));
   const std::string coordinates = std::string(lat) + "," + lon;
+  if (remembered) {
+    // The age in the largest unit that still says it in a short number: "25 min", "3 h", "2 d".
+    const uint32_t minutes = lastKnownAge / 60 + 1;
+    const std::string* unit = minutes < 120 ? &w.ageMinutes : minutes < 48 * 60 ? &w.ageHours : &w.ageDays;
+    const uint32_t n = minutes < 120 ? minutes : minutes < 48 * 60 ? minutes / 60 : minutes / (24 * 60);
+    const i18n::Arg ageArg[] = {{"n", n}};
+    const std::string age = fill(*unit, ageArg, 1);
+    const i18n::Arg args[] = {{"head", headText.c_str()},
+                              {"age", age.c_str()},
+                              {"map", map},
+                              {"coordinates", coordinates.c_str()},
+                              {"accuracy", accuracyMeters(where.hdop)}};
+    return fill(haveMap ? w.lastKnown : w.lastKnownNoMap, args, 5);
+  }
   const i18n::Arg args[] = {{"head", headText.c_str()},
                             {"map", map},
                             {"coordinates", coordinates.c_str()},
@@ -117,6 +134,9 @@ void SosPing::poll(uint32_t now) {
 }
 
 void SosPing::finish(uint32_t waited) {
-  text_ = buildText(wording_, who_, mapTemplate_, best_, best_.valid, waited, kind_);
+  GnssFix last;
+  uint32_t age = 0;
+  const bool haveLast = !best_.valid && host_.lastKnownFix(last, age);
+  text_ = buildText(wording_, who_, mapTemplate_, best_, best_.valid, waited, kind_, haveLast ? &last : nullptr, age);
   stage_ = host_.sendText(peer_.c_str(), text_) ? Stage::Done : Stage::Failed;
 }

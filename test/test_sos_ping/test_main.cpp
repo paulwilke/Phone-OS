@@ -29,6 +29,11 @@ SosPing::Wording english() {
   w.position = "{head}. Coordinates here:\n{map}\n{coordinates}, accurate to {accuracy} m";
   w.positionNoMap = "{head}. Coordinates here:\n{coordinates}\naccurate to {accuracy} m";
   w.noGps = "{head}.\nNo GPS signal after {seconds} s.";
+  w.lastKnown = "{head}.\nNo GPS. LAST KNOWN position, {age} ago:\n{map}\naccurate to {accuracy} m";
+  w.lastKnownNoMap = "{head}.\nNo GPS. LAST KNOWN position, {age} ago:\n{coordinates}\naccurate to {accuracy} m";
+  w.ageMinutes = "{n} min";
+  w.ageHours = "{n} h";
+  w.ageDays = "{n} d";
   return w;
 }
 
@@ -41,6 +46,14 @@ struct TestHost : SosPing::Host {
   bool readFix(GnssFix& out) override {
     if (!fixReadable) return false;
     out = fix;
+    return true;
+  }
+  GnssFix remembered;
+  uint32_t rememberedAge = 0;
+  bool lastKnownFix(GnssFix& out, uint32_t& age) override {
+    if (!remembered.valid) return false;
+    out = remembered;
+    age = rememberedAge;
     return true;
   }
   bool sendText(const char* peer, const std::string& text) override {
@@ -501,10 +514,58 @@ SosPing::Wording wordingOf(i18n::Translator& t, const std::string& language) {
   w.position = t.text("sms.sos.position");
   w.positionNoMap = t.text("sms.sos.position-no-map");
   w.noGps = t.text("sms.sos.no-gps");
+  w.lastKnown = t.text("sms.sos.last-known");
+  w.lastKnownNoMap = t.text("sms.sos.last-known-no-map");
+  w.ageMinutes = t.text("sms.sos.age-minutes");
+  w.ageHours = t.text("sms.sos.age-hours");
+  w.ageDays = t.text("sms.sos.age-days");
   return w;
 }
 
 }  // namespace
+
+// Owner, 2026-10-08: an SOS from inside a house went out without any place. Without a position during the search the
+// text carries the last known one, said as such and with its age, so that nobody takes it for the present one.
+void test_without_a_position_the_last_known_one_goes_out_said_as_such() {
+  Setup s;
+  s.host.remembered.valid = true;
+  s.host.remembered.lat = 48.13745;
+  s.host.remembered.lon = 11.57550;
+  s.host.remembered.hdop = 3.0f;
+  s.host.rememberedAge = 25 * 60 - 1;
+  s.ping.start("+491701111111", 0);
+  s.ping.poll(120);
+  TEST_ASSERT_EQUAL(1, s.host.sent.size());
+  const std::string& text = s.host.sent[0];
+  TEST_ASSERT_TRUE_MESSAGE(text.find("LAST KNOWN position, 25 min ago") != std::string::npos, text.c_str());
+  TEST_ASSERT_TRUE_MESSAGE(text.find("48.13745") != std::string::npos, text.c_str());
+  TEST_ASSERT_TRUE_MESSAGE(text.find("accurate to 15 m") != std::string::npos, text.c_str());
+  TEST_ASSERT_TRUE(text.find("Coordinates here") == std::string::npos);   // never worded as the present position
+
+  // older: hours, then days
+  for (const auto& c : {std::make_pair(3u * 3600u, "3 h ago"), std::make_pair(50u * 3600u, "2 d ago")}) {
+    Setup o;
+    o.host.remembered = s.host.remembered;
+    o.host.rememberedAge = c.first;
+    o.ping.start("+491701111111", 0);
+    o.ping.poll(120);
+    TEST_ASSERT_TRUE_MESSAGE(o.host.sent[0].find(c.second) != std::string::npos, o.host.sent[0].c_str());
+  }
+}
+
+// A position found during the search wins over the remembered one, however good that is.
+void test_a_present_position_wins_over_the_last_known_one() {
+  Setup s;
+  s.host.remembered.valid = true;
+  s.host.remembered.lat = 1.0;
+  s.host.remembered.lon = 1.0;
+  s.host.remembered.hdop = 1.0f;
+  s.host.setFix(48.1, 11.5, 4.0f);
+  s.ping.start("+491701111111", 0);
+  s.ping.poll(120);
+  TEST_ASSERT_TRUE(s.host.sent[0].find("Coordinates here") != std::string::npos);
+  TEST_ASSERT_TRUE(s.host.sent[0].find("LAST KNOWN") == std::string::npos);
+}
 
 // Every shipped language fills every template completely, and the longest message
 // still fits in one SMS (160 characters of the GSM alphabet, which check_i18n.py
@@ -529,9 +590,12 @@ void test_shipped_languages_build_complete_messages_that_fit_one_sms() {
     TEST_ASSERT_TRUE_MESSAGE(w.complete(), language);
     for (SosPing::Kind kind : {SosPing::Kind::Emergency, SosPing::Kind::Pickup, SosPing::Kind::Query}) {
       for (const std::string& who : {std::string(), longName}) {
-        for (int shape = 0; shape < 3; ++shape) {
-          const std::string map = shape == 1 ? "" : "https://maps.google.com/?q={lat},{lon}";
-          const std::string text = SosPing::buildText(w, who, map, fix, shape != 2, 120, kind);
+        // 0 with a map, 1 without, 2 no position at all, 3 and 4 the last known one (with and without a map), with
+        // the widest age ("119 min", "47 h" and "999 d" are as wide)
+        for (int shape = 0; shape < 5; ++shape) {
+          const std::string map = shape == 1 || shape == 4 ? "" : "https://maps.google.com/?q={lat},{lon}";
+          const bool last = shape >= 3;
+          const std::string text = SosPing::buildText(w, who, map, fix, shape < 2, 120, kind, last ? &fix : nullptr, 999u * 86400u);
           const std::string label = std::string(language) + ": " + text;
           TEST_ASSERT_TRUE_MESSAGE(!text.empty(), label.c_str());
           TEST_ASSERT_TRUE_MESSAGE(text.find('{') == std::string::npos, label.c_str());  // no unfilled placeholder
@@ -554,6 +618,8 @@ int main(int, char**) {
   RUN_TEST(test_nonsense_fixes_are_ignored);
   RUN_TEST(test_a_clock_that_goes_back_does_not_send_early);
   RUN_TEST(test_without_any_fix_a_message_still_goes_out);
+  RUN_TEST(test_without_a_position_the_last_known_one_goes_out_said_as_such);
+  RUN_TEST(test_a_present_position_wins_over_the_last_known_one);
   RUN_TEST(test_the_message_carries_name_link_and_plain_coordinates);
   RUN_TEST(test_the_map_address_comes_from_the_template);
   RUN_TEST(test_without_a_name_the_message_still_works);

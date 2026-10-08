@@ -15,6 +15,8 @@
 #include <ui/OptionRows.h>
 #include <ui/Shapes.h>
 #include <ui/SoftKeys.h>
+#include <ui/Splash.h>
+#include <Shows.h>
 #include <ui/StatusBar.h>
 #include <ui/Symbols.h>
 #include <ui/TextBlock.h>
@@ -1300,6 +1302,28 @@ void test_the_current_option_row_has_a_second_outline_in_both_colours() {
   TEST_ASSERT_FALSE(inner(0));           // current and in focus: a white line inside the black fill
 }
 
+// ---- the splash picture -------------------------------------------------------------------------
+
+// The device's own picture at start (as 3.x had it) and, with the line "Switched off", before it switches off: e-ink
+// keeps its last picture, and a device that went off showing a page looked on (owner, 2026-10-08).
+void test_the_splash_and_the_switched_off_picture_stay_on_the_screen_in_every_language() {
+  languages::forEach([](const std::string& language, Translator& t) {
+    FrameBuffer fb;
+    drawSplash(fb, "T-Deck Pro MAX", "Version 4.1.1", t.get("power.switched-off"));
+    TEST_ASSERT_FALSE_MESSAGE(fb.clipped(), clips(language, fb).c_str());
+    TEST_ASSERT_TRUE(shows::text(fb, "PhonePlus", FontSize::Large));
+    TEST_ASSERT_TRUE(shows::text(fb, "Version 4.1.1", FontSize::Small));
+    TEST_ASSERT_TRUE_MESSAGE(shows::text(fb, t.get("power.switched-off"), FontSize::Text), language.c_str());
+    languages::expectPicture(fb, "splash_off", language, Rect{0, 0, kScreenWidth, kScreenHeight});
+  });
+  Translator t = languages::loaded();
+  t.select("de");
+  TEST_ASSERT_EQUAL_STRING("Ausgeschaltet", t.get("power.switched-off").c_str());
+  FrameBuffer start;
+  drawSplash(start, "T-Deck Pro MAX", "Version 4.1.1");                // at start: no line, no words
+  TEST_ASSERT_TRUE(shows::text(start, "T-Deck Pro MAX", FontSize::Text));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_the_standard_layout_tiles_the_screen_from_top_to_bottom);
@@ -1311,6 +1335,7 @@ int main() {
   RUN_TEST(test_shapes_stay_inside_their_rectangle_even_when_it_is_tiny);
   RUN_TEST(test_a_radius_beyond_half_the_size_is_the_largest_that_fits);
   RUN_TEST(test_the_scroll_bar_shows_the_window_and_hides_when_all_is_visible);
+  RUN_TEST(test_the_splash_and_the_switched_off_picture_stay_on_the_screen_in_every_language);
   RUN_TEST(test_back_has_a_fixed_place_and_the_action_ends_at_the_right_edge);
   RUN_TEST(test_a_wide_single_button_gets_the_whole_bar);
   RUN_TEST(test_the_soft_key_bar_is_a_little_taller_than_in_4_0);

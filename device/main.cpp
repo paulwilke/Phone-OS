@@ -39,6 +39,7 @@
 #include <board/TimeSync.h>
 #include <config/ConfigLoader.h>
 #include <drivers/A7682EDriver.h>
+#include <ui/Splash.h>
 
 #include "Esp32Bhi260Hub.h"
 #include "Esp32Delay.h"
@@ -117,6 +118,7 @@ std::unique_ptr<board::BoardGnss> gnss;
 std::unique_ptr<boot::Runtime> runtime;
 int batteryMah = board::kDefaultBatteryMah;
 bool powerOffLogged = false;
+const char* const kBoardName = "T-Deck Pro MAX";   // on the status page and the splash picture
 
 // What the console asks of the device.
 class Host : public board::ConsoleHost {
@@ -168,18 +170,35 @@ void readKeys() {
 }
 
 // The power logic asked to switch off: the modem says goodbye to the network first, then the rails and the battery.
+// Seen on the device 2026-10-08 (4.1.0): the picture of the page stayed after switching off (e-ink keeps it), so a
+// device that was off looked on; and a switch-off the cable refuses was asked again at every pass of the loop, the
+// modem shut down each time, and nobody was told. Fix host-tested where it can be (ui::drawSplash, the core's
+// refusal); the order below is to be verified on the device.
 void powerOff() {
+  // A cable keeps the board alive whatever the battery switch does: refuse before anything is shut down.
+  if (power->externalPower()) {
+    runtime->core().notePowerOffFailed();   // the notice says "only without cable", the log says why
+    return;
+  }
   if (!powerOffLogged) {
     powerOffLogged = true;
     eventLog.log("Power: switching off");
   }
+  display.beginFrame();
+  ui::drawSplash(display, kBoardName, "Version " + firmwareVersion, runtime->translator().get("power.switched-off"));
+  display.endFrame();
   modem->shutdown();
   for (int i = 0; i < 200 && modem->state() != ModemState::Off; ++i) {
     modem->poll();
     drainModemLog();
     delay(50);
   }
-  power->powerOff();  // false while a cable feeds the board: the device stays on, and the log says so
+  if (!power->powerOff()) {
+    // The charger did not take the command: the modem is down, so the device starts again rather than stay on
+    // without a network behind a picture that says it is off.
+    eventLog.log("Power: the charger did not switch off; restarting");
+    consoleHost.restart();
+  }
 }
 
 }  // namespace
@@ -218,12 +237,16 @@ void setup() {
   gnssUart.begin();
   modemTransport.begin();
   display.begin();
+  // The device's own picture while the rest starts, as 3.x showed it; no words, the catalogs come next.
+  display.beginFrame();
+  ui::drawSplash(display, kBoardName, "Version " + shipped::version());
+  display.endFrame();
 
   shipped::load(translator, [](const std::string& line) { eventLog.log(line); });
   firmwareVersion = shipped::version();
   runtime.reset(new boot::Runtime(
       boot::Capabilities{deviceClock, *power, *modem, *gnss, haptic, eventLog, configStore, wifi, tcpServer, flashAssets, display,
-                         [] { return (uint32_t)esp_random(); }, firmwareVersion.c_str(), nullptr, &motion, "T-Deck Pro MAX", &messageLog},
+                         [] { return (uint32_t)esp_random(); }, firmwareVersion.c_str(), nullptr, &motion, kBoardName, &messageLog},
       translator, millis()));
   // The named zone of settings.toml is in force when the time sync writes its line about a new time.
   timeSync.setZoneRule([](uint32_t epoch, int fallback) { return runtime ? runtime->core().zoneOffsetMinutes(epoch, fallback) : fallback; });

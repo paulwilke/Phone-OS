@@ -15,8 +15,11 @@
 //
 // These are the three steps the screen shows. After `timeoutSeconds` whatever there
 // is gets sent: an inaccurate position is better than none, and the text says how
-// accurate it is. With no position at all a message goes out anyway ("no GPS"): the
-// child pressed, and the parents must hear of it.
+// accurate it is. With no position during the search the text carries the last known
+// position, said as such and with its age, so that nobody takes it for the present one
+// (owner, 2026-10-08: an SOS from inside a house went out without any place). Without
+// that either a message goes out anyway ("no GPS"): the child pressed, and the parents
+// must hear of it.
 //
 // **The wording comes from outside.** The module holds no sentence; it fills the
 // templates it is given (Wording) from the catalogs. Placeholders:
@@ -24,6 +27,9 @@
 //   position, position-no-map: {head} (the head, already filled), {map} (the address,
 //                              only in `position`), {coordinates}, {accuracy} (metres)
 //   no-gps: {head}, {seconds}
+//   last-known, last-known-no-map: {head}, {age} (filled from age-minutes, age-hours or
+//                              age-days: "25 min"), {map} (only in `last-known`),
+//                              {coordinates}, {accuracy}
 
 #include <cstddef>
 #include <cstdint>
@@ -64,11 +70,14 @@ public:
     std::string location, locationAnonymous;
     std::string position, positionNoMap;
     std::string noGps;
+    std::string lastKnown, lastKnownNoMap;
+    std::string ageMinutes, ageHours, ageDays;  // {n}
 
     bool complete() const {
       return !emergency.empty() && !emergencyAnonymous.empty() && !pickup.empty() && !pickupAnonymous.empty() &&
              !location.empty() && !locationAnonymous.empty() && !position.empty() && !positionNoMap.empty() &&
-             !noGps.empty();
+             !noGps.empty() && !lastKnown.empty() && !lastKnownNoMap.empty() && !ageMinutes.empty() &&
+             !ageHours.empty() && !ageDays.empty();
     }
   };
 
@@ -78,6 +87,9 @@ public:
     virtual bool readFix(GnssFix& out) = 0;
     // Cellular, else radio, else the queue. False when not even queueing worked.
     virtual bool sendText(const char* peer, const std::string& text) = 0;
+    // The last position the receiver had before this search, whoever asked for it, and its age in
+    // seconds; false when there has been none since the device started.
+    virtual bool lastKnownFix(GnssFix&, uint32_t& /*ageSeconds*/) { return false; }
   };
 
   SosPing(Host& host, const Config& cfg) : host_(host), cfg_(cfg) {}
@@ -120,8 +132,10 @@ public:
 
   // Builds the message. `waited` is the number of seconds spent searching (shown
   // when there is no position).
+  // Without `haveFix`, a `lastKnown` fix (with its age) is sent as the last known position.
   static std::string buildText(const Wording& wording, const std::string& who, const std::string& mapTemplate,
-                               const GnssFix& fix, bool haveFix, unsigned waited, Kind kind);
+                               const GnssFix& fix, bool haveFix, unsigned waited, Kind kind,
+                               const GnssFix* lastKnown = nullptr, uint32_t lastKnownAge = 0);
 
 private:
   void finish(uint32_t waited);

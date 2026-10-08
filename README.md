@@ -6,7 +6,7 @@ position at the press of a button, and nothing else. Only the people in the cont
 call or write to the child. The interface is multilingual: English, German and French ship
 with it, and anyone can add a language by writing one text file.
 
-This is version 4.1.0 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.1.md](docs/release-4.1.md)); the LoRa radio is not part of it.
+This is version 4.1.1 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.1.md](docs/release-4.1.md)); the LoRa radio is not part of it.
 
 Parents start with the user's guide: [English](docs/user-guide.md),
 [Deutsch](docs/de/benutzerhandbuch.md), [Français](docs/fr/guide-utilisateur.md).

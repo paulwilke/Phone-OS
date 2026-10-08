@@ -1,6 +1,6 @@
 # Release 4.1
 
-Version 4.1.0 of PhonePlus. It tidies the interface after the owner's test of 4.0 on the device (2026-10-07/08) and builds on 4.0.2. What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device each time, with a column for the date and the result, is [de/abnahmetest.md](de/abnahmetest.md). Everything about 4.0 that this page does not change ([release-4.0.md](release-4.0.md): no radio, no published binary, going back to 3.2) holds for 4.1 too.
+Version 4.1.1 of PhonePlus (4.1.1: the last known position in an SOS without a position, the splash picture, the picture "Switched off"). It tidies the interface after the owner's test of 4.0 on the device (2026-10-07/08) and builds on 4.0.2. What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device each time, with a column for the date and the result, is [de/abnahmetest.md](de/abnahmetest.md). Everything about 4.0 that this page does not change ([release-4.0.md](release-4.0.md): no radio, no published binary, going back to 3.2) holds for 4.1 too.
 
 ## What changes for the parents
 
