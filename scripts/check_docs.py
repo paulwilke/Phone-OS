@@ -20,6 +20,10 @@ Checks every Markdown file and every source file:
   * every Python file compiles, so that a script nobody runs is not left broken (one once was);
   * the user's guide and its translations have the same headings in the same order (level for level), so
     that a section added to one is added to all;
+  * the old name of the project (PhonePlus, until 4.1.1) appears only where it must stay: the changelog and the
+    release notes before 4.1.2, the upgrade from 3.2 (whose firmware had that name), the cards of 3.2 that the tests
+    read, the test that the old header is refused, and the names earlier versions wrote and this one reads (the
+    format of the 4.0 backup bundle, the mark of the simulator's work directory) (OLD_NAME_KEPT, OLD_NAME_READ);
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
     `docs/<language-code>/` (translated documentation) and files that carry the marker
     `allow-non-english` in their first lines (test data, examples of other languages) are exempt.
@@ -38,6 +42,20 @@ CODE_SUFFIXES = (".h", ".hpp", ".c", ".cpp", ".py", ".sh", ".ini", ".yml", ".yam
 MARKER = re.compile(r"\b(TODO|FIXME|XXX|TBD)\b|\b(for now|legacy|deprecated|temporary|decision to confirm)\b", re.I)
 GERMAN = re.compile(r"[äöüÄÖÜß]|\b(und|nicht|oder|ist|sind|wird|eine?|der|die|das|für|mit|auch|noch)\b")
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+OLD_NAME = re.compile("phone" + "plus", re.I)
+# Where the old name stays, and why. A file listed here may name it anywhere; elsewhere only OLD_NAME_READ may.
+OLD_NAME_KEPT = {
+    "CHANGELOG.md": "the releases up to 4.1.1 were published under that name",
+    "docs/release-4.0.md": "4.0 was published under that name",
+    "docs/release-4.1.md": "names the header the old page sends, so that a parent knows why it must be reloaded",
+    "docs/upgrading.md": "the 3.2 firmware is called that on the devices it is upgraded from",
+    "test/test_upgrade_3_2/test_main.cpp": "the network name a card of 3.2 holds, which 4.x keeps",
+    "test/test_http/test_main.cpp": "the header of the earlier page, which the device must refuse",
+}
+OLD_NAME_KEPT_DIRS = ("test/data/card-3.2/",)   # a card as 3.2 wrote it
+# Names that earlier versions wrote and this one still reads: the format inside every backup bundle of 4.0, and the
+# mark of a simulator's work directory, so that a directory made before 4.1.2 is still emptied.
+OLD_NAME_READ = ("phoneplus-backup-2", ".phoneplus-sim")
 TICK = re.compile(r"`([A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+\.[A-Za-z0-9]+)`")
 
 
@@ -50,7 +68,7 @@ def files():
     for base, dirs, names in os.walk(ROOT):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for n in names:
-            if n.endswith(".md") or n.endswith(CODE_SUFFIXES):
+            if n.endswith(".md") or n.endswith(CODE_SUFFIXES) or n == "LICENSE":
                 yield os.path.join(base, n)
 
 
@@ -200,6 +218,17 @@ def index_problems():
     return problems
 
 
+def old_name_problem(rel, line):
+    rel = rel.replace(os.sep, "/")
+    if rel in OLD_NAME_KEPT or rel.startswith(OLD_NAME_KEPT_DIRS) or rel == "scripts/check_docs.py":
+        return None
+    for kept in OLD_NAME_READ:
+        line = line.replace(kept, "")
+    if OLD_NAME.search(line):
+        return "the old name of the project (OLD_NAME_KEPT in scripts/check_docs.py says where it may stay)"
+    return None
+
+
 def main():
     problems = screen_problems() + guide_problems() + index_problems() + release_problems() + python_problems() + test_ignore_problems()
     if version_problem():
@@ -214,6 +243,8 @@ def main():
         for n, line in enumerate(lines, 1):
             if rel != os.path.join("scripts", "check_docs.py") and MARKER.search(line):
                 problems.append(f"{rel}:{n}: placeholder marker: {MARKER.search(line).group(0)}")
+            if old_name_problem(rel, line):
+                problems.append(f"{rel}:{n}: {old_name_problem(rel, line)}")
             if not allow_foreign and GERMAN.search(line):
                 problems.append(f"{rel}:{n}: not English: {GERMAN.search(line).group(0)!r}")
             if path.endswith(".md"):

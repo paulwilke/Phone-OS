@@ -170,7 +170,7 @@ void test_request_body_reaches_the_handler() {
   FakeConn c;
   const std::string body = "hello";
   c.fromPeer("PUT /api/settings HTTP/1.1\r\n"
-             "X-Phoneplus: 1\r\n"
+             "X-Phone-OS: 1\r\n"
              "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body);
   f.tcp.waiting.push_back(&c);
   f.run();
@@ -416,7 +416,7 @@ void test_a_request_with_an_error_status_leaves_one_line_without_secrets() {
   FakeConn c;
   const std::string body = "TOP-SECRET-BODY";
   c.fromPeer("PUT /api/file?path=/config/secrets.toml&x=hunter2 HTTP/1.1\r\nAuthorization: Basic cGFyZW50Omh1bnRlcjI=\r\n"
-             "X-Phoneplus: 1\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body);
+             "X-Phone-OS: 1\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body);
   f.tcp.waiting.push_back(&c);
   f.run(0, 5);
   TEST_ASSERT_EQUAL(1, (int)f.log.size());

@@ -154,7 +154,7 @@ config.web_password.label             = "Web-Passwort"
 config.web_password.help              = "Passwort der Webseite. Mindestens 4 Zeichen. Ohne Passwort bleibt die Webseite gesperrt."
 
 # Webseite (nur im Browser; wird nicht auf dem Gerät angezeigt)
-web.title                = "PhonePlus"
+web.title                = "Phone OS"
 web.tab.status           = "Status"
 web.tab.basics           = "Allgemein"
 web.tab.school-time      = "Schulzeit"

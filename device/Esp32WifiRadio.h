@@ -22,7 +22,7 @@ public:
     WiFi.persistent(false);
     WiFi.setAutoReconnect(false);  // trying again is the controller's business
     WiFi.mode(WIFI_STA);
-    WiFi.setHostname("phoneplus");
+    WiFi.setHostname("phone-os");
     WiFi.begin(ssid.c_str(), password.empty() ? nullptr : password.c_str());
   }
   bool beginAccessPoint(const std::string& ssid, const std::string& password) override {

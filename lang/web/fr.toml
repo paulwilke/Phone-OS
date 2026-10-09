@@ -154,7 +154,7 @@ config.web_password.label             = "Mot de passe web"
 config.web_password.help              = "Mot de passe de la page web. Au moins 4 caractères. Sans mot de passe, la page web reste verrouillée."
 
 # Interface web (navigateur uniquement ; non affiche sur l'appareil)
-web.title                = "PhonePlus"
+web.title                = "Phone OS"
 web.tab.status           = "État"
 web.tab.basics           = "Général"
 web.tab.school-time      = "Heures de classe"

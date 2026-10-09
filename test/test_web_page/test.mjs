@@ -1050,11 +1050,11 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   pg.els['backup-export'].listeners.click();
   await pg.settle();
   assert(pg.calls.some((c) => c.path === '/api/backup' && c.authed), 'the backup is asked for with the password');
-  assert(saved === 'phoneplus-backup.zip', 'and saved as phoneplus-backup.zip: ' + saved);
-  pg.document.getElementById('backup-import-input').files = [{ name: 'phoneplus-backup.zip' }];
+  assert(saved === 'phone-os-backup.zip', 'and saved as phone-os-backup.zip: ' + saved);
+  pg.document.getElementById('backup-import-input').files = [{ name: 'phone-os-backup.zip' }];
   pg.els['backup-restore'].listeners.click();
   await pg.settle();
-  assert(restored && restored.method === 'POST' && restored.headers['X-Phoneplus'] === '1' && restored.body === archive.buffer,
+  assert(restored && restored.method === 'POST' && restored.headers['X-Phone-OS'] === '1' && restored.body === archive.buffer,
     'the restore sends the file as it is, with the header, to /api/restore');
   assert(!pg.calls.some((c) => c.path === '/api/backup' && c.method === 'POST'), 'nothing is posted to /api/backup');
   assert(pg.els['backup-status'].textContent === 'Restored.', 'the page says Restored.: ' + pg.els['backup-status'].textContent);

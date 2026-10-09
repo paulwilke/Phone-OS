@@ -80,7 +80,7 @@ struct Profile {
   loglevel::Level logLevel = loglevel::Level::All;
 
   // --- radio ---
-  std::string radioName = "phoneplus";  // this device's name in the radio network
+  std::string radioName = "phone-os";  // this device's name in the radio network
   std::string radioPeer;                // default peer to send radio messages to
 
   // May the child call this number? It must be in the contact book (any spelling of the

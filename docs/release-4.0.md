@@ -1,6 +1,6 @@
 # Release 4.0
 
-Version 4.0.2 of PhonePlus, the emergency phone for a child on the LilyGO T-Deck Pro MAX. What changed against 3.2 is in [../CHANGELOG.md](../CHANGELOG.md), the way from a running 3.2 device is in [upgrading.md](upgrading.md), and every open question is in [open-points.md](open-points.md). This page says what the release is, what it is not, and where the owner's checklist stands.
+Version 4.0.2 of the firmware (then called PhonePlus, since 4.1.2 Phone OS), the emergency phone for a child on the LilyGO T-Deck Pro MAX. What changed against 3.2 is in [../CHANGELOG.md](../CHANGELOG.md), the way from a running 3.2 device is in [upgrading.md](upgrading.md), and every open question is in [open-points.md](open-points.md). This page says what the release is, what it is not, and where the owner's checklist stands.
 
 ## What the release is
 

@@ -195,7 +195,7 @@ struct Sim {
   static sim::Options options() {
     sim::Options o;
     o.dataDir = kCard;
-    o.workDir = (std::filesystem::temp_directory_path() / "phoneplus-upgrade-3-2-card").string();
+    o.workDir = (std::filesystem::temp_directory_path() / "phone-os-upgrade-3-2-card").string();
     o.webPort = 0;
     return o;
   }

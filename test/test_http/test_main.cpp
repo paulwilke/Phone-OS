@@ -28,7 +28,7 @@ void test_get_request() {
 void test_post_with_body_arriving_in_pieces() {
   http::Parser p;
   TEST_ASSERT_TRUE(feedAll(p, "PUT /api/settings HTTP/1.1\r\nContent-Le") == http::Parser::State::Head);
-  TEST_ASSERT_TRUE(feedAll(p, "ngth: 12\r\nX-Phoneplus: 1\r\n\r\n{\"pin\":") == http::Parser::State::Body);
+  TEST_ASSERT_TRUE(feedAll(p, "ngth: 12\r\nX-Phone-OS: 1\r\n\r\n{\"pin\":") == http::Parser::State::Body);
   TEST_ASSERT_TRUE(feedAll(p, "\"12\"}") == http::Parser::State::Done);
   TEST_ASSERT_EQUAL_STRING("{\"pin\":\"12\"}", p.request().body);
   TEST_ASSERT_EQUAL_STRING("1", p.request().custom);
@@ -36,9 +36,19 @@ void test_post_with_body_arriving_in_pieces() {
 
 void test_header_names_are_case_insensitive() {
   http::Parser p;
-  feedAll(p, "POST /x HTTP/1.1\r\ncontent-length: 2\r\nx-phoneplus: 1\r\n\r\nhi");
+  feedAll(p, "POST /x HTTP/1.1\r\ncontent-length: 2\r\nx-phone-os: 1\r\n\r\nhi");
   TEST_ASSERT_TRUE(p.state() == http::Parser::State::Done);
   TEST_ASSERT_EQUAL_STRING("1", p.request().custom);
+}
+
+// The header of the versions before 4.1.2 is not taken for the new one: the owner decided that only X-Phone-OS
+// counts, so a page the browser kept from an earlier version is refused until it is reloaded, and no second name is
+// accepted beside the one the page sends.
+void test_the_header_of_earlier_versions_is_not_the_custom_header() {
+  http::Parser p;
+  feedAll(p, "POST /x HTTP/1.1\r\ncontent-length: 2\r\nX-Phoneplus: 1\r\n\r\nhi");
+  TEST_ASSERT_TRUE(p.state() == http::Parser::State::Done);
+  TEST_ASSERT_EQUAL_STRING("", p.request().custom);
 }
 
 void test_oversized_body_is_rejected_before_it_is_read() {
@@ -175,6 +185,7 @@ int main() {
   RUN_TEST(test_get_request);
   RUN_TEST(test_post_with_body_arriving_in_pieces);
   RUN_TEST(test_header_names_are_case_insensitive);
+  RUN_TEST(test_the_header_of_earlier_versions_is_not_the_custom_header);
   RUN_TEST(test_oversized_body_is_rejected_before_it_is_read);
   RUN_TEST(test_oversized_head_is_rejected);
   RUN_TEST(test_garbage_is_a_400);

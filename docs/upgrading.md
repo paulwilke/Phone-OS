@@ -1,6 +1,6 @@
 # Upgrading from 3.2 to 4.0
 
-For the owner of a device that runs the 3.2 firmware. The card of a 3.2 device is read by 4.0 without changes: `test/test_upgrade_3_2/` runs the loader, the runtime and the card classes over files in the layout 3.2 wrote (`test/data/card-3.2/`, invented values), and this page is written from what those tests pin. **Nothing of 4.0 has been verified on a device**, so the upgrade ends in the checklist [bring-up.md](bring-up.md), not in this page.
+For the owner of a device that runs the 3.2 firmware, which was called PhonePlus; since 4.1.2 the project is Phone OS. The card of a 3.2 device is read by 4.0 without changes: `test/test_upgrade_3_2/` runs the loader, the runtime and the card classes over files in the layout 3.2 wrote (`test/data/card-3.2/`, invented values), and this page is written from what those tests pin. **Nothing of 4.0 has been verified on a device**, so the upgrade ends in the checklist [bring-up.md](bring-up.md), not in this page.
 
 ## 1. Before you flash: save the card
 
@@ -40,7 +40,7 @@ In a checkout of the tag `v4.0.0`, with the device connected by the USB cable of
 
 (`pio` alone when it works in your shell; on the owner's Mac the one in `~/.platformio/penv/bin/` is the one that does.) Flashing is the owner's, nobody else flashes the device. Opening the serial port resets the ESP32, which is the USB bridge's habit and not a fault; read the first lines with `pio device monitor -e device`.
 
-The card stays as it is. If you replace it, it is FAT32 with an MBR partition table (`diskutil eraseDisk FAT32 PHONEPLUS MBRFormat /dev/diskN` on macOS) and the saved files go into it.
+The card stays as it is. If you replace it, it is FAT32 with an MBR partition table (`diskutil eraseDisk FAT32 PHONEOS MBRFormat /dev/diskN` on macOS) and the saved files go into it.
 
 ## 4. What changes at the first start
 

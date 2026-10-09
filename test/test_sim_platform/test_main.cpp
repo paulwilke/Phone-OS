@@ -26,7 +26,7 @@ namespace {
 namespace fs = std::filesystem;
 
 struct DirectoryStoreRig {
-  fs::path dir = fs::temp_directory_path() / ("phoneplus-dirstore-" + std::to_string(::getpid()) + "-" + std::to_string(counter()++));
+  fs::path dir = fs::temp_directory_path() / ("phone-os-dirstore-" + std::to_string(::getpid()) + "-" + std::to_string(counter()++));
   sim::DirectoryStore impl;
   DirectoryStoreRig() : impl((fs::create_directories(dir), dir)) {}
   ~DirectoryStoreRig() {

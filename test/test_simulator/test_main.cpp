@@ -26,7 +26,7 @@ namespace {
 constexpr const char* kParentOne = "+491701111111";
 
 std::filesystem::path scratch(const std::string& name) {
-  const std::filesystem::path dir = std::filesystem::temp_directory_path() / ("phoneplus-sim-test-" + name);
+  const std::filesystem::path dir = std::filesystem::temp_directory_path() / ("phone-os-sim-test-" + name);
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   return dir;
@@ -554,6 +554,24 @@ void test_a_work_directory_that_is_not_the_simulators_is_never_emptied() {
   TEST_ASSERT_TRUE(std::filesystem::exists(work / "precious.txt"));
 }
 
+// A work directory a simulator of 4.1.1 or before made carries the mark of the project's old name: it is still the
+// simulator's, so it is emptied and gets the new mark, instead of being refused like a stranger's.
+void test_a_work_directory_of_an_earlier_simulator_is_still_emptied_and_marked_anew() {
+  const std::filesystem::path work = scratch("earlier");
+  std::ofstream(work / ".phoneplus-sim") << "made by an earlier simulator\n";
+  std::filesystem::create_directories(work / "card");
+  std::ofstream(work / "card" / "stale.txt") << "left over";
+  sim::Options o;
+  o.workDir = work.string();
+  o.webPort = 0;
+  std::ostringstream out;
+  sim::Simulator s(o, out);
+  TEST_ASSERT_TRUE_MESSAGE(s.ok(), s.error().c_str());
+  TEST_ASSERT_FALSE(std::filesystem::exists(work / "card" / "stale.txt"));
+  TEST_ASSERT_TRUE(std::filesystem::exists(work / ".phone-os-sim"));
+  TEST_ASSERT_FALSE(std::filesystem::exists(work / ".phoneplus-sim"));
+}
+
 void test_a_work_directory_that_is_holds_or_lies_in_the_data_is_refused() {
   const std::filesystem::path data = scratch("holds");
   std::filesystem::create_directories(data / "config");
@@ -828,6 +846,7 @@ int main() {
   RUN_TEST(test_the_card_is_a_copy_and_the_data_directory_is_never_written);
   RUN_TEST(test_a_fresh_start_forgets_what_the_last_one_saved_unless_the_card_is_used_in_place);
   RUN_TEST(test_a_work_directory_that_is_not_the_simulators_is_never_emptied);
+  RUN_TEST(test_a_work_directory_of_an_earlier_simulator_is_still_emptied_and_marked_anew);
   RUN_TEST(test_a_work_directory_that_is_holds_or_lies_in_the_data_is_refused);
   RUN_TEST(test_in_place_needs_a_data_directory);
   RUN_TEST(test_the_smoke_script_runs_through_the_real_wiring_and_matches_its_pictures);

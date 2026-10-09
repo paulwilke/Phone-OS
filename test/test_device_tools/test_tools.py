@@ -217,9 +217,9 @@ except SystemExit:
 
 check("the tool has a help text", "settings.toml" in deviceconfig.build_parser().format_help())
 
-raw = webbridge.build_request("PUT", "/api/settings", {"authorization": "Basic x", "x-phoneplus": "1", "cookie": "no"}, b"{}")
+raw = webbridge.build_request("PUT", "/api/settings", {"authorization": "Basic x", "x-phone-os": "1", "cookie": "no"}, b"{}")
 check("the bridge forwards only the headers that matter and sets the length",
-      raw == b"PUT /api/settings HTTP/1.1\r\nauthorization: Basic x\r\nx-phoneplus: 1\r\ncontent-length: 2\r\n\r\n{}", raw)
+      raw == b"PUT /api/settings HTTP/1.1\r\nauthorization: Basic x\r\nx-phone-os: 1\r\ncontent-length: 2\r\n\r\n{}", raw)
 check("a request that does not fit the device is refused", webbridge.build_request("PUT", "/x", {}, b"x" * 9300) is None)
 check("the largest request that fits is forwarded", webbridge.build_request("GET", "/", {}, b"") is not None)
 

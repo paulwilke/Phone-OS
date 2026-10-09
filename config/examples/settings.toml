@@ -42,7 +42,7 @@ level = "all"  # restart
 auto_off_minutes = 10  # restart
 
 [radio]
-name = "phoneplus"  # restart
+name = "phone-os"  # restart
 peer = ""  # restart
 
 [home]

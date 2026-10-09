@@ -156,7 +156,7 @@ config.web_password.label = "Web password"
 config.web_password.help = "Password for the web interface. At least 4 characters. Without a password the web interface stays locked."
 
 # Web interface (browser-only; not shown on the device display)
-web.title = "PhonePlus"
+web.title = "Phone OS"
 web.tab.status = "Status"
 web.tab.basics = "Basics"
 web.tab.school-time = "School time"

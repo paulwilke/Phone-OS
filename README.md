@@ -1,12 +1,13 @@
-# PhonePlus
+# Phone OS
 
-A distraction-free emergency phone for children, built for the LilyGO T-Deck Pro MAX
-(ESP32-S3, e-ink display, 4G modem, GPS): call the parents, read and write SMS, send the
-position at the press of a button, and nothing else. Only the people in the contact book can
-call or write to the child. The interface is multilingual: English, German and French ship
-with it, and anyone can add a language by writing one text file.
+Phone OS, an open firmware for the LilyGO T-Deck Pro MAX (ESP32-S3, e-ink display, 4G modem,
+GPS). It makes the device a distraction-free emergency phone, for a child for example: call
+the parents, read and write SMS, send the position at the press of a button, and nothing
+else. Only the people in the contact book can call or write to the child. The interface is
+multilingual: English, German and French ship with it, and anyone can add a language by
+writing one text file.
 
-This is version 4.1.1 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.1.md](docs/release-4.1.md)); the LoRa radio is not part of it.
+This is version 4.1.2 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.1.md](docs/release-4.1.md)); the LoRa radio is not part of it.
 
 Parents start with the user's guide: [English](docs/user-guide.md),
 [Deutsch](docs/de/benutzerhandbuch.md), [Français](docs/fr/guide-utilisateur.md).

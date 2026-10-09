@@ -9,7 +9,7 @@ native = "Français"
 plural = "zero-one-other"
 
 [strings]
-demo.title            = "Démonstration Phoneplus par clics"
+demo.title            = "Phone OS : démonstration par clics"
 demo.intro            = "Appuie sur les touches sous l'image, comme sur l'appareil."
 demo.language         = "Langue"
 demo.key-up           = "Haut"

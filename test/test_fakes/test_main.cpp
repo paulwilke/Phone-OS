@@ -430,7 +430,7 @@ void test_wifi_station_stays_connecting_until_told() {
   w.finishConnecting(false);
   TEST_ASSERT_TRUE(w.state() == WifiState::Failed);
   w.failAccessPoint(true);
-  TEST_ASSERT_FALSE(w.startAccessPoint("PhonePlus", "12345678"));
+  TEST_ASSERT_FALSE(w.startAccessPoint("phone-os", "12345678"));
   TEST_ASSERT_TRUE(w.state() == WifiState::Off);
 }
 

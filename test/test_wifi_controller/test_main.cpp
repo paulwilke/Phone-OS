@@ -59,7 +59,7 @@ void test_the_settings_are_validated() {
   TEST_ASSERT_TRUE(s.setApPassword(""));                           // clearing it is allowed
   TEST_ASSERT_EQUAL_STRING("", s.apPassword.c_str());
   TEST_ASSERT_FALSE(s.setApSsid(""));
-  TEST_ASSERT_EQUAL_STRING("phoneplus", s.apSsid.c_str());
+  TEST_ASSERT_EQUAL_STRING("phone-os", s.apSsid.c_str());
   TEST_ASSERT_TRUE(s.setApSsid("mine"));
 
   TEST_ASSERT_TRUE(s.setAutoOffMinutes(1));

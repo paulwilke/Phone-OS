@@ -264,7 +264,7 @@ void WebApi::handle(const http::Request& req, http::Response& res, uint32_t now)
   if (WifiController* wifi = app_.wifiController()) wifi->noteActivity(now);
 
   if (!get && strcmp(req.custom, "1") != 0)
-    return jsonError(res, 403, "Header X-Phoneplus: 1 missing");
+    return jsonError(res, 403, "Header X-Phone-OS: 1 missing");
 
   const char* p = req.path + 4;  // "/..."
 
@@ -612,7 +612,7 @@ void WebApi::backup(http::Response& res) {
   res.contentType = "application/zip";
   res.body = archive_.data();
   res.length = archive_.size();
-  res.extraHeader = "Content-Disposition: attachment; filename=\"phoneplus-backup.zip\"";
+  res.extraHeader = "Content-Disposition: attachment; filename=\"phone-os-backup.zip\"";
 }
 
 // The checks of 4.0's restore, for the archive: the request's size (http::kMaxBody), each file's size
@@ -656,7 +656,7 @@ void WebApi::restoreJson(const http::Request& req, http::Response& res) {
   char format[48];
   if (!web::json::getString(req.body, req.contentLength, "format", format, sizeof(format)) ||
       strcmp(format, "phoneplus-backup-2") != 0)
-    return jsonError(res, 422, "Not a phoneplus backup");
+    return jsonError(res, 422, "Not a backup of this firmware");
 
   web::json::getString(req.body, req.contentLength, "settings.toml", scratch_,  sizeof(scratch_));
   web::json::getString(req.body, req.contentLength, "contacts.toml", scratch2_, sizeof(scratch2_));

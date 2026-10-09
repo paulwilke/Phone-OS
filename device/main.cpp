@@ -119,6 +119,7 @@ std::unique_ptr<boot::Runtime> runtime;
 int batteryMah = board::kDefaultBatteryMah;
 bool powerOffLogged = false;
 const char* const kBoardName = "T-Deck Pro MAX";   // on the status page and the splash picture
+const char* const kProjectName = "Phone OS";   // on the splash picture; never shortened, it wraps
 
 // What the console asks of the device.
 class Host : public board::ConsoleHost {
@@ -185,7 +186,8 @@ void powerOff() {
     eventLog.log("Power: switching off");
   }
   display.beginFrame();
-  ui::drawSplash(display, kBoardName, "Version " + firmwareVersion, runtime->translator().get("power.switched-off"));
+  ui::drawSplash(display, kProjectName, kBoardName, "Version " + firmwareVersion,
+                 runtime->translator().get("power.switched-off"));
   display.endFrame();
   modem->shutdown();
   for (int i = 0; i < 200 && modem->state() != ModemState::Off; ++i) {
@@ -239,7 +241,7 @@ void setup() {
   display.begin();
   // The device's own picture while the rest starts, as 3.x showed it; no words, the catalogs come next.
   display.beginFrame();
-  ui::drawSplash(display, kBoardName, "Version " + shipped::version());
+  ui::drawSplash(display, kProjectName, kBoardName, "Version " + shipped::version());
   display.endFrame();
 
   shipped::load(translator, [](const std::string& line) { eventLog.log(line); });

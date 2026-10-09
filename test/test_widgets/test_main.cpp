@@ -1309,10 +1309,10 @@ void test_the_current_option_row_has_a_second_outline_in_both_colours() {
 void test_the_splash_and_the_switched_off_picture_stay_on_the_screen_in_every_language() {
   languages::forEach([](const std::string& language, Translator& t) {
     FrameBuffer fb;
-    drawSplash(fb, "T-Deck Pro MAX", "Version 4.1.1", t.get("power.switched-off"));
+    drawSplash(fb, "Phone OS", "T-Deck Pro MAX", "Version 4.1.2", t.get("power.switched-off"));
     TEST_ASSERT_FALSE_MESSAGE(fb.clipped(), clips(language, fb).c_str());
-    TEST_ASSERT_TRUE(shows::text(fb, "PhonePlus", FontSize::Large));
-    TEST_ASSERT_TRUE(shows::text(fb, "Version 4.1.1", FontSize::Small));
+    TEST_ASSERT_TRUE(shows::text(fb, "Phone OS", FontSize::Large));
+    TEST_ASSERT_TRUE(shows::text(fb, "Version 4.1.2", FontSize::Small));
     TEST_ASSERT_TRUE_MESSAGE(shows::text(fb, t.get("power.switched-off"), FontSize::Text), language.c_str());
     languages::expectPicture(fb, "splash_off", language, Rect{0, 0, kScreenWidth, kScreenHeight});
   });
@@ -1320,7 +1320,7 @@ void test_the_splash_and_the_switched_off_picture_stay_on_the_screen_in_every_la
   t.select("de");
   TEST_ASSERT_EQUAL_STRING("Ausgeschaltet", t.get("power.switched-off").c_str());
   FrameBuffer start;
-  drawSplash(start, "T-Deck Pro MAX", "Version 4.1.1");                // at start: no line, no words
+  drawSplash(start, "Phone OS", "T-Deck Pro MAX", "Version 4.1.2");  // at start: no line, no words
   TEST_ASSERT_TRUE(shows::text(start, "T-Deck Pro MAX", FontSize::Text));
 }
 

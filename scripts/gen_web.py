@@ -223,7 +223,7 @@ var SCHEMA = {form_json};
 // catalog: the login overlay and its messages use these English words, and the real catalog is
 // fetched only after a successful login.
 var FALLBACK = {{
-  'web.title': 'PhonePlus',
+  'web.title': 'Phone OS',
   'web.auth.title': 'Password',
   'web.auth.password': 'Web password',
   'web.auth.enter': 'Enter',
@@ -248,7 +248,7 @@ function api(method, path, body) {{
   var opts = {{ method: method, headers: {{ Authorization: authHeader }} }};
   if (body !== undefined) {{
     opts.headers['Content-Type'] = 'application/json';
-    opts.headers['X-Phoneplus'] = '1';
+    opts.headers['X-Phone-OS'] = '1';
     opts.body = JSON.stringify(body);
   }}
   return fetch(path, opts);
@@ -748,7 +748,7 @@ function loadFiles(dir) {{
       var content = ev.target.result;
       var path = joinPath(filesDir, file.name);
       var opts = {{ method: 'PUT', headers: {{ Authorization: authHeader,
-          'Content-Type': 'text/plain', 'X-Phoneplus': '1' }}, body: content }};
+          'Content-Type': 'text/plain', 'X-Phone-OS': '1' }}, body: content }};
       fetch('/api/file?path=' + encodeURIComponent(path), opts).then(filesOk)
         .then(function() {{ loadFiles(); uploadInput.value = ''; }}).catch(filesFailed);
     }};
@@ -796,7 +796,7 @@ function showEditor(path, text) {{
   editorDiv.hidden = false;
   document.getElementById('file-editor-save').onclick = function() {{
     var opts = {{ method: 'PUT', headers: {{ Authorization: authHeader,
-        'Content-Type': 'text/plain', 'X-Phoneplus': '1' }},
+        'Content-Type': 'text/plain', 'X-Phone-OS': '1' }},
         body: textArea.value }};
     fetch('/api/file?path=' + encodeURIComponent(path), opts).then(filesOk)
       .then(function() {{ editorDiv.hidden = true; loadFiles(); }}).catch(filesFailed);
@@ -843,7 +843,7 @@ document.getElementById('backup-export').addEventListener('click', function() {{
   }}).then(function(blob) {{
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'phoneplus-backup.zip'; a.click();
+    a.download = 'phone-os-backup.zip'; a.click();
   }}).catch(function(e) {{ status.textContent = t('web.form.error') + ': ' + e.message; }});
 }});
 document.getElementById('backup-restore').addEventListener('click', function() {{
@@ -852,7 +852,7 @@ document.getElementById('backup-restore').addEventListener('click', function() {
   var status = document.getElementById('backup-status');
   var reader = new FileReader();
   reader.onload = function(e) {{
-    var opts = {{ method: 'POST', headers: {{ Authorization: authHeader, 'X-Phoneplus': '1',
+    var opts = {{ method: 'POST', headers: {{ Authorization: authHeader, 'X-Phone-OS': '1',
         'Content-Type': 'application/zip' }}, body: e.target.result }};
     fetch('/api/restore', opts).then(function(r) {{ return r.json(); }}).then(function(d) {{
       status.textContent = d.ok ? t('web.backup.restored') : (t('web.form.error') + ': ' + (d.error || ''));
@@ -973,7 +973,7 @@ function init(state) {{
         "<head>",
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
-        "<title>PhonePlus</title>",
+        "<title>Phone OS</title>",
         f"<style>{css}</style>",
         "</head>",
         "<body>",

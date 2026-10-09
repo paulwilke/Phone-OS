@@ -188,13 +188,13 @@ Takes effect on next start.
 
 | Key | Type | Default | Required | Apply |
 |-----|------|---------|----------|-------|
-| `name` | string | `phoneplus` | no | restart |
+| `name` | string | `phone-os` | no | restart |
 | `peer` | string | `—` | no | restart |
 
 #### `name`
 
 String, at most 32 characters.
-Default: `phoneplus`.
+Default: `phone-os`.
 Takes effect on next start.
 
 #### `peer`
@@ -383,13 +383,13 @@ Takes effect on next start.
 
 | Key | Type | Default | Required | Apply |
 |-----|------|---------|----------|-------|
-| `ssid` | string | `phoneplus` | no | restart |
+| `ssid` | string | `phone-os` | no | restart |
 | `password` | string | `—` | no | restart |
 
 #### `ssid`
 
 String, at most 32 characters.
-Default: `phoneplus`.
+Default: `phone-os`.
 Takes effect on next start.
 
 #### `password`

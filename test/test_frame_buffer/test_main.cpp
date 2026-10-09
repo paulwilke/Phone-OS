@@ -16,7 +16,7 @@ void tearDown() {}
 namespace {
 
 std::string scratchDirectory(const char* name) {
-  const std::string dir = std::string("/tmp/phoneplus-golden-test-") + name;
+  const std::string dir = std::string("/tmp/phone-os-golden-test-") + name;
   std::filesystem::remove_all(dir);
   return dir;
 }

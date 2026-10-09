@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
   if (!script.empty() && !interactive) return 0;
   if (simulator.quitRequested()) return 0;
 
-#if PHONEPLUS_SIM_SDL
+#if PHONE_OS_SIM_SDL
   sim::SdlWindow window(scale);
   const bool windowed = !headless && window.ok();
   if (!headless && !windowed) std::cerr << "warning: no window could be opened, the console only\n";
@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
 #endif
 
   Terminal terminal;
-  std::cout << "phoneplus simulator: type help\n";
+  std::cout << "Phone OS simulator: type help\n";
   auto last = std::chrono::steady_clock::now();
   while (!simulator.quitRequested()) {
     std::string line;
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count();
     last = now;
     simulator.advance(static_cast<uint64_t>(elapsed) * simulator.lapse());
-#if PHONEPLUS_SIM_SDL
+#if PHONE_OS_SIM_SDL
     if (windowed) {
       if (!window.pump(simulator)) break;
       window.present(simulator.panel(), simulator.nowMs());

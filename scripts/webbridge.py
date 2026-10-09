@@ -6,7 +6,7 @@
 
 A small web server on this computer (127.0.0.1 only) forwards every browser request through the USB console
 (`CONFIG WEB`) to the device. The device runs the same checks as over Wi-Fi: the page, the password
-(web_password in secrets.toml), the lock-out after wrong passwords and the X-Phoneplus header. What the page
+(web_password in secrets.toml), the lock-out after wrong passwords and the X-Phone-OS header. What the page
 shows is the device's real configuration. The cable replaces the transport and nothing else.
 
 The serial port is exclusive: while the bridge runs, deviceconfig.py cannot talk to the device. Stop with
@@ -25,7 +25,7 @@ import threading
 import time
 
 MAX_REQUEST = 9300  # the head and the largest body the device's parser accepts
-FORWARD = ("authorization", "x-phoneplus", "content-type")
+FORWARD = ("authorization", "x-phone-os", "content-type")
 
 
 def find_port():

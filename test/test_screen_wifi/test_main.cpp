@@ -96,7 +96,7 @@ void test_the_access_point_shows_what_somebody_needs_to_join_it() {
   TEST_ASSERT_TRUE(page.rig.core.state().wifiPhase == WifiPhase::AccessPoint);
   TEST_ASSERT_TRUE(page.marked(1, true));
   TEST_ASSERT_FALSE(page.marked(2));
-  TEST_ASSERT_TRUE(page.says("Network: phoneplus"));
+  TEST_ASSERT_TRUE(page.says("Network: phone-os"));
   TEST_ASSERT_TRUE(page.says("Password: 12345678"));                    // only the device's screen shows it
   TEST_ASSERT_TRUE(page.says("Page: http://192.168.4.1"));
   TEST_ASSERT_TRUE(page.says("Off in 10 min"));

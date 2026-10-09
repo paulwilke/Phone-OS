@@ -1,12 +1,12 @@
 #pragma once
 
-// The simulator's window, built only with -DPHONEPLUS_SIM_SDL=1 (environment `sim-sdl`). It shows
+// The simulator's window, built only with -DPHONE_OS_SIM_SDL=1 (environment `sim-sdl`). It shows
 // what the panel shows, with the refresh made visible: a partial refresh keeps the old picture on
 // show until it is done, a full refresh flashes. The Mac keyboard is the device's keyboard (arrows,
 // Enter, Backspace, F1 / F2 / F3 for the three keys under the screen, typed characters as text) and
 // a click is a touch. Nothing in here decides anything: it hands keys to the Simulator.
 
-#if PHONEPLUS_SIM_SDL
+#if PHONE_OS_SIM_SDL
 
 #include <SDL.h>
 
@@ -22,7 +22,7 @@ class SdlWindow {
 public:
   explicit SdlWindow(int scale) : scale_(scale) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) return;
-    window_ = SDL_CreateWindow("phoneplus simulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    window_ = SDL_CreateWindow("Phone OS simulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                ui::kScreenWidth * scale_, ui::kScreenHeight * scale_, 0);
     if (!window_) return;
     renderer_ = SDL_CreateRenderer(window_, -1, 0);
@@ -110,4 +110,4 @@ private:
 
 }  // namespace sim
 
-#endif  // PHONEPLUS_SIM_SDL
+#endif  // PHONE_OS_SIM_SDL

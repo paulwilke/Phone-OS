@@ -1,6 +1,6 @@
 # Third-party material
 
-The repository is under the MIT licence, copyright "PhonePlus contributors" ([LICENSE](LICENSE)). It stores one third-party work, the Adobe Helvetica bitmap fonts. Everything else listed here is fetched by a build or read for facts and is not stored.
+The repository is under the MIT licence, copyright "Phone OS contributors" ([LICENSE](LICENSE)). It stores one third-party work, the Adobe Helvetica bitmap fonts. Everything else listed here is fetched by a build or read for facts and is not stored.
 
 | Tool | Licence | Used for |
 |---|---|---|

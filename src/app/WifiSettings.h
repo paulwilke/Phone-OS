@@ -31,7 +31,7 @@ struct WifiSettings {
   };
 
   std::vector<Network> networks;
-  std::string apSsid = "phoneplus";
+  std::string apSsid = "phone-os";
   // Empty: a new random password at every start of the access point.
   std::string apPassword;
   uint32_t autoOffMinutes = 10;

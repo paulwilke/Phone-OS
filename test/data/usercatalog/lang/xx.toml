@@ -323,7 +323,7 @@ config.sim_pin.help                   = "4-8 digit PIN for the SIM card. Tried o
 config.web_password.label             = "Web password"
 config.web_password.help              = "Password for the web interface. At least 4 characters. Without a password the web interface stays locked."
 
-web.title                = "PhonePlus"
+web.title                = "Phone OS"
 web.tab.status           = "Status"
 web.tab.basics           = "Basics"
 web.tab.school-time      = "School time"

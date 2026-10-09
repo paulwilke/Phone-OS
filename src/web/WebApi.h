@@ -7,7 +7,7 @@
 //   1. Every /api/ route requires Basic-Auth with the password from
 //      /config/secrets.toml. Without a stored password the API is locked.
 //   2. Five wrong passwords in a row lock everyone out for one minute.
-//   3. Mutating requests (PUT, POST, DELETE) require the header X-Phoneplus: 1.
+//   3. Mutating requests (PUT, POST, DELETE) require the header X-Phone-OS: 1.
 //      A foreign page cannot set this header (no CORS), blocking CSRF.
 //   4. /api/secrets returns the whole file including all passwords; only for
 //      the authenticated parent (deliberate trade-off: 2026-10-01).

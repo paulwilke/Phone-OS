@@ -91,10 +91,10 @@ void test_a_hash_inside_a_string_is_not_a_comment() {
 }
 
 void test_tables_and_nesting() {
-  Doc x("[features]\nradio = true\n[wifi.access_point]\nssid = \"phoneplus\"\n");
+  Doc x("[features]\nradio = true\n[wifi.access_point]\nssid = \"phone-os\"\n");
   TEST_ASSERT_FALSE(x.err.failed());
   TEST_ASSERT_TRUE(x["features"]->find("radio")->boolean());
-  TEST_ASSERT_EQUAL_STRING("phoneplus", str(x["wifi"]->find("access_point")->find("ssid")).c_str());
+  TEST_ASSERT_EQUAL_STRING("phone-os", str(x["wifi"]->find("access_point")->find("ssid")).c_str());
 }
 
 void test_spaces_around_header_names_are_fine() {

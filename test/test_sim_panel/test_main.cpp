@@ -268,7 +268,7 @@ void test_the_png_is_the_picture_on_the_panel() {
 void test_a_png_is_written_to_a_file_and_an_unwritable_path_is_reported() {
   Panel p;
   p.frame();
-  const std::string path = (std::filesystem::temp_directory_path() / "phoneplus-sim-panel-test.png").string();
+  const std::string path = (std::filesystem::temp_directory_path() / "phone-os-sim-panel-test.png").string();
   TEST_ASSERT_TRUE(p.panel.writePng(path));
   FILE* file = std::fopen(path.c_str(), "rb");
   TEST_ASSERT_NOT_NULL(file);

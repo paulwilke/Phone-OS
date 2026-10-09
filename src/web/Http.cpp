@@ -122,7 +122,7 @@ void Parser::parseHead() {
       haveLength = true;
     } else if (const char* v = headerValue(line, n, "Authorization")) {
       copyTo(req_.authorization, sizeof(req_.authorization), v, (size_t)(e - v));
-    } else if (const char* v = headerValue(line, n, "X-Phoneplus")) {
+    } else if (const char* v = headerValue(line, n, "X-Phone-OS")) {
       copyTo(req_.custom, sizeof(req_.custom), v, (size_t)(e - v));
     } else if (const char* v = headerValue(line, n, "Content-Type")) {
       copyTo(req_.contentType, sizeof(req_.contentType), v, (size_t)(e - v));

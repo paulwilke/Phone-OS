@@ -129,7 +129,7 @@ inline constexpr KeyDef kKeys[] = {
      "config.wifi.auto_off_minutes.label", "config.wifi.auto_off_minutes.help", "wifi.autoOffMinutes"},
     // settings / [radio]
     {"settings", "radio", "name", KeyType::String, false, false, Apply::Restart,
-     "phoneplus", 0, 32, "",
+     "phone-os", 0, 32, "",
      "config.radio.name.label", "config.radio.name.help", "radioName"},
     {"settings", "radio", "peer", KeyType::String, false, false, Apply::Restart,
      "", 0, 32, "",
@@ -204,7 +204,7 @@ inline constexpr KeyDef kKeys[] = {
      "config.web_password.label", "config.web_password.help", ""},
     // secrets / [wifi.access_point]
     {"secrets", "wifi.access_point", "ssid", KeyType::String, false, false, Apply::Restart,
-     "phoneplus", 0, 32, "",
+     "phone-os", 0, 32, "",
      "config.wifi.access_point.ssid.label", "config.wifi.access_point.ssid.help", "wifi.apSsid"},
     {"secrets", "wifi.access_point", "password", KeyType::String, false, true, Apply::Restart,
      "", 0, 63, "",

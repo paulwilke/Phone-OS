@@ -15,7 +15,7 @@ The idle time is `auto_off_minutes` (default 10). The page has a button "keep Wi
 | Setting | Rule |
 |---|---|
 | networks | at most 4; name 1 … 32 bytes; password empty (an open network) or 8 … 63 characters |
-| access point name | 1 … 32 bytes, default `phoneplus` |
+| access point name | 1 … 32 bytes, default `phone-os` |
 | access point password | empty or 8 … 63 characters; empty means a new random one at every start |
 | idle minutes | clamped to 1 … 120, default 10 |
 

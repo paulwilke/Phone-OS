@@ -2,6 +2,16 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.2
+
+The project is called **Phone OS**: generic words that nobody can register as a trade mark ("PhonePlus" is registered by others). Only names change, no behaviour; what the parents notice is in [docs/release-4.1.md](docs/release-4.1.md).
+
+- **The splash picture** says "Phone OS". Host-tested; not verified on the device.
+- **The parents' page** is titled "Phone OS", and every change it sends carries the header `X-Phone-OS: 1` instead of `X-Phoneplus: 1`; the device refuses a change without the new header. A page the browser kept from an earlier version must be reloaded once. Host-tested; not verified on the device.
+- **Backup** saves `phone-os-backup.zip`; the 4.0 bundle is still read. Host-tested.
+- **The default network names are `phone-os`**: the access point, the host name in the home network and the radio name. A name already saved on the card stays. Host-tested; not verified on the device.
+- **The licence** names "Phone OS contributors"; the MIT text is unchanged.
+
 ## 4.1.1
 
 - **An SOS without a position carries the last known one**, said as such and with its age ("No GPS. LAST KNOWN position, 25 min ago", "LETZTE BEKANNTE Position vor 25 Min."), so that nobody takes it for the present place. Seen on the device 2026-10-08: an SOS from inside a house went out without any place. The last position is kept while the device runs (from the start-up fix, an SOS, a query, the GPS page), not across switching off. Host-tested; not verified on the device.

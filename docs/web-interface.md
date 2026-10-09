@@ -72,7 +72,7 @@ What only the device can show: whether the log and contacts tabs load now, how m
 | GET | `/api/file` | Download a file (query: `path=`) |
 | PUT | `/api/file` | Upload or overwrite a file (query: `path=`) |
 | DELETE | `/api/file` | Delete a file (query: `path=`) |
-| GET | `/api/backup` | A ZIP archive (`phoneplus-backup.zip`) of `settings.toml` and `contacts.toml` in a folder `config` of the archive, as the card has them, stored without compression (`src/web/Zip.{h,cpp}`); `secrets.toml` is never in it (rule 5) |
+| GET | `/api/backup` | A ZIP archive (`phone-os-backup.zip`) of `settings.toml` and `contacts.toml` in a folder `config` of the archive, as the card has them, stored without compression (`src/web/Zip.{h,cpp}`); `secrets.toml` is never in it (rule 5) |
 | PUT, POST | `/api/restore` | Restore such an archive, or the JSON bundle of 4.0 (read in 4.1 so that a backup of 4.0 can be restored once). Refused with 422 and nothing written: not a ZIP file, a compressed or encrypted entry (as the Mac's own "Compress" writes), a wrong checksum, a cut file, a file over 4096 bytes, any name but the two (`secrets.toml` included), a file twice, or a file the device would refuse at start. Every file is validated before the first is written, each through the card's safe write and logged (`WEB: /config/settings.toml written (632 bytes)`). The whole archive must fit one request body (8192 bytes, `http::kMaxBody`): two files of the full 4096 bytes do not, the usual ones (well under 1 KB each) do |
 | PUT | `/api/restart` | Ask the device to restart |
 | PUT, POST | `/api/wifi-off` | Ask Wi-Fi to switch off (done after the answer has gone out) |
@@ -88,7 +88,7 @@ What only the device can show: whether the log and contacts tabs load now, how m
 
 2. **Lockout after repeated failures.** Five consecutive wrong passwords (`kMaxFailures`) lock the API for sixty seconds (`kLockSeconds`). The counter resets on a correct password.
 
-3. **CSRF protection.** Mutating requests (PUT, POST, DELETE) must carry the header `X-Phoneplus: 1`. A cross-origin page cannot set a custom header, so the browser's same-origin policy blocks any site that tries to use a logged-in parent's session without their knowledge.
+3. **CSRF protection.** Mutating requests (PUT, POST, DELETE) must carry the header `X-Phone-OS: 1`. A cross-origin page cannot set a custom header, so the browser's same-origin policy blocks any site that tries to use a logged-in parent's session without their knowledge.
 
 4. **`/config/secrets.toml` cannot be deleted.** The `DELETE /api/file` route refuses any path that points to the secrets file. Deleting it would remove the password and unlock the API.
 

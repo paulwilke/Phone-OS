@@ -253,7 +253,7 @@ void test_a_success_resets_the_failure_count() {
 
 // ─── CSRF protection ─────────────────────────────────────────────────────────
 
-// Rule 3 counter-check: mutating requests without X-Phoneplus: 1 are rejected.
+// Rule 3 counter-check: mutating requests without X-Phone-OS: 1 are rejected.
 void test_changing_requests_need_the_custom_header() {
   Fixture f;
   TEST_ASSERT_EQUAL(403, f.call("PUT",    "/api/file?path=/config/x.txt", "x",  kAuth, false));
@@ -593,7 +593,7 @@ void test_the_backup_is_a_zip_archive_of_the_files_as_they_are() {
   TEST_ASSERT_EQUAL(200, f.get("/api/backup"));
   TEST_ASSERT_EQUAL_STRING("application/zip", f.res.contentType);
   TEST_ASSERT_TRUE(f.body.compare(0, 4, "PK\x03\x04") == 0);
-  TEST_ASSERT_TRUE(std::string(f.res.extraHeader).find("phoneplus-backup.zip") != std::string::npos);
+  TEST_ASSERT_TRUE(std::string(f.res.extraHeader).find("phone-os-backup.zip") != std::string::npos);
   std::vector<zip::Entry> entries;
   std::string why;
   TEST_ASSERT_TRUE(zip::read(f.body.data(), f.body.size(), 4096, 8, entries, why));
@@ -731,7 +731,7 @@ void test_the_button_keeps_wifi_on_behind_the_password_and_the_header_and_is_log
   Fixture f;
   f.app.setWifiMode(WifiMode::AccessPoint);
   TEST_ASSERT_EQUAL(401, f.call("POST", "/api/wifi-extend", "", nullptr, true, 500));
-  TEST_ASSERT_EQUAL(403, f.call("POST", "/api/wifi-extend", "", kAuth, false, 500));   // no X-Phoneplus header
+  TEST_ASSERT_EQUAL(403, f.call("POST", "/api/wifi-extend", "", kAuth, false, 500));   // no X-Phone-OS header
   TEST_ASSERT_EQUAL(404, f.call("GET", "/api/wifi-extend", "", kAuth, true, 500));     // a change is not a GET
   TEST_ASSERT_FALSE(f.log.contains("WEB: Wi-Fi kept on"));
   TEST_ASSERT_EQUAL(200, f.call("POST", "/api/wifi-extend", "", kAuth, true, 550));
@@ -747,7 +747,7 @@ void test_the_state_is_the_one_controllers_state() {
   f.app.setWifiMode(WifiMode::AccessPoint);
   TEST_ASSERT_EQUAL(200, f.get("/api/state"));
   TEST_ASSERT_TRUE(f.has("\"state\":\"access_point\""));
-  TEST_ASSERT_TRUE(f.has("\"ssid\":\"phoneplus\""));
+  TEST_ASSERT_TRUE(f.has("\"ssid\":\"phone-os\""));
   TEST_ASSERT_TRUE(f.has("\"address\":\"192.168.4.1\""));
   f.app.setWifiMode(WifiMode::Off);                                      // from the device's screen
   TEST_ASSERT_EQUAL(200, f.get("/api/state"));

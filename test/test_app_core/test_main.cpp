@@ -646,7 +646,7 @@ void test_the_state_tells_what_somebody_needs_to_join_the_wifi() {
   d.run(2);
   const AppCore::State s = d.core.state();
   TEST_ASSERT_TRUE(s.wifiPhase == WifiPhase::AccessPoint);
-  TEST_ASSERT_EQUAL_STRING("phoneplus", s.wifiSsid.c_str());
+  TEST_ASSERT_EQUAL_STRING("phone-os", s.wifiSsid.c_str());
   TEST_ASSERT_EQUAL_STRING("12345678", s.wifiPassword.c_str());      // the invented one: the screen reveals it
   TEST_ASSERT_TRUE(s.wifiAddress.size() > 0);
   TEST_ASSERT_TRUE(s.wifiSecondsLeft > 9 * 60 && s.wifiSecondsLeft <= 10 * 60);

@@ -8,7 +8,7 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 
 | Nr. | Schritt | Erwartung | Datum | Ergebnis |
 |---|---|---|---|---|
-| 1.1 | Neue Firmware aufspielen, Gerät startet | zuerst das Startbild "PhonePlus, T-Deck Pro MAX, Version ...", dann der Startbildschirm; Statusseite (Kachel **Status**) zeigt die neue Version | | |
+| 1.1 | Neue Firmware aufspielen, Gerät startet | zuerst das Startbild "Phone OS, T-Deck Pro MAX, Version ...", dann der Startbildschirm; Statusseite (Kachel **Status**) zeigt die neue Version | | |
 | 1.2 | Gleich nach dem Start auf die Statuszeile oben links sehen | "Verbinde ..." bis Netz und Anrufe bereit sind, kein Springen zwischen "Netz", "Kein Netz" und "Noch keine Anrufe" | | |
 | 1.3 | Etwa eine Minute warten | oben links der Netzbetreiber ("Telekom"), Kachel **Netz**: "IMS: ja" | | |
 | 1.4 | GPS-Anzeige oben | "GPS" nur in den ersten Minuten nach dem Start (Start-Fix) und während eines SOS, sonst nicht | | |
@@ -55,7 +55,7 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 | Nr. | Schritt | Erwartung | Datum | Ergebnis |
 |---|---|---|---|---|
 | 6.1 | Kachel **Option**, ganz nach unten | letztes Kästchen **Ausschalten**, am Kabel "erst USB abziehen" und nichts passiert | | |
-| 6.2 | Kabel ab, **Ausschalten** zweimal drücken | erst "noch einmal: aus", dann das Bild "PhonePlus ... Ausgeschaltet", dann ist das Gerät aus (Licht aus, keine Reaktion auf Tasten) | | |
+| 6.2 | Kabel ab, **Ausschalten** zweimal drücken | erst "noch einmal: aus", dann das Bild "Phone OS ... Ausgeschaltet", dann ist das Gerät aus (Licht aus, keine Reaktion auf Tasten) | | |
 | 6.3 | Mit der seitlichen Taste einschalten | Gerät startet wieder | | |
 
 ## 7. Schulzeit

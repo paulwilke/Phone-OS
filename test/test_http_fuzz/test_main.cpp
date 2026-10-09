@@ -28,10 +28,10 @@ struct Lcg {
 // Well-formed request fragments used to build truncated inputs.
 const char* kValidRequests[] = {
     "GET / HTTP/1.1\r\nHost: x\r\n\r\n",
-    "POST /api/settings HTTP/1.1\r\nContent-Length: 5\r\nX-Phoneplus: 1\r\n\r\nhello",
+    "POST /api/settings HTTP/1.1\r\nContent-Length: 5\r\nX-Phone-OS: 1\r\n\r\nhello",
     "PUT /api/file?path=/config/x.txt HTTP/1.1\r\n"
     "Authorization: Basic dXNlcjp0ZXN0LXBhc3N3b3JkLTE=\r\n"
-    "Content-Length: 3\r\nX-Phoneplus: 1\r\n\r\nabc",
+    "Content-Length: 3\r\nX-Phone-OS: 1\r\n\r\nabc",
     "DELETE /api/file HTTP/1.1\r\nHost: a\r\n\r\n",
 };
 

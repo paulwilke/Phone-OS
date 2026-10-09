@@ -1,6 +1,6 @@
 # Release 4.1
 
-Version 4.1.1 of PhonePlus (4.1.1: the last known position in an SOS without a position, the splash picture, the picture "Switched off"). It tidies the interface after the owner's test of 4.0 on the device (2026-10-07/08) and builds on 4.0.2. What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device each time, with a column for the date and the result, is [de/abnahmetest.md](de/abnahmetest.md). Everything about 4.0 that this page does not change ([release-4.0.md](release-4.0.md): no radio, no published binary, going back to 3.2) holds for 4.1 too.
+Version 4.1.2 of Phone OS (4.1.2: the new name; 4.1.1: the last known position in an SOS without a position, the splash picture, the picture "Switched off"). It tidies the interface after the owner's test of 4.0 on the device (2026-10-07/08) and builds on 4.0.2. What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device each time, with a column for the date and the result, is [de/abnahmetest.md](de/abnahmetest.md). Everything about 4.0 that this page does not change ([release-4.0.md](release-4.0.md): no radio, no published binary, going back to 3.2) holds for 4.1 too.
 
 ## What changes for the parents
 
@@ -10,7 +10,7 @@ Version 4.1.1 of PhonePlus (4.1.1: the last known position in an SOS without a p
 - **Who gets the SOS is ticked.** Each contact has a box **SOS**; the SOS goes to every ticked contact with the same text. Without any tick it goes to the first call button, as in 4.0.
 - **The home screen's second page** can be thinned out: each of its tiles has a box on the **Advanced** tab. Without the **Wi-Fi** tile the parents' page is still reached over the USB cable (`scripts/webbridge.py`).
 - **Files**: what a Mac leaves on the card is hidden (tick **Show hidden files** to see it), **Remove Mac leftovers** deletes its `._` files, and the Mac's folders are named for a computer to delete. `energy.log` and `firmware.txt` are marked as files of 3.2 that may go.
-- **Backup** saves `phoneplus-backup.zip` with the settings and the contacts exactly as they are (never the passwords), and **Restore** takes it back. Restoring did not work from the page of 4.0. A backup made with 4.0 can still be restored once.
+- **Backup** saves `phone-os-backup.zip` with the settings and the contacts exactly as they are (never the passwords), and **Restore** takes it back. Restoring did not work from the page of 4.0. A backup made with 4.0 can still be restored once.
 
 ## What changes for the child
 
@@ -19,6 +19,15 @@ Version 4.1.1 of PhonePlus (4.1.1: the last known position in an SOS without a p
 - **In a call**, **Hang up** is the whole key bar, and **Quieter** and **Louder** are buttons on the screen.
 - **Writing with free text**: the child types at once; while nothing is typed the right key is **Templates**, the ready-made messages.
 - **Options** has **Switch off** (press twice); with the cable plugged in it says to unplug first.
+
+## What changes with the new name (4.1.2)
+
+The project is called **Phone OS** from 4.1.2 on; it changes names, not behaviour.
+
+- **The splash picture** says "Phone OS".
+- **The parents' page** is titled "Phone OS". A page the browser kept from an earlier version has to be **reloaded once**: the device now asks every change for the header `X-Phone-OS` instead of `X-Phoneplus`, and the old page sends the old one, so its saves are refused with 403 until it is reloaded.
+- **Backup** saves `phone-os-backup.zip`; a backup saved by 4.1.0 or 4.1.1 under the old file name is restored as before.
+- **The default network names** are `phone-os`: the device's own Wi-Fi (`wifi.access_point.ssid`), its name in the home network (the host name) and its name in the radio network (`radio.name`). **A name already saved on the card stays as it is**: a card of 3.2 or 4.x that holds `ssid = "phoneplus"` keeps that name. Only a card without the key gets the new default.
 
 ## What was checked, and where
 

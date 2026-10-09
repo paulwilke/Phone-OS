@@ -8,7 +8,7 @@ native = "English"
 plural = "one-other"
 
 [strings]
-demo.title            = "Phoneplus click-through demo"
+demo.title            = "Phone OS: click-through demo"
 demo.intro            = "Press the keys under the picture, as on the device."
 demo.language         = "Language"
 demo.key-up           = "Up"

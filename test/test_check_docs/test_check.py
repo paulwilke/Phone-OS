@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Counter-checks of five rules of scripts/check_docs.py: the user's guide and its two translations must have the
+"""Counter-checks of six rules of scripts/check_docs.py: the user's guide and its two translations must have the
 same headings in the same order, every document of docs/ must be linked from docs/README.md (with the list of open
 work, docs/open-points.md, among them), VERSION, the newest heading of CHANGELOG.md and the release notes
-docs/release-<major>.<minor>.md must agree, every Python file must compile, and a Python or Node test must be in
-test_ignore. The check must say so when a rule is broken. Runs the script on small trees built on the fly (--root);
+docs/release-<major>.<minor>.md must agree, every Python file must compile, a Python or Node test must be in
+test_ignore, and the old name of the project stays only where scripts/check_docs.py lists it. The check must say so when a rule is broken. Runs the script on small trees built on the fly (--root);
 the other rules of the script report on those trees too, so the cases look only for the findings of the rule they test.
 
     python3 test/test_check_docs/test_check.py
@@ -139,8 +139,46 @@ IGNORE_CASES = [
 ]
 
 
+def run_name(files):
+    with tempfile.TemporaryDirectory() as root:
+        for rel, text in files.items():
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        p = subprocess.run([sys.executable, SCRIPT, "--root", root], capture_output=True, text=True)
+        return [l for l in p.stdout.split("\n") if "old name of the project" in l]
+
+
+OLD = "Phone" + "Plus"   # spelt apart, so that this file does not carry the old name itself
+
+NAME_CASES = [
+    ("the new name passes", {"README.md": "# Phone OS\n", "LICENSE": "Copyright (c) 2026 Phone OS contributors\n"}, []),
+    ("the old name in a document is found", {"README.md": "# " + OLD + "\n"}, ["README.md:1"]),
+    ("the old name in the licence is found", {"LICENSE": "Copyright (c) 2026 " + OLD + " contributors\n"}, ["LICENSE:1"]),
+    ("the old name in any spelling in code is found", {"src/a.cpp": "// " + OLD.upper() + "\nint " + OLD.lower() + "_x;\n"},
+     ["src/a.cpp:1", "src/a.cpp:2"]),
+    ("the old header is found", {"src/web/b.h": "// X-" + OLD.capitalize() + ": 1\n"}, ["src/web/b.h:1"]),
+    ("the mark of an earlier simulator directory passes", {"sim/s.h": "work / \"." + OLD.lower() + "-sim\";\n"}, []),
+    ("the format name of a 4.0 backup passes", {"src/web/c.cpp": "strcmp(f, \"" + OLD.lower() + "-backup-2\")\n"}, []),
+    ("but the old name beside it on the same line is found", {"src/web/c.cpp": "strcmp(f, \"" + OLD.lower() + "-backup-2\") // " + OLD + "\n"},
+     ["src/web/c.cpp:1"]),
+    ("the changelog and a card of 3.2 may keep it", {"CHANGELOG.md": "## 4.0.0\n\n" + OLD + "\n",
+                                                     "test/data/card-3.2/config/secrets.toml": "ssid = \"" + OLD.lower() + "\"\n"}, []),
+    ("a card of another version may not", {"test/data/card-4/config/secrets.toml": "ssid = \"" + OLD.lower() + "\"\n"},
+     ["test/data/card-4/config/secrets.toml:1"]),
+]
+
+
 def main():
     failed = 0
+    for name, files, needles in NAME_CASES:
+        got = run_name(files)
+        ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)
+        print(("ok   " if ok else "FAIL ") + name)
+        if not ok:
+            failed += 1
+            print("\n".join(got))
     for name, files, needles in IGNORE_CASES:
         got = [g + "\n" for g in run_ignore(files)]
         ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)

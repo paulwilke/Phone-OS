@@ -16,7 +16,7 @@ void tearDown() {}
 
 void test_a_refused_start_does_not_touch_the_radio_and_leaves_what_runs_running() {
   BoardWifiRig r;
-  r.impl.startAccessPoint("PhonePlus", "12345678");
+  r.impl.startAccessPoint("phone-os", "12345678");
   const int shutdowns = r.radio.shutdowns();
   TEST_ASSERT_FALSE(r.impl.startAccessPoint("Other", "short"));
   TEST_ASSERT_FALSE(r.impl.startStation("", "x"));
@@ -49,7 +49,7 @@ void test_an_open_network_is_asked_with_an_empty_password() {
 
 void test_starting_one_mode_shuts_the_chip_down_before_the_other_comes_up() {
   BoardWifiRig r;
-  r.impl.startAccessPoint("PhonePlus", "12345678");
+  r.impl.startAccessPoint("phone-os", "12345678");
   const int before = r.radio.shutdowns();
   r.impl.startStation("Home", "secret");
   TEST_ASSERT_EQUAL(before + 1, r.radio.shutdowns());
@@ -59,7 +59,7 @@ void test_starting_one_mode_shuts_the_chip_down_before_the_other_comes_up() {
 void test_an_access_point_that_does_not_start_powers_the_chip_down() {
   BoardWifiRig r;
   r.radio.failAccessPoint(true);
-  TEST_ASSERT_FALSE(r.impl.startAccessPoint("PhonePlus", "12345678"));
+  TEST_ASSERT_FALSE(r.impl.startAccessPoint("phone-os", "12345678"));
   TEST_ASSERT_FALSE(r.radio.running());
   TEST_ASSERT_TRUE(r.impl.state() == WifiState::Off);
 }

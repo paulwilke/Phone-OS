@@ -298,10 +298,12 @@ inline std::filesystem::path Simulator::prepareCard(const Options& options, std:
   }
   // A work directory is emptied only when this program made it, so a wrong --work cannot cost files.
   const fs::path work = options.workDir;
-  const fs::path marker = work / ".phoneplus-sim";
+  const fs::path marker = work / ".phone-os-sim";
+  // The mark a simulator of 4.1.1 and before left (the project's old name): such a directory is the simulator's too.
+  const fs::path earlierMarker = work / ".phoneplus-sim";
   const fs::path card = work / "card";
-  if (fs::exists(work, ec) && !fs::is_empty(work, ec) && !fs::exists(marker, ec)) {
-    error = "refusing to empty " + options.workDir + ": it is not a directory of the simulator (no .phoneplus-sim in it)";
+  if (fs::exists(work, ec) && !fs::is_empty(work, ec) && !fs::exists(marker, ec) && !fs::exists(earlierMarker, ec)) {
+    error = "refusing to empty " + options.workDir + ": it is not a directory of the simulator (no .phone-os-sim in it)";
     return card;
   }
   const fs::path inside = fs::weakly_canonical(data, ec);
@@ -318,7 +320,8 @@ inline std::filesystem::path Simulator::prepareCard(const Options& options, std:
   }
   fs::remove_all(card, ec);
   fs::create_directories(card, ec);
-  { std::ofstream(marker) << "made by the phoneplus simulator; its card/ is emptied at every start\n"; }
+  fs::remove(earlierMarker, ec);
+  { std::ofstream(marker) << "made by the Phone OS simulator; its card/ is emptied at every start\n"; }
   if (!fs::is_directory(data, ec)) {
     out << "warning: no data directory " << options.dataDir << ": the card is empty\n";
     return card;
@@ -950,7 +953,7 @@ inline void Simulator::webRequest(const std::string& method, const std::string& 
   }
   std::string request = method + " " + path + " HTTP/1.1\r\nHost: 127.0.0.1\r\n";
   if (password) request += "Authorization: Basic " + detail::base64("parent:" + *password) + "\r\n";
-  if (method != "GET") request += "X-Phoneplus: 1\r\n";
+  if (method != "GET") request += "X-Phone-OS: 1\r\n";
   request += "Content-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
   ::send(fd, request.data(), request.size(), 0);
   // The server answers when the simulator runs: a few milliseconds of its time at a time.

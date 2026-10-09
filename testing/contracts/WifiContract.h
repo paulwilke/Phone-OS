@@ -55,7 +55,7 @@ struct WifiContract {
     const struct { size_t length; bool accepted; } cases[] = {{0, false}, {7, false}, {8, true}, {63, true}, {64, false}};
     for (const auto& c : cases) {
       Rig rig;
-      const bool ok = rig.wifi().startAccessPoint("PhonePlus", std::string(c.length, 'p'));
+      const bool ok = rig.wifi().startAccessPoint("phone-os", std::string(c.length, 'p'));
       TEST_ASSERT_EQUAL(c.accepted, ok);
       TEST_ASSERT_TRUE((rig.wifi().state() == WifiState::AccessPoint) == c.accepted);
     }
@@ -69,7 +69,7 @@ struct WifiContract {
 
   static void a_running_access_point_has_an_address() {
     Rig rig;
-    TEST_ASSERT_TRUE(rig.wifi().startAccessPoint("PhonePlus", "12345678"));
+    TEST_ASSERT_TRUE(rig.wifi().startAccessPoint("phone-os", "12345678"));
     TEST_ASSERT_TRUE(rig.wifi().state() == WifiState::AccessPoint);
     TEST_ASSERT_TRUE(!rig.wifi().address().empty());
   }
@@ -77,23 +77,23 @@ struct WifiContract {
   static void an_access_point_that_fails_to_start_leaves_the_state_off() {
     Rig rig;
     CONTRACT_NEEDS(rig.failAccessPoint(true));
-    TEST_ASSERT_FALSE(rig.wifi().startAccessPoint("PhonePlus", "12345678"));
+    TEST_ASSERT_FALSE(rig.wifi().startAccessPoint("phone-os", "12345678"));
     TEST_ASSERT_TRUE(rig.wifi().state() == WifiState::Off);
   }
 
   static void starting_one_mode_stops_the_other() {
     Rig rig;
-    rig.wifi().startAccessPoint("PhonePlus", "12345678");
+    rig.wifi().startAccessPoint("phone-os", "12345678");
     rig.wifi().startStation("Home", "secret");
     TEST_ASSERT_TRUE(rig.wifi().state() != WifiState::AccessPoint);
-    rig.wifi().startAccessPoint("PhonePlus", "12345678");
+    rig.wifi().startAccessPoint("phone-os", "12345678");
     TEST_ASSERT_TRUE(rig.wifi().state() == WifiState::AccessPoint);
   }
 
   // A refused start must not cost the user the connection that works.
   static void a_refused_start_leaves_a_running_mode_running() {
     Rig rig;
-    rig.wifi().startAccessPoint("PhonePlus", "12345678");
+    rig.wifi().startAccessPoint("phone-os", "12345678");
     TEST_ASSERT_FALSE(rig.wifi().startAccessPoint("Other", "short"));
     TEST_ASSERT_FALSE(rig.wifi().startStation("", "x"));
     TEST_ASSERT_TRUE(rig.wifi().state() == WifiState::AccessPoint);
@@ -102,7 +102,7 @@ struct WifiContract {
 
   static void stopping_turns_everything_off_and_may_be_repeated() {
     Rig rig;
-    rig.wifi().startAccessPoint("PhonePlus", "12345678");
+    rig.wifi().startAccessPoint("phone-os", "12345678");
     rig.wifi().stop();
     TEST_ASSERT_TRUE(rig.wifi().state() == WifiState::Off);
     TEST_ASSERT_EQUAL_STRING("", rig.wifi().address().c_str());
@@ -116,7 +116,7 @@ struct WifiContract {
   static void it_can_be_started_again_after_a_stop() {
     Rig rig;
     for (int i = 0; i < 3; ++i) {
-      TEST_ASSERT_TRUE(rig.wifi().startAccessPoint("PhonePlus", "12345678"));
+      TEST_ASSERT_TRUE(rig.wifi().startAccessPoint("phone-os", "12345678"));
       TEST_ASSERT_TRUE(rig.wifi().state() == WifiState::AccessPoint);
       rig.wifi().stop();
     }

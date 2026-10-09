@@ -192,7 +192,7 @@ void test_for_each_gives_each_language_its_own_texts() {
 }
 
 void test_for_each_reads_the_catalogs_from_the_given_directory() {
-  const std::string dir = "/tmp/phoneplus-languages-test";
+  const std::string dir = "/tmp/phone-os-languages-test";
   std::filesystem::remove_all(dir);
   std::filesystem::create_directories(dir);
   std::ifstream en("lang/en.toml");

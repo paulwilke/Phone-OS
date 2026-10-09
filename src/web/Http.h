@@ -21,7 +21,7 @@ struct Request {
   char path[120] = {};       // without the query
   char query[200] = {};
   char authorization[160] = {};
-  char custom[16] = {};      // value of X-Phoneplus, "" when not sent
+  char custom[16] = {};      // value of X-Phone-OS, "" when not sent
   char contentType[40] = {};
   size_t contentLength = 0;
   const char* body = nullptr;  // points into the parser's buffer
@@ -32,7 +32,7 @@ struct Response {
   const char* contentType = "text/plain; charset=utf-8";
   const char* body = "";
   size_t length = 0;
-  const char* extraHeader = nullptr;  // e.g. "WWW-Authenticate: Basic realm=\"phoneplus\""
+  const char* extraHeader = nullptr;  // e.g. "WWW-Authenticate: Basic realm=\"phone-os\""
 };
 
 // Fed byte by byte or in chunks; evaluates as soon as the request is complete.

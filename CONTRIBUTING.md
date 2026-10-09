@@ -1,6 +1,6 @@
 # Contributing
 
-PhonePlus is an emergency phone for children, so a mistake costs more here than in most projects. The rules below keep the code small, readable and testable on a laptop.
+Phone OS is an emergency phone for children, so a mistake costs more here than in most projects. The rules below keep the code small, readable and testable on a laptop.
 
 ## The rules
 

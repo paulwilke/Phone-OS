@@ -6,7 +6,7 @@
 
 namespace shipped {
 
-constexpr std::string_view kLangDe(R"phoneplus_toml(# Deutsch.
+constexpr std::string_view kLangDe(R"phone_os_toml(# Deutsch.
 
 [meta]
 code   = "de"
@@ -403,9 +403,9 @@ sms.sos.age-hours           = "{n} Std."
 sms.sos.age-days            = "{n} Tg."
 
 sms.command.where = "#WoBistDu"
-)phoneplus_toml");
+)phone_os_toml");
 
-constexpr std::string_view kLangEn(R"phoneplus_toml(# English — the reference catalog. Every other language is checked against it:
+constexpr std::string_view kLangEn(R"phone_os_toml(# English — the reference catalog. Every other language is checked against it:
 # the same keys, the same {placeholders}, the right number of plural forms.
 
 [meta]
@@ -798,9 +798,9 @@ sms.sos.age-hours = "{n} h"
 sms.sos.age-days = "{n} d"
 
 sms.command.where = "#WhereAreYou"
-)phoneplus_toml");
+)phone_os_toml");
 
-constexpr std::string_view kLangFr(R"phoneplus_toml(# Français.
+constexpr std::string_view kLangFr(R"phone_os_toml(# Français.
 
 [meta]
 code   = "fr"
@@ -1197,9 +1197,9 @@ sms.sos.age-hours           = "{n} h"
 sms.sos.age-days            = "{n} j"
 
 sms.command.where = "#OuEsTu"
-)phoneplus_toml");
+)phone_os_toml");
 
-constexpr std::string_view kWebDe(R"phoneplus_toml(# Deutsch — die Seite der Eltern (Webseite und Konfigurationsformular). Die Wörter des Geräts stehen in ../de.toml.
+constexpr std::string_view kWebDe(R"phone_os_toml(# Deutsch — die Seite der Eltern (Webseite und Konfigurationsformular). Die Wörter des Geräts stehen in ../de.toml.
 
 [meta]
 code   = "de"
@@ -1355,7 +1355,7 @@ config.web_password.label             = "Web-Passwort"
 config.web_password.help              = "Passwort der Webseite. Mindestens 4 Zeichen. Ohne Passwort bleibt die Webseite gesperrt."
 
 # Webseite (nur im Browser; wird nicht auf dem Gerät angezeigt)
-web.title                = "PhonePlus"
+web.title                = "Phone OS"
 web.tab.status           = "Status"
 web.tab.basics           = "Allgemein"
 web.tab.school-time      = "Schulzeit"
@@ -1429,9 +1429,9 @@ web.auth.enter           = "Anmelden"
 web.auth.wrong           = "Falsches Passwort."
 web.auth.locked          = "Zu viele Versuche, bitte eine Minute warten."
 web.lang.label           = "Sprache"
-)phoneplus_toml");
+)phone_os_toml");
 
-constexpr std::string_view kWebEn(R"phoneplus_toml(# English — the page of the parents (web interface and configuration form). The device's own words are in ../en.toml.
+constexpr std::string_view kWebEn(R"phone_os_toml(# English — the page of the parents (web interface and configuration form). The device's own words are in ../en.toml.
 # Checked like the device catalog: the same keys in every language, the same {placeholders}.
 
 [meta]
@@ -1589,7 +1589,7 @@ config.web_password.label = "Web password"
 config.web_password.help = "Password for the web interface. At least 4 characters. Without a password the web interface stays locked."
 
 # Web interface (browser-only; not shown on the device display)
-web.title = "PhonePlus"
+web.title = "Phone OS"
 web.tab.status = "Status"
 web.tab.basics = "Basics"
 web.tab.school-time = "School time"
@@ -1663,9 +1663,9 @@ web.auth.enter = "Enter"
 web.auth.wrong = "Wrong password."
 web.auth.locked = "Too many attempts, wait one minute."
 web.lang.label = "Language"
-)phoneplus_toml");
+)phone_os_toml");
 
-constexpr std::string_view kWebFr(R"phoneplus_toml(# Français — la page des parents (interface web et formulaire de configuration). Les mots de l'appareil sont dans ../fr.toml.
+constexpr std::string_view kWebFr(R"phone_os_toml(# Français — la page des parents (interface web et formulaire de configuration). Les mots de l'appareil sont dans ../fr.toml.
 
 [meta]
 code   = "fr"
@@ -1821,7 +1821,7 @@ config.web_password.label             = "Mot de passe web"
 config.web_password.help              = "Mot de passe de la page web. Au moins 4 caractères. Sans mot de passe, la page web reste verrouillée."
 
 # Interface web (navigateur uniquement ; non affiche sur l'appareil)
-web.title                = "PhonePlus"
+web.title                = "Phone OS"
 web.tab.status           = "État"
 web.tab.basics           = "Général"
 web.tab.school-time      = "Heures de classe"
@@ -1895,8 +1895,8 @@ web.auth.enter           = "Connexion"
 web.auth.wrong           = "Mot de passe incorrect."
 web.auth.locked          = "Trop de tentatives, attendez une minute."
 web.lang.label           = "Langue"
-)phoneplus_toml");
+)phone_os_toml");
 
-constexpr std::string_view kVersion("4.1.1");
+constexpr std::string_view kVersion("4.1.2");
 
 }  // namespace shipped

@@ -96,7 +96,7 @@ struct Web {
   static sim::Options options() {
     static int n = 0;
     sim::Options o;
-    o.workDir = (fs::temp_directory_path() / ("phoneplus-simweb-" + std::to_string(::getpid()) + "-" + std::to_string(++n))).string();
+    o.workDir = (fs::temp_directory_path() / ("phone-os-simweb-" + std::to_string(::getpid()) + "-" + std::to_string(++n))).string();
     o.webPort = 0;
     return o;
   }
@@ -125,7 +125,7 @@ struct Web {
                const std::string& password = kPassword) {
     std::string request = method + " " + path + " HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Basic " +
                           base64("parent:" + password) + "\r\n";
-    if (header) request += "X-Phoneplus: 1\r\n";
+    if (header) request += "X-Phone-OS: 1\r\n";
     request += "Content-Type: application/json\r\nContent-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
     return send(request);
   }
@@ -437,7 +437,7 @@ void test_a_change_without_the_header_is_refused_and_changes_nothing() {
   const std::string before = w.file("config/settings.toml");
   const Reply refused = w.change("PUT", "/api/settings", "{\"child\":{\"name\":\"Sam\"}}", /*header=*/false);
   TEST_ASSERT_EQUAL(403, refused.status);
-  TEST_ASSERT_TRUE(refused.has("X-Phoneplus"));
+  TEST_ASSERT_TRUE(refused.has("X-Phone-OS"));
   TEST_ASSERT_EQUAL_STRING(before.c_str(), w.file("config/settings.toml").c_str());
   TEST_ASSERT_EQUAL(403, w.change("DELETE", "/api/file?path=/config/contacts.toml", "", false).status);
   TEST_ASSERT_TRUE(!w.file("config/contacts.toml").empty());
