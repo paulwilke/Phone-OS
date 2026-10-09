@@ -9,7 +9,7 @@
   python3 scripts/deviceconfig.py restart
 
 Over the cable only settings.toml, contacts.toml and secrets.toml can be read and written, and the logs
-system.log, system.old.log and messages.log read. Everything else on the card is the parents' page's business
+system.log, system.old.log, messages.log, energy.log and energy.old.log read. Everything else on the card is the parents' page's business
 (scripts/webbridge.py). A new file takes effect after a restart.
 
 `read` prints the file byte for byte (of a long log the last 8 KB, and says where they start); the device sends the
@@ -33,7 +33,7 @@ import sys
 import time
 
 WRITABLE = ("settings.toml", "contacts.toml", "secrets.toml")
-LOGS = ("system" + ".log", "system" + ".old" + ".log", "messages" + ".log")  # built: a quoted word with a dot looks like a catalog key
+LOGS = ("system" + ".log", "system" + ".old" + ".log", "messages" + ".log", "energy" + ".log", "energy" + ".old" + ".log")  # built: a quoted word with a dot looks like a catalog key
 READABLE = WRITABLE + LOGS
 BOOT_WAIT = 3.0  # seconds the device needs after the port was opened
 

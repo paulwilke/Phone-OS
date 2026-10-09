@@ -1,6 +1,6 @@
 # Release 4.1
 
-Version 4.1.2 of Phone OS (4.1.2: the new name; 4.1.1: the last known position in an SOS without a position, the splash picture, the picture "Switched off"). It tidies the interface after the owner's test of 4.0 on the device (2026-10-07/08) and builds on 4.0.2. What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device each time, with a column for the date and the result, is [de/abnahmetest.md](de/abnahmetest.md). Everything about 4.0 that this page does not change ([release-4.0.md](release-4.0.md): no radio, no published binary, going back to 3.2) holds for 4.1 too.
+Version 4.1.3 of Phone OS (4.1.3: the energy log is back; 4.1.2: the new name; 4.1.1: the last known position in an SOS without a position, the splash picture, the picture "Switched off"). It tidies the interface after the owner's test of 4.0 on the device (2026-10-07/08) and builds on 4.0.2. What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device each time, with a column for the date and the result, is [de/abnahmetest.md](de/abnahmetest.md). Everything about 4.0 that this page does not change ([release-4.0.md](release-4.0.md): no radio, no published binary, going back to 3.2) holds for 4.1 too.
 
 ## What changes for the parents
 
@@ -9,7 +9,7 @@ Version 4.1.2 of Phone OS (4.1.2: the new name; 4.1.1: the last known position i
 - **School time is ticked.** Each window has seven boxes Mo to Su, then from and to and "active" in one row; **Add** adds a window, for example Monday and Tuesday afternoon.
 - **Who gets the SOS is ticked.** Each contact has a box **SOS**; the SOS goes to every ticked contact with the same text. Without any tick it goes to the first call button, as in 4.0.
 - **The home screen's second page** can be thinned out: each of its tiles has a box on the **Advanced** tab. Without the **Wi-Fi** tile the parents' page is still reached over the USB cable (`scripts/webbridge.py`).
-- **Files**: what a Mac leaves on the card is hidden (tick **Show hidden files** to see it), **Remove Mac leftovers** deletes its `._` files, and the Mac's folders are named for a computer to delete. `energy.log` and `firmware.txt` are marked as files of 3.2 that may go.
+- **Files**: what a Mac leaves on the card is hidden (tick **Show hidden files** to see it), **Remove Mac leftovers** deletes its `._` files, and the Mac's folders are named for a computer to delete. `firmware.txt` is marked as a file of 3.2 that may go (`energy.log` was too until 4.1.3, which writes it again).
 - **Backup** saves `phone-os-backup.zip` with the settings and the contacts exactly as they are (never the passwords), and **Restore** takes it back. Restoring did not work from the page of 4.0. A backup made with 4.0 can still be restored once.
 
 ## What changes for the child

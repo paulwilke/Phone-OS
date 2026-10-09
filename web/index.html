@@ -714,7 +714,7 @@ function fileRow(dir, e) {
 var MAC_FOLDERS = ['.Spotlight-V100', '.fseventsd', '.Trashes', '.TemporaryItems'];
 function macLeftover(e) { return (!e.dir && e.name.indexOf('._') === 0) || (e.dir && MAC_FOLDERS.indexOf(e.name) >= 0); }
 // Files of 3.2 that 4.0 neither reads nor writes (docs/upgrading.md); they may be deleted.
-var UNUSED_32 = ['energy.log', 'firmware.txt'];
+var UNUSED_32 = ['firmware.txt'];
 
 function loadFiles(dir) {
   if (typeof dir === 'string') filesDir = dir;

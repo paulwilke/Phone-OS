@@ -1015,7 +1015,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   const names = pg.els['files-tbody'].children.map((tr) => walkP(tr.children[0]).filter((c) => c.tag === 'button').map((b) => b.textContent)[0] || tr.children[0].textContent);
   assert(names.join('|') === 'config/|.metadata_never_index|energy.log|firmware.txt|system.log|lang/', 'the root hides ._ files and the four Mac folders, not .metadata_never_index: ' + names.join('|'));
   const notes = pg.els['files-tbody'].children.map((tr) => walkP(tr.children[0]).filter((c) => c.className === 'hint').map((c) => c.textContent).join(''));
-  assert(notes[2].includes('(from 3.2, not used)') && notes[3].includes('(from 3.2, not used)') && notes[4] === '', 'energy.log and firmware.txt are marked as files of 3.2, system.log is not');
+  assert(notes[2] === '' && notes[3].includes('(from 3.2, not used)') && notes[4] === '', 'firmware.txt is marked as a file of 3.2, energy.log (written again since 4.1.3) and system.log are not');
 
   let asked = 0;
   pg.context.confirm = () => { asked++; return false; };            // the parent says no
