@@ -36,7 +36,7 @@ Only the symbols of the first page are pictures (☎ ✈ 💬 📍 📡); the to
 
 Up and Down move the selection one tile in reading order through both pages and wrap; the page follows the selection. Select opens the tile. **Back locks the device**: without it the child could not lock it before it goes into the pocket. A typed character is not used. The selection is **kept** when the screen is left and come back to, so returning from a tool lands on the same tile and the same page.
 
-**The soft keys are empty** (owner, 2026-10-08: the arrows only took room). The tiles are the buttons and the dots turn the page; a bar that named the action of the tile under the selection would change with every step, which costs a redraw of the panel each time. The keys Up and Down still move the selection, so every tile is reached without touch (a test walks them all).
+**The soft keys have no arrows** (owner, 2026-10-08: the arrows only took room), **but one button: Lock** ("Lock", "Sperren", "Verrouiller"), in the place of Back on the left. Back locks the device on this screen, and since 4.1.0 nothing on it said so: the bar was empty, and the only way to lock was a key a child does not know. The word is the same whatever tile is selected, so the bar never changes and costs no redraw. A tap on it is the Back key. The tiles are the buttons and the dots turn the page; a bar that named the action of the tile under the selection would change with every step. The keys Up and Down still move the selection, so every tile is reached without touch (a test walks them all). The button is in the bar of every language; a test measures that the word fits the slot in each.
 
 ## Touch
 

@@ -324,6 +324,7 @@ wifi.reason-access-point-lost        = "Zugangspunkt ausgefallen"
 wifi.reason-switched-off-by-itself   = "Von selbst ausgeschaltet"
 
 key.back = "Zurück"
+key.lock = "Sperren"
 key.open = "Öffnen"
 key.send = "Senden"
 key.templates = "Vorlagen"

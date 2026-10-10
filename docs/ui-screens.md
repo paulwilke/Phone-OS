@@ -23,6 +23,10 @@ A screen that needs something the core does not hand out as data — the acceler
 
 `ScreenContext` is what the application hands every screen: the core, the translator, the navigation, the `Session` (the little data the screens of one task hand to each other: who a message goes to — the screen that asks writes it, the screen that composes reads it) and whether the device has a motion sensor (the core does not wrap the sensor, so the home screen learns it here).
 
+## The GPS note
+
+"GPS" is drawn in the middle of the status bar while the position is being determined, so that it stays in one place whatever the network is called and whatever day it is (owner, 2026-10-09). The left text gets the room up to it (an operator's name is shortened to fit, at least 40 pixels or the note gives way), the date the room after it (the weekday goes first). Only when a fixed word such as "SIM verrouillee" or the date would run into the middle does the note follow the left text, as it did before 4.1.6; nothing is ever drawn over anything. `test_widgets` pins the middle for four names and three weekdays and the fallback in French.
+
 ## The status bar from the state
 
 `statusModelOf(state)` turns the core's state into the bar's own small model:

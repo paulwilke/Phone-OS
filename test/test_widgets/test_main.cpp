@@ -548,13 +548,50 @@ void test_the_gps_note_is_drawn_exactly_when_the_position_is_being_determined() 
   FrameBuffer with;
   drawStatusBar(with, area, m, t);
   TEST_ASSERT_FALSE(with == without);
-  // "GPS" sits right behind the operator name, in the same line.
-  const int nameWidth = text::width(font(FontSize::Small), "Mobile");
+  // "GPS" stands in the middle of the bar, in the same line.
+  const int wordX = (240 - text::width(font(FontSize::Small), "GPS")) / 2;
   FrameBuffer onlyGps;
-  text::draw(onlyGps, font(FontSize::Small), 2 + nameWidth, 0, "  GPS");
+  text::draw(onlyGps, font(FontSize::Small), wordX, 0, "GPS");
   for (int y = 0; y < 16; ++y)
     for (int x = 0; x < 240; ++x)
       if (onlyGps.pixel(x, y)) TEST_ASSERT_TRUE(with.pixel(x, y));
+}
+
+// Owner, 2026-10-09: the GPS note stays where it is, whatever the network is called and whatever day it is.
+void test_the_gps_note_stays_in_the_middle_whatever_the_name_and_the_date() {
+  const Rect area = ScreenLayout::standard().status;
+  Translator t = languages::loaded();
+  t.select("en");
+  const int wordWidth = text::width(font(FontSize::Small), "GPS");
+  const int wordX = (area.w - wordWidth) / 2;
+  FrameBuffer onlyGps;
+  text::draw(onlyGps, font(FontSize::Small), wordX, 0, "GPS");
+  for (const char* name : {"Mobile", "Example Mobile", "Telekom.de", "International Mobile Communications of Example Country"}) {
+    for (int weekday : {0, 2, 3}) {
+      StatusModel m = model("plain");
+      m.operatorName = name;
+      m.weekday = weekday;
+      m.locating = true;
+      FrameBuffer fb;
+      drawStatusBar(fb, area, m, t);
+      for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 240; ++x)
+          if (onlyGps.pixel(x, y)) TEST_ASSERT_TRUE_MESSAGE(fb.pixel(x, y), name);
+    }
+  }
+}
+
+// When the left word does not leave the middle free, the note follows it as before and nothing is drawn over anything.
+void test_the_gps_note_follows_the_left_text_when_the_middle_is_not_free() {
+  const Rect area = ScreenLayout::standard().status;
+  Translator t = languages::loaded();
+  t.select("fr");
+  StatusModel m = model("sim-locked");
+  FrameBuffer fb;
+  fb.beginRegion(area);
+  drawStatusBar(fb, area, m, t);
+  fb.endRegion();
+  TEST_ASSERT_FALSE_MESSAGE(fb.clipped(), fb.describeClips().c_str());
 }
 
 void test_a_long_operator_name_is_shortened_and_keeps_the_gps_note() {
@@ -566,14 +603,12 @@ void test_a_long_operator_name_is_shortened_and_keeps_the_gps_note() {
   drawStatusBar(fb, area, model("long-name"), t);
   fb.endRegion();
   TEST_ASSERT_FALSE_MESSAGE(fb.clipped(), fb.describeClips().c_str());
-  // The name is cut where the picture ends in dots; the GPS note is behind them.
+  // The name is cut where the picture ends in dots; the GPS note stands in the middle, behind them.
   FrameBuffer expectedHead;
   const Font& f = font(FontSize::Small);
   StatusModel m = model("long-name");
-  const int gps = text::width(f, "  GPS");
-  const int date = text::width(f, dateText(m, t, false));
-  const int frame = 33;
-  const int room = (240 - 2 - frame) - 6 - date - 6 - 2 - 2 - gps;   // the layout's arithmetic, spelled out
+  const int wordX = (240 - text::width(f, "GPS")) / 2;
+  const int room = wordX - text::width(f, "  ") - 2;               // the layout's arithmetic, spelled out
   const std::string shown = text::ellipsize(f, m.operatorName, room);
   TEST_ASSERT_TRUE(shown.size() > 3 && shown.size() < m.operatorName.size());
   TEST_ASSERT_EQUAL_STRING("...", shown.c_str() + shown.size() - 3);
@@ -1353,6 +1388,8 @@ int main() {
   RUN_TEST(test_an_unknown_date_is_shown_as_dashes);
   RUN_TEST(test_the_status_bar_fits_its_area_in_every_language);
   RUN_TEST(test_the_gps_note_is_drawn_exactly_when_the_position_is_being_determined);
+  RUN_TEST(test_the_gps_note_stays_in_the_middle_whatever_the_name_and_the_date);
+  RUN_TEST(test_the_gps_note_follows_the_left_text_when_the_middle_is_not_free);
   RUN_TEST(test_a_long_operator_name_is_shortened_and_keeps_the_gps_note);
   RUN_TEST(test_the_weekday_is_dropped_when_the_sides_meet);
   RUN_TEST(test_the_battery_frame_shows_one_bar_per_fifth);
