@@ -1547,6 +1547,80 @@ bool splitSms(const std::string& body, bool& ascii, std::vector<std::string>& pa
   return !parts.empty();
 }
 
+// The code point of the UTF-8 character at s[i] with length n (n from utf8Length).
+uint32_t codePoint(const std::string& s, size_t i, size_t n) {
+  const unsigned char c = (unsigned char)s[i];
+  if (n == 1) return c;
+  uint32_t cp = n == 2 ? (c & 0x1F) : n == 3 ? (c & 0x0F) : (c & 0x07);
+  for (size_t k = 1; k < n; ++k) cp = (cp << 6) | ((unsigned char)s[i + k] & 0x3F);
+  return cp;
+}
+
+// The plain ASCII that stands in for a letter or sign the way a person would write it without it: "oe" for
+// the umlaut, the bare letter for an accent. Null for anything else, so that a text with such a character
+// (an emoji, a letter of another script) is never changed.
+const char* asciiFor(uint32_t cp) {
+  switch (cp) {
+    case 0xE4: return "ae"; case 0xF6: return "oe"; case 0xFC: return "ue";
+    case 0xC4: return "Ae"; case 0xD6: return "Oe"; case 0xDC: return "Ue";
+    case 0xDF: return "ss"; case 0xE6: return "ae"; case 0xC6: return "Ae"; case 0x153: return "oe"; case 0x152: return "Oe";
+    case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE5: return "a";
+    case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC5: return "A";
+    case 0xE7: return "c"; case 0xC7: return "C";
+    case 0xE8: case 0xE9: case 0xEA: case 0xEB: return "e";
+    case 0xC8: case 0xC9: case 0xCA: case 0xCB: return "E";
+    case 0xEC: case 0xED: case 0xEE: case 0xEF: return "i";
+    case 0xCC: case 0xCD: case 0xCE: case 0xCF: return "I";
+    case 0xF1: return "n"; case 0xD1: return "N";
+    case 0xF2: case 0xF3: case 0xF4: case 0xF5: return "o";
+    case 0xD2: case 0xD3: case 0xD4: case 0xD5: return "O";
+    case 0xF9: case 0xFA: case 0xFB: return "u";
+    case 0xD9: case 0xDA: case 0xDB: return "U";
+    case 0xFF: return "y";
+    case 0xA0: return " ";
+    case 0x2018: case 0x2019: return "'";
+    case 0x201C: case 0x201D: return "\"";
+    case 0x2013: case 0x2014: return "-";
+    case 0x2026: return "...";
+    case 0x20AC: return "EUR";
+    default: return nullptr;
+  }
+}
+
+// The text in plain ASCII, or false when a character has no stand-in.
+bool foldToAscii(const std::string& body, std::string& out) {
+  out.clear();
+  for (size_t i = 0; i < body.size();) {
+    const size_t n = utf8Length(body, i);
+    if (n == 0) return false;
+    if (n == 1) {
+      out += body[i];
+    } else {
+      const char* stand = asciiFor(codePoint(body, i, n));
+      if (!stand) return false;
+      out += stand;
+    }
+    i += n;
+  }
+  return true;
+}
+
+// Every part is a separate message that costs money, and a text with one umlaut goes out as UCS2 (70 places
+// instead of 160). So when a text would take more messages as UCS2 than it takes in plain ASCII, it is
+// sent in plain ASCII ("moechte" for the word with the umlaut): a SOS of 130 characters was three messages and is one. A
+// text that fits one message as it is, or that cannot be written in ASCII, keeps its characters.
+bool splitCheapest(const std::string& body, bool& ascii, std::vector<std::string>& parts) {
+  if (!splitSms(body, ascii, parts)) return false;
+  if (ascii || parts.size() < 2) return true;
+  std::string folded;
+  std::vector<std::string> foldedParts;
+  bool foldedAscii = true;
+  if (!foldToAscii(body, folded) || !splitSms(folded, foldedAscii, foldedParts) || foldedParts.size() >= parts.size()) return true;
+  parts = std::move(foldedParts);
+  ascii = foldedAscii;
+  return true;
+}
+
 }  // namespace
 
 bool A7682EDriver::sendSms(const std::string& phone, const std::string& body) {
@@ -1555,7 +1629,7 @@ bool A7682EDriver::sendSms(const std::string& phone, const std::string& body) {
   if (outbox_.size() >= kOutboxSize) return false;
   Outgoing out;
   out.phone = phone;
-  if (!splitSms(body, out.ascii, out.parts)) return false;
+  if (!splitCheapest(body, out.ascii, out.parts)) return false;
   outbox_.push_back(std::move(out));
   return true;
 }

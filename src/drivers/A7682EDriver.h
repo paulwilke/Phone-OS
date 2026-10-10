@@ -90,7 +90,8 @@ public:
   // going off), the number is not a dial string, the text is empty, not valid UTF-8 or longer than
   // kMaxSmsBytes, or four messages are already waiting. A text that does not fit one SMS (160 characters
   // in the GSM alphabet, 70 as soon as one character is not in it) goes out as several messages in a row;
-  // there is no concatenation header, so the phone shows them as separate messages.
+  // there is no concatenation header, so the phone shows them as separate messages. A text that would
+  // take fewer messages in plain ASCII ("oe" for the umlaut, the bare letter for an accent) is sent that way.
   bool sendSms(const std::string& phone, const std::string& body) override;
   bool pollSms(SmsMessage& out) override;
   bool pollSendFailure(SmsFailure& out) override;
