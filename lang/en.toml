@@ -321,6 +321,7 @@ wifi.reason-access-point-lost = "Access point stopped"
 wifi.reason-switched-off-by-itself = "Switched off: not used"
 
 key.back = "Back"
+key.lock = "Lock"
 key.open = "Open"
 key.send = "Send"
 key.templates = "Templates"

@@ -9,8 +9,9 @@
 //
 // Left: the most important of: the SIM problem, school time, "SMS only", the network name (a
 // general word when the network has none).
-// "GPS" follows whenever the position is being determined (a device that locates in secret is
-// what this one must not be). Right: the date and the battery.
+// "GPS" shows whenever the position is being determined (a device that locates in secret is
+// what this one must not be), **in the middle of the bar** so that it is always in the same place; only when the left
+// text or the date would run into it does it follow the left text. Right: the date and the battery.
 //
 // The words are fixed catalog texts and are never shortened; only the operator's name, which
 // comes from the network, is (documented in drawStatusBar). If the weekday does not fit next

@@ -93,8 +93,14 @@ void HomeScreen::draw(Display& display, const Rect& area) {
 }
 
 // No arrows: the tiles are touched, the page dots turn the page, and the keys Up and Down still move the
-// selection (owner, 2026-10-08: the arrows only took room).
-SoftKeys HomeScreen::keys() { return SoftKeys{}; }
+// selection (owner, 2026-10-08: the arrows only took room). The one button is Lock, in the place of Back, because
+// Back locks the device here and a key nobody can see is a key a child does not find. The word never changes
+// with the selection, so the bar costs no redraw.
+SoftKeys HomeScreen::keys() {
+  SoftKeys keys;
+  keys.back = t().get("key.lock");
+  return keys;
+}
 
 bool HomeScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {

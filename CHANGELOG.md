@@ -2,6 +2,11 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.6
+
+- **The home screen has a visible Lock button** in the bar at the bottom ("Lock", "Sperren", "Verrouiller"). Back locks the device there, and since 4.1.0 the bar was empty (the arrows were removed on purpose, and the Back key went with them), so nothing said how to lock it. The word never changes with the selection, so the bar costs no redraw. The arrows stay away. Host-tested in all three languages; not verified on the device.
+- **The GPS note stands in the middle of the status bar** while the position is being determined, instead of after the left text. It gives way only when the left text or the date would run into it. Host-tested; not verified on the device.
+
 ## 4.1.5
 
 - **An SOS with an umlaut is one message, not three.** One o-umlaut (German "moechte" written with it) turned the text into UCS2, which allows 70 characters per message and has no concatenation header, so an SOS of about 130 characters arrived as three separate messages and cost three. A text that would take more messages as UCS2 than in plain ASCII is now sent in plain ASCII when every non-ASCII character has a stand-in ("moechte" for the word with the umlaut, "e" for e-acute, the typographic quote as `'`, the euro sign as `EUR`); the history keeps the original. A text with an emoji or another script keeps its characters. Host-tested; not verified on the device. See [docs/modem-driver.md](docs/modem-driver.md).

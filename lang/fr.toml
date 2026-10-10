@@ -325,6 +325,7 @@ wifi.reason-access-point-lost        = "Point d'accès interrompu"
 wifi.reason-switched-off-by-itself   = "Éteint automatiquement"
 
 key.back = "Retour"
+key.lock = "Verrouiller"
 key.open = "Ouvrir"
 key.send = "Envoyer"
 key.templates = "Modèles"

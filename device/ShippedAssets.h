@@ -333,6 +333,7 @@ wifi.reason-access-point-lost        = "Zugangspunkt ausgefallen"
 wifi.reason-switched-off-by-itself   = "Von selbst ausgeschaltet"
 
 key.back = "Zurück"
+key.lock = "Sperren"
 key.open = "Öffnen"
 key.send = "Senden"
 key.templates = "Vorlagen"
@@ -731,6 +732,7 @@ wifi.reason-access-point-lost = "Access point stopped"
 wifi.reason-switched-off-by-itself = "Switched off: not used"
 
 key.back = "Back"
+key.lock = "Lock"
 key.open = "Open"
 key.send = "Send"
 key.templates = "Templates"
@@ -1133,6 +1135,7 @@ wifi.reason-access-point-lost        = "Point d'accès interrompu"
 wifi.reason-switched-off-by-itself   = "Éteint automatiquement"
 
 key.back = "Retour"
+key.lock = "Verrouiller"
 key.open = "Ouvrir"
 key.send = "Envoyer"
 key.templates = "Modèles"
@@ -1906,6 +1909,6 @@ web.auth.locked          = "Trop de tentatives, attendez une minute."
 web.lang.label           = "Langue"
 )phone_os_toml");
 
-constexpr std::string_view kVersion("4.1.5");
+constexpr std::string_view kVersion("4.1.6");
 
 }  // namespace shipped

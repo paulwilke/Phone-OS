@@ -391,14 +391,15 @@ void test_system_entries_count_as_unread_on_the_tile() {
 // No arrows on the home screen (owner, 2026-10-08: they only took room); the tiles are touched and the dots turn
 // the page. The device stays usable without touch: Down reaches every tile of both pages once and comes round,
 // Select opens the tile.
-void test_the_soft_keys_have_no_arrows_and_the_keys_still_reach_every_tile() {
+void test_the_soft_keys_have_no_arrows_but_a_lock_button_and_the_keys_still_reach_every_tile() {
   DeviceRig rig;
   HomeScreen home(rig.context());
   rig.poll();
   home.render(rig.frame);
   const SoftKeys keys = home.softKeys();
   TEST_ASSERT_FALSE(keys.scroll);
-  TEST_ASSERT_TRUE(keys.back.empty() && keys.action.empty());
+  TEST_ASSERT_TRUE(keys.action.empty());
+  TEST_ASSERT_EQUAL_STRING("Lock", keys.back.c_str());
   std::vector<Kind> seen;
   bool secondPage = false;
   do {
@@ -531,6 +532,24 @@ void test_every_label_fits_its_tile_in_the_shipped_languages() {
   TEST_ASSERT_TRUE_MESSAGE(tooWide.empty(), ("wider than " + std::to_string(inner) + " px:\n" + tooWide).c_str());
 }
 
+// The Lock button is there in every language, with its whole word (the symbol goes first when the slot is short).
+void test_the_lock_button_is_there_in_every_language_with_its_whole_word() {
+  const struct { const char* code; const char* word; } words[] = {{"en", "Lock"}, {"de", "Sperren"}, {"fr", "Verrouiller"}};
+  for (const auto& w : words) {
+    DeviceRig rig;
+    rig.language(w.code);
+    HomeScreen home(rig.context());
+    rig.poll();
+    home.render(rig.frame);
+    const SoftKeys keys = home.softKeys();
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(w.word, keys.back.c_str(), w.code);
+    const Rect slot = softKeySlots(keys, ScreenLayout::standard().softKeys).back;
+    TEST_ASSERT_FALSE_MESSAGE(slot.empty(), w.code);
+    TEST_ASSERT_TRUE_MESSAGE(text::width(font(FontSize::Small), keys.back) <= slot.w - 6, w.code);
+    TEST_ASSERT_TRUE_MESSAGE(shows::text(rig.frame, w.word, FontSize::Small, ScreenLayout::standard().softKeys), w.code);
+  }
+}
+
 void test_the_tiles_say_their_words_in_the_language_of_the_moment() {
   const struct { const char* code; const char* front[5]; const char* tools[5]; } words[] = {
       {"en", {"Phone", "Text", "SOS", "Inbox", "Light"}, {"Network", "GPS", "Clock", "Settings", "Tests"}},
@@ -637,11 +656,12 @@ int main(int, char**) {
   RUN_TEST(test_after_school_time_the_phone_tile_opens_again);
   RUN_TEST(test_the_inbox_tile_shows_how_many_are_unread_and_nothing_when_none);
   RUN_TEST(test_system_entries_count_as_unread_on_the_tile);
-  RUN_TEST(test_the_soft_keys_have_no_arrows_and_the_keys_still_reach_every_tile);
+  RUN_TEST(test_the_soft_keys_have_no_arrows_but_a_lock_button_and_the_keys_still_reach_every_tile);
   RUN_TEST(test_the_page_dots_are_wide_targets_that_turn_the_page_through_the_touch_chip);
   RUN_TEST(test_a_tap_on_a_tile_opens_it_and_a_tap_beside_the_tiles_does_nothing);
   RUN_TEST(test_a_tap_on_a_tile_of_the_other_page_is_not_possible_and_the_dots_switch_pages);
   RUN_TEST(test_every_label_fits_its_tile_in_the_shipped_languages);
+  RUN_TEST(test_the_lock_button_is_there_in_every_language_with_its_whole_word);
   RUN_TEST(test_the_tiles_say_their_words_in_the_language_of_the_moment);
   RUN_TEST(test_both_pages_are_drawn_inside_the_screen_in_every_language);
   RUN_TEST(test_the_home_pictures_in_english_and_german);

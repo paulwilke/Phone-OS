@@ -12,6 +12,7 @@ namespace {
 constexpr int kBars = 5, kBarWidth = 5, kBarGap = 1;
 constexpr int kFrameWidth = kBars * kBarWidth + (kBars - 1) * kBarGap + 4;
 constexpr int kFrameHeight = 12;
+constexpr int kMinOperatorRoom = 40;  // less than this and the network's name would be an ellipsis: GPS follows it instead
 
 const char* const kWeekdayKeys[7] = {"weekday.sun", "weekday.mon", "weekday.tue", "weekday.wed",
                                      "weekday.thu", "weekday.fri", "weekday.sat"};
@@ -80,6 +81,31 @@ void drawStatusBar(Display& display, const Rect& area, const StatusModel& model,
     display.fillRect({frame.x + 2 + i * (kBarWidth + kBarGap), frame.y + 2, kBarWidth, kFrameHeight - 4}, true);
 
   const StatusLeft left = statusLeft(model, t);
+
+  // "GPS" stands in the middle of the bar, so that it is found in the same place whatever the network is called
+  // and whatever day it is (owner, 2026-10-09). It gives way only when a side would run into it; then it follows
+  // the left text as it did before.
+  if (model.locating) {
+    const std::string word = t.get("status.gps");
+    const int wordWidth = text::width(font, word);
+    const int gap = text::width(font, "  ");
+    const int wordX = area.x + (area.w - wordWidth) / 2;
+    const int leftRoom = wordX - gap - (area.x + 2);
+    const int dateRight = frame.x - 6;
+    // The weekday is the first thing to go when the sides meet.
+    for (const bool withWeekday : {true, false}) {
+      const std::string date = dateText(model, t, withWeekday);
+      const bool dateFits = wordX + wordWidth + gap <= dateRight - text::width(font, date);
+      const bool leftFits = left.isOperatorName ? leftRoom >= kMinOperatorRoom : text::width(font, left.text) <= leftRoom;
+      if (!dateFits || !leftFits) continue;
+      text::drawRight(display, font, dateRight, area.y, date);
+      text::draw(display, font, area.x + 2, area.y, left.isOperatorName ? text::ellipsize(font, left.text, leftRoom) : left.text);
+      text::draw(display, font, wordX, area.y, word);
+      display.fillRect({area.x, area.y + line, area.w, 2}, true);
+      return;
+    }
+  }
+
   const std::string gps = model.locating ? "  " + t.get("status.gps") : std::string();
   const int gpsWidth = text::width(font, gps);
 
