@@ -18,7 +18,7 @@ Each release names what changed for the people who use the device, what was remo
 ## 4.1.4
 
 - **The battery shows what the voltage says when the gauge says almost nothing.** On 2026-10-09 the fuel gauge fell from 55 % to 6 % in one step at 3627 mV and then said 0 % for three hours while the device ran on to 3426 mV at the same load. The gauge had never learned the battery (cycle count 0). On the battery, when the gauge says 30 or more points less than the voltage gives, the percentage is now the voltage's own number (a table measured in that discharge), the time remaining is withheld, and the log says so once. Before, the display showed 0, and switching Wi-Fi on would have been refused for "battery below 20 percent" (nobody tried in that time, so the log has no such line). Host-tested; not verified on the device.
-- **The status page shows the voltage** in millivolts with the flat and the full mark ("Voltage: 3561 mV (flat at 3430, full 4200)") and says "Battery almost empty" at 10 % or less on the battery. Host-tested.
+- **The status page shows the voltage** in millivolts with the flat and the full mark (two short lines: "Voltage: 3561 mV" and "Flat 3430, full 4200 mV") and says "Battery almost empty" at 10 % or less on the battery. Host-tested.
 - **Deep discharge is not protected by the firmware, and nothing shows that the cell is.** Written down in [docs/battery.md](docs/battery.md) with the decision for the owner (open point 18).
 
 ## 4.1.3
