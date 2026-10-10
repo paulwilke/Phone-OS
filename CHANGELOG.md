@@ -2,6 +2,10 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.5
+
+- **An SOS with an umlaut is one message, not three.** One o-umlaut (German "moechte" written with it) turned the text into UCS2, which allows 70 characters per message and has no concatenation header, so an SOS of about 130 characters arrived as three separate messages and cost three. A text that would take more messages as UCS2 than in plain ASCII is now sent in plain ASCII when every non-ASCII character has a stand-in ("moechte" for the word with the umlaut, "e" for e-acute, the typographic quote as `'`, the euro sign as `EUR`); the history keeps the original. A text with an emoji or another script keeps its characters. Host-tested; not verified on the device. See [docs/modem-driver.md](docs/modem-driver.md).
+
 ## 4.1.4
 
 - **The battery shows what the voltage says when the gauge says almost nothing.** On 2026-10-09 the fuel gauge fell from 55 % to 6 % in one step at 3627 mV and then said 0 % for three hours while the device ran on to 3426 mV at the same load. The gauge had never learned the battery (cycle count 0). On the battery, when the gauge says 30 or more points less than the voltage gives, the percentage is now the voltage's own number (a table measured in that discharge), the time remaining is withheld, and the log says so once. Before, the display showed 0, and switching Wi-Fi on would have been refused for "battery below 20 percent" (nobody tried in that time, so the log has no such line). Host-tested; not verified on the device.

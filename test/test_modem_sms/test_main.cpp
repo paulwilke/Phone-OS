@@ -282,6 +282,50 @@ void test_an_error_at_the_recipient_is_a_failure_with_that_line() {
   TEST_ASSERT_EQUAL(0, p.t.bodies().size());
 }
 
+// 2026-10-09: an SOS of about 130 characters with one "o"-umlaut arrived as three messages (UCS2 allows 70 places
+// and has no concatenation header). In plain ASCII it is one.
+void test_an_sos_with_an_umlaut_goes_out_as_one_message_in_plain_ascii() {
+  Ready m;
+  const std::string text = "Jean m\xC3\xB6" "chte abgeholt werden. Koordinaten hier:\nhttps://maps.google.com/?q=48.13745,11.57550\n48.13745,11.57550, auf 11 m genau";
+  TEST_ASSERT_TRUE(text.size() > 70);
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
+  m.r.run(5000);
+  TEST_ASSERT_EQUAL(1, m.r.countPrefix("AT+CMGS="));
+  TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
+  TEST_ASSERT_EQUAL(1, m.r.count("AT+CSCS=\"GSM\""));
+  TEST_ASSERT_TRUE(m.r.t.bodies()[0].find("Jean moechte abgeholt werden.") == 0);
+}
+
+void test_a_text_with_a_letter_that_has_no_stand_in_keeps_its_characters() {
+  Ready m;
+  std::string text;
+  for (int i = 0; i < 10; ++i) text += "m\xC3\xB6" "chte \xF0\x9F\x98\x80 ";   // an emoji: no stand-in
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
+  m.r.run(8000);
+  TEST_ASSERT_EQUAL(0, m.r.count("AT+CSCS=\"GSM\""));
+  TEST_ASSERT_TRUE(m.r.t.bodies().size() >= 2);
+}
+
+// Folding only ever saves messages: a text that is two messages either way keeps its umlauts.
+void test_a_text_that_is_two_messages_either_way_keeps_its_umlauts() {
+  Ready m;
+  std::string text;
+  for (int i = 0; i < 100; ++i) text += "\xC3\xA4";                    // 100 a-umlauts = 200 letters in ASCII: 2 either way
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
+  m.r.run(5000);
+  TEST_ASSERT_EQUAL(0, m.r.count("AT+CSCS=\"GSM\""));
+  TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
+}
+
+void test_french_accents_and_typographic_signs_fold_to_their_letters() {
+  Ready m;
+  const std::string text = "L\xE2\x80\x99" "enfant a besoin d\xE2\x80\x99" "aide, venez la chercher \xC3\xA0 l\xE2\x80\x99" "\xC3\xA9" "cole. Position : https://maps.google.com/?q=48.13745,11.57550";
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
+  m.r.run(5000);
+  TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
+  TEST_ASSERT_TRUE(m.r.t.bodies()[0].find("L'enfant a besoin d'aide, venez la chercher a l'ecole.") == 0);
+}
+
 // ---- texts of several parts ------------------------------------------------------------------------------------------
 
 void test_a_text_of_320_plain_characters_goes_out_as_two_messages_of_160() {
@@ -697,6 +741,10 @@ void test_no_log_line_carries_a_number_or_the_text_of_a_message() {
 
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_an_sos_with_an_umlaut_goes_out_as_one_message_in_plain_ascii);
+  RUN_TEST(test_a_text_with_a_letter_that_has_no_stand_in_keeps_its_characters);
+  RUN_TEST(test_a_text_that_is_two_messages_either_way_keeps_its_umlauts);
+  RUN_TEST(test_french_accents_and_typographic_signs_fold_to_their_letters);
   RUN_TEST(test_an_announced_message_is_read_and_then_deleted_from_the_sim);
   RUN_TEST(test_the_messages_on_the_sim_are_fetched_after_registration_and_deleted_after_reading);
   RUN_TEST(test_a_sim_with_more_messages_than_one_read_holds_is_read_again_until_empty);
