@@ -7,15 +7,18 @@ else. Only the people in the contact book can call or write to the child. The in
 multilingual: English, German and French ship with it, and anyone can add a language by
 writing one text file.
 
-This is version 4.1.2 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.1.md](docs/release-4.1.md)); the LoRa radio is not part of it.
+This is version 4.1.7 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.1.md](docs/release-4.1.md)); the LoRa radio is not part of it.
 
 Parents start with the user's guide: [English](docs/user-guide.md),
 [Deutsch](docs/de/benutzerhandbuch.md), [Français](docs/fr/guide-utilisateur.md).
 
-**What is verified.** The logic is tested on a laptop (more than 2,400 host tests) and runs in a
-simulator; the firmware compiles. Nothing of it has been verified on the device yet: *compiled*,
-*tested on the host* and *verified on the device* are kept apart everywhere, and what is still to
-be done is in [docs/open-points.md](docs/open-points.md).
+**What is verified.** The logic is tested on a laptop (more than 2,500 host tests) and runs in a
+simulator; the firmware compiles and has run on the device since the first days of October 2026.
+Three words are kept apart everywhere: *compiled*, *tested on the host* and *verified on the device*.
+What was measured on the device is in [docs/hardware-lessons.md](docs/hardware-lessons.md), each entry of the
+[CHANGELOG](CHANGELOG.md) says whether its change is verified on the device or only tested on the host (several are
+not yet), the systematic pass is the checklist [docs/bring-up.md](docs/bring-up.md), whose date and result columns the owner
+has not filled in, and everything still to be done is in [docs/open-points.md](docs/open-points.md).
 
 ## Build, test, run
 
