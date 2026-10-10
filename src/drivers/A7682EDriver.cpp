@@ -123,7 +123,8 @@ void A7682EDriver::begin() {
   atTries_ = 0;
   pwrkeyTried_ = false;
   restarts_ = 0;
-  registered_ = smsOnly_ = false;
+  registered_ = smsOnly_ = roaming_ = manualOperator_ = false;
+  nextReselect_.clear();
   imsKnown_ = false;
   operator_.clear();
   simStatus_ = SimStatus::Unknown;
@@ -187,7 +188,8 @@ void A7682EDriver::onRestart() {
   responded_ = false;
   atTries_ = 0;
   pwrkeyTried_ = false;
-  registered_ = smsOnly_ = false;
+  registered_ = smsOnly_ = roaming_ = manualOperator_ = false;
+  nextReselect_.clear();
   imsKnown_ = false;
   lastLoggedIms_ = -1;
   operator_.clear();
@@ -298,6 +300,7 @@ void A7682EDriver::finishJob(bool ok) {
       break;
 
     case Job::SelectOperator:
+      manualOperator_ = ok;  // from now on the modem stays on this network, whatever happens to the air around it
       startJob(Job::Register);
       break;
 
@@ -309,13 +312,27 @@ void A7682EDriver::finishJob(bool ok) {
       nextSignal_.set(now, operator_.empty() && operatorByCode_ ? 0 : config_.signalIntervalMs);
       nextClock_.set(now, config_.clockIntervalMs);
       drainInboxPending_ = true;  // what arrived while the modem was away
+      if (roaming_ || manualOperator_) nextReselect_.set(now, config_.reselectIntervalMs);
+      else nextReselect_.clear();
       break;
 
     case Job::Signal:
       if (!registered_ && state_ == ModemState::Ready) {
         log("Cellular: network lost, registering again");
         beginRegistering(false);  // no window: a device in the woods is not in error
+      } else if (roaming_ || manualOperator_) {
+        if (!nextReselect_.armed()) nextReselect_.set(now, config_.reselectIntervalMs);  // it moved abroad after the start
+      } else {
+        nextReselect_.clear();  // at home
       }
+      break;
+
+    case Job::Reselect:
+      // Automatic again, whatever came of it, and no window: like a lost network, a device that finds nothing
+      // for a while is not in error. The modem's own search goes on and the registration is asked every 2 s.
+      manualOperator_ = false;
+      log("Cellular: searching again");
+      beginRegistering(false);
       break;
 
     case Job::SendSms:
@@ -570,6 +587,27 @@ void A7682EDriver::step(const char* line, at::LineType type) {
         return;
       }
       if (answered) finishJob(type == at::LineType::Ok);
+      return;
+
+    // -----------------------------------------------------------------------
+    // Back to the home network: deregister, then let the modem choose again. Deregistering is the step
+    // that makes it look anew; AT+COPS=0 alone is answered at once by a modem that is registered.
+    case Job::Reselect:
+      if (!line) {
+        log(manualOperator_ ? "Cellular: a network was chosen by hand, asking for the home network again"
+                            : "Cellular: roaming, asking for the home network again");
+        send("AT+COPS=2");
+        expect(config_.radioTimeoutMs);
+        return;
+      }
+      if (!answered) return;
+      if (stepIndex_ == 0) {
+        stepIndex_ = 1;
+        send("AT+COPS=0");
+        expect(config_.operatorScanTimeoutMs);
+        return;
+      }
+      finishJob(type == at::LineType::Ok);
       return;
 
     // -----------------------------------------------------------------------
@@ -1012,6 +1050,7 @@ void A7682EDriver::onLine(const char* line) {
       if (at::parseCreg(line, &r)) {
         registered_ = r.registered();
         smsOnly_ = r.smsOnly();
+        roaming_ = r.roaming();
         if (!registered_) {
           operator_.clear();  // no network, no operator: the old name would be wrong
           imsKnown_ = false;
@@ -1203,6 +1242,14 @@ void A7682EDriver::pickNextJob() {
     return;
   }
   if (asleep_) return;  // the periodic questions would only wake the modem for nothing
+
+  // On a foreign network, or on one chosen by hand: look for the home network again now and then. Only here,
+  // where nothing is sent, read or dialled, so that it never cuts into anything.
+  if ((roaming_ || manualOperator_) && nextReselect_.armed() && nextReselect_.expired(now)) {
+    nextReselect_.set(now, config_.reselectIntervalMs);
+    startJob(Job::Reselect);
+    return;
+  }
 
   if (nextSignal_.expired(now)) {
     nextSignal_.set(now, config_.signalIntervalMs);
@@ -1769,7 +1816,8 @@ void A7682EDriver::finishPowerOff() {
   transport_.setDtr(false);
   transport_.power(false);
   setState(ModemState::Off);
-  registered_ = smsOnly_ = false;
+  registered_ = smsOnly_ = roaming_ = manualOperator_ = false;
+  nextReselect_.clear();
   imsKnown_ = false;
   operator_.clear();
   asleep_ = shuttingDown_ = false;

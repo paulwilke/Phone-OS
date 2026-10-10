@@ -534,6 +534,98 @@ void test_registration_gives_up_after_the_window_and_says_so() {
   TEST_ASSERT_TRUE(r.t.unexpected().empty());
 }
 
+// ---- back to the home network ---------------------------------------------------------------------------------
+
+// 2026-10: the device was taken across the German-French border, registered on the French network and, back in
+// Germany, did not return to a German one for a long time. A modem that roams, or that sits on a network chosen by
+// hand, is told to deregister and search again every 15 minutes, when nothing else is going on.
+namespace {
+constexpr uint32_t kQuarterHour = 15 * 60 * 1000;
+}
+
+void test_a_modem_that_roams_looks_for_the_home_network_again_every_quarter_hour() {
+  Rig r;
+  Script s;
+  s.creg = {"+CREG: 0,5"};
+  s.apply(r.t);
+  r.t.reply("AT+COPS=2", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  r.run(kQuarterHour - 60000);
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=2"));                           // not before the time
+  r.run(120000);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=0"));
+  TEST_ASSERT_TRUE(r.indexOf("AT+COPS=2") < r.indexOf("AT+COPS=0"));
+  TEST_ASSERT_TRUE(r.logged("roaming, asking for the home network again"));
+  r.run(60000);
+  TEST_ASSERT_TRUE(r.driver.state() == ModemState::Ready);               // registered again (still roaming here)
+  r.run(kQuarterHour);
+  TEST_ASSERT_EQUAL(2, r.count("AT+COPS=2"));                           // and again a quarter of an hour later
+}
+
+void test_back_home_the_modem_stops_asking() {
+  Rig r;
+  Script s;
+  s.creg = {"+CREG: 0,5"};
+  s.apply(r.t);
+  r.t.reply("AT+COPS=2", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  for (int i = 0; i < 1300 && r.count("AT+COPS=2") == 0; ++i) r.run(1000);   // until the search begins
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));
+  r.t.clearReplies("AT+CREG?");
+  r.t.reply("AT+CREG?", {"+CREG: 0,1"});                                // the search found the home network
+  r.run(120000);
+  TEST_ASSERT_TRUE(r.driver.state() == ModemState::Ready);
+  r.run(3 * kQuarterHour);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));                           // at home: no more
+}
+
+void test_a_modem_on_its_home_network_is_never_asked_to_search() {
+  Rig r;
+  Script s;
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.start());
+  r.run(4 * kQuarterHour);
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=2"));
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=0"));
+}
+
+void test_a_network_chosen_by_hand_is_given_up_after_a_quarter_hour() {
+  Rig r;
+  Script s;
+  s.creg = {"+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,1"};
+  s.apply(r.t);
+  r.t.reply("AT+COPS=?", {"+COPS: (1,\"Orange F\",\"Orange\",\"20801\",0),(1,\"Telekom.de\",\"TDG\",\"26201\",0)"});
+  r.t.reply("AT+COPS=1,2,\"20801\"", {});                              // the first of the list is the foreign one
+  r.t.reply("AT+COPS=2", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=1,2,\"20801\""));
+  r.run(kQuarterHour + 120000);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=0"));
+  TEST_ASSERT_TRUE(r.logged("a network was chosen by hand, asking for the home network again"));
+  r.run(4 * kQuarterHour);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));                           // automatic again and at home: no more
+}
+
+// Nothing is cut off: a call comes first (the search is a job of the idle modem, after the outbox and the inbox).
+void test_the_search_waits_for_a_call() {
+  Rig r;
+  Script s;
+  s.creg = {"+CREG: 0,5"};
+  s.apply(r.t);
+  r.t.reply("AT+COPS=2", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  r.run(kQuarterHour - 30000);
+  TEST_ASSERT_TRUE(r.driver.dial(s.number));
+  r.run(120000);                                                          // the quarter hour is over, the call is on
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=2"));
+}
+
 // With the foreign SIM of 2026-09-30 the automatic search found no network in Germany, while a manual
 // choice registered within seconds.
 void test_a_network_that_the_automatic_search_does_not_find_is_chosen_by_hand() {
@@ -817,6 +909,11 @@ void test_the_log_is_polled_once_per_line_and_is_bounded() {
 
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_a_modem_that_roams_looks_for_the_home_network_again_every_quarter_hour);
+  RUN_TEST(test_back_home_the_modem_stops_asking);
+  RUN_TEST(test_a_modem_on_its_home_network_is_never_asked_to_search);
+  RUN_TEST(test_a_network_chosen_by_hand_is_given_up_after_a_quarter_hour);
+  RUN_TEST(test_the_search_waits_for_a_call);
   RUN_TEST(test_the_whole_start_up_is_one_readable_sequence);
   RUN_TEST(test_begin_twice_changes_nothing);
   RUN_TEST(test_a_missing_context_1_is_written_and_the_radio_cycled_in_order_once);
