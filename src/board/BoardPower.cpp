@@ -6,6 +6,7 @@
 namespace board {
 
 void BoardPower::begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer, EventLog& log) {
+  log_ = &log;
   if (charger_.detect()) {
     log.log(std::string("Battery: charger ") + chargerChipName(charger_.chip()) + " found");
   } else {
@@ -88,7 +89,26 @@ ChargeState BoardPower::chargeState() {
 
 int BoardPower::batteryPercent() {
   const Reading r = read();
-  return assessBattery(inputsOf(r)).percent;
+  const BatteryAssessment a = assessBattery(inputsOf(r));
+  if (log_ && a.estimated != estimating_) {
+    estimating_ = a.estimated;
+    if (a.estimated)
+      log_->log("Battery: the gauge says " + std::to_string(r.gauge.percent) + " % at " + std::to_string(r.gauge.millivolts) +
+                " mV; showing about " + std::to_string(a.percent) + " % from the voltage");
+    else
+      log_->log("Battery: the gauge agrees with the voltage again");
+  }
+  return a.percent;
+}
+
+int BoardPower::batteryMillivolts() {
+  const Reading r = read();
+  if (r.gaugeOk && r.gauge.millivolts > 0) return r.gauge.millivolts;
+  // Without a gauge the charger's own measurement stands in; the short status read does not carry it.
+  uint8_t registers[kChargerRegisterCount];
+  ChargerStatus full;
+  if (charger_.readAll(registers, full) && full.batteryMv > 0) return full.batteryMv;
+  return -1;
 }
 
 int BoardPower::batteryMinutesRemaining() {

@@ -47,6 +47,7 @@ public:
   bool powerOff() override;
   bool externalPower() override;
   int batteryPercent() override;
+  int batteryMillivolts() override;
   int batteryMinutesRemaining() override;
   ChargeState chargeState() override;
 
@@ -65,6 +66,8 @@ private:
   Charger& charger_;
   FuelGauge& gauge_;
   Modem& modem_;
+  EventLog* log_ = nullptr;
+  bool estimating_ = false;  // the percentage is the voltage's: said once when it starts and when it ends
   bool frontlight_ = false;
   uint32_t switchOns_[4] = {};
 };

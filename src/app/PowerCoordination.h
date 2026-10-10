@@ -63,6 +63,7 @@ public:
   void notePowerOffFailed();
 
   int batteryPercent() { return power_.batteryPercent(); }
+  int batteryMillivolts() { return power_.batteryMillivolts(); }
   ChargeState chargeState() { return power_.chargeState(); }
   bool externalPower() { return power_.externalPower(); }
   int batteryMinutesRemaining() { return power_.batteryMinutesRemaining(); }

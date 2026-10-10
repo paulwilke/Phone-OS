@@ -113,6 +113,7 @@ public:
     bool positioningActive = false;
     // power
     int batteryPercent = -1;
+    int batteryMillivolts = -1;
     int batteryMinutes = -1;
     ChargeState charge = ChargeState::Unknown;
     // A supply is attached, whatever the charger is doing: the charger's power-good bit, not the charge state.

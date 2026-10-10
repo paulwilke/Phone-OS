@@ -10,10 +10,24 @@
 // "Full" is claimed only on a cable and only on the charger's word: the charge is done, or the charger
 // is not charging a cell that is above 4.1 V (a full battery on a cable reads "not charging").
 
+// The second rule, on the battery: a gauge that says far less than the voltage gives is wrong too. On
+// 2026-10-09 the gauge fell from 55 % to 6 % in one step at 3627 mV and then said 0 % for three hours while the
+// device ran on down to 3426 mV with the same load (140 mA) all the time: it had not learned this battery
+// (cycle count 0) and took the cell for empty. The percentage is then taken from the voltage, with the table
+// that the same discharge measured (percentFromVoltage), and the time remaining is withheld. Only this direction
+// is checked: a gauge that says more than the voltage gives could be fooled by a dip while the modem sends.
+
+#include "../hal/Power.h"
+
 namespace board {
 
 constexpr int kCellHighMv = 4100;
 constexpr int kImplausiblyLowPercent = 70;
+constexpr int kGaugeTooLowByPoints = 30;
+
+// The percentage the cell voltage alone gives under a load of about 140 mA, 0..100. A lighter load gives a
+// higher voltage and so a slightly higher number; a heavier one a lower number.
+int percentFromVoltage(int millivolts);
 
 struct BatteryInputs {
   int gaugePercent = -1;     // -1: the gauge does not answer
@@ -26,8 +40,9 @@ struct BatteryInputs {
 };
 
 struct BatteryAssessment {
-  int percent = -1;           // 0..100, or -1 when unknown or contradicted
+  int percent = -1;           // 0..100, or -1 when unknown or withheld; the voltage's own number when `estimated`
   bool contradicted = false;  // the gauge's number disagrees with the voltage
+  bool estimated = false;     // the number is the voltage's, because the gauge says far too little
   bool full = false;          // the trustworthy state: on a cable and full
 };
 

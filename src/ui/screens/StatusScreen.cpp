@@ -26,6 +26,11 @@ std::string StatusScreen::words() {
   if (s.batteryPercent < 0) line(t().get("status.battery-unknown"));
   else line(t().get(s.charge == ChargeState::Charging ? "status.battery-charging" : s.charge == ChargeState::Full ? "status.battery-full" : "status.battery",
                     {{"percent", s.batteryPercent}}));
+  // Almost empty only on the battery: on a cable the number is the charge so far, not a warning.
+  if (!cable && s.batteryPercent >= 0 && s.batteryPercent <= kBatteryLowPercent) line(t().get("status.battery-low"));
+  // The voltage is the one value that does not depend on the gauge having learned the battery.
+  if (s.batteryMillivolts > 0)
+    line(t().get("status.voltage", {{"mv", s.batteryMillivolts}, {"empty", kBatteryEmptyMv}, {"full", kBatteryFullMv}}));
   if (s.batteryMinutes < 0) line(t().get("status.remaining-unknown"));
   else line(t().get("status.remaining", {{"hours", s.batteryMinutes / 60}, {"minutes", s.batteryMinutes % 60}}));
   if (!profile.childName.empty()) line(t().get("status.child", {{"name", profile.childName.c_str()}}));

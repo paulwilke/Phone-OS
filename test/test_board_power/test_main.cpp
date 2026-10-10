@@ -52,6 +52,30 @@ void test_a_gauge_that_disagrees_with_the_cell_shows_no_percentage_and_no_time()
   TEST_ASSERT_EQUAL(-1, r.impl.batteryMinutesRemaining());
 }
 
+void test_the_gauge_that_said_zero_at_3601_mv_gives_the_voltages_number_and_says_so_once() {
+  BoardPowerRig r;
+  r.scriptGauge(3601, 0, 1500, 1500);
+  const int percent = r.impl.batteryPercent();
+  TEST_ASSERT_TRUE(percent > 30 && percent < 45);
+  TEST_ASSERT_EQUAL(-1, r.impl.batteryMinutesRemaining());
+  r.impl.batteryPercent();
+  int lines = 0;
+  for (const auto& l : r.log.lines())
+    if (l.find("showing about") != std::string::npos) ++lines;
+  TEST_ASSERT_EQUAL(1, lines);
+  r.scriptGauge(3700, 60, 1500, 1500);
+  r.impl.batteryPercent();
+  TEST_ASSERT_TRUE(r.log.lines().back().find("agrees with the voltage again") != std::string::npos);
+}
+
+void test_the_cell_voltage_is_the_gauges_else_the_chargers_else_unknown() {
+  BoardPowerRig r;
+  r.scriptGauge(3754, 63, 1500, 1500);
+  TEST_ASSERT_EQUAL(3754, r.impl.batteryMillivolts());
+  r.scriptGauge(0, 63, 1500, 1500);
+  TEST_ASSERT_EQUAL(4164, r.impl.batteryMillivolts());  // the charger's 0x0E = 0x5D, as measured on 2026-10-06
+}
+
 void test_charging_is_reported_while_the_charger_charges() {
   BoardPowerRig r;
   r.scriptGauge(3900, 70, 1500, 1500);
@@ -234,6 +258,8 @@ int main(int, char**) {
   RUN_TEST(test_the_cable_is_the_power_good_bit_whatever_the_charge_state);
   RUN_TEST(test_on_the_battery_the_gauge_is_believed_when_the_voltage_agrees);
   RUN_TEST(test_a_gauge_that_disagrees_with_the_cell_shows_no_percentage_and_no_time);
+  RUN_TEST(test_the_gauge_that_said_zero_at_3601_mv_gives_the_voltages_number_and_says_so_once);
+  RUN_TEST(test_the_cell_voltage_is_the_gauges_else_the_chargers_else_unknown);
   RUN_TEST(test_charging_is_reported_while_the_charger_charges);
   RUN_TEST(test_the_older_charger_at_6b_works_the_same);
   RUN_TEST(test_no_charger_says_so_once_and_reports_unknown);
