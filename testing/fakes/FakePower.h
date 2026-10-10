@@ -3,7 +3,7 @@
 // Power supply with a scripted battery and domains that can refuse to switch.
 //
 // Scripting:
-//   setBattery(percent), setMinutesRemaining(minutes)   -1 = unknown
+//   setBattery(percent), setMinutesRemaining(minutes), setMillivolts(mv)   -1 = unknown
 //   plugIn(state)       an external supply with the given state (Charging or Full)
 //   unplug()            on battery
 //   setChargerAnswers(false)   the charger does not answer: state Unknown
@@ -40,12 +40,14 @@ public:
   bool externalPower() override { return cableOnly_ || charge_ == ChargeState::Charging || charge_ == ChargeState::Full; }
 
   int batteryPercent() override { return percent_; }
+  int batteryMillivolts() override { return millivolts_; }
   // Unknown while charging, as the contract says.
   int batteryMinutesRemaining() override { return externalPower() ? -1 : minutes_; }
   ChargeState chargeState() override { return chargerAnswers_ ? charge_ : ChargeState::Unknown; }
 
   // Scripting.
   void setBattery(int percent) { percent_ = percent; }
+  void setMillivolts(int millivolts) { millivolts_ = millivolts; }
   void setMinutesRemaining(int minutes) { minutes_ = minutes; }
   void plugIn(ChargeState state) { charge_ = state == ChargeState::Full ? ChargeState::Full : ChargeState::Charging; }
   // A cable with a supply behind it while the charger neither charges nor reports the charge as done:
@@ -67,6 +69,7 @@ private:
   uint64_t switchedOnAt_[4] = {};
   Clock* clock_;
   int percent_ = 80;
+  int millivolts_ = 3900;
   int minutes_ = 600;
   ChargeState charge_ = ChargeState::Discharging;
   bool chargerAnswers_ = true;

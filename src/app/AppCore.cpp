@@ -165,6 +165,7 @@ AppCore::State AppCore::state() {
   s.schoolTime = school_.active(&s.schoolTimeEndMinute);
   s.positioningActive = positioning_.active();
   s.batteryPercent = powerCoordination_.batteryPercent();
+  s.batteryMillivolts = powerCoordination_.batteryMillivolts();
   s.batteryMinutes = powerCoordination_.batteryMinutesRemaining();
   s.charge = powerCoordination_.chargeState();
   s.externalPower = powerCoordination_.externalPower();

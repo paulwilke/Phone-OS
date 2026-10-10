@@ -65,11 +65,12 @@ void test_not_charging_on_a_cable_with_a_high_cell_is_full() {
   TEST_ASSERT_FALSE(assessBattery(on(60, 3900, true, false, true)).full);
 }
 
+// The first rule's edges, on a cable: the voltage rule for the battery would doubt these numbers on its own.
 void test_the_boundaries() {
-  TEST_ASSERT_FALSE(assessBattery(on(70, 4200, false)).contradicted);  // 70 % is not below 70
-  TEST_ASSERT_TRUE(assessBattery(on(69, 4200, false)).contradicted);
-  TEST_ASSERT_FALSE(assessBattery(on(50, 4100, false)).contradicted);  // 4.1 V is not above 4.1 V
-  TEST_ASSERT_TRUE(assessBattery(on(50, 4101, false)).contradicted);
+  TEST_ASSERT_FALSE(assessBattery(on(70, 4200, true)).contradicted);  // 70 % is not below 70
+  TEST_ASSERT_TRUE(assessBattery(on(69, 4200, true)).contradicted);
+  TEST_ASSERT_FALSE(assessBattery(on(50, 4100, true)).contradicted);  // 4.1 V is not above 4.1 V
+  TEST_ASSERT_TRUE(assessBattery(on(50, 4101, true)).contradicted);
   TEST_ASSERT_TRUE(assessBattery(on(0, 4101, false)).contradicted);
   TEST_ASSERT_FALSE(assessBattery(on(100, 3300, false)).contradicted);  // high number, low cell: not this rule's business
 }
@@ -97,6 +98,71 @@ void test_a_charger_that_did_not_answer_claims_nothing() {
   TEST_ASSERT_EQUAL(56, a.percent);
 }
 
+// 2026-10-09, on the battery at 140 mA: the gauge went from 55 % (820 mAh) to 6 % (79 mAh) in one step at 3627 mV
+// and then said 0 % for three hours while the device ran on to 3426 mV.
+void test_a_gauge_that_fell_to_almost_nothing_at_3627_mv_is_not_believed() {
+  const BatteryAssessment a = assessBattery(on(6, 3627, false));
+  TEST_ASSERT_TRUE(a.contradicted);
+  TEST_ASSERT_TRUE(a.estimated);
+  TEST_ASSERT_EQUAL(percentFromVoltage(3627), a.percent);
+  TEST_ASSERT_TRUE(a.percent >= 40 && a.percent <= 50);
+}
+
+void test_a_gauge_that_says_zero_at_3601_mv_is_not_believed_and_the_number_is_the_voltages() {
+  const BatteryAssessment a = assessBattery(on(0, 3601, false));
+  TEST_ASSERT_TRUE(a.estimated);
+  TEST_ASSERT_TRUE(a.percent > 30 && a.percent < 45);
+}
+
+void test_a_gauge_that_agrees_with_a_low_voltage_is_believed() {
+  const BatteryAssessment a = assessBattery(on(8, 3500, false));
+  TEST_ASSERT_FALSE(a.contradicted);
+  TEST_ASSERT_FALSE(a.estimated);
+  TEST_ASSERT_EQUAL(8, a.percent);
+}
+
+void test_a_flat_cell_is_zero_by_the_gauge_and_by_the_voltage() {
+  const BatteryAssessment a = assessBattery(on(0, 3426, false));
+  TEST_ASSERT_FALSE(a.estimated);
+  TEST_ASSERT_EQUAL(0, a.percent);
+}
+
+// A raised voltage on a cable is the charger's, not the cell's: the second rule is for the battery only.
+void test_the_voltage_rule_is_not_applied_on_a_cable_or_with_an_unknown_charger() {
+  TEST_ASSERT_FALSE(assessBattery(on(6, 3900, true)).estimated);
+  BatteryInputs in = on(6, 3900, false);
+  in.chargerKnown = false;
+  TEST_ASSERT_FALSE(assessBattery(in).estimated);
+}
+
+// The edge of the second rule: 30 points below the voltage's number is doubted, 29 is not.
+void test_the_second_rule_has_its_edge_at_30_points() {
+  const int fromVoltage = percentFromVoltage(3749);  // 63
+  TEST_ASSERT_TRUE(assessBattery(on(fromVoltage - 30, 3749, false)).estimated);
+  TEST_ASSERT_FALSE(assessBattery(on(fromVoltage - 29, 3749, false)).estimated);
+}
+
+// A dip while the modem sends is a low voltage with a good gauge: only a gauge that says too little is doubted.
+void test_a_gauge_that_says_more_than_the_voltage_gives_is_left_alone() {
+  const BatteryAssessment a = assessBattery(on(70, 3500, false));
+  TEST_ASSERT_FALSE(a.contradicted);
+  TEST_ASSERT_EQUAL(70, a.percent);
+}
+
+void test_the_curve_is_the_one_measured_and_never_leaves_0_to_100() {
+  TEST_ASSERT_EQUAL(100, percentFromVoltage(4200));
+  TEST_ASSERT_EQUAL(100, percentFromVoltage(4100));
+  TEST_ASSERT_EQUAL(49, percentFromVoltage(3644));
+  TEST_ASSERT_EQUAL(0, percentFromVoltage(3430));
+  TEST_ASSERT_EQUAL(0, percentFromVoltage(3000));
+  int last = 0;
+  for (int mv = 3400; mv <= 4200; ++mv) {
+    const int p = percentFromVoltage(mv);
+    TEST_ASSERT_TRUE_MESSAGE(p >= last && p <= 100, "the curve rises with the voltage");
+    last = p;
+  }
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_the_measurement_of_the_6th_of_october_shows_full_and_no_number);
@@ -109,5 +175,13 @@ int main(int, char**) {
   RUN_TEST(test_the_chargers_voltage_stands_in_when_the_gauge_gives_none);
   RUN_TEST(test_an_unknown_gauge_is_unknown);
   RUN_TEST(test_a_charger_that_did_not_answer_claims_nothing);
+  RUN_TEST(test_a_gauge_that_fell_to_almost_nothing_at_3627_mv_is_not_believed);
+  RUN_TEST(test_a_gauge_that_says_zero_at_3601_mv_is_not_believed_and_the_number_is_the_voltages);
+  RUN_TEST(test_a_gauge_that_agrees_with_a_low_voltage_is_believed);
+  RUN_TEST(test_a_flat_cell_is_zero_by_the_gauge_and_by_the_voltage);
+  RUN_TEST(test_the_voltage_rule_is_not_applied_on_a_cable_or_with_an_unknown_charger);
+  RUN_TEST(test_the_second_rule_has_its_edge_at_30_points);
+  RUN_TEST(test_a_gauge_that_says_more_than_the_voltage_gives_is_left_alone);
+  RUN_TEST(test_the_curve_is_the_one_measured_and_never_leaves_0_to_100);
   return UNITY_END();
 }

@@ -2,6 +2,12 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.4
+
+- **The battery shows what the voltage says when the gauge says almost nothing.** On 2026-10-09 the fuel gauge fell from 55 % to 6 % in one step at 3627 mV and then said 0 % for three hours while the device ran on to 3426 mV at the same load. The gauge had never learned the battery (cycle count 0). On the battery, when the gauge says 30 or more points less than the voltage gives, the percentage is now the voltage's own number (a table measured in that discharge), the time remaining is withheld, and the log says so once. Before, the display showed 0, and switching Wi-Fi on would have been refused for "battery below 20 percent" (nobody tried in that time, so the log has no such line). Host-tested; not verified on the device.
+- **The status page shows the voltage** in millivolts with the flat and the full mark (two short lines: "Voltage: 3561 mV" and "Flat 3430, full 4200 mV") and says "Battery almost empty" at 10 % or less on the battery. Host-tested.
+- **Deep discharge is not protected by the firmware, and nothing shows that the cell is.** Written down in [docs/battery.md](docs/battery.md) with the decision for the owner (open point 18).
+
 ## 4.1.3
 
 - **The energy log is back.** `/energy.log` on the card gets one line every ten minutes: the time, the uptime, the fuel gauge's percentage, voltage, current and remaining charge, and whether a cable is attached, the modem may sleep or the device is awake. It exists to explain a battery that ran down fast (on 2026-10-09 the log showed no sleep at all: `modem_sleep = false` keeps modem and processor awake). It is read over the cable (`deviceconfig.py read energy.log`) and on the Files tab, and rotates to `energy.old.log` at 64 KB. 3.2 wrote a file of that name in another format; the Files tab no longer marks it as unused. Host-tested; not verified on the device. See [docs/energy-log.md](docs/energy-log.md).

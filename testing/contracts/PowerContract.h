@@ -68,6 +68,12 @@ struct PowerContract {
     TEST_ASSERT_TRUE(percent >= -1 && percent <= 100);
   }
 
+  static void the_cell_voltage_is_a_plausible_number_of_millivolts_or_minus_one() {
+    Rig rig;
+    const int millivolts = rig.power().batteryMillivolts();
+    TEST_ASSERT_TRUE(millivolts == -1 || (millivolts >= 2500 && millivolts <= 4500));
+  }
+
   static void the_remaining_time_is_a_number_of_minutes_or_minus_one() {
     Rig rig;
     TEST_ASSERT_TRUE(rig.power().batteryMinutesRemaining() >= -1);
@@ -110,6 +116,7 @@ struct PowerContract {
   RUN_TEST(PowerContract<Rig>::the_domains_are_independent);                                              \
   RUN_TEST(PowerContract<Rig>::a_domain_that_cannot_be_switched_reports_failure_and_keeps_its_state);     \
   RUN_TEST(PowerContract<Rig>::the_battery_percent_is_0_to_100_or_minus_one);                             \
+  RUN_TEST(PowerContract<Rig>::the_cell_voltage_is_a_plausible_number_of_millivolts_or_minus_one);         \
   RUN_TEST(PowerContract<Rig>::the_remaining_time_is_a_number_of_minutes_or_minus_one);                   \
   RUN_TEST(PowerContract<Rig>::charging_needs_a_supply_and_the_remaining_time_is_unknown_while_charging); \
   RUN_TEST(PowerContract<Rig>::on_battery_there_is_no_supply);                                            \

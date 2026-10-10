@@ -21,6 +21,14 @@ enum class PowerDomain : uint8_t {
   Radio,        // the long-range radio chip
 };
 
+// What the battery is: the cell's usable voltage range, measured on the device (docs/battery.md). Below the empty
+// mark the cell is flat; this is not the cell's safe limit, which nothing in this repository knows (the data
+// sheet of the cell is not here), and nothing below it is protected by the firmware.
+constexpr int kBatteryEmptyMv = 3430;
+constexpr int kBatteryFullMv = 4200;
+// At or below this percentage on the battery the interface says the battery is almost empty.
+constexpr int kBatteryLowPercent = 10;
+
 // Where the power comes from. Full means: on external power and fully charged.
 enum class ChargeState : uint8_t { Unknown, Discharging, Charging, Full };
 
@@ -44,6 +52,8 @@ public:
 
   // 0 … 100, or -1 when unknown.
   virtual int batteryPercent() = 0;
+  // The cell voltage in millivolts; -1 when no chip answers.
+  virtual int batteryMillivolts() = 0;
   // Estimate of the remaining time in minutes; -1 when unknown or while charging.
   virtual int batteryMinutesRemaining() = 0;
   // Unknown when the charger does not answer.

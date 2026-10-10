@@ -342,8 +342,44 @@ void test_the_pictures_with_problems_in_english_and_german() {
   }
 }
 
+void test_the_voltage_and_its_range_are_on_the_page() {
+  Page page;
+  page.rig.power.setMillivolts(3561);
+  page.rig.poll();
+  page.screen.onEnter();
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Voltage: 3561 mV"));
+  TEST_ASSERT_TRUE(page.says("Flat 3430, full 4200 mV"));
+}
+
+void test_an_unknown_voltage_has_no_line() {
+  Page page;
+  page.rig.power.setMillivolts(-1);
+  page.rig.poll();
+  page.screen.onEnter();
+  page.draw();
+  TEST_ASSERT_FALSE(page.says("Voltage: -1"));
+}
+
+void test_almost_empty_is_said_on_the_battery_and_not_on_the_cable() {
+  Page page;
+  page.rig.power.setBattery(8);
+  page.rig.poll();
+  page.screen.onEnter();
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Battery almost empty: charge it now"));
+  page.rig.power.plugIn(ChargeState::Charging);
+  page.rig.poll();
+  page.screen.onEnter();
+  page.draw();
+  TEST_ASSERT_FALSE(page.says("Battery almost empty: charge it now"));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
+  RUN_TEST(test_the_voltage_and_its_range_are_on_the_page);
+  RUN_TEST(test_an_unknown_voltage_has_no_line);
+  RUN_TEST(test_almost_empty_is_said_on_the_battery_and_not_on_the_cable);
   RUN_TEST(test_the_page_gives_battery_time_left_child_contacts_queries_and_firmware);
   RUN_TEST(test_unknown_values_are_told_as_unknown_and_empty_ones_are_left_out);
   RUN_TEST(test_the_cable_is_told_with_the_battery_and_switching_off_says_unplug_first);

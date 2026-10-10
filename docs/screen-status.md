@@ -10,6 +10,8 @@ Code: `src/ui/screens/StatusScreen.{h,cpp}`; tests in `test/test_screen_status/`
 
 **Restarting** is written under it and works the same way: two presses of r (capital too), the first one arms ("Restart? Press r again"), any other input, including x, takes it back, and so does opening the page afresh (neither has a timeout). Unlike switching off it works with the cable plugged in: the reason switch-off refuses there, that USB keeps the board alive, does not apply to a restart. The page writes one log line ("Restart requested on the device", so the log shows who restarted) and asks the core (`requestRestart`); the host restarts, as it does for the parents' page and the USB console ([runtime.md](runtime.md)). That path only flushes the console and calls the processor's restart: it does nothing of its own for pending writes (the log and the card's files are written when they are asked for, not held back).
 
+**The battery lines.** The percentage, then, on the battery at 10 % or less, "Battery almost empty: charge it now", then the voltage in millivolts with the flat and the full mark of the cell (`kBatteryEmptyMv`, `kBatteryFullMv`), then the time remaining. The voltage is the one value that does not depend on the gauge having learned the battery; without a reading there is no voltage line. Where the percentage comes from is in [battery.md](battery.md).
+
 The page is a text and scrolls with the arrows when it is longer than the page (a long hardware name, or a language); the position is kept while the words stay the same and the page opens at the top.
 
 ## Not ported
