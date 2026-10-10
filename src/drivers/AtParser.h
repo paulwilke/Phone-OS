@@ -127,6 +127,8 @@ struct Registration {
   // sent its SMS all the same.
   bool registered() const { return stat == 1 || stat == 5 || stat == 6 || stat == 7; }
   bool smsOnly() const { return stat == 6 || stat == 7; }
+  // 5 and 7: registered, but on a network that is not the SIM's own.
+  bool roaming() const { return stat == 5 || stat == 7; }
 };
 bool parseCreg(const char* line, Registration* out);
 

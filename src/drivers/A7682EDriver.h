@@ -56,6 +56,12 @@ public:
     // 2026-09-30 a foreign SIM found no network in Germany with AT+COPS=0, while
     // AT+COPS=1,2,"<code>" registered within seconds.
     int autoRegisterAttempts = 8;
+    // A modem that sits on a foreign network (roaming) or on one chosen by hand does not go back to its own by
+    // itself while the foreign one still carries: on the German-French border it stayed on the French network
+    // for a long time after coming home (2026-10). So often, when nothing else is going on, it is told to
+    // deregister and search again, which prefers the home network. Fifteen minutes: every search costs a few
+    // seconds without a network.
+    uint32_t reselectIntervalMs = 15 * 60 * 1000;
     // AT+CNMP: the A7682E knows 2 (automatic), 13 (GSM only) and 38 (LTE only), no 3G.
     // Automatic is the default: LTE covers better, and GSM sending draws up to two amperes, with
     // which the modem restarted once in the middle of a call.
@@ -137,7 +143,7 @@ private:
   // What the driver is doing. One at a time.
   enum class Job : uint8_t { None, Init, SimCheck, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock,
                              Dial, Answer, Hangup, CallPoll, CallDiag, Volume,
-                             SendSms, ReadSms, DrainInbox, Query, Sleep, Wake, Shutdown };
+                             SendSms, ReadSms, DrainInbox, Query, Sleep, Wake, Shutdown, Reselect };
 
   void send(const char* command);
   void startJob(Job job);
@@ -193,6 +199,7 @@ private:
   at::Deadline waitUntil_;  // PoweringOn: until the modem is asked; Registering: the next CREG round
   at::Deadline registerWindow_;
   at::Deadline nextSignal_;
+  at::Deadline nextReselect_;  // armed while roaming or on a network chosen by hand
   at::Deadline nextClock_;
   std::deque<std::string> log_;
 
@@ -278,6 +285,8 @@ private:
   // Network
   bool registered_ = false;
   bool smsOnly_ = false;
+  bool roaming_ = false;         // +CREG says 5 or 7
+  bool manualOperator_ = false;  // the network was chosen by hand (AT+COPS=1): the modem stays there until told otherwise
   std::string operator_;
   std::string loggedOperator_;  // the network is logged when it changes, not at every question
   // The modem gave a blank name: the operator is asked for as its code (AT+COPS=3,2), which the

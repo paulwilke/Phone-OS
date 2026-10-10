@@ -2,6 +2,10 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.7
+
+- **The modem looks for its home network again** when it is on a foreign network (roaming) or on one that was chosen by hand: every 15 minutes, when nothing else is going on, it deregisters (`AT+COPS=2`) and lets the modem search again (`AT+COPS=0`), which prefers the home network. After the trip over the German-French border the device stayed on the French network for a long time: the modem does not leave a foreign network by itself while that one still carries, and a network chosen by hand (the driver does this when the automatic search finds nothing, and takes the first of the list) stays until somebody changes it, which nothing did. At home the appointment is dropped; a call, a text to send or a sleeping modem come first. Host-tested with a scripted modem; **not verified on a real network** (see [docs/modem-driver.md](docs/modem-driver.md)).
+
 ## 4.1.6
 
 - **The home screen has a visible Lock button** in the bar at the bottom ("Lock", "Sperren", "Verrouiller"). Back locks the device there, and since 4.1.0 the bar was empty (the arrows were removed on purpose, and the Back key went with them), so nothing said how to lock it. The word never changes with the selection, so the bar costs no redraw. The arrows stay away. Host-tested in all three languages; not verified on the device.
