@@ -13,6 +13,7 @@ The documents describe what exists in this repository — each one is written fr
 | [contacts.md](contacts.md) | phone number normalisation, the whitelist and its file format |
 | [quiet-hours.md](quiet-hours.md) | school-time windows, midnight crossing, behaviour without a clock |
 | [time-zones.md](time-zones.md) | named time zones, summer-time rules, calendar arithmetic |
+| [energy-log.md](energy-log.md) | the battery readings every ten minutes in /energy.log, their format, rotation and what to read from them |
 | [log-level.md](log-level.md) | which log lines are written on which level, and which are never dropped |
 | [map-link.md](map-link.md) | the map address in position messages, built from a template |
 | [shake-detector.md](shake-detector.md) | recognising shaking from acceleration samples |

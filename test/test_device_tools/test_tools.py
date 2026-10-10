@@ -140,6 +140,13 @@ out, err = capture_both(lambda: run(["--port", "x", "read", SYSTEM_LOG],
                                                                 "line b", "line c", "", "CONFIG END"]}))
 check("read of the end of a long log says where it begins", out == TAIL.decode() and "begins 100 bytes earlier" in err, repr((out, err)))
 
+ENERGY_LOG = "energy" + ".log"
+LINE = b"1791489827 600 63 3754 -42 939 modem-sleep\n"
+out, err = capture_both(lambda: run(["--port", "x", "read", ENERGY_LOG],
+                                    {f"CONFIG READ {ENERGY_LOG}": [f"CONFIG CONTENT {ENERGY_LOG} {len(LINE)} {deviceconfig.checksum(LINE)} from 0 of {len(LINE)}",
+                                                                 LINE.decode().rstrip("\n"), "", "CONFIG END"]}))
+check("the energy log can be read over the cable", out == LINE.decode(), repr((out, err)))
+
 out, err = capture_both(lambda: run(["--port", "x", "read", "contacts.toml"],
                                     {"CONFIG READ contacts.toml": ["CONFIG CONTENT contacts.toml 0 0 from 0 of 0", "", "CONFIG END"]}))
 check("read of a file that is empty or missing says so", out == "" and "empty or does not exist" in err, repr((out, err)))

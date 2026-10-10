@@ -135,9 +135,12 @@ void test_the_cable_reaches_only_the_known_files() {
   TEST_ASSERT_EQUAL_STRING("/system.log", log.path.c_str());
   TEST_ASSERT_TRUE(parseConsoleLine("CONFIG READ system.old.log").kind == Kind::Read);
   TEST_ASSERT_TRUE(parseConsoleLine("CONFIG READ messages.log").kind == Kind::Read);
+  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG READ energy.log").kind == Kind::Read);
+  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG READ energy.old.log").kind == Kind::Read);
   // A log is read over the cable and never written.
   TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WRITE system.log 10 100").kind == Kind::Unknown);
   TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WRITE messages.log 10 100").kind == Kind::Unknown);
+  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WRITE energy.log 10 100").kind == Kind::Unknown);
 }
 
 void test_no_path_no_dots_nothing_else_on_the_card() {

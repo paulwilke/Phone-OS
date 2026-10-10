@@ -16,7 +16,7 @@
 // console and is ignored.
 //
 // **Over the cable only the known files are reachable**: settings.toml, contacts.toml and secrets.toml to read
-// and write, and the logs system.log, system.old.log and messages.log to read. No path, nothing outside /config
+// and write, and the logs system.log, system.old.log, messages.log, energy.log and energy.old.log to read. No path, nothing outside /config
 // and the logs: whoever is at the cable sets the device up; any other file is the parents' page's business, with
 // its password.
 //

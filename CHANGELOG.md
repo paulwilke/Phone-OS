@@ -2,6 +2,10 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.1.3
+
+- **The energy log is back.** `/energy.log` on the card gets one line every ten minutes: the time, the uptime, the fuel gauge's percentage, voltage, current and remaining charge, and whether a cable is attached, the modem may sleep or the device is awake. It exists to explain a battery that ran down fast (on 2026-10-09 the log showed no sleep at all: `modem_sleep = false` keeps modem and processor awake). It is read over the cable (`deviceconfig.py read energy.log`) and on the Files tab, and rotates to `energy.old.log` at 64 KB. 3.2 wrote a file of that name in another format; the Files tab no longer marks it as unused. Host-tested; not verified on the device. See [docs/energy-log.md](docs/energy-log.md).
+
 ## 4.1.2
 
 The project is called **Phone OS**: generic words that nobody can register as a trade mark ("PhonePlus" is registered by others). Only names change, no behaviour; what the parents notice is in [docs/release-4.1.md](docs/release-4.1.md).

@@ -11,7 +11,8 @@ bool writable(const std::string& name) { return name == "settings.toml" || name 
 // The logs. Built from parts because the catalog check takes a quoted word with a dot for a catalog key.
 bool isLog(const std::string& name) {
   const std::string ending = ".log";
-  return name == std::string("system") + ending || name == std::string("system") + ".old" + ending || name == std::string("messages") + ending;
+  return name == std::string("system") + ending || name == std::string("system") + ".old" + ending || name == std::string("messages") + ending ||
+         name == std::string("energy") + ending || name == std::string("energy") + ".old" + ending;
 }
 bool readable(const std::string& name) { return writable(name) || isLog(name); }
 

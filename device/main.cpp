@@ -33,6 +33,7 @@
 #include <board/PowerUp.h>
 #include <board/SdCard.h>
 #include <board/SdConfigStore.h>
+#include <board/EnergyLog.h>
 #include <board/SdEventLog.h>
 #include <board/SdMessageLog.h>
 #include <board/Tca8418.h>
@@ -78,6 +79,7 @@ Esp32GaugeWriter gaugeWriter;
 Esp32SdVolume sdVolume;
 board::SdCard sdCard(sdVolume, gpio, delays);
 board::SdEventLog eventLog(sdCard, deviceClock, &serialLog);
+board::EnergyLog energyLog(sdCard, gauge, deviceClock);
 board::SdConfigStore configStore(sdCard);
 board::SdMessageLog messageLog(sdCard);
 
@@ -268,6 +270,12 @@ void loop() {
   haptic.service();
 
   const PowerDecision decision = runtime->step(now);
+
+  // One reading of the battery every ten minutes (docs/energy-log.md). The cable is asked only when a line is due.
+  if (energyLog.due(now))
+    energyLog.record(now, power->externalPower() ? board::EnergyState::Cable
+                          : decision.modemShouldSleep ? board::EnergyState::ModemSleep
+                                                      : board::EnergyState::Awake);
 
   // The radio is not part of this firmware: a request to start it is answered with "not available".
   if (runtime->core().takeRadioStartRequest()) eventLog.log("Radio: not available in this firmware");
