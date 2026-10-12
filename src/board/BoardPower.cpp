@@ -9,6 +9,12 @@ void BoardPower::begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer,
   log_ = &log;
   if (charger_.detect()) {
     log.log(std::string("Battery: charger ") + chargerChipName(charger_.chip()) + " found");
+    // The chip charges with 2048 mA unless it is told otherwise, which is more than 1 C for this cell, and
+    // its watchdog sets it back to that every 40 seconds.
+    const ChargeSetup setup = charger_.limitCharging(chargeCurrentLimitMa(batteryCapacityMah));
+    if (!setup.ok) log.log("Battery: the charge current could not be limited, the charger keeps its own " + std::to_string(setup.chargeCurrentBeforeMa) + " mA");
+    else if (setup.changed) log.log("Battery: charge current limited to " + std::to_string(setup.chargeCurrentMa) + " mA (it was " + std::to_string(setup.chargeCurrentBeforeMa) + " mA), the charger's watchdog is off");
+    else log.log("Battery: charge current is " + std::to_string(setup.chargeCurrentMa) + " mA already, nothing to write");
   } else {
     log.log("Battery: no charger answers at either address, charge state and cable are unknown");
   }

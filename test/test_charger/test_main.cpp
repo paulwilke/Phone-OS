@@ -111,6 +111,77 @@ void test_neither_charger_is_reported_as_absent_not_as_a_broken_bus() {
   TEST_ASSERT_FALSE(c.disconnectBattery());
 }
 
+namespace {
+// The registers of 2026-10-12: the chip on its defaults, the watchdog (40 s) running and nobody feeding it.
+void onDefaults(FakeI2cBus& bus) {
+  bus.addChip(i2c::kChargerSy6970);
+  bus.setRegister(i2c::kChargerSy6970, 0x04, 0x20);
+  bus.setRegister(i2c::kChargerSy6970, 0x07, 0x9D);
+}
+}  // namespace
+
+void test_the_limit_for_a_cell_is_065_c_in_steps_of_64() {
+  TEST_ASSERT_EQUAL(960, chargeCurrentLimitMa(1500));
+  TEST_ASSERT_EQUAL(640, chargeCurrentLimitMa(1000));
+  TEST_ASSERT_EQUAL(2048, chargeCurrentLimitMa(5000));  // never above the chip's default
+  TEST_ASSERT_EQUAL(64, chargeCurrentLimitMa(0));
+}
+
+void test_limiting_writes_the_current_and_switches_the_watchdog_off_keeping_the_other_bits() {
+  FakeI2cBus bus;
+  onDefaults(bus);
+  bus.setRegister(i2c::kChargerSy6970, 0x04, 0xA0);  // bit 7 set: not ours to change
+  Charger c(bus);
+  c.detect();
+  const ChargeSetup s = c.limitCharging(960);
+  TEST_ASSERT_TRUE(s.ok);
+  TEST_ASSERT_TRUE(s.changed);
+  TEST_ASSERT_EQUAL(2048, s.chargeCurrentBeforeMa);
+  TEST_ASSERT_EQUAL(960, s.chargeCurrentMa);
+  TEST_ASSERT_EQUAL(40, s.watchdogBeforeSeconds);
+  TEST_ASSERT_EQUAL(0, s.watchdogSeconds);
+  TEST_ASSERT_EQUAL_HEX8(0x8F, bus.reg(i2c::kChargerSy6970, 0x04));  // 15 steps of 64 mA, bit 7 kept
+  TEST_ASSERT_EQUAL_HEX8(0x8D, bus.reg(i2c::kChargerSy6970, 0x07));  // 0x9D without the watchdog bits
+}
+
+void test_limiting_writes_nothing_when_the_chip_holds_the_values() {
+  FakeI2cBus bus;
+  onDefaults(bus);
+  Charger c(bus);
+  c.detect();
+  c.limitCharging(960);
+  const int before04 = bus.writeCount(i2c::kChargerSy6970, 0x04), before07 = bus.writeCount(i2c::kChargerSy6970, 0x07);
+  const ChargeSetup again = c.limitCharging(960);
+  TEST_ASSERT_TRUE(again.ok);
+  TEST_ASSERT_FALSE(again.changed);
+  TEST_ASSERT_EQUAL(before04, bus.writeCount(i2c::kChargerSy6970, 0x04));
+  TEST_ASSERT_EQUAL(before07, bus.writeCount(i2c::kChargerSy6970, 0x07));
+}
+
+void test_a_refused_write_is_not_ok_and_says_what_the_chip_holds() {
+  FakeI2cBus bus;
+  onDefaults(bus);
+  bus.refuseRegisterWrite(i2c::kChargerSy6970, 0x04);
+  Charger c(bus);
+  c.detect();
+  const ChargeSetup s = c.limitCharging(960);
+  TEST_ASSERT_FALSE(s.ok);
+  TEST_ASSERT_EQUAL(2048, s.chargeCurrentBeforeMa);
+  FakeI2cBus empty;
+  Charger none(empty);
+  TEST_ASSERT_FALSE(none.limitCharging(960).ok);  // no chip found: nothing is claimed
+}
+
+void test_the_watchdog_decodes_from_register_7() {
+  uint8_t r[kChargerRegisterCount] = {};
+  r[0x07] = 0x9D;
+  TEST_ASSERT_EQUAL(40, decodeCharger(r).watchdogSeconds);
+  r[0x07] = 0xAD;
+  TEST_ASSERT_EQUAL(80, decodeCharger(r).watchdogSeconds);
+  r[0x07] = 0x8D;
+  TEST_ASSERT_EQUAL(0, decodeCharger(r).watchdogSeconds);
+}
+
 void test_both_present_prefers_6a() {
   FakeI2cBus bus;
   bus.addChip(i2c::kChargerSy6970);
@@ -181,6 +252,11 @@ int main(int, char**) {
   RUN_TEST(test_the_newer_charger_is_found_at_6a);
   RUN_TEST(test_the_older_charger_is_found_at_6b);
   RUN_TEST(test_neither_charger_is_reported_as_absent_not_as_a_broken_bus);
+  RUN_TEST(test_the_limit_for_a_cell_is_065_c_in_steps_of_64);
+  RUN_TEST(test_limiting_writes_the_current_and_switches_the_watchdog_off_keeping_the_other_bits);
+  RUN_TEST(test_limiting_writes_nothing_when_the_chip_holds_the_values);
+  RUN_TEST(test_a_refused_write_is_not_ok_and_says_what_the_chip_holds);
+  RUN_TEST(test_the_watchdog_decodes_from_register_7);
   RUN_TEST(test_both_present_prefers_6a);
   RUN_TEST(test_reading_all_registers_writes_nothing);
   RUN_TEST(test_a_charger_that_answers_the_probe_but_not_the_read_is_reported);

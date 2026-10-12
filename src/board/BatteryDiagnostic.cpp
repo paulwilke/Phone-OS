@@ -71,7 +71,8 @@ void addChargerLines(const BatteryDiagnostic& d, std::vector<std::string>& lines
   lines.push_back(std::string("charger: ") + chargePhaseName(c.phase) + ", power good " + (c.powerGood ? "yes" : "no") +
                   ", fault register 0x" + hex2(c.fault));
   lines.push_back("charger: charge voltage " + to_string(c.chargeVoltageMv) + " mV, charge current " + to_string(c.chargeCurrentMa) +
-                  " mA, pre-charge " + to_string(c.prechargeCurrentMa) + " mA, termination " + to_string(c.terminationCurrentMa) + " mA");
+                  " mA, pre-charge " + to_string(c.prechargeCurrentMa) + " mA, termination " + to_string(c.terminationCurrentMa) + " mA, watchdog " +
+                  (c.watchdogSeconds ? to_string(c.watchdogSeconds) + " s" : std::string("off")));
   lines.push_back("charger: battery " + to_string(c.batteryMv) + " mV, system " + to_string(c.systemMv) +
                   " mV, charging current " + to_string(c.chargingCurrentMa) + " mA");
 }

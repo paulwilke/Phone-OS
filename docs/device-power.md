@@ -45,6 +45,8 @@ Both revisions are probed: an SY6970 at 0x6A, else a BQ25896 at 0x6B (the regist
 
 **"Cable present" is the power-good bit** (register 0x0B bit 2), not the charge phase: `externalPower()` follows it, and the power policy lets nothing sleep while it is set (the USB console disappears in light sleep). `powerOff()` is refused, with nothing changed, while the bit is set (VBUS keeps the board powered, so the battery switch would do nothing) and when the charger does not answer; otherwise it switches the rails off and sets BATFET_DIS (register 0x09 bit 5). A modem that should say goodbye to the network is shut down by the caller first. **The caller's order** (`device/main.cpp`, `powerOff()`; seen on the device 2026-10-08 with 4.1.0, changed in 4.1.1): with a cable it refuses at once (`notePowerOffFailed`: the notice "Switch off only without cable" and a log line) and touches nothing; before, the request stayed and the modem was shut down at every pass of the loop. Otherwise it draws the picture "Phone OS ... Switched off" (`ui::drawSplash`, e-ink keeps it without power, so the device does not look on), shuts the modem down, and disconnects the battery; if the charger does not take the command, the device restarts rather than stay without a network behind a picture that says it is off. Every request is logged ("Power: switch off asked for"). Not verified on the device.
 
+**The charge current is limited at every start** (decision D-14). The chip charges with 2048 mA unless told otherwise, which is more than 1 C for the 1500 mAh cell, and its I2C watchdog (40 seconds) sets every register back to that default when nobody feeds it; the diagnosis of 2026-10-12 showed exactly this (fault register 0x90, a watchdog fault). `BoardPower::begin` calls `Charger::limitCharging(chargeCurrentLimitMa(capacity))`: 0.65 C of the configured capacity, rounded down to the chip's step of 64 mA (960 mA for 1500 mAh), and the watchdog switched off so that the value stays. Each register is read, written only on a difference with only its own bits, and read back; the log says one of "charge current limited to 960 mA (it was 2048 mA), the charger's watchdog is off", "... is 960 mA already, nothing to write" or "could not be limited". The diagnosis shows the watchdog next to the charge current. The register map is the BQ25896's, which the SY6970 is documented to follow; the SY6970's own data sheet is not in this repository, which is why every write is read back.
+
 ## The diagnosis
 
 `board::readBatteryDiagnostic()` reads both chips **without writing** and `formatBatteryDiagnostic()` makes one line per statement:
@@ -69,5 +71,8 @@ Reading register 0x0C clears the charger's latched fault flags, as it does for a
 | the cable is the power-good bit | `test_charger`, `test_board_power` |
 
 ## Not verified on the device
+
+The charge current: that `battery` reads 960 mA and "watchdog off" after a start, that the fault register no longer shows a watchdog fault, and what the energy log shows with a mains adapter on the cable (open point 26).
+
 
 Compiled and tested on the host are not verified on the device: that the capacity write takes (the gauge's data memory, the read back after the chip re-initialises), the register layout of the SY6970 against the values decoded here beyond the six measured registers, and the shutdown through the battery switch.
