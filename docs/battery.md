@@ -15,14 +15,16 @@ The fuel gauge (a BQ27220) counts charge, but it only counts well once it has le
 
 ## The marks of the cell
 
-`kBatteryEmptyMv` 3430 and `kBatteryFullMv` 4200 (`src/hal/Power.h`) are what the status page shows next to the voltage. 3430 is where **this** cell was flat under the load above; 4200 is the charger's target (4208 mV). They are not the cell's limits: the data sheet of the cell is not in this repository.
+`kBatteryEmptyMv` 3300 and `kBatteryFullMv` 4200 (`src/hal/Power.h`) are the ends of the battery bar and what the status page shows next to the voltage. 3300 is where the firmware switches the device off (below); 4200 is the charger's target (4208 mV). The cell is a 3.7 V lithium-polymer cell of 1500 mAh according to the maker's page; its data sheet is not in this repository, and the maker's page names no protection circuit or cut-off voltage. Before 4.2.0 the empty mark was 3430, where **this** cell was flat under 140 mA on 2026-10-09; the device kept running below it.
 
-## Deep discharge: what is known
+The voltage table (`percentFromVoltage`) was measured down to 3430 mV; from there to 3300 mV it is a straight line from 3 % to 0 %, which is an extension and not a measurement.
 
-- **Measured:** the device kept running at 3426 mV. The firmware has no low-voltage switch-off: nothing in it watches the voltage and powers the device off.
-- **Not known:** whether the cell has a protection circuit, and at what voltage it cuts off. The charger (SY6970) and the gauge (BQ27220) are not a protection of the cell: the charger's battery switch is used here only to switch the device off, and the gauge only measures.
-- **Therefore** nobody should rely on the hardware protecting the cell until that is looked up. The owner switched the device off by hand on 2026-10-09 for this reason.
-- **A mitigation, not built:** the firmware switches the device off by itself when the voltage on the battery stays below a limit for a minute (`BoardPower::powerOff()` exists). Whether to do this, and at what voltage, is the owner's decision: a child's emergency phone that switches off earlier is less reachable, and a cell that is discharged too far is damaged. Open point 18 in [open-points.md](open-points.md).
+## Deep discharge: the firmware switches off (decision D-5)
+
+- **Measured:** on 2026-10-09 the device kept running at 3426 mV, with nothing watching the voltage.
+- **Not known:** whether the cell has a protection circuit, and at what voltage it cuts off. The charger (SY6970) and the gauge (BQ27220) are not a protection of the cell, and the maker's page says nothing about one. Nobody should rely on the hardware protecting the cell.
+- **What the firmware does since 4.2.0:** `LowVoltageGuard` (`src/board/LowVoltageGuard.h`, tests in `test/test_low_voltage_guard/`). When the voltage on the battery stays below 3300 mV for 60 seconds, the main loop logs "Battery: <mV> mV for a minute, switching off to protect the cell" and asks for the same switch-off as the menu entry, so the modem says goodbye first and the picture says "Battery empty". The loop reads the voltage every five seconds. A reading at or above the limit, a cable, or an unknown reading starts the minute again, so a dip while the modem sends does not switch the device off. On a cable the switch-off is refused as always.
+- **The number is the agent's.** 3300 mV is above the 3.0 V below which lithium-polymer cells are generally harmed and 130 mV under the voltage where this cell was flat. If a dip switches the device off too early on the device, a new entry in [decisions.md](decisions.md) changes it.
 
 ## Not verified on the device
 

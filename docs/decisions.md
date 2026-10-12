@@ -76,8 +76,8 @@ Context: On 2026-10-09 the device ran on down to 3426 mV while the fuel gauge ha
 Options: Rely on a protection circuit that nobody has shown to exist. Switch the device off by itself at a voltage with a margin above the damaging one (the phone is then unreachable earlier). Both.
 Decision: The firmware switches the device off before the voltage reaches a damaging level, and the battery bar ends at that voltage, so the bar is empty when the device goes off. The voltage: off when the voltage on the battery stays below 3300 mV for 60 seconds (a minute, so that a dip while the modem sends does not switch it off), and 3300 mV is the empty end of the bar.
 Reason: A deeply discharged cell is damaged, and 3300 mV is above the 3.0 V below which lithium-polymer cells are generally harmed, with margin; it is 130 mV under the 3430 mV where this cell was flat at 140 mA. With no cut-off in the documentation, the firmware must do it.
-Consequences: Open point 18 (to be built). `kBatteryEmptyMv` (3430) and the voltage table in `BatteryPlausibility` change with it; the table was measured down to 3426 mV only, so below that it extends a measurement. The number is the agent's: if the device shows a dip that switches it off too early, a new entry changes it. The cell size of 1500 mAh in the firmware agrees with the maker's page for this model.
-Verified: not verified; the discharge to 3426 mV was measured on the device on 2026-10-09
+Consequences: Open point 18 (built; to be checked on the device). `kBatteryEmptyMv` (3430) and the voltage table in `BatteryPlausibility` change with it; the table was measured down to 3426 mV only, so below that it extends a measurement. The number is the agent's: if the device shows a dip that switches it off too early, a new entry changes it. The cell size of 1500 mAh in the firmware agrees with the maker's page for this model.
+Verified: host-tested; compiled; not verified on the device (open point 18); the discharge to 3426 mV was measured on the device on 2026-10-09
 
 ## D-6: A text with an umlaut is sent in ASCII to stay one message
 Date: 2026-10-12   Status: superseded by D-10

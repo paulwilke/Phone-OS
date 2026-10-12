@@ -349,7 +349,7 @@ void test_the_voltage_and_its_range_are_on_the_page() {
   page.screen.onEnter();
   page.draw();
   TEST_ASSERT_TRUE(page.says("Voltage: 3561 mV"));
-  TEST_ASSERT_TRUE(page.says("Flat 3430, full 4200 mV"));
+  TEST_ASSERT_TRUE(page.says("Flat 3300, full 4200 mV"));
 }
 
 void test_an_unknown_voltage_has_no_line() {

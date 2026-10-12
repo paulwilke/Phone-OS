@@ -221,6 +221,7 @@ notice.cellular-switched-off   = "Réseau mobile coupé"
 notice.wifi-battery-low        = "Batterie faible : pas de Wi-Fi"
 notice.power-off-refused       = "Débranchez avant d'éteindre"
 power.switched-off             = "Éteint"
+power.battery-empty            = "Batterie vide"
 notice.light-on                = "Lumière allumée"
 notice.light-off               = "Lumière éteinte"
 

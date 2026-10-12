@@ -222,6 +222,7 @@ notice.cellular-switched-off = "Cellular off"
 notice.wifi-battery-low = "Battery too low for Wi-Fi"
 notice.power-off-refused = "Switch off only without cable"
 power.switched-off = "Switched off"
+power.battery-empty = "Battery empty"
 notice.light-on = "Light on"
 notice.light-off = "Light off"
 
