@@ -154,7 +154,7 @@ Options: A button in the status bar (D-11; crowded). A tile on the second page (
 Decision: A tile "Power" on the first page. It opens a page with the choices Switch off, Power save (D-13) and Cancel. Switch off asks once more ("Switch off?") before it acts, and then shows the "Switched off" picture. The menu entry under Settings stays. This supersedes D-11.
 Reason: It is findable, it is where the other things the device does are, and the question keeps a tap from switching off.
 Consequences: Open point 23. Built as the tile `home.power` (the last of the first page) and the page `PowerScreen` with the choices Switch off (asks "Switch off?", Cancel in focus) and, for later, Power save (D-13, not on the page yet). The switch-off still refuses on the cable and says why. The tile is on the child's page; the question is what protects against a tap.
-Verified: host-tested; compiled; the tile was used on the device on 2026-10-12 and switched the device off (the log has "switch off asked for", "switching off"); the question and the picture are still to be looked at (acceptance test 6.0 and 6.0a)
+Verified: host-tested; compiled; the tile was used on the device on 2026-10-12 and switched the device off (the log has "switch off asked for", "switching off"); the picture "Switched off" is right (owner, 2026-10-12); the question and Cancel are still to be looked at (acceptance test 6.0)
 
 ## D-13: What "Power save" does
 Date: 2026-10-12   Status: open
@@ -212,7 +212,7 @@ Consequences: Open point 28. For C the owner decides where the private signing k
 Verified: not applicable
 
 ## D-18: Read routes on the parents' page in 4.3; an update over the air is written down and not built
-Date: 2026-10-12   Status: decided
+Date: 2026-10-12   Status: decided (the read routes are dropped by D-19; the rest stands)
 Decided by: owner
 
 Context: D-17 asked whether to read the device over Wi-Fi and to update its firmware over the air. The owner charges the device away from the computer and wants to read logs and the battery diagnosis without the cable.
@@ -220,5 +220,16 @@ Options: As in D-17: (A) read routes behind the password, (B) the raw console on
 Decision: (A) is built in 4.3. An update over the air is **not** built; it stays here, with its objections, so that it can be thought through and done later. (B) and (D) are refused.
 Reason: Reading is low risk behind the existing password. The objections to an update over the air, kept for later: the parents' page is plain HTTP with a password in a Basic header, so anybody on the Wi-Fi who sees it could install any firmware on a child's phone; a device that does not boot after an update is a child without a phone, so a signature (a public key in the firmware, the private key outside the repository, the owner's to keep) and a return to the old application slot when the new firmware does not mark itself good are the work, not the upload; the parser holds a whole request in memory (8 KB), so the upload needs a streaming route of its own; an update is to be refused on a low battery, in a call and during an SOS; and the first image with an update function has to be flashed by cable like every other. The partition table already has the two slots (`ota_0`, `ota_1` of 3.2 MB; the firmware is 1.5 MB).
 Consequences: Open point 28 is the read routes: the battery diagnosis, a longer log tail and the energy log, with the same password, the `X-Phone-OS` header and the lockout as every route. No raw console and no update function are built. A later decision that takes up the update over the air supersedes this one.
+Verified: not applicable
+
+## D-19: No read routes on the parents' page
+Date: 2026-10-12   Status: decided
+Decided by: owner
+
+Context: D-18 decided read routes for 4.3 (the battery diagnosis, a longer log tail, the energy log over the parents' page). The owner then said that reading the battery over the network was only an idea: it comes up once, and the cable does it.
+Options: Build the read routes (a small piece of work and a new surface behind the password). Do not build them and read over the cable.
+Decision: The read routes are not built. The rest of D-18 stands: an update over the air is written down with its objections and not built; the raw console on the network and an update with the password only are refused.
+Reason: The need was a single occasion, and every route on the parents' page is code that has to be kept safe.
+Consequences: Open point 28 is removed. If the need comes back, a new entry takes up D-17 (the options) again.
 Verified: not applicable
 
