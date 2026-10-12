@@ -85,7 +85,7 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 
 | Nr. | Schritt | Erwartung | Datum | Ergebnis |
 |---|---|---|---|---|
-| 9.1 | Am Kabel an den Computer: `scripts/deviceconfig.py battery` | in der Zeile "charge voltage" steht "charge current 960 mA" und "watchdog off"; das Fehlerregister zeigt keinen Watchdog-Fehler mehr (0x80 nicht gesetzt) | | |
+| 9.1 | Am Kabel an den Computer: `scripts/deviceconfig.py battery` | in der Zeile "charge voltage" steht "charge current 960 mA" und "watchdog off"; das Fehlerregister (0x90) ändert sich dadurch nicht und ist kein Watchdog-Fehler (am 2026-10-12 am Gerät so gesehen) | | |
 | 9.2 | Das Protokoll nach dem Start ansehen | "Battery: charge current limited to 960 mA (it was 2048 mA)" beim ersten Start, danach "is 960 mA already" | | |
 | 9.3 | Mit dem Netzteil laden, im `energy.log` den Strom ansehen | der Ladestrom bleibt bei etwa 1 A oder darunter | | |
 | 9.4 | `modem_sleep = true` in der Elternseite setzen und speichern (Reiter **Allgemein** oder **Erweitert**) | "Gespeichert", kein Fehler "Request Header Fields Too Large" | | |
