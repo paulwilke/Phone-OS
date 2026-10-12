@@ -16,7 +16,7 @@ const char* const kError[] = {"failed", "rejected",        "not found", "not res
                               "not established", "crash", "blocked",   "cannot"};
 
 const char* const kEvent[] = {"call", "sent",  "received", "power saving", "wifi",
-                              "cellular", "message", "mesh running", "sim:"};
+                              "cellular", "message", "mesh running", "sim:", "loop:"};
 
 char lower(char c) { return (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c; }
 bool isAlnum(char c) { return (c >= '0' && c <= '9') || (lower(c) >= 'a' && lower(c) <= 'z'); }

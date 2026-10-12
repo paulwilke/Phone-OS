@@ -28,6 +28,7 @@
 #include <board/GDEQ031T10Profile.h>
 #include <board/EpdWire.h>
 #include <board/KeyboardDecoder.h>
+#include <board/LoopStats.h>
 #include <board/LowVoltageGuard.h>
 #include <board/ModemTransport.h>
 #include <board/PinMap.h>
@@ -123,6 +124,7 @@ int batteryMah = board::kDefaultBatteryMah;
 bool powerOffLogged = false;
 bool lowVoltageOff = false;           // the switch-off was asked by the guard, not by a person
 board::LowVoltageGuard lowVoltageGuard;
+board::LoopStats loopStats;
 uint32_t lastVoltageCheckMs = 0;
 const char* const kBoardName = "T-Deck Pro MAX";   // on the status page and the splash picture
 const char* const kProjectName = "Phone OS";   // on the splash picture; never shortened, it wraps
@@ -300,6 +302,16 @@ void loop() {
   if (runtime->core().powerOffRequested()) powerOff();
   if (runtime->restartRequested()) consoleHost.restart();
 
-  if (decision.cpuMaySleep && !haptic.busy() && decision.cpuSleepMs > 0) lightSleep(decision.cpuSleepMs);
-  else delay(5);
+  // The pass is timed without the sleep or the pause that ends it (decision D-20; docs/device-console.md).
+  const uint32_t workMs = millis() - now;
+  uint32_t sleptMs = 0;
+  if (decision.cpuMaySleep && !haptic.busy() && decision.cpuSleepMs > 0) {
+    const uint32_t before = millis();
+    lightSleep(decision.cpuSleepMs);
+    sleptMs = millis() - before;
+  } else {
+    delay(5);
+  }
+  loopStats.pass(now, workMs, sleptMs);
+  if (loopStats.due(millis())) eventLog.log(loopStats.takeLine(millis()));
 }

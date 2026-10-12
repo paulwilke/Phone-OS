@@ -2,6 +2,13 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.1
+
+A version for measuring (D-20); it changes no behaviour. Host-tested and compiled; the lines it writes are to be read on the device (open points 20, 25 and 30).
+
+- **The system log says how the loop is doing.** Every half hour one line: "Loop: longest pass 11320 ms, 400 passes in 1800 s, asleep 12 %". The longest pass is the longest time the loop was busy without a break, which is how long a key press could have waited (the sensor start, the e-ink wait and the card are the suspects, D-8); "asleep" is the share of the half hour that the processor spent in light sleep, which says whether the power policy's permission to sleep is used (the energy log showed about 105 mA with the modem asleep). Kept on the levels `all` and `events`.
+- **The system log says how the parents' page was asked for its words.** The three requests of the page after the login (`/api/lang/<code>`, `/labels`, `/help`) leave one line each, "WEB: GET /api/lang/en -> 200, sent 2498 bytes", so that a page that shows keys instead of labels can be explained from the log. Nothing else that went well is logged.
+
 ## 4.2.0
 
 Every change names the decision (D-number) in [docs/decisions.md](docs/decisions.md) that holds its reasons. Host-tested and compiled; **none of it is verified on the device yet** (the open points named below).

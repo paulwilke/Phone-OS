@@ -428,6 +428,28 @@ void test_a_request_with_an_error_status_leaves_one_line_without_secrets() {
   TEST_ASSERT_TRUE(line.find('\n') == std::string::npos);
 }
 
+// The page asks for its words, labels and hints after the login; when a label is missing on the page, the log shows
+// whether the device was asked and answered. Other requests that went well are not logged.
+void test_the_three_language_requests_of_the_page_leave_a_line_each_and_other_good_requests_none() {
+  Fixture f;
+  f.handler.page = "{}";
+  f.server.begin();
+  FakeConn words, labels, help, settings;
+  words.fromPeer("GET /api/lang/de HTTP/1.1\r\n\r\n");
+  labels.fromPeer("GET /api/lang/de/labels HTTP/1.1\r\n\r\n");
+  help.fromPeer("GET /api/lang/de/help HTTP/1.1\r\n\r\n");
+  settings.fromPeer("GET /api/settings HTTP/1.1\r\n\r\n");
+  for (FakeConn* c : {&words, &labels, &help, &settings}) f.tcp.waiting.push_back(c);
+  f.run(0, 5);
+  f.run(5, 5);
+  f.run(10, 5);
+  f.run(15, 5);
+  TEST_ASSERT_EQUAL(3, (int)f.log.size());
+  TEST_ASSERT_TRUE(f.logged("WEB: GET /api/lang/de -> 200, sent "));
+  TEST_ASSERT_TRUE(f.logged("WEB: GET /api/lang/de/labels -> 200, sent "));
+  TEST_ASSERT_TRUE(f.logged("WEB: GET /api/lang/de/help -> 200, sent "));
+}
+
 void test_a_request_refused_by_the_parser_is_logged_and_a_good_one_is_not() {
   Fixture f;
   f.server.begin();
@@ -508,6 +530,7 @@ int main() {
   RUN_TEST(test_an_early_error_answer_is_followed_by_reading_the_rest);
   RUN_TEST(test_input_left_after_a_complete_exchange_is_read_before_the_close);
   RUN_TEST(test_a_request_with_an_error_status_leaves_one_line_without_secrets);
+  RUN_TEST(test_the_three_language_requests_of_the_page_leave_a_line_each_and_other_good_requests_none);
   RUN_TEST(test_a_request_refused_by_the_parser_is_logged_and_a_good_one_is_not);
   RUN_TEST(test_a_path_cannot_forge_a_log_line);
   RUN_TEST(test_the_log_is_limited_per_minute_and_says_how_many_more);

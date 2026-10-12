@@ -233,3 +233,14 @@ Reason: The need was a single occasion, and every route on the parents' page is 
 Consequences: Open point 28 is removed. If the need comes back, a new entry takes up D-17 (the options) again.
 Verified: not applicable
 
+## D-20: Measure the loop and the sleep before changing them
+Date: 2026-10-12   Status: decided
+Decided by: owner
+
+Context: D-8 (does anything block the main loop) and the open question of the energy (about 105 mA with the modem asleep, where a sleeping processor should draw far less) both lack numbers. The owner said: a small version 4.2.1, "we have to measure this".
+Options: Guess and change the code (a task for the sensor start, another sleep policy). Add two lines to the log and read them after a day.
+Decision: Version 4.2.1 writes one line every half hour to the system log with the longest pass of the loop, the number of passes and the share of the time spent asleep, and logs the three language requests of the parents' page. It changes no behaviour.
+Reason: D-8 recommends measuring first, and the owner agreed; the same line answers where the 105 mA go.
+Consequences: Open points 20, 25 and 30 are read from these lines after a day on the device. The half hour keeps the system log from filling (48 lines a day); the line is kept on the levels `all` and `events`. A decision about the sensor start, about the sleep policy or about the page follows from what the lines show.
+Verified: host-tested; compiled; not verified on the device
+
