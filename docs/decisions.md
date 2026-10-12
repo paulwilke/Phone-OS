@@ -55,7 +55,7 @@ Options: A larger limit (more memory risk on the device). 32,768 bytes for each 
 Decision: 32,768 bytes for each file.
 Reason: Set by the owner as a security limit.
 Consequences: Not to be weakened by the agent on its own initiative. To be looked at again with real memory numbers from the device (open point 11); [translating.md](translating.md) and [i18n.md](i18n.md) describe the limit.
-Verified: host-tested; memory numbers from the device not taken
+Verified: host-tested. Memory numbers from the device (2026-10-12): about 8.3 MB of heap free; loading the three web catalogs, about 42 KB of text together, took about 106 KB of heap. A catalog of 32,768 bytes costs well under 100 KB, so the limit is far from the memory; it stays as the owner set it (a security limit).
 
 ## D-4: The APN stays explicit in the configuration
 Date: 2026-10-11 (recorded afterwards)   Status: superseded by D-9
@@ -132,7 +132,7 @@ Options: Keep the folding to ASCII (changes the child's words). Rewrite single w
 Decision: PDU mode. A text whose characters are all in the GSM alphabet goes out as 7-bit (160 characters, 153 per part when long), any other as UCS2 (70, or 67 per part), and long texts as one concatenated message that the receiving phone shows as one. The folding of D-6 is removed when this works.
 Reason: It removes the cause instead of working around it, and the words of an SOS stay as written.
 Consequences: Open point 22 with its "done". The folding to ASCII of 4.1.5 is removed with it. Receiving stays as it is. The A7682 must accept PDU sending with `AT+CMGF=0`; that is the first thing to try on the device. The driver now logs "Messages: sent in N parts, GSM 7-bit" or "UCS2" for every text, which the system log lacked on 2026-10-09 when an SOS arrived as three messages.
-Verified: host-tested; compiled; not verified on the device (open point 22)
+Verified: host-tested; compiled; on the device on 2026-10-12 (owner): a text of 127 characters with an umlaut went out as "1 part, GSM 7-bit" and arrived as one message with the umlaut right; a text of 181 characters with umlauts went out as "2 parts, GSM 7-bit" and arrived complete.
 
 ## D-11: A switch-off button on the touch screen, with a question
 Date: 2026-10-12   Status: superseded by D-12
@@ -154,7 +154,7 @@ Options: A button in the status bar (D-11; crowded). A tile on the second page (
 Decision: A tile "Power" on the first page. It opens a page with the choices Switch off, Power save (D-13) and Cancel. Switch off asks once more ("Switch off?") before it acts, and then shows the "Switched off" picture. The menu entry under Settings stays. This supersedes D-11.
 Reason: It is findable, it is where the other things the device does are, and the question keeps a tap from switching off.
 Consequences: Open point 23. Built as the tile `home.power` (the last of the first page) and the page `PowerScreen` with the choices Switch off (asks "Switch off?", Cancel in focus) and, for later, Power save (D-13, not on the page yet). The switch-off still refuses on the cable and says why. The tile is on the child's page; the question is what protects against a tap.
-Verified: host-tested; compiled; the tile was used on the device on 2026-10-12 and switched the device off (the log has "switch off asked for", "switching off"); the picture "Switched off" is right (owner, 2026-10-12); the question and Cancel are still to be looked at (acceptance test 6.0)
+Verified: host-tested; compiled; the tile was used on the device on 2026-10-12 and switched the device off; the picture "Switched off" is right and the question "Switch off?" with Cancel is shown and works (owner, 2026-10-12). The cable text is not yet looked at.
 
 ## D-13: What "Power save" does
 Date: 2026-10-12   Status: open
@@ -198,7 +198,7 @@ Options: Leave 1024 (saving from a browser stays unreliable). 2048 (a few cookie
 Decision: `http::kMaxHead` is 4096; the bridge's limit (`kConsoleMaxRequest`, `MAX_REQUEST`) is 12300, the head and the largest body.
 Reason: It lets ordinary browsers through and costs 3 KB of the parser's buffer (the firmware uses 14.5 % of its RAM).
 Consequences: A head over 4096 bytes is still refused with 431, with a test. Verified in the browser only after flashing (open point 27).
-Verified: host-tested; compiled; not verified on the device
+Verified: host-tested; compiled; saving a setting from a browser over the home network worked on the device on 2026-10-12 (owner: the right message was shown).
 
 ## D-17: Reading the device and updating its firmware over Wi-Fi
 Date: 2026-10-12   Status: superseded by D-18
