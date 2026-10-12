@@ -133,3 +133,15 @@ Decision: PDU mode. A text whose characters are all in the GSM alphabet goes out
 Reason: It removes the cause instead of working around it, and the words of an SOS stay as written.
 Consequences: Open point 22 with its "done". The folding of 4.1.5 stays until PDU mode is built and tested, so that nothing is worse in between. Receiving stays as it is. The A7682 must accept PDU sending with `AT+CMGF=0`; that is the first thing to try on the device.
 Verified: not verified; not built
+
+## D-11: A switch-off button on the touch screen, with a question
+Date: 2026-10-12   Status: decided
+Decided by: owner (button, question, place near the top); agent (the exact place and look)
+
+Context: The device is often switched off in the pocket and switched on when it is used, which makes the battery last. The switch-off that exists sits in the second page of the home screen under Settings and on the status page, which the owner finds too hidden. The micro switch on the right of the case is on the charger chip; the firmware never reads it, and the owner knows of no signal from it, so "press twice, then ask" on that switch is not possible.
+Options: Leave the menu entry. A tile on the second page of the home screen (hidden, and at the bottom of the screen like the page dots). A touch button near the top of the home screen that opens a question. Read the side switch (not possible as far as is known).
+Decision: A switch-off button near the top of the home screen, at the right end of the status bar. A tap opens a page that asks "Switch off?" with the two choices Switch off and Cancel, in the three languages; Switch off shows the "Switched off" picture and switches the device off as the menu entry does. The existing menu entry stays.
+Reason: It is where a hand looks first, away from the soft keys where the child moves between pages, and the question keeps a tap in a pocket from switching off.
+Consequences: Open point 23. The status bar is crowded (operator, GPS note, battery, date), so the place is checked on a picture from the simulator before it is built; the date gives up room, not the battery. A locked device ignores taps, so the button is reached only after unlocking. The switch-off still refuses on the cable, and the page says why. The side switch is open point 24.
+Verified: not verified; not built
+
