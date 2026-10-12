@@ -121,7 +121,7 @@ Options: The explicit APN only (D-4: a parent must know it). A built-in list by 
 Decision: The firmware carries a list of operators with their APNs and chooses the entry that matches the SIM when it is inserted. The user sets nothing. `[modem] apn` in `settings.toml` stays as an override for the rare case, and an operator that is not in the list gets what the device does today (the modem's own contexts are left alone) and one log line that says so. This supersedes D-4.
 Reason: A device for children and parents must work with the SIM they put in. The list is data, which a public source can supply.
 Consequences: Agent's proposal for how: a script writes the list into the source at build time from a maintained public list (the Android Open Source Project's `apns-conf.xml` is Apache-2.0 and would be named in [THIRD_PARTY.md](../THIRD_PARTY.md)), with a test; an update of the list comes with a firmware update. No entry is written by hand from memory. The IMS bearer (context 8, APN "ims") is set up by the modem and is not part of the list. Open point 21.
-Verified: host-tested; compiled; not verified on the device (open point 21). Built from the sample file apns-full-conf.xml of the Android project (1146 operators); the file named above, apns-conf.xml, was not found at the addresses tried.
+Verified: host-tested; compiled; on the device on 2026-10-12 with the APN field cleared on the parents' page: "APN internet.v6.telekom chosen for the operator 26201", then "IMS registered". A call with that APN has not been made. Built from the sample file apns-full-conf.xml of the Android project (1146 operators); the file named above, apns-conf.xml, was not found at the addresses tried.
 
 ## D-10: Texts go out in PDU mode, in the GSM alphabet, as one concatenated message
 Date: 2026-10-12   Status: decided
@@ -243,4 +243,15 @@ Decision: Version 4.2.1 writes one line every half hour to the system log with t
 Reason: D-8 recommends measuring first, and the owner agreed; the same line answers where the 105 mA go.
 Consequences: Open points 20, 25 and 30 are read from these lines after a day on the device. The half hour keeps the system log from filling (48 lines a day); the line is kept on the levels `all` and `events`. A decision about the sensor start, about the sleep policy or about the page follows from what the lines show.
 Verified: host-tested; compiled; not verified on the device
+
+## D-21: The Power tile shows the power symbol, not a word
+Date: 2026-10-12   Status: decided
+Decided by: owner
+
+Context: The tile is called "Strom" in German ("Power" in English, "Energie" in French). The owner finds "Strom" a poor translation. A tile on the first page can carry a picture (phone, text, SOS, inbox, radio have one).
+Options: Another word ("Aus", "Ausschalten" are too long for 68 pixels, "Power" is English). The power-off symbol, the circle with a bar, which needs no translation.
+Decision: The tile shows the power symbol. The words stay in the catalogs for the page behind it (title and the buttons).
+Reason: A symbol needs no translation and is known from every device.
+Consequences: Open point 31. Not built; it must be looked at whether the fonts have the glyph (U+23FB) or whether it is drawn like the other symbols (`src/ui/Symbols.h`). The tile keeps its label key `home.power` for the tests and for the self-test words.
+Verified: not verified; not built
 
