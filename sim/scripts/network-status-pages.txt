@@ -5,7 +5,7 @@ advance 5s
 signal 2
 network Example Mobile
 advance 2s
-key down down down down down down select
+key down down down down down down down select
 check screen net
 see net.title
 see net.operator name=Example

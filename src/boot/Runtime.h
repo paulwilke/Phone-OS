@@ -50,6 +50,7 @@
 #include "../ui/screens/RadioScreen.h"
 #include "../ui/screens/RecipientScreen.h"
 #include "../ui/screens/SelfTestScreen.h"
+#include "../ui/screens/PowerScreen.h"
 #include "../ui/screens/SettingsScreen.h"
 #include "../ui/screens/SosScreen.h"
 #include "../ui/screens/StatusScreen.h"
@@ -147,6 +148,7 @@ private:
   ui::RecipientScreen recipient_;
   ui::SosScreen sos_;
   ui::SettingsScreen settings_;
+  ui::PowerScreen power_;
   ui::WifiScreen wifiPage_;
   ui::NetScreen net_;
   ui::StatusScreen status_;

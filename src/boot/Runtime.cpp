@@ -73,6 +73,7 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
       recipient_(ui::ScreenContext{core_, translator, stack_, session_}),
       sos_(ui::ScreenContext{core_, translator, stack_, session_}),
       settings_(ui::ScreenContext{core_, translator, stack_, session_}),
+      power_(ui::ScreenContext{core_, translator, stack_, session_}),
       wifiPage_(ui::ScreenContext{core_, translator, stack_, session_}),
       net_(ui::ScreenContext{core_, translator, stack_, session_}),
       status_(ui::ScreenContext{core_, translator, stack_, session_}, ui::DeviceInfo{capabilities.firmware, capabilities.hardware, problemsOf(diagnostics_)}),
@@ -105,6 +106,7 @@ Runtime::Runtime(const Capabilities& capabilities, i18n::Translator& translator,
   stack_.add(ui::screen::kRecipient, recipient_);
   stack_.add(ui::screen::kSos, sos_);
   stack_.add(ui::screen::kSettings, settings_);
+  stack_.add(ui::screen::kPower, power_);
   stack_.add(ui::screen::kWifi, wifiPage_);
   stack_.add(ui::screen::kNet, net_);
   stack_.add(ui::screen::kStatus, status_);

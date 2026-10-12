@@ -59,6 +59,7 @@ The documents describe what exists in this repository — each one is written fr
 | [app-core.md](app-core.md) | the facade: the host's calls, the order of one pass, the read-only state, the settings that change at run time |
 | [notices.md](notices.md) | notices and system entries as codes: the kinds, their catalog keys, the stored form |
 | [screen-sos.md](screen-sos.md) | the SOS page: choice, school-time taps, the ping step by step, leaving releases the search |
+| [screen-power.md](screen-power.md) | the power page: switching off after a question |
 | [screen-settings.md](screen-settings.md) | the options page: volume, message vibration, Wi-Fi, language |
 | [screen-wifi.md](screen-wifi.md) | the Wi-Fi page: three buttons, the mark, what to join with, why it did not work |
 | [screen-net.md](screen-net.md) | the network page: the lines, SIM problems and their explanations |

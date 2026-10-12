@@ -134,7 +134,7 @@ public:
   static std::string screenOf(Simulator& sim) {
     static const char* const names[] = {"home", "lock", "clock", "phone", "number", "call", "messages", "compose",
                                         "recipient", "sos", "settings", "wifi", "net", "status", "language",
-                                        "gnss", "radio", "motion", "selftest"};
+                                        "gnss", "radio", "motion", "selftest", "power"};
     return names[sim.runtime().stack().visibleId()];
   }
 

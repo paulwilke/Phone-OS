@@ -220,9 +220,9 @@ void test_the_motion_page_runs_the_sensor_only_while_it_is_open_through_the_runt
   FrameBuffer fb;
   w.boot(fb);
   w.run(2);
-  // The motion tile is the twelfth: six of the child's (the light among them), then network, GPS, clock, options,
-  // Wi-Fi.
-  for (int i = 0; i < 11; ++i) w.runtime->input(ui::Input::pressed(ui::Key::Down), w.ms);
+  // The motion tile is the thirteenth: seven of the child's (the light and the power tile among them), then
+  // network, GPS, clock, options, Wi-Fi.
+  for (int i = 0; i < 12; ++i) w.runtime->input(ui::Input::pressed(ui::Key::Down), w.ms);
   w.runtime->input(ui::Input::pressed(ui::Key::Select), w.ms);
   TEST_ASSERT_EQUAL(ui::screen::kMotion, w.runtime->stack().visibleId());
   TEST_ASSERT_FALSE(w.motion.running());                 // the page says it is starting first

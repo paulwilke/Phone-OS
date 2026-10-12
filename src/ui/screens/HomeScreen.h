@@ -1,7 +1,7 @@
 #pragma once
 
 // The home screen: a grid of tiles, three columns, two pages. The first page is the child's —
-// phone, text, SOS, inbox, radio, light —, the second is the device's: network, GPS, clock,
+// phone, text, SOS, inbox, radio, light, power —, the second is the device's: network, GPS, clock,
 // settings, Wi-Fi, motion, tests, status. What a child needs every day is in front, what is looked
 // at once a month is behind, and the dots under the tiles say there is a second page.
 //
@@ -42,7 +42,7 @@ public:
 
   enum class Kind {
     Phone, Text, Sos, Inbox, Radio,                                          // page one
-    Network, Gps, Clock, Settings, Wifi, Motion, Tests, Status, Light,      // page two
+    Network, Gps, Clock, Settings, Wifi, Motion, Tests, Status, Light, Power,   // Light and Power are on page one
   };
 
   // The tiles that exist now, by page, in the order they are drawn.
