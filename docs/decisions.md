@@ -135,7 +135,7 @@ Consequences: Open point 22 with its "done". The folding of 4.1.5 stays until PD
 Verified: not verified; not built
 
 ## D-11: A switch-off button on the touch screen, with a question
-Date: 2026-10-12   Status: decided
+Date: 2026-10-12   Status: superseded by D-12
 Decided by: owner (button, question, place near the top); agent (the exact place and look)
 
 Context: The device is often switched off in the pocket and switched on when it is used, which makes the battery last. The switch-off that exists sits in the second page of the home screen under Settings and on the status page, which the owner finds too hidden. The micro switch on the right of the case is on the charger chip; the firmware never reads it, and the owner knows of no signal from it, so "press twice, then ask" on that switch is not possible.
@@ -144,4 +144,26 @@ Decision: A switch-off button near the top of the home screen, at the right end 
 Reason: It is where a hand looks first, away from the soft keys where the child moves between pages, and the question keeps a tap in a pocket from switching off.
 Consequences: Open point 23. The status bar is crowded (operator, GPS note, battery, date), so the place is checked on a picture from the simulator before it is built; the date gives up room, not the battery. A locked device ignores taps, so the button is reached only after unlocking. The switch-off still refuses on the cable, and the page says why. The side switch is open point 24.
 Verified: not verified; not built
+
+## D-12: A power tile on the first page of the home screen, with a choice
+Date: 2026-10-12   Status: decided
+Decided by: owner
+
+Context: D-11 put a button in the status bar. The owner meant something else: a tile like the others, below the status bar, on the first page, that opens a choice. The first page has six tiles of nine places.
+Options: A button in the status bar (D-11; crowded). A tile on the second page (hidden). A tile on the first page.
+Decision: A tile "Power" on the first page. It opens a page with the choices Switch off, Power save (D-13) and Cancel. Switch off asks once more ("Switch off?") before it acts, and then shows the "Switched off" picture. The menu entry under Settings stays. This supersedes D-11.
+Reason: It is findable, it is where the other things the device does are, and the question keeps a tap from switching off.
+Consequences: Open point 23. The tile and its page need words in the three catalogs, the layout tests and a screen test; the switch-off still refuses on the cable and says why. The tile is on the child's page; the question is what protects against a tap.
+Verified: not verified; not built
+
+## D-13: What "Power save" does
+Date: 2026-10-12   Status: open
+Decided by: agent (not confirmed by owner)
+
+Context: The owner wants Power save as a choice next to Switch off. The device today never saves power by itself: `modem_sleep = false` is set in the owner's `settings.toml` (the default is true), so the policy's rule 3 never lets the modem or the processor sleep, and the energy log of 2026-10-12 shows only "awake" and "cable", about 130 mA, which empties 1500 mAh in about eleven hours. Why the setting is off is not recorded; the energy log of 2026-10-09 names it as the reason for a fast discharge.
+Options: Power save switches the modem and processor sleep on until the device is woken (what `modem_sleep = true` does; reachable by SMS and call through the ring line). Real deep sleep of the processor with a wake on the ring line and the keys (lowest current; more to build and to test). Leave Power save out of 4.2.0 and first find out why `modem_sleep` was turned off.
+Decision: None yet. Recommendation: the third, because with modem sleep off nothing a new button does would save power, and that fault is worth finding first.
+Reason: A button that promises to save power while the setting underneath forbids it would be wrong.
+Consequences: Open point 25.
+Verified: not verified; the 130 mA is read from the energy log on the device
 
