@@ -200,3 +200,14 @@ Reason: It lets ordinary browsers through and costs 3 KB of the parser's buffer 
 Consequences: A head over 4096 bytes is still refused with 431, with a test. Verified in the browser only after flashing (open point 27).
 Verified: host-tested; compiled; not verified on the device
 
+## D-17: Reading the device and updating its firmware over Wi-Fi
+Date: 2026-10-12   Status: open
+Decided by: agent (a recommendation the owner asked for; not confirmed by owner)
+
+Context: The owner charges the device away from the computer and cannot then read the logs or the battery diagnosis, and a firmware update always needs the cable. He asked whether an update over the air (OTA) and the console over Wi-Fi make sense. What exists: the partition table (`default_8MB`) already has two application slots of 3.2 MB (`ota_0`, `ota_1`) and `otadata`, and the firmware is 1.5 MB, so no repartitioning is needed. The parents' page is plain HTTP on port 80 with a password in a Basic header (no TLS), one connection at a time, and a request body of at most 8 KB in a buffer ([web-interface.md](web-interface.md)).
+Options: (A) Routes on the parents' page, behind the same password and the same `X-Phone-OS` header: the battery diagnosis, a longer log tail, the energy log. (B) The raw USB console on a TCP port: it has no login, and it can write files and send SMS. (C) OTA through the parents' page: a streamed upload (the parser holds a whole request in memory today), written to the other slot, a signature of the image checked against a public key in the firmware, a reboot, and a return to the old slot if the new firmware does not mark itself good; refused on a low battery, in a call and during an SOS. (D) OTA with the password only: anybody on the Wi-Fi who sees the password (HTTP, Basic) could install any firmware on a child's phone.
+Decision: None yet. Recommendation: A in 4.3 (small, solves today's problem); C later as a project of its own, with the signature; not B; not D.
+Reason: Reading is low risk behind the existing password. Writing firmware is the one action that must not depend on a password sent in the clear, and a device that fails to boot after an update is a child without a phone, so the return to the old slot and the signature are the work, not the upload.
+Consequences: Open point 28. For C the owner decides where the private signing key lives (not in the repository). The first firmware with OTA has to be flashed by cable like every other. Nothing is built.
+Verified: not applicable
+
