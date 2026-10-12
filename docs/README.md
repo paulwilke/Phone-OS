@@ -43,6 +43,7 @@ The documents describe what exists in this repository — each one is written fr
 | [hardware-lessons.md](hardware-lessons.md) | what went wrong on the real device, why, and the rule that prevents it (fuel gauge capacity, IMS context, charger, USB) |
 | [modem-driver.md](modem-driver.md) | the modem driver: start-up, SIM and PIN, the data bearer and the IMS, registration, restarts |
 | [volte.md](volte.md) | voice over LTE: what the measurements prove, what the driver does about it, what is not proven or not built, and the owner's checklist on the device |
+| [apn-table.md](apn-table.md) | which APN a SIM gets: the operator list from the Android project, the lookup by the SIM's operator code, and what happens for an unknown operator |
 | [sms-pdu.md](sms-pdu.md) | the PDU of an outgoing SMS: 7-bit with umlauts, UCS2, one concatenated message for a long text |
 | [at-layer.md](at-layer.md) | the modem driver's AT layer: the transport seam, lines, the answers the driver reads, the SMS answers, UCS2, the scripted modem |
 | [test-doubles.md](test-doubles.md) | the scriptable fake of every capability and what each can be made to do |

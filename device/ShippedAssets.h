@@ -1255,7 +1255,7 @@ config.display.map_url.help           = "URL-Vorlage für den Kartenlink in SOS-
 
 config.modem.label = "Modem"
 config.modem.apn.label = "APN"
-config.modem.apn.help = "Zugangspunktname des Mobilfunknetzes, etwa von der Hilfeseite des Anbieters. Das Modem braucht ihn, um sich für Anrufe über LTE anzumelden. Leer lassen, um das im Modem Gespeicherte zu behalten. Nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
+config.modem.apn.help = "Zugangspunktname des Mobilfunknetzes. Leer lassen: Das Gerät wählt ihn anhand der SIM-Karte. Nur ausfüllen, wenn diese Wahl für Ihre SIM nicht stimmt. Nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
 
 config.battery.label = "Akku"
 config.battery.capacity_mah.label = "Akkukapazität (mAh)"
@@ -1489,7 +1489,7 @@ config.display.map_url.help = "URL template for the map link in SOS messages. Us
 
 config.modem.label = "Modem"
 config.modem.apn.label = "APN"
-config.modem.apn.help = "Access point name of the mobile network, for example from the provider's help pages. The modem needs it to register for calls over LTE. Leave empty to keep what the modem has stored. Letters, digits, dots, hyphens and underscores only."
+config.modem.apn.help = "Access point name of the mobile network. Leave it empty and the device chooses it by the SIM card; fill it in only when that choice is wrong for your SIM. Letters, digits, dots, hyphens and underscores only."
 
 config.battery.label = "Battery"
 config.battery.capacity_mah.label = "Battery capacity (mAh)"
@@ -1721,7 +1721,7 @@ config.display.map_url.help           = "Modèle d'URL pour le lien de la carte 
 
 config.modem.label = "Modem"
 config.modem.apn.label = "APN"
-config.modem.apn.help = "Nom du point d'accès du réseau mobile, par exemple d'après l'aide de l'opérateur. Le modem en a besoin pour s'enregistrer pour les appels en LTE. Laisser vide pour garder ce que le modem a mémorisé. Uniquement des lettres, des chiffres, des points, des traits d'union et des tirets bas."
+config.modem.apn.help = "Nom du point d'accès du réseau mobile. Laisser vide : l'appareil le choisit d'après la carte SIM. À remplir seulement si ce choix ne convient pas à votre SIM. Lettres, chiffres, points, traits d'union et tirets bas uniquement."
 
 config.battery.label = "Batterie"
 config.battery.capacity_mah.label = "Capacité de la batterie (mAh)"

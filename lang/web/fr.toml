@@ -24,7 +24,7 @@ config.display.map_url.help           = "Modèle d'URL pour le lien de la carte 
 
 config.modem.label = "Modem"
 config.modem.apn.label = "APN"
-config.modem.apn.help = "Nom du point d'accès du réseau mobile, par exemple d'après l'aide de l'opérateur. Le modem en a besoin pour s'enregistrer pour les appels en LTE. Laisser vide pour garder ce que le modem a mémorisé. Uniquement des lettres, des chiffres, des points, des traits d'union et des tirets bas."
+config.modem.apn.help = "Nom du point d'accès du réseau mobile. Laisser vide : l'appareil le choisit d'après la carte SIM. À remplir seulement si ce choix ne convient pas à votre SIM. Lettres, chiffres, points, traits d'union et tirets bas uniquement."
 
 config.battery.label = "Batterie"
 config.battery.capacity_mah.label = "Capacité de la batterie (mAh)"

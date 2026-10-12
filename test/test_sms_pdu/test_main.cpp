@@ -60,15 +60,17 @@ std::string repeat(const std::string& s, size_t n) {
 
 }  // namespace
 
-// The example that every SMS tutorial gives: "hellohello" to +46708251358. Ours differs in one octet, the
-// validity period (0xA7 where the tutorial has 0xAA).
-void test_the_tutorial_pdu_is_reproduced() {
+// The example that every SMS tutorial gives for "hellohello": its user data is E8329BFD4697D9EC37 in all of them. The
+// rest is built as the specification has it for an invented number: the service centre 00, first octet 11, reference
+// 00, twelve digits (0C) of international type (91) with their pairs swapped, protocol 00, coding 00, validity A7
+// (the tutorials have AA; the text mode was set to 167), ten places (0A).
+void test_the_tutorial_user_data_is_reproduced() {
   Coding coding;
   std::vector<Part> parts;
-  TEST_ASSERT_TRUE(encode("+46708251358", "hellohello", 1, coding, parts));
+  TEST_ASSERT_TRUE(encode("+491701111111", "hellohello", 1, coding, parts));
   TEST_ASSERT_TRUE(coding == Coding::Gsm7);
   TEST_ASSERT_EQUAL(1, parts.size());
-  TEST_ASSERT_EQUAL_STRING("0011000B916407281553F80000A70AE8329BFD4697D9EC37", parts[0].hex.c_str());
+  TEST_ASSERT_EQUAL_STRING("0011000C91947110111111" "0000A70AE8329BFD4697D9EC37", parts[0].hex.c_str());
   TEST_ASSERT_EQUAL(23, parts[0].tpduLength);
 }
 
@@ -217,7 +219,7 @@ void test_control_characters_that_were_a_problem_in_text_mode_are_just_character
 
 int main(int, char**) {
   UNITY_BEGIN();
-  RUN_TEST(test_the_tutorial_pdu_is_reproduced);
+  RUN_TEST(test_the_tutorial_user_data_is_reproduced);
   RUN_TEST(test_an_sos_with_an_umlaut_is_one_7_bit_message);
   RUN_TEST(test_the_german_and_common_letters_are_in_the_alphabet);
   RUN_TEST(test_the_extension_characters_take_two_places);
