@@ -9,6 +9,7 @@ The documents describe what exists in this repository — each one is written fr
 | [de/abnahmetest.md](de/abnahmetest.md) | the acceptance test the owner goes through on the device after every update, in German, with a column for the date and the result |
 | [fr/guide-utilisateur.md](fr/guide-utilisateur.md) | the same guide in French, with the same headings |
 | [open-points.md](open-points.md) | the one list of open work, with the owner of every item |
+| [decisions.md](decisions.md) | the running log of decisions: what was chosen or refused, by whom, why, and how it is checked |
 | [i18n.md](i18n.md) | translation library, catalog format, plural rules, user catalogs |
 | [contacts.md](contacts.md) | phone number normalisation, the whitelist and its file format |
 | [quiet-hours.md](quiet-hours.md) | school-time windows, midnight crossing, behaviour without a clock |

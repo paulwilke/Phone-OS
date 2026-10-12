@@ -11,6 +11,7 @@ Phone OS is an emergency phone for children, so a mistake costs more here than i
 5. **Every module has tests.** Logic that can run on a laptop is written so that it does, and `pio test -e native` covers it. A bug that was found once gets a test, and you prove the test by putting the bug back and watching it fail.
 6. **Users read text from catalogs.** Anything shown to the user lives in `lang/en.toml`, `lang/de.toml` and `lang/fr.toml` (the device) or `lang/web/*.toml` (the parents' page); see [docs/i18n.md](docs/i18n.md). Pure logic modules contain no user text: they return codes and data, and the interface turns those into words.
 7. **Security limits are the owner's decision.** Do not weaken a password rule, a path check, a rate limit or a validation on your own initiative. Propose the change and explain why.
+8. **Decisions are written down.** A choice between options, a refusal or a reversal gets an entry in [docs/decisions.md](docs/decisions.md) in the same commit as the change; [CLAUDE.md](CLAUDE.md) has the rules.
 
 ## Running the checks
 
