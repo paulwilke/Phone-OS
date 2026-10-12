@@ -1,6 +1,6 @@
 // Host tests for the messages, sleep, switching off and questions of the A7682E driver: receiving by +CMTI
-// and by reading the SIM, deleting only what was read, sending in the GSM alphabet and in UCS2, texts of
-// several parts, failures reported once with the modem's reason, a restart in the middle, sleeping and waking,
+// and by reading the SIM, deleting only what was read, sending in PDU mode (7-bit with umlauts, UCS2, one
+// concatenated message for a long text), failures reported once with the modem's reason, a restart in the middle, sleeping and waking,
 // AT+CPOF and the diagnostic questions. The driver runs against a scripted modem; nothing here has run against
 // the real modem.
 // allow-non-english: texts with umlauts are the point of the UCS2 cases.
@@ -11,11 +11,14 @@
 #include <vector>
 
 #include <ModemScript.h>
+#include <SmsPduDecoder.h>
 #include <app/LogLevel.h>
 #include <drivers/A7682EDriver.h>
+#include <drivers/SmsPdu.h>
 #include <drivers/Ucs2.h>
 
 using namespace modemtest;
+using namespace smsdecode;
 
 void setUp() {}
 void tearDown() {}
@@ -31,7 +34,13 @@ std::string ucs2(const std::string& text) {
   return hex;
 }
 
-std::string cmgs(const std::string& number, bool ascii) { return "AT+CMGS=\"" + (ascii ? number : ucs2(number)) + "\""; }
+// The command that announces the PDU of a text: its length is that of the TPDU, so it is the encoder's.
+std::string cmgsFor(const std::string& number, const std::string& text) {
+  sms::Coding coding;
+  std::vector<sms::Part> parts;
+  TEST_ASSERT_TRUE(sms::encode(number, text, 1, coding, parts));
+  return "AT+CMGS=" + std::to_string(parts[0].tpduLength);
+}
 
 struct Ready {
   Rig r;
@@ -162,7 +171,7 @@ void test_a_read_that_is_never_answered_times_out_and_the_driver_goes_on() {
   TEST_ASSERT_TRUE(m.r.driver.state() == ModemState::Ready);
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, "after"));
   m.r.run(3000);
-  TEST_ASSERT_EQUAL(1, m.r.countPrefix(cmgs(kNumber, true)));
+  TEST_ASSERT_EQUAL(1, m.r.countPrefix(cmgsFor(kNumber, "after")));
 }
 
 void test_a_message_arrives_during_a_call_and_the_call_is_untouched() {
@@ -180,34 +189,62 @@ void test_a_message_arrives_during_a_call_and_the_call_is_untouched() {
 
 // ---- sending -----------------------------------------------------------------------------------------------------------
 
-void test_plain_text_goes_out_in_the_gsm_alphabet_and_the_charset_goes_back() {
+// The position of the first sent command that equals `command` after index `from`, or -1.
+int indexOf(const std::vector<std::string>& sent, const std::string& command, size_t from = 0) {
+  for (size_t i = from; i < sent.size(); ++i)
+    if (sent[i] == command) return (int)i;
+  return -1;
+}
+
+void test_plain_text_goes_out_as_a_pdu_between_pdu_mode_and_text_mode() {
   Ready m;
-  const int before = m.r.count("AT+CSCS=\"UCS2\"");
+  const int textModeBefore = m.r.count("AT+CMGF=1");
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, "I will be there at noon"));
   m.r.run(2000);
-  TEST_ASSERT_EQUAL(1, m.r.count("AT+CSCS=\"GSM\""));
-  TEST_ASSERT_EQUAL(1, m.r.count("AT+CSMP=17,167,0,0"));
-  TEST_ASSERT_EQUAL(1, m.r.count(cmgs(kNumber, true)));
+  TEST_ASSERT_EQUAL(1, m.r.count("AT+CMGF=0"));
+  TEST_ASSERT_EQUAL(1, m.r.count(cmgsFor(kNumber, "I will be there at noon")));
   TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL_STRING("I will be there at noon", m.r.t.bodies()[0].c_str());
-  TEST_ASSERT_EQUAL(before + 1, m.r.count("AT+CSCS=\"UCS2\""));          // back, or incoming umlauts would be hex
-  TEST_ASSERT_TRUE(m.failures().empty());                                // sent: no failure
+  const Decoded d = decode(m.r.t.bodies()[0]);
+  TEST_ASSERT_TRUE(d.ok);
+  TEST_ASSERT_EQUAL_STRING(kNumber.c_str(), d.number.c_str());
+  TEST_ASSERT_EQUAL(0x00, d.dcs);                                           // the GSM alphabet
+  TEST_ASSERT_EQUAL_STRING("I will be there at noon", textOf(m.r.t.bodies()).c_str());
+  TEST_ASSERT_EQUAL(textModeBefore + 1, m.r.count("AT+CMGF=1"));            // text mode is back, or reading a message would fail
+  const auto sent = m.r.t.sent();
+  const int pduMode = indexOf(sent, "AT+CMGF=0");
+  const int cmgs = indexOf(sent, cmgsFor(kNumber, "I will be there at noon"), (size_t)pduMode);
+  const int back = indexOf(sent, "AT+CMGF=1", (size_t)cmgs);
+  TEST_ASSERT_TRUE(pduMode >= 0 && cmgs > pduMode && back > cmgs);
+  TEST_ASSERT_TRUE(m.failures().empty());                                   // sent: no failure
   TEST_ASSERT_TRUE(m.r.driver.state() == ModemState::Ready);
 }
 
-void test_text_with_an_umlaut_goes_out_as_ucs2_with_the_number_in_hex() {
+// Decision D-10: the umlaut is in the GSM alphabet and costs nothing there.
+void test_text_with_an_umlaut_stays_7_bit_and_keeps_its_umlaut() {
   Ready m;
-  const int csmp = m.r.count("AT+CSMP=17,167,0,8");                   // the initialisation sets it once
-  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, "Gr\xC3\xBC\xC3\x9F" "e"));
+  const std::string text = "Gr\xC3\xBC\xC3\x9F" "e";
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
   m.r.run(2000);
-  TEST_ASSERT_EQUAL(csmp + 1, m.r.count("AT+CSMP=17,167,0,8"));
-  TEST_ASSERT_EQUAL(1, m.r.count(cmgs(kNumber, false)));
   TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL_STRING(ucs2("Gr\xC3\xBC\xC3\x9F" "e").c_str(), m.r.t.bodies()[0].c_str());
+  const Decoded d = decode(m.r.t.bodies()[0]);
+  TEST_ASSERT_EQUAL(0x00, d.dcs);
+  TEST_ASSERT_TRUE(d.places == expectedPlaces(text));
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
+}
+
+// A character outside the alphabet makes the text UCS2, and the umlauts stay as they are.
+void test_text_with_a_character_outside_the_alphabet_goes_out_as_ucs2() {
+  Ready m;
+  const std::string text = "Gr\xC3\xBC\xC3\x9F" "e \xF0\x9F\x98\x80";
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
+  m.r.run(2000);
+  TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
+  TEST_ASSERT_EQUAL(0x08, decode(m.r.t.bodies()[0]).dcs);
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
 }
 
 // Refused at once and nothing sent: a number that is not a dial string must never be cut short ("0170 123" is not
-// 0170), and the text must not contain what the modem takes for a command.
+// 0170), a text must be valid UTF-8, and nothing is sent that does not fit.
 void test_sending_is_refused_for_what_cannot_go_out() {
   Ready m;
   TEST_ASSERT_FALSE(m.r.driver.sendSms("", "text"));
@@ -216,12 +253,21 @@ void test_sending_is_refused_for_what_cannot_go_out() {
   TEST_ASSERT_FALSE(m.r.driver.sendSms("+49170111111111111111111111", "text"));
   TEST_ASSERT_FALSE(m.r.driver.sendSms(kNumber, std::string(kMaxSmsBytes + 1, 'x')));
   TEST_ASSERT_FALSE(m.r.driver.sendSms(kNumber, "bad \xC3 utf-8"));
-  TEST_ASSERT_FALSE(m.r.driver.sendSms(kNumber, "ends here\x1A and more"));   // Ctrl-Z would send it early
-  TEST_ASSERT_FALSE(m.r.driver.sendSms(kNumber, "escape\x1B"));
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, std::string(kMaxSmsBytes, 'x')));
   m.r.run(5000);
-  TEST_ASSERT_EQUAL(0, m.r.count(cmgs("0170 123", true)));
-  TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());                                     // 320 characters: two parts, nothing else
+  TEST_ASSERT_EQUAL(3, m.r.t.bodies().size());                                     // 320 places: three parts of at most 153, nothing else
+}
+
+// In text mode a Ctrl-Z in a text sent it early and an Escape cancelled it; a PDU is hex digits, so no character of a
+// text can reach the modem as a control character.
+void test_the_modem_receives_hex_digits_only_whatever_the_text_holds() {
+  Ready m;
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, "ends here\x1A and more\x1B"));
+  m.r.run(3000);
+  TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
+  TEST_ASSERT_EQUAL(0, m.r.t.escapes());
+  for (char c : m.r.t.bodies()[0]) TEST_ASSERT_TRUE((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'));
+  TEST_ASSERT_TRUE(decode(m.r.t.bodies()[0]).ok);
 }
 
 void test_sending_is_refused_while_the_modem_is_not_ready() {
@@ -247,7 +293,7 @@ void test_at_most_four_messages_wait_and_they_go_out_in_order() {
   TEST_ASSERT_FALSE(m.r.driver.sendSms(kNumber, "message 5"));
   m.r.run(8000);
   TEST_ASSERT_EQUAL(4, m.r.t.bodies().size());
-  for (size_t i = 0; i < 4; ++i) TEST_ASSERT_EQUAL_STRING(("message " + std::to_string(i + 1)).c_str(), m.r.t.bodies()[i].c_str());
+  for (size_t i = 0; i < 4; ++i) TEST_ASSERT_EQUAL_STRING(("message " + std::to_string(i + 1)).c_str(), textOf({m.r.t.bodies()[i]}).c_str());
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, "message 5"));       // room again
 }
 
@@ -266,12 +312,12 @@ void test_a_refused_sending_is_reported_exactly_once_with_the_modems_reason_and_
   TEST_ASSERT_EQUAL_STRING(kOther.c_str(), f[1].phone.c_str());
   TEST_ASSERT_TRUE(m.failures().empty());                               // once
   TEST_ASSERT_TRUE(m.r.driver.state() == ModemState::Ready);
-  TEST_ASSERT_EQUAL(2, m.r.count("AT+CSCS=\"UCS2\"") - 1);              // the charset went back after each
+  TEST_ASSERT_EQUAL(2, m.r.count("AT+CMGF=1") - 1);                     // text mode went back after each
 }
 
 void test_an_error_at_the_recipient_is_a_failure_with_that_line() {
   Rig p;
-  p.t.reply("AT+CMGS=\"+491701111111\"", {}, "+CMS ERROR: 304");
+  p.t.reply(cmgsFor(kNumber, "hello"), {}, "+CMS ERROR: 304");
   Script().apply(p.t);
   TEST_ASSERT_TRUE(p.start());
   TEST_ASSERT_TRUE(p.driver.sendSms(kNumber, "hello"));
@@ -280,11 +326,12 @@ void test_an_error_at_the_recipient_is_a_failure_with_that_line() {
   TEST_ASSERT_TRUE(p.driver.pollSendFailure(f));
   TEST_ASSERT_EQUAL_STRING("+CMS ERROR: 304", f.reason.c_str());
   TEST_ASSERT_EQUAL(0, p.t.bodies().size());
+  TEST_ASSERT_EQUAL(1, p.count("AT+CMGF=1") - 1);                      // and text mode is back all the same
 }
 
-// 2026-10-09: an SOS of about 130 characters with one "o"-umlaut arrived as three messages (UCS2 allows 70 places
-// and has no concatenation header). In plain ASCII it is one.
-void test_an_sos_with_an_umlaut_goes_out_as_one_message_in_plain_ascii() {
+// 2026-10-09: an SOS of about 130 characters with one "o"-umlaut arrived as three messages (UCS2 allows 70 places and the
+// driver had no concatenation header). Now the umlaut is in the 7-bit alphabet: one message, and the word is as written.
+void test_an_sos_with_an_umlaut_goes_out_as_one_7_bit_message_with_the_umlaut() {
   Ready m;
   const std::string text = "Jean m\xC3\xB6" "chte abgeholt werden. Koordinaten hier:\nhttps://maps.google.com/?q=48.13745,11.57550\n48.13745,11.57550, auf 11 m genau";
   TEST_ASSERT_TRUE(text.size() > 70);
@@ -292,107 +339,81 @@ void test_an_sos_with_an_umlaut_goes_out_as_one_message_in_plain_ascii() {
   m.r.run(5000);
   TEST_ASSERT_EQUAL(1, m.r.countPrefix("AT+CMGS="));
   TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL(1, m.r.count("AT+CSCS=\"GSM\""));
-  TEST_ASSERT_TRUE(m.r.t.bodies()[0].find("Jean moechte abgeholt werden.") == 0);
+  TEST_ASSERT_EQUAL(0x00, decode(m.r.t.bodies()[0]).dcs);
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
 }
 
-void test_a_text_with_a_letter_that_has_no_stand_in_keeps_its_characters() {
-  Ready m;
-  std::string text;
-  for (int i = 0; i < 10; ++i) text += "m\xC3\xB6" "chte \xF0\x9F\x98\x80 ";   // an emoji: no stand-in
-  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
-  m.r.run(8000);
-  TEST_ASSERT_EQUAL(0, m.r.count("AT+CSCS=\"GSM\""));
-  TEST_ASSERT_TRUE(m.r.t.bodies().size() >= 2);
-}
+// ---- texts of several parts: one concatenated message ------------------------------------------------------------------------
 
-// Folding only ever saves messages: a text that is two messages either way keeps its umlauts.
-void test_a_text_that_is_two_messages_either_way_keeps_its_umlauts() {
-  Ready m;
-  std::string text;
-  for (int i = 0; i < 100; ++i) text += "\xC3\xA4";                    // 100 a-umlauts = 200 letters in ASCII: 2 either way
-  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
-  m.r.run(5000);
-  TEST_ASSERT_EQUAL(0, m.r.count("AT+CSCS=\"GSM\""));
-  TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
-}
-
-void test_french_accents_and_typographic_signs_fold_to_their_letters() {
-  Ready m;
-  const std::string text = "L\xE2\x80\x99" "enfant a besoin d\xE2\x80\x99" "aide, venez la chercher \xC3\xA0 l\xE2\x80\x99" "\xC3\xA9" "cole. Position : https://maps.google.com/?q=48.13745,11.57550";
-  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
-  m.r.run(5000);
-  TEST_ASSERT_EQUAL(1, m.r.t.bodies().size());
-  TEST_ASSERT_TRUE(m.r.t.bodies()[0].find("L'enfant a besoin d'aide, venez la chercher a l'ecole.") == 0);
-}
-
-// ---- texts of several parts ------------------------------------------------------------------------------------------
-
-void test_a_text_of_320_plain_characters_goes_out_as_two_messages_of_160() {
+void test_a_text_of_320_plain_characters_goes_out_as_one_concatenated_message_of_three_parts() {
   Ready m;
   const std::string text(320, 'x');
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
   m.r.run(5000);
-  TEST_ASSERT_EQUAL(2, m.r.countPrefix("AT+CMGS="));
-  TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL(160, m.r.t.bodies()[0].size());
-  TEST_ASSERT_EQUAL(160, m.r.t.bodies()[1].size());
-  TEST_ASSERT_EQUAL(1, m.r.count("AT+CSCS=\"GSM\""));               // the charset is set once for the whole text
+  TEST_ASSERT_EQUAL(3, m.r.countPrefix("AT+CMGS="));
+  TEST_ASSERT_EQUAL(3, m.r.t.bodies().size());
+  const Decoded first = decode(m.r.t.bodies()[0]);
+  const Decoded last = decode(m.r.t.bodies()[2]);
+  TEST_ASSERT_TRUE(first.udhi);
+  TEST_ASSERT_EQUAL(3, first.total);
+  TEST_ASSERT_EQUAL(1, first.sequence);
+  TEST_ASSERT_EQUAL(3, last.sequence);
+  TEST_ASSERT_EQUAL(first.reference, last.reference);                // the phone joins the parts by this
+  TEST_ASSERT_EQUAL(1, m.r.count("AT+CMGF=0"));                     // PDU mode is set once for the whole text
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
   TEST_ASSERT_TRUE(m.failures().empty());
 }
 
-// The cut is after a space where there is one, and nothing is lost or invented.
-void test_the_parts_are_cut_after_a_space_and_together_are_the_text() {
+// Two long texts one after the other have different references, or the phone would join their parts.
+void test_the_next_long_text_has_another_reference() {
+  Ready m;
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, std::string(200, 'a')));
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, std::string(200, 'b')));
+  m.r.run(8000);
+  TEST_ASSERT_EQUAL(4, m.r.t.bodies().size());
+  TEST_ASSERT_TRUE(decode(m.r.t.bodies()[0]).reference != decode(m.r.t.bodies()[2]).reference);
+}
+
+void test_a_long_ucs2_text_is_cut_at_67_characters_and_never_inside_one() {
   Ready m;
   std::string text;
-  while (text.size() < 300) text += "wordy ";               // 6 characters: a cut at 160 would fall inside a word
-  text.resize(299);
+  for (int i = 0; i < 100; ++i) text += "\xD0\xB6";                  // 100 Cyrillic letters: not in the alphabet
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
   m.r.run(5000);
   TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
-  TEST_ASSERT_TRUE(m.r.t.bodies()[0].size() <= 160);
-  TEST_ASSERT_EQUAL(' ', m.r.t.bodies()[0].back());
-  TEST_ASSERT_EQUAL_STRING(text.c_str(), (m.r.t.bodies()[0] + m.r.t.bodies()[1]).c_str());
+  TEST_ASSERT_EQUAL(67, decode(m.r.t.bodies()[0]).units.size());
+  TEST_ASSERT_EQUAL(33, decode(m.r.t.bodies()[1]).units.size());
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
 }
 
-void test_a_ucs2_text_is_cut_at_70_characters_and_never_inside_one() {
-  Ready m;
-  std::string text;
-  for (int i = 0; i < 100; ++i) text += "\xC3\xA4";                  // 100 times a-umlaut: 200 bytes
-  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
-  m.r.run(5000);
-  TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL_STRING(ucs2(text.substr(0, 140)).c_str(), m.r.t.bodies()[0].c_str());   // 70 characters
-  TEST_ASSERT_EQUAL_STRING(ucs2(text.substr(140)).c_str(), m.r.t.bodies()[1].c_str());
-}
-
-// An emoji takes two places of the 70, and is never cut in the middle of its pair.
+// An emoji takes two units of the 67 and is never cut in the middle of its pair.
 void test_an_emoji_counts_double_and_is_never_split() {
   Ready m;
   std::string text;
-  for (int i = 0; i < 40; ++i) text += "\xF0\x9F\x98\x80";            // 40 emoji = 80 places
+  for (int i = 0; i < 40; ++i) text += "\xF0\x9F\x98\x80";            // 40 emoji = 80 units
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
   m.r.run(5000);
   TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL(35 * 8, m.r.t.bodies()[0].size());              // 35 emoji = 70 places = 280 hex digits
-  TEST_ASSERT_EQUAL(5 * 8, m.r.t.bodies()[1].size());
+  TEST_ASSERT_EQUAL(66, decode(m.r.t.bodies()[0]).units.size());   // 33 emoji; the 34th would have started at unit 67
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
 }
 
 // "{" is in the GSM alphabet only through its extension and takes two places.
 void test_the_extension_characters_of_the_gsm_alphabet_take_two_places() {
   Ready m;
-  const std::string text(100, '{');
+  const std::string text(100, '{');                                 // 200 places
   TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, text));
   m.r.run(5000);
   TEST_ASSERT_EQUAL(2, m.r.t.bodies().size());
-  TEST_ASSERT_EQUAL(80, m.r.t.bodies()[0].size());
+  TEST_ASSERT_EQUAL(152, decode(m.r.t.bodies()[0]).places.size());  // 76 braces: a pair is never cut
+  TEST_ASSERT_EQUAL_STRING(text.c_str(), textOf(m.r.t.bodies()).c_str());
 }
 
 void test_a_failing_second_part_is_one_failure_that_names_the_part() {
   Ready m;
   m.r.t.replyToBody({"+CMGS: 12"});
   m.r.t.replyToBody({}, "+CMS ERROR: 331");
-  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, std::string(320, 'x')));
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, std::string(200, 'x')));
   m.r.run(5000);
   const auto f = m.failures();
   TEST_ASSERT_EQUAL(1, f.size());
@@ -400,13 +421,28 @@ void test_a_failing_second_part_is_one_failure_that_names_the_part() {
   TEST_ASSERT_TRUE(m.r.driver.state() == ModemState::Ready);
 }
 
+// The log says how a text went out, never to whom or what.
+void test_the_log_says_the_parts_and_the_coding() {
+  Ready m;
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, "one part"));
+  TEST_ASSERT_TRUE(m.r.driver.sendSms(kNumber, std::string(200, 'x')));
+  m.r.run(5000);
+  bool one = false, two = false;
+  for (const std::string& line : m.r.logs) {
+    one = one || line == "Messages: sent in 1 part, GSM 7-bit";
+    two = two || line == "Messages: sent in 2 parts, GSM 7-bit";
+  }
+  TEST_ASSERT_TRUE(one);
+  TEST_ASSERT_TRUE(two);
+}
+
 // ---- when the modem does not answer ----------------------------------------------------------------------------------------
 
 void test_a_sending_that_gets_no_prompt_fails_leaves_the_prompt_and_the_queue_goes_on() {
   Rig p;
   Script s;
-  s.silent = cmgs(kNumber, true);
   s.apply(p.t);
+  p.t.silence(cmgsFor(kNumber, "first"));                                // no prompt for the first message only
   TEST_ASSERT_TRUE(p.start());
   TEST_ASSERT_TRUE(p.driver.sendSms(kNumber, "first"));
   TEST_ASSERT_TRUE(p.driver.sendSms(kOther, "second"));
@@ -417,7 +453,7 @@ void test_a_sending_that_gets_no_prompt_fails_leaves_the_prompt_and_the_queue_go
   TEST_ASSERT_EQUAL_STRING("no prompt from the modem", f.reason.c_str());
   TEST_ASSERT_EQUAL_STRING(kNumber.c_str(), f.phone.c_str());
   TEST_ASSERT_EQUAL(1, p.t.bodies().size());
-  TEST_ASSERT_EQUAL_STRING("second", p.t.bodies()[0].c_str());        // the next message was not held up
+  TEST_ASSERT_EQUAL_STRING("second", textOf({p.t.bodies()[0]}).c_str());   // the next message was not held up
   TEST_ASSERT_FALSE(p.driver.pollSendFailure(f));
 }
 
@@ -474,12 +510,12 @@ void test_a_message_queued_before_a_restart_goes_out_after_the_radio_cycle() {
   r.run(3000);
   TEST_ASSERT_EQUAL(cyclesBefore + 1, r.count("AT+CFUN=1"));
   TEST_ASSERT_EQUAL(1, r.t.bodies().size());
-  TEST_ASSERT_EQUAL_STRING("queued", r.t.bodies()[0].c_str());
+  TEST_ASSERT_EQUAL_STRING("queued", textOf({r.t.bodies()[0]}).c_str());
   // The second CFUN=1 stands before the sending: the cycle would have dropped a message in flight.
   int lastCfun = -1;
   for (size_t i = 0; i < r.t.sent().size(); ++i)
     if (r.t.sent()[i] == "AT+CFUN=1") lastCfun = (int)i;
-  TEST_ASSERT_TRUE(lastCfun >= 0 && lastCfun < r.indexOf(cmgs(kNumber, true)));
+  TEST_ASSERT_TRUE(lastCfun >= 0 && lastCfun < r.indexOf(cmgsFor(kNumber, "queued")));
   SmsFailure f;
   TEST_ASSERT_FALSE(r.driver.pollSendFailure(f));
 }
@@ -741,10 +777,6 @@ void test_no_log_line_carries_a_number_or_the_text_of_a_message() {
 
 int main(int, char**) {
   UNITY_BEGIN();
-  RUN_TEST(test_an_sos_with_an_umlaut_goes_out_as_one_message_in_plain_ascii);
-  RUN_TEST(test_a_text_with_a_letter_that_has_no_stand_in_keeps_its_characters);
-  RUN_TEST(test_a_text_that_is_two_messages_either_way_keeps_its_umlauts);
-  RUN_TEST(test_french_accents_and_typographic_signs_fold_to_their_letters);
   RUN_TEST(test_an_announced_message_is_read_and_then_deleted_from_the_sim);
   RUN_TEST(test_the_messages_on_the_sim_are_fetched_after_registration_and_deleted_after_reading);
   RUN_TEST(test_a_sim_with_more_messages_than_one_read_holds_is_read_again_until_empty);
@@ -753,19 +785,23 @@ int main(int, char**) {
   RUN_TEST(test_a_message_that_does_not_parse_stays_on_the_sim_and_is_read_with_the_next_read_of_it);
   RUN_TEST(test_a_read_that_is_never_answered_times_out_and_the_driver_goes_on);
   RUN_TEST(test_a_message_arrives_during_a_call_and_the_call_is_untouched);
-  RUN_TEST(test_plain_text_goes_out_in_the_gsm_alphabet_and_the_charset_goes_back);
-  RUN_TEST(test_text_with_an_umlaut_goes_out_as_ucs2_with_the_number_in_hex);
+  RUN_TEST(test_plain_text_goes_out_as_a_pdu_between_pdu_mode_and_text_mode);
+  RUN_TEST(test_text_with_an_umlaut_stays_7_bit_and_keeps_its_umlaut);
+  RUN_TEST(test_text_with_a_character_outside_the_alphabet_goes_out_as_ucs2);
   RUN_TEST(test_sending_is_refused_for_what_cannot_go_out);
+  RUN_TEST(test_the_modem_receives_hex_digits_only_whatever_the_text_holds);
   RUN_TEST(test_sending_is_refused_while_the_modem_is_not_ready);
   RUN_TEST(test_at_most_four_messages_wait_and_they_go_out_in_order);
   RUN_TEST(test_a_refused_sending_is_reported_exactly_once_with_the_modems_reason_and_the_queue_goes_on);
   RUN_TEST(test_an_error_at_the_recipient_is_a_failure_with_that_line);
-  RUN_TEST(test_a_text_of_320_plain_characters_goes_out_as_two_messages_of_160);
-  RUN_TEST(test_the_parts_are_cut_after_a_space_and_together_are_the_text);
-  RUN_TEST(test_a_ucs2_text_is_cut_at_70_characters_and_never_inside_one);
+  RUN_TEST(test_an_sos_with_an_umlaut_goes_out_as_one_7_bit_message_with_the_umlaut);
+  RUN_TEST(test_a_text_of_320_plain_characters_goes_out_as_one_concatenated_message_of_three_parts);
+  RUN_TEST(test_the_next_long_text_has_another_reference);
+  RUN_TEST(test_a_long_ucs2_text_is_cut_at_67_characters_and_never_inside_one);
   RUN_TEST(test_an_emoji_counts_double_and_is_never_split);
   RUN_TEST(test_the_extension_characters_of_the_gsm_alphabet_take_two_places);
   RUN_TEST(test_a_failing_second_part_is_one_failure_that_names_the_part);
+  RUN_TEST(test_the_log_says_the_parts_and_the_coding);
   RUN_TEST(test_a_sending_that_gets_no_prompt_fails_leaves_the_prompt_and_the_queue_goes_on);
   RUN_TEST(test_a_sending_whose_result_never_comes_fails_after_the_limit);
   RUN_TEST(test_a_restart_while_sending_reports_that_message_once_and_does_not_send_it_again);

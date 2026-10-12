@@ -199,10 +199,6 @@ bool parseScts(const char* s, uint32_t* epochUtc);
 // leading +, and more than a bare +. Nothing else ever reaches a command line.
 bool isValidDialString(const char* phone);
 
-// AT+CMGS="<number>" for 1 … 23 characters of 0-9 * # and a leading +; everything else, a
-// buffer that is too small included, is false and leaves `out` empty.
-bool buildCmgsCommand(const char* phone, Charset cs, char* out, size_t outSize);
-
 // ---------------------------------------------------------------------------
 // The answer of AT+CMGL and AT+CMGR
 // ---------------------------------------------------------------------------

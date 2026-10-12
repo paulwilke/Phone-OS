@@ -25,6 +25,7 @@
 
 #include "AtParser.h"
 #include "AtTransport.h"
+#include "SmsPdu.h"
 #include "../hal/Modem.h"
 
 class A7682EDriver : public Modem {
@@ -94,10 +95,9 @@ public:
 
   // True means accepted, not delivered: false when the modem is not ready to send (not registered, off or
   // going off), the number is not a dial string, the text is empty, not valid UTF-8 or longer than
-  // kMaxSmsBytes, or four messages are already waiting. A text that does not fit one SMS (160 characters
-  // in the GSM alphabet, 70 as soon as one character is not in it) goes out as several messages in a row;
-  // there is no concatenation header, so the phone shows them as separate messages. A text that would
-  // take fewer messages in plain ASCII ("oe" for the umlaut, the bare letter for an accent) is sent that way.
+  // kMaxSmsBytes, or four messages are already waiting. The text goes out in PDU mode (SmsPdu.h): 7-bit
+  // (160 places) when all its characters are in the GSM alphabet, umlauts included, else UCS2 (70); a longer
+  // text is one concatenated message that the receiving phone shows as one.
   bool sendSms(const std::string& phone, const std::string& body) override;
   bool pollSms(SmsMessage& out) override;
   bool pollSendFailure(SmsFailure& out) override;
@@ -177,13 +177,13 @@ private:
   // Messages
   struct Outgoing {
     std::string phone;
-    std::vector<std::string> parts;  // UTF-8, each fits one SMS
-    bool ascii = true;               // GSM alphabet (160 per SMS) or UCS2 (70)
+    std::vector<sms::Part> parts;    // the PDUs, each one SMS
+    sms::Coding coding = sms::Coding::Gsm7;
   };
   bool wantsSomething() const;
   void noteSendFailure(const std::string& phone, const std::string& reason);
   void smsFail(const std::string& reason);
-  void smsRestoreCharset();
+  void smsRestoreTextMode();
   void smsStartPart();
   void queueSms(const SmsMessage& sms);
   void finishPowerOff();
@@ -269,6 +269,7 @@ private:
   size_t deleteCount_ = 0;
   size_t deleteCursor_ = 0;
   size_t partIndex_ = 0;
+  uint8_t smsReference_ = 0;  // the concatenation reference of the last text that needed several parts
   bool smsFailed_ = false;
 
   // Questions, sleep, shutdown

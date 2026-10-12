@@ -431,27 +431,6 @@ void test_a_dial_string_is_digits_star_hash_and_a_leading_plus() {
     TEST_ASSERT_FALSE_MESSAGE(isValidDialString(bad), bad);
 }
 
-void test_cmgs_command_valid_and_rejected_numbers() {
-  char cmd[128];
-  TEST_ASSERT_TRUE(buildCmgsCommand("+491701111111", Charset::Gsm, cmd, sizeof(cmd)));
-  TEST_ASSERT_EQUAL_STRING("AT+CMGS=\"+491701111111\"", cmd);
-  TEST_ASSERT_TRUE(buildCmgsCommand("+4917", Charset::Ucs2, cmd, sizeof(cmd)));
-  TEST_ASSERT_EQUAL_STRING("AT+CMGS=\"002B0034003900310037\"", cmd);
-
-  // 24 characters do not fit: an error and not a silent cut.
-  TEST_ASSERT_FALSE(buildCmgsCommand("+49170111111111111111111", Charset::Gsm, cmd, sizeof(cmd)));
-  TEST_ASSERT_TRUE(buildCmgsCommand("+4917011111111111111111", Charset::Gsm, cmd, sizeof(cmd)));  // 23
-  TEST_ASSERT_FALSE(buildCmgsCommand("0170 1111", Charset::Gsm, cmd, sizeof(cmd)));
-  TEST_ASSERT_FALSE(buildCmgsCommand("49+170", Charset::Gsm, cmd, sizeof(cmd)));
-  TEST_ASSERT_FALSE(buildCmgsCommand("\"; AT+CPOF", Charset::Gsm, cmd, sizeof(cmd)));
-  TEST_ASSERT_FALSE(buildCmgsCommand("", Charset::Gsm, cmd, sizeof(cmd)));
-  TEST_ASSERT_FALSE(buildCmgsCommand("+", Charset::Gsm, cmd, sizeof(cmd)));
-
-  char small[16];  // too small: an error, not cut
-  TEST_ASSERT_FALSE(buildCmgsCommand("+491701111111", Charset::Gsm, small, sizeof(small)));
-  TEST_ASSERT_EQUAL_STRING("", small);
-}
-
 // ---- +CMGL / +CMGR -----------------------------------------------------------------------------
 
 void test_cmgl_single_message_gsm() {
@@ -780,7 +759,6 @@ int main(int, char**) {
   RUN_TEST(test_cclk_gives_the_time_and_the_zone);
   RUN_TEST(test_cclk_refuses_the_clock_of_a_modem_without_network_time);
   RUN_TEST(test_a_dial_string_is_digits_star_hash_and_a_leading_plus);
-  RUN_TEST(test_cmgs_command_valid_and_rejected_numbers);
   RUN_TEST(test_cmgl_single_message_gsm);
   RUN_TEST(test_cmgl_three_messages_all_parsed_with_indices);
   RUN_TEST(test_cmgl_ten_full_length_messages);

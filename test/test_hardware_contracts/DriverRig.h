@@ -265,8 +265,8 @@ private:
 
   // What does not change while a test runs: the initialisation, messages, calls, the questions of the diagnosis.
   void scriptStatic() {
-    for (const char* c : {"AT", "ATE0", "AT+CMEE=2", "AT+CMGF=1", "AT+CSCS=\"UCS2\"", "AT+CSMP=17,167,0,8", "AT+CNMI=2,1,0,0,0", "AT+CTZU=1",
-                          "AT+CLIP=1", "AT+CSDVC=3", "AT+COUTGAIN=4", "AT+COPS=3,0", "AT+CNMP=2", "AT+CSCS=\"GSM\"", "AT+CSMP=17,167,0,0",
+    for (const char* c : {"AT", "ATE0", "AT+CMEE=2", "AT+CMGF=1", "AT+CSCS=\"UCS2\"", "AT+CNMI=2,1,0,0,0", "AT+CTZU=1",
+                          "AT+CLIP=1", "AT+CSDVC=3", "AT+COUTGAIN=4", "AT+COPS=3,0", "AT+CNMP=2", "AT+CMGF=0",
                           "AT+CCLK?", "AT+CHUP", "ATA", "AT+CLCC", "AT+CEER", "AT+CSCLK=1", "AT+CPOF", "AT+CFUN=0", "AT+CFUN=1"}) {
       t_.reply(c, {});
     }
@@ -277,13 +277,8 @@ private:
     t_.reply("AT+CMGL=\"ALL\"", {});
     for (int slot = 0; slot < 10; ++slot) t_.reply("AT+CMGD=" + std::to_string(slot), {});
     t_.setDefaultBodyAnswer({"+CMGS: 12"});
-    for (const char* n : {"+491701111111", "+491702222222"}) {
-      char hex[256];
-      text::utf8ToUcs2Hex(n, hex, sizeof(hex));
-      t_.replyPrompt(std::string("AT+CMGS=\"") + n + "\"");
-      t_.replyPrompt(std::string("AT+CMGS=\"") + hex + "\"");
-      t_.reply(std::string("ATD") + n + ";", {});
-    }
+    t_.replyPromptToPrefix("AT+CMGS=");
+    for (const char* n : {"+491701111111", "+491702222222"}) t_.reply(std::string("ATD") + n + ";", {});
   }
 
   // What the contract changes: the network, the card.

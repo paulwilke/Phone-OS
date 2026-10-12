@@ -28,7 +28,7 @@ Do not log routine edits, refactors with no choice in them, or anything the code
 4. Open work stays in docs/open-points.md and nowhere else. A decision that is waiting for the owner is listed there and points to its D-number; when it is decided, the open point is removed in the same commit and the entry in decisions.md becomes decided.
 5. The changelog names what changed for the people who use the device and refers to the D-number; the reasons stay in decisions.md.
 6. A lesson measured on the device still goes into docs/hardware-lessons.md; if it changed what the code does, add a decision that links to it.
-7. Add entries at the end of docs/decisions.md. Never rewrite or delete an old one; to change a decision, add a new entry that says it supersedes the old number and set the old status to "superseded by D-<n>" (the one permitted edit).
+7. Add entries at the end of docs/decisions.md. Never rewrite or delete an old one; to change a decision, add a new entry that says it supersedes the old number and set the old status to "superseded by D-<n>". The status line and the "Verified" line are the only lines of an old entry that change.
 
 ## Bounded problems
 

@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "SmsPdu.h"
 #include "Ucs2.h"
 
 namespace {
@@ -13,9 +14,8 @@ namespace {
 const char* const kInitCommands[] = {
     "ATE0",
     "AT+CMEE=2",           // errors as words; 1 would give bare numbers, 2 is also the default
-    "AT+CMGF=1",           // SMS in text mode
+    "AT+CMGF=1",           // SMS in text mode; a message goes out in PDU mode and the mode is set back
     "AT+CSCS=\"UCS2\"",    // umlauts and emoji unharmed
-    "AT+CSMP=17,167,0,8",  // outgoing SMS as UCS2
     "AT+CNMI=2,1,0,0,0",   // a new SMS is announced as +CMTI, not delivered inline
     "AT+CTZU=1",           // take the network time
     "AT+CLIP=1",           // the caller's number on an incoming call
@@ -813,10 +813,11 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       return;
 
     // -----------------------------------------------------------------------
-    // Sending. A text of plain ASCII goes out in the GSM alphabet (160 characters per SMS), anything with a
-    // character outside it as UCS2 (70); afterwards the charset goes back to UCS2, or incoming texts would
-    // arrive as hex. A text of several parts is sent part by part. Steps: 0 AT+CSCS, 1 AT+CSMP, 2 AT+CMGS
-    // (the part is begun), 3 waiting for the prompt "> ", 4 waiting for the result, 5 AT+CSCS back to UCS2.
+    // Sending (decision D-10). The modem is put into PDU mode, every part of the text goes out as a PDU
+    // that the driver built (SmsPdu.h: 7-bit where the text is in the GSM alphabet, UCS2 where not, parts with
+    // a concatenation header), and the modem is put back into text mode, which reading messages needs.
+    // Steps: 0 AT+CMGF=0, 2 AT+CMGS=<length> (the part is begun), 3 waiting for the prompt "> ", 4 waiting
+    // for the result, 5 AT+CMGF=1 (back to text mode).
     case Job::SendSms: {
       if (outbox_.empty()) {
         finishJob(false);
@@ -826,7 +827,7 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       if (!line) {
         partIndex_ = 0;
         smsFailed_ = false;
-        send(out.ascii ? "AT+CSCS=\"GSM\"" : "AT+CSCS=\"UCS2\"");
+        send("AT+CMGF=0");
         expect(config_.commandTimeoutMs);
         return;
       }
@@ -838,32 +839,13 @@ void A7682EDriver::step(const char* line, at::LineType type) {
             smsFail(line);
             return;
           }
-          stepIndex_ = 1;
-          send(out.ascii ? "AT+CSMP=17,167,0,0" : "AT+CSMP=17,167,0,8");
-          expect(config_.commandTimeoutMs);
-          return;
-        case 1:
-          if (type == at::LineType::Error) {
-            smsFail(line);
-            return;
-          }
           smsStartPart();
           return;
-        case 3:  // the recipient is out: the modem answers with "> " and waits for the text
+        case 3:  // the length is out: the modem answers with "> " and waits for the PDU
           if (type == at::LineType::Prompt) {
             reader_.setPromptMode(false);
             stepIndex_ = 4;
-            if (out.ascii) {
-              transport_.write(out.parts[partIndex_].data(), out.parts[partIndex_].size());
-            } else {
-              char hex[kMaxSmsBytes * 4 + 1];
-              if (text::utf8ToUcs2Hex(out.parts[partIndex_].c_str(), hex, sizeof(hex)) < 0) {
-                transport_.write("\x1B", 1);  // Escape: cancel the sending
-                smsFail("text cannot be coded");
-                return;
-              }
-              transport_.write(hex, strlen(hex));
-            }
+            transport_.write(out.parts[partIndex_].hex.data(), out.parts[partIndex_].hex.size());
             transport_.write("\x1A", 1);  // Ctrl-Z sends it
             expect(config_.smsSendTimeoutMs);
           } else if (type == at::LineType::Error) {
@@ -874,15 +856,20 @@ void A7682EDriver::step(const char* line, at::LineType type) {
           if (type == at::LineType::Cmgs) return;  // the confirmation; OK follows
           if (type == at::LineType::Ok) {
             if (++partIndex_ < out.parts.size()) smsStartPart();
-            else smsRestoreCharset();
+            else smsRestoreTextMode();
           } else if (type == at::LineType::Error) {
             // **Keep the reason before it is lost.** Before, a "+CMS ERROR: 304" vanished without a trace and
             // the interface said "sent", an emergency message included (found 2026-10-01).
             smsFail(line);
           }
           return;
-        default:  // 5: the charset is back
-          if (answered) finishJob(!smsFailed_);
+        default:  // 5: text mode is back
+          if (answered) {
+            if (!smsFailed_)
+              log("Messages: sent in " + std::to_string(out.parts.size()) + (out.parts.size() == 1 ? " part, " : " parts, ") +
+                  (out.coding == sms::Coding::Gsm7 ? "GSM 7-bit" : "UCS2"));
+            finishJob(!smsFailed_);
+          }
           return;
       }
     }
@@ -1519,164 +1506,15 @@ bool A7682EDriver::setCallVolume(int level) {
 // Messages
 // ---------------------------------------------------------------------------
 
-namespace {
-
-// A character of the extension table of the GSM alphabet takes two places in an SMS.
-bool isGsmExtension(char c) {
-  return c == '^' || c == '{' || c == '}' || c == '\\' || c == '[' || c == ']' || c == '~' || c == '|';
-}
-
-// The length of the UTF-8 character at s[i], 0 when it is not valid there.
-size_t utf8Length(const std::string& s, size_t i) {
-  const unsigned char c = (unsigned char)s[i];
-  const size_t n = c < 0x80 ? 1 : (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3 : (c & 0xF8) == 0xF0 ? 4 : 0;
-  if (n == 0 || i + n > s.size()) return 0;
-  for (size_t k = 1; k < n; ++k)
-    if (((unsigned char)s[i + k] & 0xC0) != 0x80) return 0;
-  return n;
-}
-
-// How many places a character takes in an SMS: in the GSM alphabet one (two for the extension), in UCS2 one
-// unit (two for a character beyond the first plane, an emoji).
-size_t places(const std::string& s, size_t i, size_t n, bool ascii) {
-  if (ascii) return isGsmExtension(s[i]) ? 2 : 1;
-  return n == 4 ? 2 : 1;
-}
-
-size_t placesOf(const std::string& s, bool ascii) {
-  size_t total = 0;
-  for (size_t i = 0; i < s.size();) {
-    const size_t n = utf8Length(s, i);
-    total += places(s, i, n, ascii);
-    i += n;
-  }
-  return total;
-}
-
-// Cuts a text into parts that each fit one SMS (160 places in the GSM alphabet, 70 in UCS2), never inside a
-// character, and where it can after a space. False for invalid UTF-8 or a control character that the
-// modem would take for a command (a text goes out after "> " and ends with Ctrl-Z: 0x1A and 0x1B must
-// not occur in it).
-bool splitSms(const std::string& body, bool& ascii, std::vector<std::string>& parts) {
-  ascii = true;
-  for (size_t i = 0; i < body.size();) {
-    const size_t n = utf8Length(body, i);
-    if (n == 0) return false;
-    const unsigned char c = (unsigned char)body[i];
-    if (c == 0x1A || c == 0x1B || c == 0x00) return false;
-    if (n > 1) ascii = false;
-    i += n;
-  }
-  const size_t limit = ascii ? 160 : 70;
-  std::string cur;
-  size_t used = 0, afterSpace = 0;
-  for (size_t i = 0; i < body.size();) {
-    const size_t n = utf8Length(body, i);
-    const size_t w = places(body, i, n, ascii);
-    if (used + w > limit) {
-      if (afterSpace > 0 && afterSpace >= cur.size() / 2) {
-        parts.push_back(cur.substr(0, afterSpace));
-        cur = cur.substr(afterSpace);
-        used = placesOf(cur, ascii);
-      } else {
-        parts.push_back(cur);
-        cur.clear();
-        used = 0;
-      }
-      afterSpace = 0;
-    }
-    cur += body.substr(i, n);
-    used += w;
-    if (body[i] == ' ' || body[i] == '\n') afterSpace = cur.size();
-    i += n;
-  }
-  if (!cur.empty()) parts.push_back(cur);
-  return !parts.empty();
-}
-
-// The code point of the UTF-8 character at s[i] with length n (n from utf8Length).
-uint32_t codePoint(const std::string& s, size_t i, size_t n) {
-  const unsigned char c = (unsigned char)s[i];
-  if (n == 1) return c;
-  uint32_t cp = n == 2 ? (c & 0x1F) : n == 3 ? (c & 0x0F) : (c & 0x07);
-  for (size_t k = 1; k < n; ++k) cp = (cp << 6) | ((unsigned char)s[i + k] & 0x3F);
-  return cp;
-}
-
-// The plain ASCII that stands in for a letter or sign the way a person would write it without it: "oe" for
-// the umlaut, the bare letter for an accent. Null for anything else, so that a text with such a character
-// (an emoji, a letter of another script) is never changed.
-const char* asciiFor(uint32_t cp) {
-  switch (cp) {
-    case 0xE4: return "ae"; case 0xF6: return "oe"; case 0xFC: return "ue";
-    case 0xC4: return "Ae"; case 0xD6: return "Oe"; case 0xDC: return "Ue";
-    case 0xDF: return "ss"; case 0xE6: return "ae"; case 0xC6: return "Ae"; case 0x153: return "oe"; case 0x152: return "Oe";
-    case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE5: return "a";
-    case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC5: return "A";
-    case 0xE7: return "c"; case 0xC7: return "C";
-    case 0xE8: case 0xE9: case 0xEA: case 0xEB: return "e";
-    case 0xC8: case 0xC9: case 0xCA: case 0xCB: return "E";
-    case 0xEC: case 0xED: case 0xEE: case 0xEF: return "i";
-    case 0xCC: case 0xCD: case 0xCE: case 0xCF: return "I";
-    case 0xF1: return "n"; case 0xD1: return "N";
-    case 0xF2: case 0xF3: case 0xF4: case 0xF5: return "o";
-    case 0xD2: case 0xD3: case 0xD4: case 0xD5: return "O";
-    case 0xF9: case 0xFA: case 0xFB: return "u";
-    case 0xD9: case 0xDA: case 0xDB: return "U";
-    case 0xFF: return "y";
-    case 0xA0: return " ";
-    case 0x2018: case 0x2019: return "'";
-    case 0x201C: case 0x201D: return "\"";
-    case 0x2013: case 0x2014: return "-";
-    case 0x2026: return "...";
-    case 0x20AC: return "EUR";
-    default: return nullptr;
-  }
-}
-
-// The text in plain ASCII, or false when a character has no stand-in.
-bool foldToAscii(const std::string& body, std::string& out) {
-  out.clear();
-  for (size_t i = 0; i < body.size();) {
-    const size_t n = utf8Length(body, i);
-    if (n == 0) return false;
-    if (n == 1) {
-      out += body[i];
-    } else {
-      const char* stand = asciiFor(codePoint(body, i, n));
-      if (!stand) return false;
-      out += stand;
-    }
-    i += n;
-  }
-  return true;
-}
-
-// Every part is a separate message that costs money, and a text with one umlaut goes out as UCS2 (70 places
-// instead of 160). So when a text would take more messages as UCS2 than it takes in plain ASCII, it is
-// sent in plain ASCII ("moechte" for the word with the umlaut): a SOS of 130 characters was three messages and is one. A
-// text that fits one message as it is, or that cannot be written in ASCII, keeps its characters.
-bool splitCheapest(const std::string& body, bool& ascii, std::vector<std::string>& parts) {
-  if (!splitSms(body, ascii, parts)) return false;
-  if (ascii || parts.size() < 2) return true;
-  std::string folded;
-  std::vector<std::string> foldedParts;
-  bool foldedAscii = true;
-  if (!foldToAscii(body, folded) || !splitSms(folded, foldedAscii, foldedParts) || foldedParts.size() >= parts.size()) return true;
-  parts = std::move(foldedParts);
-  ascii = foldedAscii;
-  return true;
-}
-
-}  // namespace
-
 bool A7682EDriver::sendSms(const std::string& phone, const std::string& body) {
   if (shuttingDown_ || (state_ != ModemState::Ready && !callState())) return false;
   if (!at::isValidDialString(phone.c_str()) || body.empty() || body.size() > kMaxSmsBytes) return false;
   if (outbox_.size() >= kOutboxSize) return false;
   Outgoing out;
   out.phone = phone;
-  if (!splitCheapest(body, out.ascii, out.parts)) return false;
+  const uint8_t reference = smsReference_ == 255 ? 1 : (uint8_t)(smsReference_ + 1);   // the same reference never follows itself
+  if (!sms::encode(phone, body, reference, out.coding, out.parts)) return false;   // never a shortened number, never bad UTF-8
+  if (out.parts.size() > 1) smsReference_ = reference;
   outbox_.push_back(std::move(out));
   return true;
 }
@@ -1714,27 +1552,22 @@ void A7682EDriver::smsFail(const std::string& reason) {
   if (out.parts.size() > 1 && stepIndex_ >= 2) why = "part " + std::to_string(partIndex_ + 1) + " of " + std::to_string(out.parts.size()) + ": " + reason;
   noteSendFailure(out.phone, why);
   smsFailed_ = true;
-  smsRestoreCharset();
+  smsRestoreTextMode();
 }
 
-void A7682EDriver::smsRestoreCharset() {
+void A7682EDriver::smsRestoreTextMode() {
   reader_.setPromptMode(false);
   stepIndex_ = 5;
-  send("AT+CSCS=\"UCS2\"");  // back to UCS2, so that incoming texts stay readable
+  send("AT+CMGF=1");  // back to text mode, so that incoming texts can be read
   expect(config_.commandTimeoutMs);
 }
 
-// The recipient of the next part goes out; the modem then answers "> ".
+// The length of the next part goes out; the modem then answers "> ".
 void A7682EDriver::smsStartPart() {
-  char cmd[96];
   const Outgoing& out = outbox_.front();
-  if (!at::buildCmgsCommand(out.phone.c_str(), out.ascii ? at::Charset::Gsm : at::Charset::Ucs2, cmd, sizeof(cmd))) {
-    smsFail("number cannot be used");  // never cut short: a shortened number is someone else's
-    return;
-  }
   stepIndex_ = 3;
   reader_.setPromptMode(true);
-  send(cmd);
+  send(("AT+CMGS=" + std::to_string(out.parts[partIndex_].tpduLength)).c_str());
   expect(config_.commandTimeoutMs);
 }
 
