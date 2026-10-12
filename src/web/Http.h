@@ -13,7 +13,7 @@
 
 namespace http {
 
-constexpr size_t kMaxHead = 1024;
+constexpr size_t kMaxHead = 4096;   // a browser sends cookies, Origin, Referer and more: 1024 refused real requests with 431
 constexpr size_t kMaxBody = 8192;
 
 struct Request {

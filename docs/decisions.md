@@ -189,3 +189,14 @@ Reason: Opening the case is not needed while calls and SMS work with the workaro
 Consequences: The question to the manufacturer (open point 8) is answered and removed. The decision is looked at again if the hang returns in a way the workaround does not cover, or when the case is open for another reason.
 Verified: not applicable; the vendor's statement is taken from the owner's message and has not been checked against the vendor's page
 
+## D-16: The parents' page accepts request headers up to 4096 bytes
+Date: 2026-10-12   Status: decided
+Decided by: owner (it must be fixed); agent (4096 bytes)
+
+Context: Saving a setting (modem sleep) from the parents' page in a browser answered "Request Header Fields Too Large" (431). The parser refused a head of more than 1024 bytes, and a browser's head with the Authorization header, Origin, Referer, the user agent and the cookies it holds for the address is easily larger. The USB bridge's request limit follows the parser's.
+Options: Leave 1024 (saving from a browser stays unreliable). 2048 (a few cookies still pass it). 4096, a common server default.
+Decision: `http::kMaxHead` is 4096; the bridge's limit (`kConsoleMaxRequest`, `MAX_REQUEST`) is 12300, the head and the largest body.
+Reason: It lets ordinary browsers through and costs 3 KB of the parser's buffer (the firmware uses 14.5 % of its RAM).
+Consequences: A head over 4096 bytes is still refused with 431, with a test. Verified in the browser only after flashing (open point 27).
+Verified: host-tested; compiled; not verified on the device
+

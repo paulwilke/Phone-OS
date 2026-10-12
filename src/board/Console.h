@@ -39,7 +39,7 @@ namespace board {
 
 constexpr size_t kConsoleLineMax = 320;
 constexpr uint32_t kConsoleMaxFile = 8192;
-constexpr uint32_t kConsoleMaxRequest = 9300;  // the head and the largest body the web parser accepts
+constexpr uint32_t kConsoleMaxRequest = 12300;  // the head and the largest body the web parser accepts
 constexpr uint32_t kConsoleRawTimeoutMs = 10000;
 // How long say() waits for a connected computer to take output before it gives up: the time without any progress,
 // so every accepted byte starts it anew. The USB transmit buffer is small and drains in milliseconds, so a reading

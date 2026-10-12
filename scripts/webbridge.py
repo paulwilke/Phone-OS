@@ -24,7 +24,7 @@ import sys
 import threading
 import time
 
-MAX_REQUEST = 9300  # the head and the largest body the device's parser accepts
+MAX_REQUEST = 12300  # the head and the largest body the device's parser accepts
 FORWARD = ("authorization", "x-phone-os", "content-type")
 
 

@@ -162,8 +162,8 @@ void test_the_length_and_the_checksum_of_a_write_are_checked_strictly() {
 }
 
 void test_the_web_request_length_is_bounded_by_what_the_parser_accepts() {
-  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WEB 9300").kind == Kind::Web);
-  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WEB 9301").kind == Kind::Unknown);
+  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WEB 12300").kind == Kind::Web);
+  TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WEB 12301").kind == Kind::Unknown);
   TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WEB 0").kind == Kind::Unknown);
   TEST_ASSERT_TRUE(parseConsoleLine("CONFIG WEB").kind == Kind::Unknown);
 }
