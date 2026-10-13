@@ -8,7 +8,7 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `kMaxHead` | 1024 bytes | Maximum header section |
+| `kMaxHead` | 4096 bytes | Maximum header section (1024 until 4.1.7: a browser's cookies, Origin and Referer made a request to save a setting a 431) |
 | `kMaxBody` | 8192 bytes | Maximum body |
 
 `Parser::feed()` takes raw bytes in any chunk size and returns one of four states: `Head` (still reading headers), `Body` (reading body), `Done` (complete), `Error`. An error sets a status code — 400 (garbage), 411 (no Content-Length), 413 (body too large), 414 (URI too long), 431 (headers too large), 501 (chunked encoding). Once the parser reaches `Done` or `Error` it ignores further input. The fuzz suite (`test/test_http_fuzz/`) feeds random bytes and truncated valid requests under AddressSanitizer to check that no input causes a crash or an out-of-bounds read.

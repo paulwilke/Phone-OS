@@ -61,10 +61,27 @@ void test_oversized_body_is_rejected_before_it_is_read() {
 void test_oversized_head_is_rejected() {
   http::Parser p;
   std::string s = "GET / HTTP/1.1\r\nX: ";
-  s += std::string(2000, 'a');
+  s += std::string(http::kMaxHead + 100, 'a');
   feedAll(p, s);
   TEST_ASSERT_TRUE(p.state() == http::Parser::State::Error);
   TEST_ASSERT_EQUAL(431, p.errorStatus());
+}
+
+// 2026-10-12: saving a setting from the parents' page in a browser gave "Request Header Fields Too Large". A
+// browser sends the Authorization header, Origin, Referer, Sec-Fetch headers, the user agent and the cookies it
+// holds for that address; with a few cookies the head is well over a kilobyte.
+void test_a_browsers_head_of_over_a_kilobyte_is_accepted() {
+  http::Parser p;
+  const std::string body = "{\"features\":{\"modem_sleep\":true}}";
+  std::string s = "PUT /api/settings HTTP/1.1\r\nHost: 192.168.1.20\r\nAuthorization: Basic cGFyZW50OnNlY3JldA==\r\n"
+                  "X-Phone-OS: 1\r\nContent-Type: application/json\r\nOrigin: http://192.168.1.20\r\n"
+                  "Referer: http://192.168.1.20/\r\nUser-Agent: " + std::string(180, 'u') + "\r\n"
+                  "Accept: */*\r\nSec-Fetch-Mode: cors\r\nCookie: " + std::string(1500, 'c') + "\r\n"
+                  "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+  TEST_ASSERT_TRUE(s.size() - body.size() > 1024);
+  feedAll(p, s);
+  TEST_ASSERT_TRUE(p.state() == http::Parser::State::Done);
+  TEST_ASSERT_EQUAL(body.size(), p.request().contentLength);
 }
 
 void test_garbage_is_a_400() {
@@ -188,6 +205,7 @@ int main() {
   RUN_TEST(test_the_header_of_earlier_versions_is_not_the_custom_header);
   RUN_TEST(test_oversized_body_is_rejected_before_it_is_read);
   RUN_TEST(test_oversized_head_is_rejected);
+  RUN_TEST(test_a_browsers_head_of_over_a_kilobyte_is_accepted);
   RUN_TEST(test_garbage_is_a_400);
   RUN_TEST(test_post_without_length_is_refused);
   RUN_TEST(test_chunked_is_not_accepted);

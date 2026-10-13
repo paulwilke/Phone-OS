@@ -93,7 +93,7 @@ ConsoleCommand parseConsoleLine(const std::string& input) {
   }
   if (verb == "WEB") {
     uint32_t n = 0;
-    if (!number(take(rest), kConsoleMaxRequest, n) || n == 0) return fail("usage: CONFIG WEB <bytes 1..9300>");
+    if (!number(take(rest), kConsoleMaxRequest, n) || n == 0) return fail("usage: CONFIG WEB <bytes 1..12300>");
     c.kind = ConsoleCommand::Kind::Web;
     c.length = n;
     return c;
