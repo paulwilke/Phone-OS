@@ -16,7 +16,6 @@ The owner is the person who owns the device and the repository. Software work th
 | 5 | The empty APN | With an empty `apn` the driver leaves the modem's own contexts alone. Whether a modem that was never configured then registers the IMS has not been tried. | owner | [volte.md](volte.md), [modem-driver.md](modem-driver.md) |
 | 6 | The vibration patterns | The five patterns come from the data sheet; whether they can be told apart in a pocket has not been felt. | owner | [bring-up.md](bring-up.md) step 6 |
 | 7 | The simulator window | Look at the window version of the simulator once (`pio run -e sim-sdl`, in a terminal): the build needs SDL2 and CI does not make it. | owner | [simulator.md](simulator.md) |
-| 8 | Question to the manufacturer | The modem firmware `A7682M7_B15V01_241119` hangs in the call setup when the IMS is not registered, and no update package is published. | owner | [volte.md](volte.md) |
 | 19 | Changes of 4.1.3 to 4.1.7 | Host-tested and not verified on the device: the energy log, the battery shown from the voltage when the gauge fails, the SOS text sent in ASCII to stay one message, the Lock button and the position of the GPS note, and the 15-minute search for the home network (not verified on a real network). Each entry of the changelog says what to look for. | owner | [../CHANGELOG.md](../CHANGELOG.md), [energy-log.md](energy-log.md), [battery.md](battery.md), [modem-driver.md](modem-driver.md) |
 
 ## Decisions

@@ -178,3 +178,14 @@ Reason: A cell that is charged too fast ages and, in the worst case, is a safety
 Consequences: Charging from empty takes a little longer with a strong adapter (about 1.5 hours instead of about one). The register map is the BQ25896's, which the SY6970 is documented to follow; its data sheet is not in the repository, so a write that does not read back is logged and the charger keeps its own value. Open point 26 keeps the check on the device.
 Verified: host-tested; not verified on the device
 
+## D-15: The modem firmware is not updated
+Date: 2026-10-12   Status: decided
+Decided by: owner
+
+Context: The modem firmware `A7682M7_B15V01_241119` hangs in the call setup when the IMS is not registered. The driver works around it by never dialling without the IMS ([volte.md](volte.md)). LilyGO answered on 2026-10-12 that a newer firmware for the A7682E exists, installed with a tool shared with the A76XX series over the modem's USB endpoints, which on the T-Deck Pro are inside the case, and that they advise against an update unless there is a specific problem.
+Options: Open the case and update the modem firmware (risk to the case and to a working modem; the effect on the hang is unknown). Leave the firmware as it is and keep the driver's workaround.
+Decision: The modem firmware is not updated now. The vendor's answer and the link to the instructions are recorded in volte.md.
+Reason: Opening the case is not needed while calls and SMS work with the workaround, and the vendor does not recommend an update without a specific problem.
+Consequences: The question to the manufacturer (open point 8) is answered and removed. The decision is looked at again if the hang returns in a way the workaround does not cover, or when the case is open for another reason.
+Verified: not applicable; the vendor's statement is taken from the owner's message and has not been checked against the vendor's page
+
