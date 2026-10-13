@@ -2,6 +2,15 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.2
+
+Fixes and measurements from the night of 2026-10-13. Host-tested and compiled; none of it is verified on the device yet (the open points named below).
+
+- **The Power tile shows the power symbol** (D-21), a circle with a bar, and no word: "Strom" was a poor translation, and no word is right in every language. The page behind it is titled "Switch off" / "Ausschalten" / "Eteindre". Open point removed; to look at on the device.
+- **The battery percentage no longer sticks at 0 % while the cell is not empty** (D-24). The gauge said 0 % at 3579 mV and the device ran four hours more; the screen showed 0 % all that time, and the rule flipped about once a second at the border (62 log lines in three minutes). Now a gauge at 3 % or less is not believed while the voltage gives 6 % or more, and the way back has a margin. Open point 32.
+- **The USB console keeps what a computer writes** (point 29). The receive buffer was the default 256 bytes and overflowed when a file was written; it is 4096 bytes now. **Seen on the device on 2026-10-13:** the settings file (615 bytes, more than the 512 that got through before) was written over the cable and read back identical.
+- **The Loop line tells where the time goes** (D-25): the share of passes in which the power policy allows sleep, and the average cost per pass of the console, the keys, the modem, the application step and the housekeeping. Open points 20 and 25.
+
 ## 4.2.1
 
 A version for measuring (D-20); it changes no behaviour. Host-tested and compiled; the lines it writes are to be read on the device (open points 20, 25 and 30).
