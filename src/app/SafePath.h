@@ -46,4 +46,9 @@ bool inConfigDir(const char* path);
 // True when `s` ends with `suffix` (case-insensitive).
 bool endsWith(const char* s, const char* suffix);
 
+// True when `a` and `b` name the same file on the card (case-insensitive). A rule about one file
+// ("secrets.toml cannot be deleted", "a configuration file is validated before it is written") must use
+// this and never an exact comparison, or `/config/SECRETS.TOML` walks around it.
+bool sameFile(const char* a, const char* b);
+
 }  // namespace safepath

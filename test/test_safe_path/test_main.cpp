@@ -94,6 +94,18 @@ void test_helpers_ignore_case() {
   TEST_ASSERT_FALSE(safepath::endsWith(nullptr, ".log"));
 }
 
+// A rule about one file must hold in every spelling the card accepts, or a capital letter walks around it.
+void test_the_same_file_is_the_same_in_any_case() {
+  TEST_ASSERT_TRUE(safepath::sameFile("/config/secrets.toml", "/config/secrets.toml"));
+  TEST_ASSERT_TRUE(safepath::sameFile("/CONFIG/SECRETS.TOML", "/config/secrets.toml"));
+  TEST_ASSERT_TRUE(safepath::sameFile("/config/Secrets.Toml", "/config/secrets.toml"));
+  TEST_ASSERT_FALSE(safepath::sameFile("/config/secrets.tom", "/config/secrets.toml"));
+  TEST_ASSERT_FALSE(safepath::sameFile("/config/secrets.toml2", "/config/secrets.toml"));
+  TEST_ASSERT_FALSE(safepath::sameFile("/config/secret.toml", "/config/secrets.toml"));
+  TEST_ASSERT_FALSE(safepath::sameFile(nullptr, "/config/secrets.toml"));
+  TEST_ASSERT_FALSE(safepath::sameFile("/config/secrets.toml", nullptr));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_ordinary_paths_are_valid);
@@ -102,5 +114,6 @@ int main(int, char**) {
   RUN_TEST(test_length_limits);
   RUN_TEST(test_the_temporary_suffix_is_refused_in_any_case);
   RUN_TEST(test_helpers_ignore_case);
+  RUN_TEST(test_the_same_file_is_the_same_in_any_case);
   return UNITY_END();
 }

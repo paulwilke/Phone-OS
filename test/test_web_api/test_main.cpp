@@ -536,11 +536,29 @@ void test_delete_a_file() {
   TEST_ASSERT_EQUAL(404, f.del("/api/file?path=/config/old.txt"));
 }
 
-// Rule 5 counter-check: secrets.toml cannot be deleted.
+// Rule 5 counter-check: secrets.toml cannot be deleted, in any spelling: the card is FAT and
+// /CONFIG/SECRETS.TOML is the same file (an exact comparison let it through, found 2026-10-13).
 void test_secrets_toml_cannot_be_deleted_here() {
   Fixture f;
-  TEST_ASSERT_EQUAL(403, f.del("/api/file?path=/config/secrets.toml"));
-  TEST_ASSERT_TRUE(f.store.files.count("/config/secrets.toml"));
+  for (const char* spelling : {"/config/secrets.toml", "/CONFIG/SECRETS.TOML", "/config/Secrets.toml"}) {
+    TEST_ASSERT_EQUAL_MESSAGE(403, f.del((std::string("/api/file?path=") + spelling).c_str()), spelling);
+    TEST_ASSERT_TRUE(f.store.files.count("/config/secrets.toml"));
+    TEST_ASSERT_FALSE(f.log.contains("deleted"));
+  }
+}
+
+// Rule 5 counter-check: a configuration file is validated whatever spelling of its name the raw editor sends.
+// The check used to compare the name exactly and took /config/Settings.toml for some other file, which was
+// then stored unread, and /config/Secrets.toml with a three-letter password likewise.
+void test_raw_config_files_are_validated_in_any_spelling_of_their_name() {
+  Fixture f;
+  TEST_ASSERT_EQUAL(422, f.call("PUT", "/api/file?path=/config/Settings.toml", "[child\nkaputt", kAuth));
+  TEST_ASSERT_EQUAL(422, f.call("PUT", "/api/file?path=/CONFIG/CONTACTS.TOML", "[[contact", kAuth));
+  TEST_ASSERT_EQUAL(422, f.call("PUT", "/api/file?path=/config/SECRETS.toml", "web_password = \"abc\"\n", kAuth));
+  TEST_ASSERT_EQUAL(422, f.call("PUT", "/api/file?path=/config/Secrets.toml", "web_password = \"test-password-1\"\nsim_pin = \"12ab\"\n", kAuth));
+  TEST_ASSERT_EQUAL(0, f.store.writes);
+  TEST_ASSERT_EQUAL_STRING("web_password = \"test-password-1\"\n", f.store.files["/config/secrets.toml"].c_str());
+  TEST_ASSERT_EQUAL(200, f.call("PUT", "/api/file?path=/config/Settings.toml", "[child]\nname = \"x\"\n", kAuth));
 }
 
 void test_logs_may_be_deleted() {
@@ -849,6 +867,7 @@ int main() {
   RUN_TEST(test_logs_are_read_from_the_end);
   RUN_TEST(test_delete_a_file);
   RUN_TEST(test_secrets_toml_cannot_be_deleted_here);
+  RUN_TEST(test_raw_config_files_are_validated_in_any_spelling_of_their_name);
   RUN_TEST(test_logs_may_be_deleted);
   RUN_TEST(test_every_change_is_logged_but_never_with_content);
   RUN_TEST(test_backup_has_settings_and_contacts_but_no_secrets);
