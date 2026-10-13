@@ -77,7 +77,7 @@ Options: Rely on a protection circuit that nobody has shown to exist. Switch the
 Decision: The firmware switches the device off before the voltage reaches a damaging level, and the battery bar ends at that voltage, so the bar is empty when the device goes off. The voltage: off when the voltage on the battery stays below 3300 mV for 60 seconds (a minute, so that a dip while the modem sends does not switch it off), and 3300 mV is the empty end of the bar.
 Reason: A deeply discharged cell is damaged, and 3300 mV is above the 3.0 V below which lithium-polymer cells are generally harmed, with margin; it is 130 mV under the 3430 mV where this cell was flat at 140 mA. With no cut-off in the documentation, the firmware must do it.
 Consequences: Open point 18 (built; to be checked on the device). `kBatteryEmptyMv` (3430) and the voltage table in `BatteryPlausibility` change with it; the table was measured down to 3426 mV only, so below that it extends a measurement. The number is the agent's: if the device shows a dip that switches it off too early, a new entry changes it. The cell size of 1500 mAh in the firmware agrees with the maker's page for this model.
-Verified: host-tested; compiled; not verified on the device (open point 18); the discharge to 3426 mV was measured on the device on 2026-10-09
+Verified: host-tested; compiled; on the device on 2026-10-13: the battery ran down overnight (about 105 mA) and the log has "Battery: 3291 mV for a minute, switching off to protect the cell", then "Power: switching off" at 07:07. A dip while the modem sends did not trigger it in 12 hours. The gauge said 0 % for four hours before that (open point 32).
 
 ## D-6: A text with an umlaut is sent in ASCII to stay one message
 Date: 2026-10-12   Status: superseded by D-10
@@ -176,7 +176,7 @@ Options: Leave the defaults (cell charged above 1 C). Set the current and feed t
 Decision: At every start the firmware sets the charge current to 0.65 C of the configured capacity, rounded down to 64 mA (960 mA for 1500 mAh), and switches the watchdog off. Each register is written only on a difference and read back.
 Reason: A cell that is charged too fast ages and, in the worst case, is a safety risk; with the watchdog off the limit cannot silently disappear while the firmware hangs.
 Consequences: Charging from empty takes a little longer with a strong adapter (about 1.5 hours instead of about one). The register map is the BQ25896's, which the SY6970 is documented to follow; its data sheet is not in the repository, so a write that does not read back is logged and the charger keeps its own value. Open point 26 keeps the check on the device.
-Verified: host-tested; on the device on 2026-10-12 the chip reads back 960 mA and the watchdog off (register 07 = 0x8D), charging with an adapter not yet tried (open point 26). The fault register reads 0x90 before and after, so it was no watchdog fault.
+Verified: host-tested; on the device on 2026-10-12 the chip reads back 960 mA and the watchdog off (register 07 = 0x8D). With the cable the charger still limits the input to 500 mA (register 00 = 0x48, "unknown adapter"): the cell charged at 445 to 500 mA from the computer and from a mains adapter, so the limit of 960 mA was not reached; the fault register 0x90 reads the same before and after, so it was no watchdog fault.
 
 ## D-15: The modem firmware is not updated
 Date: 2026-10-12   Status: decided
@@ -242,7 +242,7 @@ Options: Guess and change the code (a task for the sensor start, another sleep p
 Decision: Version 4.2.1 writes one line every half hour to the system log with the longest pass of the loop, the number of passes and the share of the time spent asleep, and logs the three language requests of the parents' page. It changes no behaviour.
 Reason: D-8 recommends measuring first, and the owner agreed; the same line answers where the 105 mA go.
 Consequences: Open points 20, 25 and 30 are read from these lines after a day on the device. The half hour keeps the system log from filling (48 lines a day); the line is kept on the levels `all` and `events`. A decision about the sensor start, about the sleep policy or about the page follows from what the lines show.
-Verified: host-tested; compiled; not verified on the device
+Verified: host-tested; compiled; on the device the loop line is written every half hour (2026-10-13): the loop makes about 32,000 passes in 1800 s and sleeps 1 % of the time, the longest pass was 123 to 206 ms (1479 ms in the first window, the start). The motion page was not opened, so the 11 seconds of the sensor start are not in these lines yet.
 
 ## D-21: The Power tile shows the power symbol, not a word
 Date: 2026-10-12   Status: decided
@@ -254,4 +254,26 @@ Decision: The tile shows the power symbol. The words stay in the catalogs for th
 Reason: A symbol needs no translation and is known from every device.
 Consequences: Open point 31. Not built; it must be looked at whether the fonts have the glyph (U+23FB) or whether it is drawn like the other symbols (`src/ui/Symbols.h`). The tile keeps its label key `home.power` for the tests and for the self-test words.
 Verified: not verified; not built
+
+## D-22: The self-test words stay in the device catalog
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: The words of the self-test page (45 keys) are in the device catalogs, although only a parent sees that page. The question was whether to move them to the page's catalogs.
+Options: Keep them in the device catalog (the page runs on the device and needs them without the card). Move them (smaller catalogs, but the page needs the card).
+Decision: They stay. The owner agreed on condition that they are not irritating and do not take much room.
+Reason: They take 1.7 to 1.9 KB of a catalog of 14.7 to 16.4 KB (about 12 %), the device has about 8 MB of memory, and nothing outside the self-test page shows them.
+Consequences: Open point 12 is removed.
+Verified: not applicable
+
+## D-23: No firmware binary is handed out
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: Open point 14 held back a binary until the redistribution terms of the Bosch image of the motion sensor were verified, and the Arduino core (LGPL) added a question of its own.
+Options: Verify the terms and publish a binary. Hand out no binary at all.
+Decision: No firmware binary is handed out, for reasons of responsibility: the device is a child's emergency phone, and a binary in other hands is a device whose behaviour nobody here answers for. The source is public; whoever builds the firmware answers for the result.
+Reason: The owner's: responsibility. It also makes the licence question of the binary moot.
+Consequences: Open point 14 is removed. The releases carry source, changelog and notes, and no binary. [THIRD_PARTY.md](../THIRD_PARTY.md) keeps its remark on the Bosch image for whoever builds from source.
+Verified: not applicable
 

@@ -31,4 +31,4 @@ Section 9 of the acceptance test, in this order: `battery` (charge current and w
 
 - **Power save** (D-13, open point 25): what it should do, once `modem_sleep` is on.
 - **The charge current and the switch-off voltage** (D-14, D-5) are the agent's numbers; change them with a new entry if the device shows a reason.
-- **Handing out a firmware binary** (open point 14) is still not decided; this release is for the owner's own device.
+- **No firmware binary is handed out** (D-23, decided by the owner): the releases carry the source, the changelog and the notes.
