@@ -32,7 +32,7 @@ The `.bdf` files are the upstream files except for one comment line, from which 
 | the Bosch Sensortec driver sources inside SensorLib (`src/bosch/`: BHI260 host driver, BMM150, BMA4xx) | BSD-3-Clause (the files carry the notice) | compiled into the firmware through SensorLib; the licence asks for its notice with a binary |
 | the firmware image of the motion sensor hub BHI260AP (Bosch Sensortec, delivered inside SensorLib as `bosch_app30_shuttle_bhi260`) | **not verified**: the image files carry no licence text | the sensor loads it into its RAM at every power-up; it is not stored in this repository |
 
-**Binaries that contain the Bosch firmware image are for the owner's own device until its redistribution terms are verified.** The image is fetched by the build as part of SensorLib; nothing of it is committed here, and a binary of the `device` environment must not be published or handed to others.
+**No binary that contains the Bosch firmware image is handed out (decision D-23); its redistribution terms have not been verified.** The image is fetched by the build as part of SensorLib; nothing of it is committed here, and a binary of the `device` environment must not be published or handed to others.
 
 ### Platform of the firmware, fetched by the firmware build
 
@@ -42,7 +42,7 @@ The `.bdf` files are the upstream files except for one comment line, from which 
 | the Arduino core for the ESP32 (`framework-arduinoespressif32`) | GNU LGPL 2.1 or later (the files of the core carry that notice); its bundled libraries `SD`, `FS`, `SPI`, `WiFi`, `Wire` carry Espressif's Apache-2.0 notice | the processor's peripherals behind the seams in `device/` |
 | ESP-IDF (inside the Arduino core) | Apache-2.0 | the system layer under the core |
 
-None of it is stored here. A firmware binary contains LGPL code from the Arduino core; the conditions that puts on handing a binary to others have not been assessed (open point 14 in [docs/open-points.md](docs/open-points.md)).
+None of it is stored here. A firmware binary contains LGPL code from the Arduino core; the conditions that puts on handing a binary to others have not been assessed, and none is handed out (decision D-23 in [docs/decisions.md](docs/decisions.md)).
 
 ### Read for values, not stored here
 

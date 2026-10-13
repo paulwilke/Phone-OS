@@ -72,6 +72,7 @@ void test_classes_of_typical_lines() {
   TEST_ASSERT_TRUE(classify("Call from Parent One") == Importance::Event);
   TEST_ASSERT_TRUE(classify("Message received") == Importance::Event);
   TEST_ASSERT_TRUE(classify("WiFi connected") == Importance::Event);
+  TEST_ASSERT_TRUE(classify("Loop: longest pass 11320 ms, 400 passes in 1800 s, asleep 12 %") == Importance::Event);   // the measurement of D-20
   TEST_ASSERT_TRUE(classify("SIM: ready") == Importance::Event);
   TEST_ASSERT_TRUE(classify("Modem not responding") == Importance::Error);
   TEST_ASSERT_TRUE(classify("Call rejected") == Importance::Error);  // error beats event

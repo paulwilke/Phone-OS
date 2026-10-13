@@ -63,7 +63,16 @@ void WebServer::report(End how, uint32_t now) {
     return emit(line, now);
   }
   const bool aborted = how != End::Done || sent_ < total;
-  if (!aborted && status_ < 400) return;
+  if (!aborted && status_ < 400) {
+    // The page asks for its words, labels and hints in three requests after the login (/api/lang/<code>,
+    // .../labels, .../help). When a field shows its key instead of its label, these lines say whether the device
+    // was asked and answered. Three lines for a page load; nothing else that went well is logged.
+    if (strcmp(method_, "GET") == 0 && strncmp(path_, "/api/lang/", 10) == 0) {
+      snprintf(line, sizeof(line), "WEB: GET %s -> %d, sent %u bytes", printable(path_, sizeof(path_)).c_str(), status_, (unsigned)sent_);
+      emit(line, now);
+    }
+    return;
+  }
   std::string target = printable(path_, sizeof(path_));
   if (!queryKeys_.empty()) target += "?" + queryKeys_;
   snprintf(line, sizeof(line), "WEB: %s %s -> %d%s%s%s, sent %u of %u bytes", printable(method_, 7).c_str(), target.c_str(), status_,

@@ -1,6 +1,6 @@
 # Release 4.2
 
-Version 4.2.0 of Phone OS. It follows the owner's test of 4.1.7 on the device and a day in which the decisions of the project were first written down ([decisions.md](decisions.md), D-1 to D-16). What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device is [de/abnahmetest.md](de/abnahmetest.md), section 9 for what is new. Everything about 4.1 that this page does not change ([release-4.1.md](release-4.1.md)) stays.
+Version 4.2.1 of Phone OS (4.2.1: two measuring lines in the system log, no change in behaviour; 4.2.0: the rest of this page). It follows the owner's test of 4.1.7 on the device and a day in which the decisions of the project were first written down ([decisions.md](decisions.md), D-1 to D-16). What changed is in [../CHANGELOG.md](../CHANGELOG.md); the acceptance test the owner goes through on the device is [de/abnahmetest.md](de/abnahmetest.md), section 9 for what is new. Everything about 4.1 that this page does not change ([release-4.1.md](release-4.1.md)) stays.
 
 ## What changes for the parents
 
@@ -31,4 +31,4 @@ Section 9 of the acceptance test, in this order: `battery` (charge current and w
 
 - **Power save** (D-13, open point 25): what it should do, once `modem_sleep` is on.
 - **The charge current and the switch-off voltage** (D-14, D-5) are the agent's numbers; change them with a new entry if the device shows a reason.
-- **Handing out a firmware binary** (open point 14) is still not decided; this release is for the owner's own device.
+- **No firmware binary is handed out** (D-23, decided by the owner): the releases carry the source, the changelog and the notes.
