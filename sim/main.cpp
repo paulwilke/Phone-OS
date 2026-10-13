@@ -125,6 +125,10 @@ int main(int argc, char** argv) {
   if (!crawlDir.empty()) {
     sim::Crawler crawler(options, prelude);
     const sim::Crawl crawl = crawler.run(depth, perScreen);
+    if (!crawler.error().empty()) {
+      std::cerr << "error: " << crawler.error() << "\n";
+      return 1;
+    }
     std::filesystem::create_directories(crawlDir);
     std::ofstream(crawlDir + "/graph.json") << sim::Crawler::json(crawl);
     std::vector<std::string> codes;
@@ -137,6 +141,10 @@ int main(int argc, char** argv) {
       std::filesystem::create_directories(crawlDir + "/" + code);
       for (const sim::CrawlNode& node : crawl.nodes) {
         std::unique_ptr<sim::Simulator> there = crawler.reach(node.path, code);
+        if (!there) {
+          std::cerr << "error: " << crawler.error() << "\n";
+          return 1;
+        }
         if (sim::Crawler::screenOf(*there) != node.screen) {
           std::cerr << "error: in " << code << " the path to state " << node.id << " leads to "
                     << sim::Crawler::screenOf(*there) << ", not " << node.screen << "\n";
