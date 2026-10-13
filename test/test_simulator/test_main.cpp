@@ -754,9 +754,9 @@ void test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data
   options.dataDir = data.string();
   options.workDir = (data.parent_path() / "crawl-work").string();
   sim::Crawler crawler(options, "sim/demo/world.txt");
-  // Home, the options tile (behind the six tiles of the first page and three of the second), the language row
+  // Home, the options tile (behind the seven tiles of the first page and three of the second), the language row
   // (third, above switching off), German: the choice is written to the card of that replay.
-  std::vector<std::string> path(9, "down");
+  std::vector<std::string> path(10, "down");
   path.push_back("select");
   for (const char* key : {"down", "down", "select", "up", "select"}) path.push_back(key);
   std::unique_ptr<sim::Simulator> chosen = crawler.reach(path, "");

@@ -58,13 +58,14 @@ Profile inSchool() { return ProfileBuilder().childName("Alex").schoolTime("tue",
 
 // ---- which tiles exist -----------------------------------------------------------------------
 
-// The light is the child's (owner, 2026-10-08): it is on the first page, behind the inbox.
-void test_a_child_device_has_five_tiles_in_front_and_the_tools_behind() {
+// The light is the child's (owner, 2026-10-08): it is on the first page, behind the inbox; the power tile
+// (owner, 2026-10-12) is the last of the first page.
+void test_a_child_device_has_six_tiles_in_front_and_the_tools_behind() {
   DeviceRig rig;
   HomeScreen home(rig.context());
   const auto pages = home.pages();
   TEST_ASSERT_EQUAL(2, pages.size());
-  const std::vector<Kind> front = {Kind::Phone, Kind::Text, Kind::Sos, Kind::Inbox, Kind::Light};
+  const std::vector<Kind> front = {Kind::Phone, Kind::Text, Kind::Sos, Kind::Inbox, Kind::Light, Kind::Power};
   const std::vector<Kind> back = {Kind::Network, Kind::Gps, Kind::Clock, Kind::Settings, Kind::Tests};
   TEST_ASSERT_TRUE(pages[0] == front);
   TEST_ASSERT_TRUE(pages[1] == back);
@@ -75,7 +76,7 @@ void test_the_radio_tile_is_in_front_and_only_when_the_profile_allows_the_radio(
   TEST_ASSERT_FALSE(has(flat(HomeScreen(without.context()).pages()), Kind::Radio));
   DeviceRig with(ProfileBuilder().radio(true).build());
   const auto pages = HomeScreen(with.context()).pages();
-  TEST_ASSERT_TRUE(pages[0][pages[0].size() - 2] == Kind::Radio);   // behind the inbox, before the light, on the first page
+  TEST_ASSERT_TRUE(pages[0][pages[0].size() - 3] == Kind::Radio);   // behind the inbox, before the light and power, on the first page
   TEST_ASSERT_FALSE(has(pages[1], Kind::Radio));
 }
 
@@ -192,6 +193,9 @@ void test_down_goes_through_both_pages_and_wraps_and_the_page_follows() {
   press(home, Key::Down, 4);
   TEST_ASSERT_TRUE(Kind::Light == home.selected());
   TEST_ASSERT_EQUAL(0, home.page());
+  press(home, Key::Down);
+  TEST_ASSERT_TRUE(Kind::Power == home.selected());
+  TEST_ASSERT_EQUAL(0, home.page());
   press(home, Key::Down);                                    // the first tool: the second page
   TEST_ASSERT_TRUE(Kind::Network == home.selected());
   TEST_ASSERT_EQUAL(1, home.page());
@@ -207,7 +211,7 @@ void test_down_goes_through_both_pages_and_wraps_and_the_page_follows() {
 void test_the_selection_is_kept_when_the_screen_is_left_and_come_back_to() {
   DeviceRig rig;
   HomeScreen home(rig.context());
-  press(home, Key::Down, 5);                                 // the network tile, on the second page
+  press(home, Key::Down, 6);                                 // the network tile, on the second page
   home.onLeave();
   home.onEnter();
   TEST_ASSERT_TRUE(Kind::Network == home.selected());
@@ -223,7 +227,7 @@ void test_no_tile_appears_twice() {
   const std::vector<Kind> kinds = flat(HomeScreen(all).pages());
   for (size_t i = 0; i < kinds.size(); ++i)
     for (size_t j = i + 1; j < kinds.size(); ++j) TEST_ASSERT_FALSE(kinds[i] == kinds[j]);
-  TEST_ASSERT_EQUAL(14, kinds.size());                          // every tile there is
+  TEST_ASSERT_EQUAL(15, kinds.size());                          // every tile there is
 }
 
 void test_every_tile_opens_its_screen() {
@@ -236,7 +240,7 @@ void test_every_tile_opens_its_screen() {
       {Kind::Inbox, screen::kMessages},   {Kind::Radio, screen::kRadio},    {Kind::Network, screen::kNet},
       {Kind::Gps, screen::kGnss},         {Kind::Clock, screen::kClock},    {Kind::Settings, screen::kSettings},
       {Kind::Wifi, screen::kWifi},        {Kind::Motion, screen::kMotion},  {Kind::Tests, screen::kSelfTest},
-      {Kind::Status, screen::kStatus}};
+      {Kind::Status, screen::kStatus},    {Kind::Power, screen::kPower}};
   const std::vector<Kind> order = flat(home.pages());
   for (const auto& row : table) {
     rig.nav.clear();
@@ -551,10 +555,10 @@ void test_the_lock_button_is_there_in_every_language_with_its_whole_word() {
 }
 
 void test_the_tiles_say_their_words_in_the_language_of_the_moment() {
-  const struct { const char* code; const char* front[5]; const char* tools[5]; } words[] = {
-      {"en", {"Phone", "Text", "SOS", "Inbox", "Light"}, {"Network", "GPS", "Clock", "Settings", "Tests"}},
-      {"de", {"Telefon", "Text", "SOS", "Eingang", "Licht"}, {"Netz", "GPS", "Uhr", "Option", "Tests"}},
-      {"fr", {"Appels", "\xC3\x89" "crire", "SOS", "Courrier", "Lumi\xC3\xA8re"}, {"R\xC3\xA9seau", "GPS", "Heure", "Options", "Tests"}}};
+  const struct { const char* code; const char* front[6]; const char* tools[5]; } words[] = {
+      {"en", {"Phone", "Text", "SOS", "Inbox", "Light", "Power"}, {"Network", "GPS", "Clock", "Settings", "Tests"}},
+      {"de", {"Telefon", "Text", "SOS", "Eingang", "Licht", "Strom"}, {"Netz", "GPS", "Uhr", "Option", "Tests"}},
+      {"fr", {"Appels", "\xC3\x89" "crire", "SOS", "Courrier", "Lumi\xC3\xA8re", "\xC3\x89nergie"}, {"R\xC3\xA9seau", "GPS", "Heure", "Options", "Tests"}}};
   for (const auto& w : words) {
     DeviceRig rig;
     rig.language(w.code);
@@ -568,7 +572,7 @@ void test_the_tiles_say_their_words_in_the_language_of_the_moment() {
                          shows::text(rig.frame, label, FontSize::Small, content, true);
       TEST_ASSERT_TRUE_MESSAGE(shown, (std::string(w.code) + " " + label).c_str());
     }
-    press(home, Key::Down, 5);
+    press(home, Key::Down, 6);
     home.render(rig.frame);
     for (const char* label : w.tools) {
       const bool shown = shows::text(rig.frame, label, FontSize::Small, content) ||
@@ -633,7 +637,7 @@ void test_a_notice_does_not_move_the_tiles() {
 
 int main(int, char**) {
   UNITY_BEGIN();
-  RUN_TEST(test_a_child_device_has_five_tiles_in_front_and_the_tools_behind);
+  RUN_TEST(test_a_child_device_has_six_tiles_in_front_and_the_tools_behind);
   RUN_TEST(test_the_radio_tile_is_in_front_and_only_when_the_profile_allows_the_radio);
   RUN_TEST(test_status_and_wifi_are_the_parents_tools);
   RUN_TEST(test_the_wifi_tile_needs_a_wifi_to_switch);

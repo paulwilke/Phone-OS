@@ -6,7 +6,7 @@ sms +491701111111 first
 advance 2s
 check haptic-message 1
 
-key down down down down down down down down down select
+key down down down down down down down down down down select
 check screen settings
 see settings.vibration
 see option.on
@@ -26,7 +26,7 @@ web post /api/restart {}
 check web-status 200
 advance 3s
 check boots 2
-key down down down down down down down down down select
+key down down down down down down down down down down select
 see settings.vibration
 see option.off
 sms +491701111111 third

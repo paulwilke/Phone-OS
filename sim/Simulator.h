@@ -536,7 +536,7 @@ inline void Simulator::printState() {
   const AppCore::State s = rig_->runtime->core().state();
   static const char* const screens[] = {"home", "lock", "clock", "phone", "number", "call", "messages", "compose",
                                         "recipient", "sos", "settings", "wifi", "net", "status", "language",
-                                        "gnss", "radio", "motion", "selftest"};
+                                        "gnss", "radio", "motion", "selftest", "power"};
   static_assert(sizeof(screens) / sizeof(screens[0]) == ui::screen::kCount, "a screen name is missing");
   out_ << "screen:    " << screens[rig_->runtime->stack().visibleId()] << (rig_->runtime->stack().locked() ? " (locked)" : "") << "\n";
   out_ << "language:  " << translator_.language() << "\n";
@@ -1109,7 +1109,7 @@ inline bool Simulator::check(const std::vector<std::string>& w, const std::strin
   std::string actual;
   static const char* const screens[] = {"home", "lock", "clock", "phone", "number", "call", "messages", "compose",
                                         "recipient", "sos", "settings", "wifi", "net", "status", "language",
-                                        "gnss", "radio", "motion", "selftest"};
+                                        "gnss", "radio", "motion", "selftest", "power"};
   auto yesNo = [](bool b) { return std::string(b ? "yes" : "no"); };
   const std::vector<FakeModem::SentSms>& sent = rig_->modem.sent();
   if (what == "screen") actual = screens[rig_->runtime->stack().visibleId()];

@@ -30,6 +30,7 @@ enum : ScreenId {
   kRadio,
   kMotion,
   kSelfTest,
+  kPower,
   kCount  // not a screen: the number of names
 };
 

@@ -153,8 +153,8 @@ Context: D-11 put a button in the status bar. The owner meant something else: a 
 Options: A button in the status bar (D-11; crowded). A tile on the second page (hidden). A tile on the first page.
 Decision: A tile "Power" on the first page. It opens a page with the choices Switch off, Power save (D-13) and Cancel. Switch off asks once more ("Switch off?") before it acts, and then shows the "Switched off" picture. The menu entry under Settings stays. This supersedes D-11.
 Reason: It is findable, it is where the other things the device does are, and the question keeps a tap from switching off.
-Consequences: Open point 23. The tile and its page need words in the three catalogs, the layout tests and a screen test; the switch-off still refuses on the cable and says why. The tile is on the child's page; the question is what protects against a tap.
-Verified: not verified; not built
+Consequences: Open point 23. Built as the tile `home.power` (the last of the first page) and the page `PowerScreen` with the choices Switch off (asks "Switch off?", Cancel in focus) and, for later, Power save (D-13, not on the page yet). The switch-off still refuses on the cable and says why. The tile is on the child's page; the question is what protects against a tap.
+Verified: host-tested; compiled; not verified on the device
 
 ## D-13: What "Power save" does
 Date: 2026-10-12   Status: open

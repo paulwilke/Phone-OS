@@ -17,7 +17,7 @@ see weekday.tue
 
 # Home, down to the options tile, into the options, down to the language row (the third: volume, vibration,
 # language; switching off is below it), into the language page.
-key down down down down down down down down down select
+key down down down down down down down down down down select
 check screen settings
 see settings.title
 key down down select

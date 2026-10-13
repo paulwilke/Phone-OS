@@ -25,6 +25,7 @@ std::vector<std::vector<HomeScreen::Kind>> HomeScreen::pages() const {
   child.push_back(Kind::Inbox);
   if (profile.radioAllowed) child.push_back(Kind::Radio);
   child.push_back(Kind::Light);   // the child's: it lights the way in the dark (owner, 2026-10-08)
+  child.push_back(Kind::Power);   // switching off with a question (owner, 2026-10-12, D-12)
 
   // The device's page; the parents may switch each tile off ([home] in settings.toml).
   const HomeTiles& shown = profile.home;
@@ -62,6 +63,7 @@ Tile HomeScreen::tileOf(Kind kind) {
     case Kind::Tests: tile.label = t().get("home.tests"); break;
     case Kind::Status: tile.label = t().get("home.status"); break;
     case Kind::Light: tile.label = t().get("home.light"); break;
+    case Kind::Power: tile.label = t().get("home.power"); break;
   }
   return tile;
 }
@@ -136,6 +138,7 @@ void HomeScreen::activate(Kind kind) {
     case Kind::Tests: nav().open(screen::kSelfTest); return;
     case Kind::Status: nav().open(screen::kStatus); return;
     case Kind::Light: app().toggleFrontlight(); return;
+    case Kind::Power: nav().open(screen::kPower); return;
   }
 }
 
