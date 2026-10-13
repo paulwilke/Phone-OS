@@ -7,6 +7,8 @@ namespace board {
 namespace {
 constexpr uint8_t kRegInputLimit = 0x00;
 constexpr uint8_t kRegChargeCurrent = 0x04;
+constexpr uint8_t kRegWatchdog = 0x07;
+constexpr uint8_t kWatchdogBits = 0x30;
 constexpr uint8_t kRegPrecharge = 0x05;
 constexpr uint8_t kRegChargeVoltage = 0x06;
 constexpr uint8_t kRegControl = 0x09;
@@ -17,6 +19,15 @@ constexpr uint8_t kRegSystem = 0x0F;
 constexpr uint8_t kRegVbus = 0x11;
 constexpr uint8_t kRegChargingCurrent = 0x12;
 constexpr uint8_t kBatfetDisable = 0x20;
+
+int watchdogSecondsOf(uint8_t reg) {
+  switch ((reg & kWatchdogBits) >> 4) {
+    case 1: return 40;
+    case 2: return 80;
+    case 3: return 160;
+    default: return 0;
+  }
+}
 
 void decodeStatusRegister(uint8_t status, ChargerStatus& s) {
   s.input = (InputKind)(status >> 5);
@@ -35,6 +46,7 @@ ChargerStatus decodeCharger(const uint8_t (&r)[kChargerRegisterCount]) {
   s.prechargeCurrentMa = 64 + 64 * (r[kRegPrecharge] >> 4);
   s.terminationCurrentMa = 64 + 64 * (r[kRegPrecharge] & 0x0F);
   s.chargeVoltageMv = 3840 + 16 * (r[kRegChargeVoltage] >> 2);
+  s.watchdogSeconds = watchdogSecondsOf(r[kRegWatchdog]);
   s.batteryMv = 2304 + 20 * (r[kRegBattery] & 0x7F);
   s.systemMv = 2304 + 20 * (r[kRegSystem] & 0x7F);
   s.vbusGood = (r[kRegVbus] & 0x80) != 0;
@@ -113,6 +125,30 @@ bool Charger::disconnectBattery() {
   uint8_t control = 0;
   if (!bus_.readRegister(address_, kRegControl, control)) return false;
   return bus_.writeRegister(address_, kRegControl, (uint8_t)(control | kBatfetDisable));
+}
+
+ChargeSetup Charger::limitCharging(int maxMa) {
+  ChargeSetup setup;
+  if (!found()) return setup;
+  uint8_t watchdog = 0, current = 0;
+  if (!bus_.readRegister(address_, kRegWatchdog, watchdog) || !bus_.readRegister(address_, kRegChargeCurrent, current)) return setup;
+  setup.watchdogBeforeSeconds = watchdogSecondsOf(watchdog);
+  setup.chargeCurrentBeforeMa = kChargeStepMa * (current & 0x7F);
+  const uint8_t wantCurrent = (uint8_t)((current & 0x80) | (maxMa / kChargeStepMa));
+  // The watchdog first: a chip that falls back to its defaults would undo the current a moment later.
+  if (setup.watchdogBeforeSeconds != 0) {
+    if (!bus_.writeRegister(address_, kRegWatchdog, (uint8_t)(watchdog & ~kWatchdogBits))) return setup;
+    setup.changed = true;
+  }
+  if (wantCurrent != current) {
+    if (!bus_.writeRegister(address_, kRegChargeCurrent, wantCurrent)) return setup;
+    setup.changed = true;
+  }
+  if (!bus_.readRegister(address_, kRegWatchdog, watchdog) || !bus_.readRegister(address_, kRegChargeCurrent, current)) return setup;
+  setup.watchdogSeconds = watchdogSecondsOf(watchdog);
+  setup.chargeCurrentMa = kChargeStepMa * (current & 0x7F);
+  setup.ok = setup.watchdogSeconds == 0 && current == wantCurrent;
+  return setup;
 }
 
 }  // namespace board

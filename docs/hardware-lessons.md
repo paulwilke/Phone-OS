@@ -16,6 +16,10 @@ Things that went wrong on the real device, why, and the rule that keeps them fro
 
 **Owner's check.** After a full charge the gauge reads 100 % within a few percent of the cell voltage chart, and the diagnostic command shows the configured capacity.
 
+## The charger charges with its default unless the firmware says otherwise
+
+Measured 2026-10-12: the SY6970 held a charge current of 2048 mA (the chip's default, more than 1 C for a 1500 mAh cell), an input limit of 500 mA, and a watchdog of 40 seconds that nobody fed, so the fault register read 0x90 (watchdog) and the chip fell back to its defaults every 40 seconds. On the computer's USB port the current stayed near 500 mA because of the input limit; on a mains adapter it would not have. **Driver rule:** at start, limit the charge current to 0.65 C of the configured capacity and switch the watchdog off, reading back what was written ([device-power.md](device-power.md), decision D-14). **Owner's check:** `battery` shows the limited current and "watchdog off".
+
 ## The IMS bearer needs a default context of type IPV4V6
 
 Outgoing calls hung the modem two seconds after dialling when the IMS was not registered. Defining PDP context 1 as IPV4V6 and restarting the radio fixed it. The modem driver sets this up itself at start (read the contexts first, write only when they differ) and refuses to dial while the IMS is not registered. How, what is proven and the owner's checklist for the device: [volte.md](volte.md).

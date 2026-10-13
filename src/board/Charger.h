@@ -38,6 +38,8 @@ struct ChargerStatus {
   int prechargeCurrentMa = 0;
   int terminationCurrentMa = 0;
   int chargeVoltageMv = 0;
+  // 0x07: the I2C watchdog in seconds, 0 when it is off. When it runs out the chip falls back to its defaults.
+  int watchdogSeconds = 0;
   // 0x0E, 0x0F, 0x11, 0x12: what it measures.
   int batteryMv = 0;
   int systemMv = 0;
@@ -45,6 +47,28 @@ struct ChargerStatus {
   int chargingCurrentMa = 0;
   bool vbusGood = false;
   uint8_t fault = 0;  // 0x0C, as the chip has it
+};
+
+// The charge current this firmware allows for a cell of the given capacity: 0.65 C, rounded down to the chip's
+// step of 64 mA and kept between one step and the chip's default of 2048 mA (a cell of 1500 mAh gets 960 mA).
+// The chip's own default is 2048 mA whatever the cell is, which is more than 1 C for a small one.
+constexpr int kChargeStepMa = 64;
+constexpr int kChargeDefaultMa = 2048;
+constexpr int chargeCurrentLimitMa(int capacityMah) {
+  int ma = (capacityMah * 65 / 100) / kChargeStepMa * kChargeStepMa;
+  if (ma < kChargeStepMa) ma = kChargeStepMa;
+  if (ma > kChargeDefaultMa) ma = kChargeDefaultMa;
+  return ma;
+}
+
+// What limitCharging() found and did.
+struct ChargeSetup {
+  bool ok = false;               // the chip holds the wanted values, read back
+  bool changed = false;          // a register was written
+  int chargeCurrentBeforeMa = 0;
+  int chargeCurrentMa = 0;       // as read back
+  int watchdogBeforeSeconds = 0;
+  int watchdogSeconds = 0;       // as read back
 };
 
 ChargerStatus decodeCharger(const uint8_t (&registers)[kChargerRegisterCount]);
@@ -73,6 +97,12 @@ public:
   // off. Reads the register first and writes only the one bit. The caller refuses it while a cable feeds
   // the board, because VBUS keeps the board powered then.
   bool disconnectBattery();
+
+  // Puts the charge current to `maxMa` (rounded down to the chip's step) and switches the I2C watchdog off,
+  // so that the chip does not fall back to its defaults 40 seconds after the last write. Each register is
+  // read first and written only on a difference, only the bits of this setting change, and both are read
+  // back. Nothing is written when the chip already holds the values.
+  ChargeSetup limitCharging(int maxMa);
 
 private:
   I2cBus& bus_;

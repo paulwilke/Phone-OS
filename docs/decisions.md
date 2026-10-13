@@ -167,3 +167,14 @@ Reason: A button that promises to save power while the setting underneath forbid
 Consequences: Open point 25.
 Verified: not verified; the 130 mA is read from the energy log on the device
 
+## D-14: The charge current is limited to 0.65 C and the charger's watchdog is off
+Date: 2026-10-12   Status: decided
+Decided by: owner (the limit must come, and he charges with a mains adapter); agent (0.65 C, the watchdog)
+
+Context: The diagnosis of 2026-10-12 showed the SY6970 on its defaults: a charge current of 2048 mA, more than 1 C for the 1500 mAh cell, and a watchdog that nobody feeds, which sets every setting back to the default every 40 seconds. On the computer's USB port the input limit of 500 mA kept the current low; on a mains adapter it would not.
+Options: Leave the defaults (cell charged above 1 C). Set the current and feed the watchdog from the main loop (a task that, if it stops, lets the chip fall back to 2048 mA). Set the current and switch the watchdog off (the value stays whatever the processor does).
+Decision: At every start the firmware sets the charge current to 0.65 C of the configured capacity, rounded down to 64 mA (960 mA for 1500 mAh), and switches the watchdog off. Each register is written only on a difference and read back.
+Reason: A cell that is charged too fast ages and, in the worst case, is a safety risk; with the watchdog off the limit cannot silently disappear while the firmware hangs.
+Consequences: Charging from empty takes a little longer with a strong adapter (about 1.5 hours instead of about one). The register map is the BQ25896's, which the SY6970 is documented to follow; its data sheet is not in the repository, so a write that does not read back is logged and the charger keeps its own value. Open point 26 keeps the check on the device.
+Verified: host-tested; not verified on the device
+
