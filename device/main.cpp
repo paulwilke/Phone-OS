@@ -218,6 +218,7 @@ void setup() {
   // The default transmit buffer (256 bytes) is what a long console answer runs into; a larger one lets most
   // answers go out in one piece. Must come before begin(), which only creates the default one when none exists.
   Serial.setTxBufferSize(4096);
+  Serial.setRxBufferSize(4096);   // the default of 256 bytes overflowed when a computer wrote a file: the loop reads the port once in about 56 ms
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);  // never wait for a computer to read the console
   Wire.begin(board::pin::kI2cSda, board::pin::kI2cScl);
