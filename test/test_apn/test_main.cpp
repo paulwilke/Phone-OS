@@ -82,9 +82,10 @@ void test_the_data_is_sorted_unique_and_clean() {
 void test_every_operator_in_the_list_can_be_found() {
   for (size_t i = 0; i < apn::kTableSize; ++i) {
     const apn::Entry& e = apn::kTable[i];
-    char imsi[16];
-    snprintf(imsi, sizeof(imsi), "%03u%0*u%s", (unsigned)e.mcc, (int)e.mncDigits, (unsigned)e.mnc, "123456789012");
-    imsi[15] = '\0';
+    std::string mnc = std::to_string(e.mnc);
+    while (mnc.size() < e.mncDigits) mnc.insert(0, "0");
+    const std::string number = (std::to_string(e.mcc) + mnc + "123456789012").substr(0, 15);
+    const char* imsi = number.c_str();
     const apn::Entry* found = apn::find(imsi);
     TEST_ASSERT_NOT_NULL_MESSAGE(found, imsi);
     const bool same = found == &e;
