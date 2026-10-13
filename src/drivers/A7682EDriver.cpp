@@ -524,9 +524,10 @@ void A7682EDriver::step(const char* line, at::LineType type) {
         const apn::Entry* entry = apn::find(line);
         if (entry && chosenApn_.empty()) {
           chosenApn_ = entry->apn;
-          char code[8];
-          snprintf(code, sizeof(code), "%u%0*u", (unsigned)entry->mcc, (int)entry->mncDigits, (unsigned)entry->mnc);
-          log(std::string("Cellular: APN ") + entry->apn + " chosen for the operator " + code);
+          // The operator code as the list has it: three digits of the MCC and two or three of the MNC, with its zeros.
+          std::string mnc = std::to_string(entry->mnc);
+          while (mnc.size() < entry->mncDigits) mnc.insert(0, "0");
+          log(std::string("Cellular: APN ") + entry->apn + " chosen for the operator " + std::to_string(entry->mcc) + mnc);
         }
         return;
       }
