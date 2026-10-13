@@ -161,7 +161,7 @@ void test_decode_always_makes_progress_on_every_byte_pair() {
 
 void test_every_font_has_exactly_the_characters_of_the_charset() {
   const std::set<uint32_t> wanted = charsetFromFile();
-  TEST_ASSERT_EQUAL(205, wanted.size());
+  TEST_ASSERT_EQUAL(206, wanted.size());   // 205 and the power symbol
   for (FontSize s : kSizes) {
     const Font& f = font(s);
     for (uint32_t c = 0; c < 0x20000; ++c) {

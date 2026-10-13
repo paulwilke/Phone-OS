@@ -121,7 +121,7 @@ void test_on_the_cable_it_says_unplug_first_and_never_asks() {
 
 void test_a_tap_works_like_select() {
   Page page;
-  TEST_ASSERT_TRUE(page.screen.handle(page.tap(0, "Power")));
+  TEST_ASSERT_TRUE(page.screen.handle(page.tap(0, "Switch off")));
   page.draw();
   TEST_ASSERT_TRUE(page.says("Switch off?"));
   TEST_ASSERT_TRUE(page.screen.handle(page.tap(1, "Switch off?")));   // "Yes, switch off"

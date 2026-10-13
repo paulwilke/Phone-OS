@@ -1,6 +1,6 @@
 # The power page
 
-Code: `src/ui/screens/PowerScreen.{h,cpp}` with the widget `src/ui/OptionRows.{h,cpp}`; tests in `test/test_screen_power/`. The page behind the **Power** tile, the last tile of the first page of the home screen ([screen-home.md](screen-home.md)). The device is often switched off in the pocket and on when it is used, which makes the battery last; the page makes that easy to find and hard to do by accident (decisions D-11 and D-12).
+Code: `src/ui/screens/PowerScreen.{h,cpp}` with the widget `src/ui/OptionRows.{h,cpp}`; tests in `test/test_screen_power/`. The page behind the power-symbol tile (a circle with a bar, no word on it), the last tile of the first page of the home screen ([screen-home.md](screen-home.md)). The device is often switched off in the pocket and on when it is used, which makes the battery last; the page makes that easy to find and hard to do by accident (decisions D-11 and D-12).
 
 ## The two views
 

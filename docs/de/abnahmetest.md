@@ -55,8 +55,8 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 | Nr. | Schritt | Erwartung | Datum | Ergebnis |
 |---|---|---|---|---|
 | 6.1 | Kachel **Option**, ganz nach unten | letztes Kästchen **Ausschalten**, am Kabel "erst USB abziehen" und nichts passiert | | |
-| 6.0 | Startbildschirm, Kachel **Strom** (letzte der ersten Seite) | Seite "Strom" mit dem Knopf **Ausschalten**; am Kabel steht dort "erst USB abziehen"; ein Druck fragt "Ausschalten?" mit **Abbrechen** (Fokus) und **Ja, ausschalten**; **Abbrechen** schaltet nichts aus | | |
-| 6.0a | Kabel ab, Kachel **Strom**, **Ausschalten**, **Ja, ausschalten** | das Bild "Phone OS ... Ausgeschaltet", dann ist das Gerät aus; der kleine Schalter rechts am Gehäuse schaltet es wieder ein | | |
+| 6.0 | Startbildschirm, Kachel mit dem Ausschalt-Symbol (letzte der ersten Seite, ohne Wort) | Seite "Ausschalten" mit dem Knopf **Ausschalten**; am Kabel steht dort "erst USB abziehen"; ein Druck fragt "Ausschalten?" mit **Abbrechen** (Fokus) und **Ja, ausschalten**; **Abbrechen** schaltet nichts aus | | |
+| 6.0a | Kabel ab, Kachel mit dem Ausschalt-Symbol, **Ausschalten**, **Ja, ausschalten** | das Bild "Phone OS ... Ausgeschaltet", dann ist das Gerät aus; der kleine Schalter rechts am Gehäuse schaltet es wieder ein | | |
 | 6.2 | Kabel ab, **Ausschalten** zweimal drücken | erst "noch einmal: aus", dann das Bild "Phone OS ... Ausgeschaltet", dann ist das Gerät aus (Licht aus, keine Reaktion auf Tasten) | | |
 | 6.3 | Mit der seitlichen Taste einschalten | Gerät startet wieder | | |
 

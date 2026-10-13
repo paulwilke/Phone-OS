@@ -12,7 +12,7 @@ Code: `src/ui/screens/HomeScreen.{h,cpp}`; tests in `test/test_screen_home/`. A 
 | 1 | inbox | `home.inbox` | always | opens the messages |
 | 1 | radio | `home.radio` | the profile allows the radio | opens the radio page |
 | 1 | light | `home.light` | always | switches the front light; the notice line says "Light on" / "Light off" |
-| 1 | power | `home.power` | always | opens the power page ([screen-power.md](screen-power.md)), where the device is switched off after a question |
+| 1 | power | the power symbol alone, no word (D-21) | always | opens the power page ([screen-power.md](screen-power.md)), where the device is switched off after a question |
 | 2 | network, GPS, clock | `home.network`, `home.gps`, `home.clock` | `[home]` does not switch it off | open their pages |
 | 2 | settings | `home.settings` | the same | opens the options |
 | 2 | Wi-Fi | `home.wifi` | the same, `parentTools` and the core has a Wi-Fi | opens the Wi-Fi page |

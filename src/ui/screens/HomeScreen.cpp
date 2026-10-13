@@ -63,7 +63,7 @@ Tile HomeScreen::tileOf(Kind kind) {
     case Kind::Tests: tile.label = t().get("home.tests"); break;
     case Kind::Status: tile.label = t().get("home.status"); break;
     case Kind::Light: tile.label = t().get("home.light"); break;
-    case Kind::Power: tile.label = t().get("home.power"); break;
+    case Kind::Power: tile.symbol = symbol::kPower; break;   // the symbol alone: no word is right in every language (D-21)
   }
   return tile;
 }
