@@ -35,3 +35,4 @@ symbol 2708 aeroplane   # ✈
 symbol 1F4AC bubble     # 💬 speech bubble
 symbol 1F4E1 radio      # 📡
 symbol 1F4CD pin        # 📍
+symbol 23FB power       # ⏻ the power symbol

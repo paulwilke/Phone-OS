@@ -137,7 +137,11 @@ void TileGrid::drawTile(Display& display, const Rect& cell, const Tile& tile, bo
   }
 
   const Rect inner{cell.x + 3, cell.y, cell.w - 6, cell.h};
-  if (tile.symbol) {
+  if (tile.symbol && tile.label.empty()) {
+    // A symbol without a word is centred on its own.
+    const int top = cell.y + (cell.h - symbolFont.lineHeight()) / 2;
+    text::drawCentered(display, symbolFont, inner, top, tile.symbol, ink);
+  } else if (tile.symbol) {
     const int block = symbolFont.lineHeight() + small.lineHeight();
     const int top = cell.y + (cell.h - block) / 2;
     text::drawCentered(display, symbolFont, inner, top, tile.symbol, ink);

@@ -17,6 +17,7 @@ constexpr const char* kAeroplane = "\xE2\x9C\x88";       // U+2708
 constexpr const char* kBubble = "\xF0\x9F\x92\xAC";      // U+1F4AC
 constexpr const char* kRadio = "\xF0\x9F\x93\xA1";       // U+1F4E1
 constexpr const char* kPin = "\xF0\x9F\x93\x8D";         // U+1F4CD
+constexpr const char* kPower = "\xE2\x8F\xBB";         // U+23FB
 
 }  // namespace symbol
 }  // namespace ui

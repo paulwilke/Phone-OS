@@ -43,8 +43,6 @@ Where a word was chosen because a better one does not fit, or where two good one
 
 | Language | Place | Choice | Alternative |
 |---|---|---|---|
-| German | tile `home.power` and page `power.title` | "Strom" (a tile has room for about nine letters) | "Power", "Aus" |
-| French | tile `home.power` and page `power.title` | "Énergie" | "Marche/arrêt" does not fit |
 | German | tile `home.settings` | "Option" (singular), chosen when "Optionen" did not fit | "Optionen": 65 pixels, it fits since the display fonts are Helvetica |
 | German | `messages.call-back` (soft key) | "Rückruf" | "Zurückrufen" does not fit |
 | German | the words for the access point and the parents' tools | "Zugangspunkt", "Elternwerkzeuge", "Zugangsdaten" for the tab of `secrets.toml` | "Hotspot", "Elternfunktionen" |

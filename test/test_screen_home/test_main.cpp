@@ -555,10 +555,10 @@ void test_the_lock_button_is_there_in_every_language_with_its_whole_word() {
 }
 
 void test_the_tiles_say_their_words_in_the_language_of_the_moment() {
-  const struct { const char* code; const char* front[6]; const char* tools[5]; } words[] = {
-      {"en", {"Phone", "Text", "SOS", "Inbox", "Light", "Power"}, {"Network", "GPS", "Clock", "Settings", "Tests"}},
-      {"de", {"Telefon", "Text", "SOS", "Eingang", "Licht", "Strom"}, {"Netz", "GPS", "Uhr", "Option", "Tests"}},
-      {"fr", {"Appels", "\xC3\x89" "crire", "SOS", "Courrier", "Lumi\xC3\xA8re", "\xC3\x89nergie"}, {"R\xC3\xA9seau", "GPS", "Heure", "Options", "Tests"}}};
+  const struct { const char* code; const char* front[5]; const char* tools[5]; } words[] = {
+      {"en", {"Phone", "Text", "SOS", "Inbox", "Light"}, {"Network", "GPS", "Clock", "Settings", "Tests"}},
+      {"de", {"Telefon", "Text", "SOS", "Eingang", "Licht"}, {"Netz", "GPS", "Uhr", "Option", "Tests"}},
+      {"fr", {"Appels", "\xC3\x89" "crire", "SOS", "Courrier", "Lumi\xC3\xA8re"}, {"R\xC3\xA9seau", "GPS", "Heure", "Options", "Tests"}}};
   for (const auto& w : words) {
     DeviceRig rig;
     rig.language(w.code);

@@ -71,7 +71,7 @@ void test_the_symbol_constants_are_the_symbols_of_the_character_set() {
       {"enter", symbol::kEnter}, {"backspace", symbol::kBackspace}, {"up", symbol::kUp},
       {"down", symbol::kDown}, {"telephone", symbol::kTelephone}, {"envelope", symbol::kEnvelope},
       {"aeroplane", symbol::kAeroplane}, {"bubble", symbol::kBubble}, {"radio", symbol::kRadio},
-      {"pin", symbol::kPin}};
+      {"pin", symbol::kPin}, {"power", symbol::kPower}};
   TEST_ASSERT_EQUAL(sizeof table / sizeof *table, codes.size());
   for (const auto& row : table) {
     TEST_ASSERT_TRUE_MESSAGE(codes.count(row.name) == 1, row.name);
