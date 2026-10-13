@@ -253,7 +253,7 @@ Options: Another word ("Aus", "Ausschalten" are too long for 68 pixels, "Power" 
 Decision: The tile shows the power symbol. The words stay in the catalogs for the page behind it (title and the buttons).
 Reason: A symbol needs no translation and is known from every device.
 Consequences: Open point 31. Not built; it must be looked at whether the fonts have the glyph (U+23FB) or whether it is drawn like the other symbols (`src/ui/Symbols.h`). The tile keeps its label key `home.power` for the tests and for the self-test words.
-Verified: not verified; not built
+Verified: host-tested; compiled; pictures reviewed (the symbol is drawn in four sizes and centred on its tile); not verified on the device. In 4.2.2 the label key `home.power` was removed, because a tile without a word needs none (the Consequences above said it would stay).
 
 ## D-22: The self-test words stay in the device catalog
 Date: 2026-10-13   Status: decided
@@ -277,3 +277,24 @@ Reason: The owner's: responsibility. It also makes the licence question of the b
 Consequences: Open point 14 is removed. The releases carry source, changelog and notes, and no binary. [THIRD_PARTY.md](../THIRD_PARTY.md) keeps its remark on the Bosch image for whoever builds from source.
 Verified: not applicable
 
+## D-24: The battery percentage trusts the voltage over a gauge at 0 %, with a margin on the way back
+Date: 2026-10-13   Status: decided
+Decided by: owner (go for the fix, 2026-10-13); agent (the numbers)
+
+Context: Overnight the gauge said 0 % at 3579 mV and the device ran four hours more, to the switch-off at 3291 mV. The rule of 4.1.4 shows the voltage's number only when the gauge is 30 points or more below it, which the voltage gives only above about 3579 mV, so below it the screen said 0 % for hours; and at the border it flipped about once a second, in the log and on the screen. The gauge has not learned this cell (cycle count 2).
+Options: Leave it. Only add a margin on the way back (no flapping, but 0 % for four hours remains). Add the margin, and also distrust a gauge that says almost nothing while the voltage is clearly above empty.
+Decision: The third. A gauge at 3 % or less is not believed while the voltage gives 6 % or more; once the voltage's number is shown it stays until the gauge is within 15 points of it, or, for an empty gauge, until the voltage gives less than 4 %.
+Reason: The device switches itself off at 3300 mV (D-5), so a cell above it is not empty whatever the gauge says; the margin ends the flapping.
+Consequences: The bar and the percentage on the screens follow the voltage in the last hours, and the log has one line per change. The numbers (3, 6, 15, 4) are the agent's and can be changed with a new entry. Open point 32.
+Verified: host-tested (five tests fail with the old rule put back); compiled; not verified on the device
+
+## D-25: The loop line tells where the time of a pass goes
+Date: 2026-10-13   Status: decided
+Decided by: owner (go, 2026-10-13)
+
+Context: The Loop line of 4.2.1 showed about 32,000 passes in 1800 s (56 ms each), 1 % sleep, and the longest pass 123 to 206 ms. It does not say where the 50 ms of work go or whether the power policy allows sleep at all.
+Options: Guess (the touch chip, the e-ink drawing, the card). Time the parts of the pass and count the passes in which sleep is allowed.
+Decision: The second: the line gives the share of passes in which sleep was allowed and the average cost per pass of the console, the keys, the modem, the application step and the housekeeping, and what is left.
+Reason: A guess about 100 mA of current is worth less than one day of numbers; the cost is a few timer reads per pass.
+Consequences: Open points 20 and 25 are read from the line after a day. What the numbers show decides what is changed (the sleep policy, a part of the loop, the I2C clock); nothing is changed before.
+Verified: host-tested; compiled; not verified on the device
