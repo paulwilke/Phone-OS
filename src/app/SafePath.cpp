@@ -68,4 +68,10 @@ bool endsWith(const char* s, const char* suffix) {
   return a >= b && sameIgnoringCase(s + a - b, suffix, b);
 }
 
+bool sameFile(const char* a, const char* b) {
+  if (!a || !b) return false;
+  const size_t n = strlen(a);
+  return n == strlen(b) && sameIgnoringCase(a, b, n);
+}
+
 }  // namespace safepath

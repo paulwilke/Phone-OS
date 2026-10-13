@@ -518,8 +518,18 @@ void loadSecrets(const toml::Value& root, WifiSettings& wifi, std::string& simPi
   checkTopLevel(d, root, "secrets", kSecretsTopLevel);
   checkLeafKeys(d, root, "secrets", "");
 
-  if (const toml::Value* v = root.find("sim_pin"))
-    checkStr(*v, "secrets", "sim_pin", 0, 8, d, simPin);
+  // The PIN goes into an AT command as it is (AT+CPIN="..."), so only what a PIN can be is taken: four to eight
+  // digits, or nothing. Anything else is refused here, whichever way the file arrived (the card in a computer,
+  // the USB console, the parents' page), and the modem is not asked.
+  if (const toml::Value* v = root.find("sim_pin")) {
+    std::string pin;
+    if (checkStr(*v, "secrets", "sim_pin", 0, 8, d, pin)) {
+      bool digits = true;
+      for (char c : pin) digits = digits && c >= '0' && c <= '9';
+      if (pin.empty() || (digits && pin.size() >= 4)) simPin = pin;
+      else d.push_back({Diagnostic::Code::OutOfRange, {"secrets", "sim_pin"}});
+    }
+  }
 
   if (const toml::Value* v = root.find("web_password")) {
     std::string pwd;

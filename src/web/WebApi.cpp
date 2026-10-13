@@ -36,12 +36,6 @@ const char* wifiPhaseText(WifiPhase p) {
   }
 }
 
-bool allDigits(const std::string& s) {
-  if (s.empty()) return false;
-  for (char c : s) if (c < '0' || c > '9') return false;
-  return true;
-}
-
 // URL-decode `name=value` from a query string.
 bool queryValue(const char* query, const char* name, char* out, size_t size) {
   const size_t n = strlen(name);
@@ -388,7 +382,7 @@ void WebApi::getConfigJson(const char* path, http::Response& res) {
 
   toml::Value root;
   const toml::Error e = toml::parse(text, root);
-  if (path == kSecretsPath) std::fill(text.begin(), text.end(), '\0');
+  if (safepath::sameFile(path, kSecretsPath)) std::fill(text.begin(), text.end(), '\0');
 
   if (e.failed()) {
     char msg[160];
@@ -399,16 +393,6 @@ void WebApi::getConfigJson(const char* path, http::Response& res) {
 
   const size_t n = web::json::fromToml(root, resp_, sizeof(resp_));
   if (n == 0) return jsonError(res, 500, "File too large");
-
-  if (path == kSecretsPath) std::fill(resp_, resp_ + n, '\0');  // zero then rebuild
-  // (fromToml already wrote resp_; keep it as-is for the response)
-  if (path != kSecretsPath)
-    ;  // resp_ already holds the JSON
-  else {
-    // Re-run after zeroing — just produce the same output again.
-    web::json::fromToml(root, resp_, sizeof(resp_));
-  }
-
   jsonResp(res, 200, resp_);
 }
 
@@ -418,13 +402,14 @@ void WebApi::getConfigJson(const char* path, http::Response& res) {
 
 bool WebApi::checkConfigText(const char* path, const char* text, size_t len,
                               std::string& why, std::string& warnings) {
-  const bool isSettings = strcmp(path, kSettingsPath) == 0;
-  const bool isContacts = strcmp(path, kContactsPath) == 0;
-  const bool isSecrets  = strcmp(path, kSecretsPath)  == 0;
+  // The card is FAT: `/config/Settings.toml` is the settings file, and must be checked as the settings file.
+  const bool isSettings = safepath::sameFile(path, kSettingsPath);
+  const bool isContacts = safepath::sameFile(path, kContactsPath);
+  const bool isSecrets  = safepath::sameFile(path, kSecretsPath);
   if (!isSettings && !isContacts && !isSecrets) return true;
 
   OneFileStore vs;
-  vs.path = path;
+  vs.path = isSettings ? kSettingsPath : isContacts ? kContactsPath : kSecretsPath;   // the loader's own name
   vs.data = std::string(text, len);
   config::ConfigLoader loader(vs);
   const auto result = loader.load();
@@ -453,15 +438,10 @@ bool WebApi::checkConfigText(const char* path, const char* text, size_t len,
     warnings += msg;
   }
 
-  if (isSecrets) {
-    if (result.webPassword.size() < kMinWebPassword) {
-      why = "web_password: at least 4 characters required";
-      return false;
-    }
-    if (!result.simPin.empty() && (result.simPin.size() < 4 || !allDigits(result.simPin))) {
-      why = "sim_pin: 4 to 8 digits or empty";
-      return false;
-    }
+  // The PIN's own rule (4 to 8 digits or empty) is the loader's, above, like every other rule of the file.
+  if (isSecrets && result.webPassword.size() < kMinWebPassword) {
+    why = "web_password: at least 4 characters required";
+    return false;
   }
   return true;
 }
@@ -582,7 +562,7 @@ void WebApi::putFile(const http::Request& req, http::Response& res) {
 void WebApi::deleteFile(const http::Request& req, http::Response& res) {
   char path[safepath::kMaxLength + 1];
   if (!queryPath(req, path, sizeof(path), res)) return;
-  if (strcmp(path, kSecretsPath) == 0)
+  if (safepath::sameFile(path, kSecretsPath))
     return jsonError(res, 403, "secrets.toml holds the web password and cannot be deleted here");
   if (store_.fileSize(path) < 0) return jsonError(res, 404, "File not found");
   if (!store_.remove(path)) return jsonError(res, 500, "Delete failed");

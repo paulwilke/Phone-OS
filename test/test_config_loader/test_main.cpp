@@ -386,6 +386,26 @@ void test_web_password_shorter_than_4_is_rejected() {
   TEST_ASSERT_TRUE(hasDiag(r.diagnostics, Diagnostic::Code::OutOfRange));
 }
 
+// The PIN goes into AT+CPIN="..." as it is: only four to eight digits, or nothing, are taken; a letter, a quote
+// or a short PIN is refused with out-of-range and the modem is never asked (the rule was the web API's alone,
+// so a PIN written over the USB console or on the card in a computer reached the modem unchecked).
+void test_a_sim_pin_is_four_to_eight_digits_or_nothing() {
+  for (const char* good : {"1234", "0000", "12345678", ""}) {
+    FakeConfigStore store;
+    store.put("/config/secrets.toml", std::string("sim_pin = \"") + good + "\"\n");
+    auto r = loadWith(store);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(good, r.simPin.c_str(), good);
+    TEST_ASSERT_FALSE_MESSAGE(hasDiag(r.diagnostics, Diagnostic::Code::OutOfRange), good);
+  }
+  for (const char* bad : {"123", "12ab", "1234;AT", "12 34", "+1234", "123456789"}) {
+    FakeConfigStore store;
+    store.put("/config/secrets.toml", std::string("sim_pin = \"") + bad + "\"\n");
+    auto r = loadWith(store);
+    TEST_ASSERT_TRUE_MESSAGE(r.simPin.empty(), bad);
+    TEST_ASSERT_TRUE_MESSAGE(hasDiagArg(r.diagnostics, Diagnostic::Code::OutOfRange, "sim_pin"), bad);
+  }
+}
+
 void test_empty_web_password_means_no_web_access() {
   FakeConfigStore store;
   store.put("/config/secrets.toml", "web_password = \"\"\n");
@@ -1162,6 +1182,7 @@ int main() {
   RUN_TEST(test_unknown_contact_role_is_reported_and_treated_as_family);
   RUN_TEST(test_secrets_are_loaded);
   RUN_TEST(test_web_password_shorter_than_4_is_rejected);
+  RUN_TEST(test_a_sim_pin_is_four_to_eight_digits_or_nothing);
   RUN_TEST(test_empty_web_password_means_no_web_access);
   RUN_TEST(test_syntax_error_is_reported_with_file_and_line);
   RUN_TEST(test_unknown_key_is_reported);
