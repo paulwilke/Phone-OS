@@ -265,45 +265,74 @@ void setup() {
   eventLog.log("Boot: the runtime runs, firmware " + firmwareVersion);
 }
 
-void loop() {
-  const uint32_t now = millis();
-  sdCard.poll(now, eventLog);
-  eventLog.flush();
-  console.poll();
-  readKeys();
-  modem->poll();
-  drainModemLog();
-  offerTimes();
-  haptic.service();
+// Times a part of the loop pass for the statistics line (decisions D-20, D-25).
+struct SectionTimer {
+  board::LoopStats::Section id;
+  uint32_t start;
+  explicit SectionTimer(board::LoopStats::Section section) : id(section), start(micros()) {}
+  ~SectionTimer() { loopStats.section(id, micros() - start); }
+};
 
-  // The cell is protected by the firmware (D-5): a minute below the limit on the battery switches off.
-  if (now - lastVoltageCheckMs >= 5000) {
-    lastVoltageCheckMs = now;
-    const int mv = power->batteryMillivolts();
-    const bool onBattery = !power->externalPower();
-    if (!onBattery) lowVoltageOff = false;   // a switch-off the cable refused is asked again after the next discharge
-    if (lowVoltageGuard.update(now, mv, onBattery) && !lowVoltageOff) {
-      lowVoltageOff = true;
-      eventLog.log("Battery: " + std::to_string(mv) + " mV for a minute, switching off to protect the cell");
-      runtime->core().requestPowerOff();
+void loop() {
+  using Section = board::LoopStats::Section;
+  const uint32_t now = millis();
+  const uint32_t passStartUs = micros();
+  {
+    SectionTimer timer(Section::Console);
+    sdCard.poll(now, eventLog);
+    eventLog.flush();
+    console.poll();
+  }
+  {
+    SectionTimer timer(Section::Keys);
+    readKeys();
+  }
+  {
+    SectionTimer timer(Section::Modem);
+    modem->poll();
+    drainModemLog();
+    offerTimes();
+    haptic.service();
+  }
+
+  {
+    SectionTimer timer(Section::Housekeeping);
+    // The cell is protected by the firmware (D-5): a minute below the limit on the battery switches off.
+    if (now - lastVoltageCheckMs >= 5000) {
+      lastVoltageCheckMs = now;
+      const int mv = power->batteryMillivolts();
+      const bool onBattery = !power->externalPower();
+      if (!onBattery) lowVoltageOff = false;   // a switch-off the cable refused is asked again after the next discharge
+      if (lowVoltageGuard.update(now, mv, onBattery) && !lowVoltageOff) {
+        lowVoltageOff = true;
+        eventLog.log("Battery: " + std::to_string(mv) + " mV for a minute, switching off to protect the cell");
+        runtime->core().requestPowerOff();
+      }
     }
   }
 
-  const PowerDecision decision = runtime->step(now);
+  PowerDecision decision;
+  {
+    SectionTimer timer(Section::Step);
+    decision = runtime->step(now);
+  }
 
-  // One reading of the battery every ten minutes (docs/energy-log.md). The cable is asked only when a line is due.
-  if (energyLog.due(now))
-    energyLog.record(now, power->externalPower() ? board::EnergyState::Cable
-                          : decision.modemShouldSleep ? board::EnergyState::ModemSleep
-                                                      : board::EnergyState::Awake);
+  {
+    SectionTimer timer(Section::Housekeeping);
+    // One reading of the battery every ten minutes (docs/energy-log.md). The cable is asked only when a line is due.
+    if (energyLog.due(now))
+      energyLog.record(now, power->externalPower() ? board::EnergyState::Cable
+                            : decision.modemShouldSleep ? board::EnergyState::ModemSleep
+                                                        : board::EnergyState::Awake);
 
-  // The radio is not part of this firmware: a request to start it is answered with "not available".
-  if (runtime->core().takeRadioStartRequest()) eventLog.log("Radio: not available in this firmware");
-  if (runtime->core().powerOffRequested()) powerOff();
-  if (runtime->restartRequested()) consoleHost.restart();
+    // The radio is not part of this firmware: a request to start it is answered with "not available".
+    if (runtime->core().takeRadioStartRequest()) eventLog.log("Radio: not available in this firmware");
+    if (runtime->core().powerOffRequested()) powerOff();
+    if (runtime->restartRequested()) consoleHost.restart();
+  }
 
-  // The pass is timed without the sleep or the pause that ends it (decision D-20; docs/device-console.md).
-  const uint32_t workMs = millis() - now;
+  // The pass is timed without the sleep or the pause that ends it (decisions D-20, D-25; docs/device-console.md).
+  const uint32_t workUs = micros() - passStartUs;
   uint32_t sleptMs = 0;
   if (decision.cpuMaySleep && !haptic.busy() && decision.cpuSleepMs > 0) {
     const uint32_t before = millis();
@@ -312,6 +341,6 @@ void loop() {
   } else {
     delay(5);
   }
-  loopStats.pass(now, workMs, sleptMs);
+  loopStats.pass(now, workUs, sleptMs, decision.cpuMaySleep);
   if (loopStats.due(millis())) eventLog.log(loopStats.takeLine(millis()));
 }
