@@ -43,10 +43,9 @@ struct Script {
   std::string atdFinal = "OK";
   std::string ataFinal = "OK";
   std::string ceer = "";
-  // Messages. What AT+CMGL="ALL" lists (header and text lines); the numbers a test sends to are answered with
-  // the prompt in both charsets; AT+CMGS ends with the line in `smsFinal` (an error line is a refused sending).
+  // Messages. What AT+CMGL="ALL" lists (header and text lines); every AT+CMGS=<length> is answered with the
+  // prompt and its PDU with the line in `smsFinal` (an error line is a refused sending).
   std::vector<std::string> inbox;
-  std::vector<std::string> sendTo = {"+491701111111", "+491702222222"};
   std::string smsFinal = "OK";
   std::string contextsFinal = "OK";   // the final line of AT+CGDCONT?
   bool cpinSilent = false;            // the card is not asked about at all: no answer
@@ -58,7 +57,7 @@ struct Script {
       if (command == silent) t.silence(command);
       else t.reply(command, lines, final);
     };
-    for (const char* c : {"AT", "ATE0", "AT+CMEE=2", "AT+CMGF=1", "AT+CSCS=\"UCS2\"", "AT+CSMP=17,167,0,8", "AT+CNMI=2,1,0,0,0",
+    for (const char* c : {"AT", "ATE0", "AT+CMEE=2", "AT+CMGF=1", "AT+CSCS=\"UCS2\"", "AT+CNMI=2,1,0,0,0",
                           "AT+CTZU=1", "AT+CLIP=1", "AT+CSDVC=3", "AT+COUTGAIN=4", "AT+COPS=3,0"}) {
       reply(c, {});
     }
@@ -96,18 +95,9 @@ struct Script {
     for (int slot = 0; slot < 10; ++slot) reply("AT+CMGD=" + std::to_string(slot), {});
     reply("AT+CSCLK=1", {});
     reply("AT+CPOF", {});
-    reply("AT+CSCS=\"GSM\"", {});
-    reply("AT+CSCS=\"UCS2\"", {});
-    reply("AT+CSMP=17,167,0,0", {});
+    reply("AT+CMGF=0", {});
     t.setDefaultBodyAnswer({"+CMGS: 12"}, smsFinal);
-    for (const std::string& n : sendTo) {
-      char hex[256];
-      text::utf8ToUcs2Hex(n.c_str(), hex, sizeof(hex));
-      for (const std::string& cmd : {"AT+CMGS=\"" + n + "\"", std::string("AT+CMGS=\"") + hex + "\""}) {
-        if (cmd == silent) t.silence(cmd);
-        else t.replyPrompt(cmd);
-      }
-    }
+    t.replyPromptToPrefix("AT+CMGS=");
   }
 };
 

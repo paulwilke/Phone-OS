@@ -33,7 +33,7 @@ Code: `src/drivers/AtTransport.h`, `AtParser.{h,cpp}`, `Ucs2.{h,cpp}`; tests in 
 
 The rules behind them:
 
-- **Numbers are never shortened.** A number longer than 23 characters is refused (`parseClip`, the header of a message, `buildCmgsCommand`): a shortened number is another person's number. The same holds for an APN that does not fit a field of `parseCgdcont`: a cut APN could look equal to the configured one, and then nothing would be written.
+- **Numbers are never shortened.** A number longer than 23 characters is refused (`parseClip`, the header of a message; an outgoing number of more than 20 digits is refused by `sms::encode`): a shortened number is another person's number. The same holds for an APN that does not fit a field of `parseCgdcont`: a cut APN could look equal to the configured one, and then nothing would be written.
 - **Registration 6 and 7 count as registered**: the device's job is messages, and a SIM at 7 sent its SMS on 2026-09-30. Whether *calls* work is a question of the IMS (`+CIREG`), not of this status.
 - **A modem without network time** runs its own clock from 1970 or 2004. `parseCclk` accepts the years 2020 … 2069 only; no time is better than the year 2070. The day is checked against the month (29 February only in a leap year).
 - **`AT+CPIN?` answers `SIM failure` in the first seconds.** Only `SIM not inserted` means a missing card; the driver asks again for anything else.

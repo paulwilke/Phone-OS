@@ -10,6 +10,7 @@
 #include <string>
 
 #include <drivers/AtParser.h>
+#include <drivers/SmsPdu.h>
 #include <drivers/Ucs2.h>
 
 using namespace at;
@@ -185,18 +186,32 @@ void test_the_ucs2_conversion_survives_random_input_and_any_buffer_size() {
   }
 }
 
-void test_building_commands_from_random_numbers_never_overruns() {
+// A PDU is built from a number and a text that anybody can type: whatever they are, the result is either refused
+// or hex digits of an even length whose TPDU length is the number the modem is told.
+void test_encoding_random_numbers_and_texts_never_overruns_and_is_always_well_formed() {
   Lcg rng(31337);
+  static const char* const pieces[] = {"a", "Z", " ", "\n", "{", "|", "\xC3\xA4", "\xC3\xB6", "\xE2\x82\xAC", "\xD0\xB6", "\xF0\x9F\x98\x80",
+                                       "\xC3", "\x80", "\xED\xA0\x80", "\x1A", "\x1B"};
   for (int round = 0; round < 3000; ++round) {
     std::string number;
-    const size_t len = rng.below(40);
-    for (size_t i = 0; i < len; ++i) number += "+0123456789*# \"A"[rng.below(16)];
-    char out[64];
-    const size_t room = rng.below(sizeof(out)) + 1;
-    for (Charset cs : {Charset::Gsm, Charset::Ucs2}) {
-      const bool ok = buildCmgsCommand(number.c_str(), cs, out, room);
-      TEST_ASSERT_TRUE(strlen(out) < room);
-      if (!ok) TEST_ASSERT_EQUAL(0, strlen(out));
+    const size_t digits = rng.below(30);
+    for (size_t i = 0; i < digits; ++i) number += "+0123456789*# \"A"[rng.below(16)];
+    std::string text;
+    const size_t len = rng.below(500);
+    for (size_t i = 0; i < len; ++i) text += pieces[rng.below(sizeof(pieces) / sizeof(pieces[0]))];
+    sms::Coding coding;
+    std::vector<sms::Part> parts;
+    const bool ok = sms::encode(number, text, (uint8_t)rng.below(256), coding, parts);
+    if (!ok) {
+      TEST_ASSERT_TRUE(parts.empty());
+      continue;
+    }
+    TEST_ASSERT_TRUE(!parts.empty() && parts.size() <= 255);
+    for (const sms::Part& part : parts) {
+      TEST_ASSERT_TRUE(part.hex.size() % 2 == 0);
+      TEST_ASSERT_EQUAL((int)part.hex.size() / 2 - 1, part.tpduLength);
+      TEST_ASSERT_TRUE(part.tpduLength <= 175);
+      for (char c : part.hex) TEST_ASSERT_TRUE((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'));
     }
   }
 }
@@ -210,6 +225,6 @@ int main(int, char**) {
   RUN_TEST(test_lines_longer_than_every_buffer_are_cut_safely);
   RUN_TEST(test_fields_at_the_edge_of_their_buffers_are_handled);
   RUN_TEST(test_the_ucs2_conversion_survives_random_input_and_any_buffer_size);
-  RUN_TEST(test_building_commands_from_random_numbers_never_overruns);
+  RUN_TEST(test_encoding_random_numbers_and_texts_never_overruns_and_is_always_well_formed);
   return UNITY_END();
 }

@@ -2,7 +2,7 @@
 
 The running log of decisions: what was chosen, what was refused, why, and how it is checked. It exists so that a decision made in a conversation does not live only in that conversation, and so that the owner and the agent both read and update it. The way of working is in [CLAUDE.md](../CLAUDE.md); open work is in [open-points.md](open-points.md), lessons measured on the device are in [hardware-lessons.md](hardware-lessons.md).
 
-Entries are added at the end and are never rewritten or deleted. To change a decision, add a new entry that supersedes the old one; the only edit to an old entry is its status line.
+Entries are added at the end and are never rewritten or deleted. To change a decision, add a new entry that supersedes the old one; the only edits to an old entry are its status line and its "Verified" line, which says what has been tried since.
 
 ## Entry format
 
@@ -131,8 +131,8 @@ Context: The driver sends every text that is not plain ASCII as UCS2, which hold
 Options: Keep the folding to ASCII (changes the child's words). Rewrite single wordings (names still bring umlauts). PDU mode with the GSM 7-bit alphabet where every character is in it, UCS2 where not, and a concatenation header for long texts (a larger piece of work in the driver). Remove the folding and accept the split.
 Decision: PDU mode. A text whose characters are all in the GSM alphabet goes out as 7-bit (160 characters, 153 per part when long), any other as UCS2 (70, or 67 per part), and long texts as one concatenated message that the receiving phone shows as one. The folding of D-6 is removed when this works.
 Reason: It removes the cause instead of working around it, and the words of an SOS stay as written.
-Consequences: Open point 22 with its "done". The folding of 4.1.5 stays until PDU mode is built and tested, so that nothing is worse in between. Receiving stays as it is. The A7682 must accept PDU sending with `AT+CMGF=0`; that is the first thing to try on the device.
-Verified: not verified; not built
+Consequences: Open point 22 with its "done". The folding to ASCII of 4.1.5 is removed with it. Receiving stays as it is. The A7682 must accept PDU sending with `AT+CMGF=0`; that is the first thing to try on the device. The driver now logs "Messages: sent in N parts, GSM 7-bit" or "UCS2" for every text, which the system log lacked on 2026-10-09 when an SOS arrived as three messages.
+Verified: host-tested; compiled; not verified on the device (open point 22)
 
 ## D-11: A switch-off button on the touch screen, with a question
 Date: 2026-10-12   Status: superseded by D-12

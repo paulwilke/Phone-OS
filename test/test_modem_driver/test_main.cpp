@@ -34,7 +34,7 @@ void test_the_whole_start_up_is_one_readable_sequence() {
   TEST_ASSERT_TRUE(r.start());
 
   const std::vector<std::string> expected = {
-      "AT", "ATE0", "AT+CMEE=2", "AT+CMGF=1", "AT+CSCS=\"UCS2\"", "AT+CSMP=17,167,0,8", "AT+CNMI=2,1,0,0,0", "AT+CTZU=1",
+      "AT", "ATE0", "AT+CMEE=2", "AT+CMGF=1", "AT+CSCS=\"UCS2\"", "AT+CNMI=2,1,0,0,0", "AT+CTZU=1",
       "AT+CLIP=1", "AT+CSDVC=3", "AT+COUTGAIN=4", "AT+COPS=3,0", "AT+CNMP=2",
       "AT+CPIN?",
       "AT+CGDCONT?", kWriteApn, "AT+CFUN=0", "AT+CFUN=1",

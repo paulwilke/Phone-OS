@@ -453,25 +453,6 @@ bool isValidDialString(const char* phone) {
   return !(len == 1 && phone[0] == '+');
 }
 
-bool buildCmgsCommand(const char* phone, Charset cs, char* out, size_t outSize) {
-  if (outSize == 0) return false;
-  out[0] = '\0';
-  if (!isValidDialString(phone)) return false;
-
-  char encoded[(kMaxPhoneChars + 1) * 4 + 1];
-  const char* number = phone;
-  if (cs == Charset::Ucs2) {
-    if (text::utf8ToUcs2Hex(phone, encoded, sizeof(encoded)) < 0) return false;
-    number = encoded;
-  }
-  const int n = snprintf(out, outSize, "AT+CMGS=\"%s\"", number);
-  if (n < 0 || (size_t)n >= outSize) {
-    out[0] = '\0';
-    return false;
-  }
-  return true;
-}
-
 // ---------------------------------------------------------------------------
 // SmsResponseParser
 // ---------------------------------------------------------------------------

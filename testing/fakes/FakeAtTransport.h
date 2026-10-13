@@ -17,6 +17,8 @@
 //   replyPrompt(command)                     "\r\n> " without a line end; the text that follows,
 //                                            ended by Ctrl-Z (0x1A), is answered by the next
 //                                            replyToBody(); Esc (0x1B) cancels without an answer
+//   replyPromptToPrefix(prefix)              the same for every command that starts with the prefix and has no
+//                                            answer of its own (AT+CMGS=<length>: the length depends on the PDU)
 //   replyToBody(lines, final = "OK")        queued; one is used for each text that ends in Ctrl-Z
 //   setDefaultBodyAnswer(lines, final)      what a text is answered with when none is queued (default: none)
 // A command nobody scripted is answered "ERROR" and recorded in unexpected(), so a test can say
@@ -96,6 +98,7 @@ public:
   }
   void silence(const std::string& command) { queue(command, 0, std::string(), false); }
   void replyPrompt(const std::string& command) { queue(command, 0, "\r\n> ", true); }
+  void replyPromptToPrefix(const std::string& prefix) { promptPrefixes_.push_back(prefix); }
   void replyToBody(std::initializer_list<std::string> lines, const std::string& final = "OK") {
     bodyAnswers_.push_back(frame(lines, final));
   }
@@ -228,6 +231,13 @@ private:
 
     auto it = answers_.find(command);
     if (it == answers_.end()) {
+      for (const std::string& prefix : promptPrefixes_) {
+        if (command.compare(0, prefix.size(), prefix) == 0) {
+          emit({0, "\r\n> ", true});
+          inBody_ = true;
+          return;
+        }
+      }
       unexpected_.push_back(command);
       const std::string err = "\r\nERROR\r\n";
       out_.insert(out_.end(), err.begin(), err.end());
@@ -255,6 +265,7 @@ private:
   std::deque<char> out_;
   std::vector<Timed> timed_;
   std::map<std::string, std::deque<Answer>> answers_;
+  std::vector<std::string> promptPrefixes_;
   std::deque<std::string> bodyAnswers_;
   std::string defaultBodyAnswer_;
   std::vector<std::string> sent_, bodies_, unexpected_;
