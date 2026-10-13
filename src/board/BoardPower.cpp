@@ -66,8 +66,9 @@ BoardPower::Reading BoardPower::read() {
   return r;
 }
 
-BatteryInputs BoardPower::inputsOf(const Reading& r) {
+BatteryInputs BoardPower::inputsOf(const Reading& r) const {
   BatteryInputs in;
+  in.wasEstimated = estimating_;
   in.gaugePercent = r.gaugeOk ? r.gauge.percent : -1;
   in.gaugeMillivolts = r.gaugeOk ? r.gauge.millivolts : 0;
   in.chargerKnown = r.chargerOk;
@@ -96,8 +97,9 @@ ChargeState BoardPower::chargeState() {
 int BoardPower::batteryPercent() {
   const Reading r = read();
   const BatteryAssessment a = assessBattery(inputsOf(r));
-  if (log_ && a.estimated != estimating_) {
-    estimating_ = a.estimated;
+  if (a.estimated != estimating_) {
+    estimating_ = a.estimated;   // also without a log: the rule needs to know what it answered last
+    if (!log_) return a.percent;
     if (a.estimated)
       log_->log("Battery: the gauge says " + std::to_string(r.gauge.percent) + " % at " + std::to_string(r.gauge.millivolts) +
                 " mV; showing about " + std::to_string(a.percent) + " % from the voltage");

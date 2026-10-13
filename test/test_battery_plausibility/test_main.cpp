@@ -2,6 +2,9 @@
 
 #include <unity.h>
 
+#include <initializer_list>
+#include <string>
+
 #include <board/BatteryPlausibility.h>
 
 using namespace board;
@@ -136,6 +139,48 @@ void test_the_voltage_rule_is_not_applied_on_a_cable_or_with_an_unknown_charger(
 }
 
 // The edge of the second rule: 30 points below the voltage's number is doubted, 29 is not.
+// 2026-10-13, overnight on the battery: the gauge said 0 % at 3579 mV and the device ran four hours more, to 3291 mV.
+// Below the point where the voltage gives 30 % the old rule believed the gauge, and the screen said 0 % for hours.
+void test_a_gauge_at_zero_with_a_cell_clearly_above_empty_is_not_believed() {
+  for (int mv : {3579, 3560, 3520, 3490}) {
+    const BatteryAssessment a = assessBattery(on(0, mv, false));
+    TEST_ASSERT_TRUE_MESSAGE(a.estimated, std::to_string(mv).c_str());
+    TEST_ASSERT_EQUAL(percentFromVoltage(mv), a.percent);
+  }
+  // Near the switch-off voltage the gauge and the voltage agree that the cell is empty.
+  TEST_ASSERT_FALSE(assessBattery(on(0, 3440, false)).estimated);
+  TEST_ASSERT_FALSE(assessBattery(on(0, 3300, false)).estimated);
+  TEST_ASSERT_EQUAL(0, assessBattery(on(0, 3300, false)).percent);
+}
+
+// The same night: at the border the rule switched on and off about once a second. With a margin on the way back it does not.
+void test_a_reading_on_the_border_does_not_switch_the_rule_on_and_off() {
+  const int millivolts[] = {3582, 3578, 3580, 3576, 3579, 3581, 3577};   // the gauge stays at 0 %
+  bool before = false;
+  for (int mv : millivolts) {
+    BatteryInputs in = on(0, mv, false);
+    in.wasEstimated = before;
+    const BatteryAssessment a = assessBattery(in);
+    TEST_ASSERT_TRUE_MESSAGE(a.estimated, std::to_string(mv).c_str());
+    before = a.estimated;
+  }
+}
+
+void test_the_way_back_needs_a_margin() {
+  BatteryInputs in = on(0, 3470, false);
+  in.wasEstimated = true;
+  TEST_ASSERT_TRUE(assessBattery(in).estimated);             // 5 % from the voltage: still believed (it takes 6 to start)
+  in = on(0, 3440, false);
+  in.wasEstimated = true;
+  TEST_ASSERT_FALSE(assessBattery(in).estimated);            // 3 %: the gauge and the voltage agree again
+  in = on(25, 3580, false);                                  // a gauge that has found its way back: 25 against 30
+  in.wasEstimated = true;
+  TEST_ASSERT_FALSE(assessBattery(in).estimated);
+  in = on(10, 3580, false);                                  // 10 against 30: not yet
+  in.wasEstimated = true;
+  TEST_ASSERT_TRUE(assessBattery(in).estimated);
+}
+
 void test_the_second_rule_has_its_edge_at_30_points() {
   const int fromVoltage = percentFromVoltage(3749);  // 63
   TEST_ASSERT_TRUE(assessBattery(on(fromVoltage - 30, 3749, false)).estimated);
@@ -181,6 +226,9 @@ int main(int, char**) {
   RUN_TEST(test_a_gauge_that_agrees_with_a_low_voltage_is_believed);
   RUN_TEST(test_a_flat_cell_is_zero_by_the_gauge_and_by_the_voltage);
   RUN_TEST(test_the_voltage_rule_is_not_applied_on_a_cable_or_with_an_unknown_charger);
+  RUN_TEST(test_a_gauge_at_zero_with_a_cell_clearly_above_empty_is_not_believed);
+  RUN_TEST(test_a_reading_on_the_border_does_not_switch_the_rule_on_and_off);
+  RUN_TEST(test_the_way_back_needs_a_margin);
   RUN_TEST(test_the_second_rule_has_its_edge_at_30_points);
   RUN_TEST(test_a_gauge_that_says_more_than_the_voltage_gives_is_left_alone);
   RUN_TEST(test_the_curve_is_the_one_measured_and_never_leaves_0_to_100);

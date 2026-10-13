@@ -24,6 +24,14 @@ namespace board {
 constexpr int kCellHighMv = 4100;
 constexpr int kImplausiblyLowPercent = 70;
 constexpr int kGaugeTooLowByPoints = 30;
+// The way back is shorter than the way in, so that a reading on the border does not switch the rule on and off
+// with every sample (seen on 2026-10-13: about once a second for minutes, in the log and on the screen).
+constexpr int kGaugeBackWithinPoints = 15;
+// A gauge that says (nearly) nothing while the cell's voltage is clearly above empty has not learned this cell:
+// on 2026-10-13 it said 0 % at 3579 mV and the device ran four hours more, down to the switch-off at 3300 mV.
+constexpr int kGaugeEmptyPercent = 3;
+constexpr int kVoltageClearlyAbovePercent = 6;   // to start trusting the voltage over an empty gauge
+constexpr int kVoltageStillAbovePercent = 4;     // to go on doing so
 
 // The percentage the cell voltage alone gives under a load of about 140 mA, 0..100. A lighter load gives a
 // higher voltage and so a slightly higher number; a heavier one a lower number.
@@ -37,6 +45,7 @@ struct BatteryInputs {
   bool cable = false;        // the charger's power-good bit
   bool chargeDone = false;   // the charger's phase is "charge done"
   bool notCharging = false;  // the charger's phase is "not charging"
+  bool wasEstimated = false; // the last answer was the voltage's number: the way back needs a margin
 };
 
 struct BatteryAssessment {

@@ -42,7 +42,10 @@ BatteryAssessment assessBattery(const BatteryInputs& in) {
   // Only on the battery, and only when the charger has said so: a cell that is being charged has a raised voltage.
   if (!out.contradicted && in.gaugePercent >= 0 && millivolts > 0 && in.chargerKnown && !in.cable) {
     const int fromVoltage = percentFromVoltage(millivolts);
-    if (fromVoltage - in.gaugePercent >= kGaugeTooLowByPoints) {
+    const bool tooLow = fromVoltage - in.gaugePercent >= (in.wasEstimated ? kGaugeBackWithinPoints : kGaugeTooLowByPoints);
+    const bool emptyGaugeFullCell =
+        in.gaugePercent <= kGaugeEmptyPercent && fromVoltage >= (in.wasEstimated ? kVoltageStillAbovePercent : kVoltageClearlyAbovePercent);
+    if (tooLow || emptyGaugeFullCell) {
       out.contradicted = true;
       out.estimated = true;
       out.percent = fromVoltage;
