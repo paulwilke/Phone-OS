@@ -176,7 +176,7 @@ Options: Leave the defaults (cell charged above 1 C). Set the current and feed t
 Decision: At every start the firmware sets the charge current to 0.65 C of the configured capacity, rounded down to 64 mA (960 mA for 1500 mAh), and switches the watchdog off. Each register is written only on a difference and read back.
 Reason: A cell that is charged too fast ages and, in the worst case, is a safety risk; with the watchdog off the limit cannot silently disappear while the firmware hangs.
 Consequences: Charging from empty takes a little longer with a strong adapter (about 1.5 hours instead of about one). The register map is the BQ25896's, which the SY6970 is documented to follow; its data sheet is not in the repository, so a write that does not read back is logged and the charger keeps its own value. Open point 26 keeps the check on the device.
-Verified: host-tested; not verified on the device
+Verified: host-tested; on the device on 2026-10-12 the chip reads back 960 mA and the watchdog off (register 07 = 0x8D), charging with an adapter not yet tried (open point 26). The fault register reads 0x90 before and after, so it was no watchdog fault.
 
 ## D-15: The modem firmware is not updated
 Date: 2026-10-12   Status: decided

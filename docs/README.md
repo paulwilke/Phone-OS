@@ -32,6 +32,7 @@ The documents describe what exists in this repository — each one is written fr
 | [device-gnss-modem-clock.md](device-gnss-modem-clock.md) | the NMEA reader and its rules, the receiver and the modem's lines on the board, the clock and which time to believe |
 | [device-storage-network.md](device-storage-network.md) | the card (mounting, the safe write, power loss, the logs), Wi-Fi, the TCP server and the page in the firmware |
 | [hardware-drivers.md](hardware-drivers.md) | every driver: what it does, from what, what is tested on the host, what is not verified; the rules of the lessons and their tests |
+| [release-4.2.md](release-4.2.md) | what release 4.2 changed for the parents and the child (the APN list, texts with umlauts, the Power tile, the battery protection), what was checked, what the owner tries on the device |
 | [release-4.1.md](release-4.1.md) | what release 4.1 changed for the parents and the child, what was checked, what the owner tries on the device |
 | [release-4.0.md](release-4.0.md) | what release 4.0 is and is not, what was checked and where, the owner's checklist state, the decisions that belong to the owner |
 | [upgrading.md](upgrading.md) | from a device that runs 3.2: what to save, what to look at in the files, how to flash, what happens at the first start, how to go back |

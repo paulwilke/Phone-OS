@@ -80,3 +80,18 @@ Vorbereitung: SIM-Karte und SD-Karte stecken, das Gerät am USB-Kabel. Zwei Kont
 | 8.7 | **Sicherung**: exportieren, die ZIP-Datei am Computer öffnen | Ordner `config` mit `settings.toml` und `contacts.toml`, ohne `secrets.toml` | | |
 | 8.8 | Dieselbe Datei wiederherstellen | "Wiederhergestellt."; Protokoll zeigt die geschriebenen Dateien | | |
 | 8.9 | Elternseite über das USB-Kabel (`scripts/webbridge.py`) | dieselbe Seite, auch wenn die Kachel WLAN ausgeblendet ist | | |
+
+## 9. Neu in 4.2
+
+| Nr. | Schritt | Erwartung | Datum | Ergebnis |
+|---|---|---|---|---|
+| 9.1 | Am Kabel an den Computer: `scripts/deviceconfig.py battery` | in der Zeile "charge voltage" steht "charge current 960 mA" und "watchdog off"; das Fehlerregister (0x90) ändert sich dadurch nicht und ist kein Watchdog-Fehler (am 2026-10-12 am Gerät so gesehen) | | |
+| 9.2 | Das Protokoll nach dem Start ansehen | "Battery: charge current limited to 960 mA (it was 2048 mA)" beim ersten Start, danach "is 960 mA already" | | |
+| 9.3 | Mit dem Netzteil laden, im `energy.log` den Strom ansehen | der Ladestrom bleibt bei etwa 1 A oder darunter | | |
+| 9.4 | `modem_sleep = true` in der Elternseite setzen und speichern (Reiter **Allgemein** oder **Erweitert**) | "Gespeichert", kein Fehler "Request Header Fields Too Large" | | |
+| 9.5 | Einen SOS "Abholen" an das zweite Telefon schicken | eine Nachricht, "Jean möchte abgeholt werden." mit Umlaut; im Protokoll "Messages: sent in 1 part, GSM 7-bit" | | |
+| 9.6 | `scripts/deviceconfig.py sms <Nummer> "<ein Text mit etwa 200 Zeichen>"` | auf dem Telefon eine einzige Nachricht, nicht zwei; im Protokoll "sent in 2 parts" | | |
+| 9.7 | Einen Text mit einem Emoji senden | kommt an, Protokoll "UCS2" | | |
+| 9.8 | `apn` aus `settings.toml` entfernen (Kopie behalten), Neustart | Protokoll "Cellular: APN ... chosen for the operator ...", dann "IMS registered"; Anruf funktioniert; danach die Einstellung zurücksetzen, wenn nicht | | |
+| 9.9 | Ohne Kabel die Batterie laufen lassen (ein Tag, Modem an) | bei 3300 mV schaltet das Gerät ab mit dem Bild "Akku leer" und der Protokollzeile "switching off to protect the cell"; kein Abschalten bei den Spitzen eines Anrufs | | |
+
