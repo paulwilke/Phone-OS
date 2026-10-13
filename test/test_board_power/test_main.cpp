@@ -68,6 +68,34 @@ void test_the_gauge_that_said_zero_at_3601_mv_gives_the_voltages_number_and_says
   TEST_ASSERT_TRUE(r.log.lines().back().find("agrees with the voltage again") != std::string::npos);
 }
 
+// 2026-10-13: the log held a line about every second for minutes, and the screen flapped between 0 % and 30 %.
+void test_a_voltage_on_the_border_leaves_one_log_line_and_one_number() {
+  BoardPowerRig r;
+  int first = -2;
+  for (int mv : {3582, 3578, 3580, 3576, 3579, 3581, 3577, 3575, 3574}) {
+    r.scriptGauge(mv, 0, 1500, 1500);
+    const int percent = r.impl.batteryPercent();
+    if (first == -2) first = percent;
+    TEST_ASSERT_TRUE_MESSAGE(percent > 20, std::to_string(mv).c_str());   // the voltage's number each time, never the gauge's 0
+  }
+  int lines = 0;
+  for (const auto& l : r.log.lines())
+    if (l.find("Battery: the gauge") != std::string::npos) ++lines;
+  TEST_ASSERT_EQUAL(1, lines);
+  TEST_ASSERT_TRUE(first > 20);
+}
+
+// The memory of the last answer does not depend on there being a log.
+void test_the_rule_remembers_its_answer_without_a_log() {
+  BoardPowerRig r(false);
+  r.impl.begin(BoardPowerRig::kConfiguredMah, r.writer, r.log);
+  r.scriptGauge(3582, 0, 1500, 1500);
+  const int a = r.impl.batteryPercent();
+  r.scriptGauge(3578, 0, 1500, 1500);
+  TEST_ASSERT_TRUE(r.impl.batteryPercent() > 20);
+  TEST_ASSERT_TRUE(a > 20);
+}
+
 void test_the_cell_voltage_is_the_gauges_else_the_chargers_else_unknown() {
   BoardPowerRig r;
   r.scriptGauge(3754, 63, 1500, 1500);
@@ -281,6 +309,8 @@ int main(int, char**) {
   RUN_TEST(test_on_the_battery_the_gauge_is_believed_when_the_voltage_agrees);
   RUN_TEST(test_a_gauge_that_disagrees_with_the_cell_shows_no_percentage_and_no_time);
   RUN_TEST(test_the_gauge_that_said_zero_at_3601_mv_gives_the_voltages_number_and_says_so_once);
+  RUN_TEST(test_a_voltage_on_the_border_leaves_one_log_line_and_one_number);
+  RUN_TEST(test_the_rule_remembers_its_answer_without_a_log);
   RUN_TEST(test_the_cell_voltage_is_the_gauges_else_the_chargers_else_unknown);
   RUN_TEST(test_charging_is_reported_while_the_charger_charges);
   RUN_TEST(test_the_older_charger_at_6b_works_the_same);

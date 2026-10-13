@@ -59,7 +59,7 @@ private:
     GaugeReading gauge;
   };
   Reading read();
-  static BatteryInputs inputsOf(const Reading& r);
+  BatteryInputs inputsOf(const Reading& r) const;
 
   Xl9555& expander_;
   Gpio& gpio_;
