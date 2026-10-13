@@ -24,7 +24,7 @@ config.display.map_url.help           = "URL-Vorlage für den Kartenlink in SOS-
 
 config.modem.label = "Modem"
 config.modem.apn.label = "APN"
-config.modem.apn.help = "Zugangspunktname des Mobilfunknetzes, etwa von der Hilfeseite des Anbieters. Das Modem braucht ihn, um sich für Anrufe über LTE anzumelden. Leer lassen, um das im Modem Gespeicherte zu behalten. Nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
+config.modem.apn.help = "Zugangspunktname des Mobilfunknetzes. Leer lassen: Das Gerät wählt ihn anhand der SIM-Karte. Nur ausfüllen, wenn diese Wahl für Ihre SIM nicht stimmt. Nur Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche."
 
 config.battery.label = "Akku"
 config.battery.capacity_mah.label = "Akkukapazität (mAh)"

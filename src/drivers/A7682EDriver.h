@@ -141,7 +141,7 @@ public:
 
 private:
   // What the driver is doing. One at a time.
-  enum class Job : uint8_t { None, Init, SimCheck, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock,
+  enum class Job : uint8_t { None, Init, SimCheck, ReadImsi, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock,
                              Dial, Answer, Hangup, CallPoll, CallDiag, Volume,
                              SendSms, ReadSms, DrainInbox, Query, Sleep, Wake, Shutdown, Reselect };
 
@@ -158,6 +158,8 @@ private:
   void log(const std::string& line);
   void beginRegistering(bool startWindow);
   bool apnUsable() const;
+  // The APN in force: the configured one, else the one the operator list gives for the SIM (decision D-9).
+  const std::string& apn() const { return config_.apn.empty() ? chosenApn_ : config_.apn; }
   bool contextOneIsRight() const;
   void logIms();
 
@@ -223,6 +225,8 @@ private:
 
   // The data bearer
   bool apnNoticeLogged_ = false;
+  std::string chosenApn_;       // from the operator list, when no APN is configured
+  bool apnLookedUp_ = false;    // the SIM was asked once for its operator since the start
   at::PdpContext context1_;
   bool context1Seen_ = false;
   char pdn8Type_[12] = {};

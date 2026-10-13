@@ -134,6 +134,84 @@ void test_without_an_apn_nothing_is_read_or_written_and_the_log_says_so_once() {
   TEST_ASSERT_EQUAL(1, r.loggedCount("no APN set"));
 }
 
+// ---- the APN from the operator list (decision D-9) ---------------------------------------------------------------------
+
+namespace {
+// An invented subscriber number: the operator code and nines. Built, not written out, so that no number of the shape of
+// a real one stands in the repository (scripts/privacy_check.py).
+std::string imsiOf(const std::string& code) { return code + std::string(15 - code.size(), '9'); }
+
+A7682EDriver::Config noApn() {
+  A7682EDriver::Config c = Rig::defaultConfig();
+  c.apn.clear();
+  return c;
+}
+}  // namespace
+
+// Nobody has to know their APN: the operator code in the SIM's subscriber number picks it from the list.
+void test_without_an_apn_the_operator_list_chooses_one_by_the_sim() {
+  Rig r(noApn());
+  Script s;
+  s.imsi = imsiOf("26201");                          // invented: Germany, the network code 01
+  s.contexts = {};                                   // the modem has no context 1 yet
+  s.apply(r.t);
+  r.t.reply("AT+CGDCONT=1,\"IPV4V6\",\"internet.v6.telekom\"", {});
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.count("AT+CIMI"));
+  TEST_ASSERT_EQUAL(1, r.count("AT+CGDCONT=1,\"IPV4V6\",\"internet.v6.telekom\""));
+  TEST_ASSERT_EQUAL(1, r.count("AT+CFUN=0"));         // and the bearer is built again, as for a configured APN
+  TEST_ASSERT_EQUAL(1, r.loggedCount("Cellular: APN internet.v6.telekom chosen for the operator 26201"));
+  for (const std::string& line : r.logs) TEST_ASSERT_TRUE_MESSAGE(line.find(imsiOf("26201")) == std::string::npos, line.c_str());   // the number is never logged
+  TEST_ASSERT_EQUAL(0, r.t.unexpected().size());
+}
+
+// An APN that was set is the owner's or the parents' and wins: the SIM is not even asked.
+void test_a_configured_apn_wins_and_the_sim_is_not_asked() {
+  Rig r;
+  Script s;
+  s.imsi = imsiOf("26202");
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(0, r.count("AT+CIMI"));
+}
+
+void test_an_operator_the_list_does_not_know_leaves_the_contexts_alone_and_says_so() {
+  Rig r(noApn());
+  Script s;
+  s.imsi = "999999999999999";
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.count("AT+CIMI"));
+  TEST_ASSERT_EQUAL(0, r.countPrefix("AT+CGDCONT="));
+  TEST_ASSERT_EQUAL(0, r.countPrefix("AT+CFUN"));
+  TEST_ASSERT_EQUAL(1, r.loggedCount("no APN known for the operator of this SIM"));
+  TEST_ASSERT_TRUE(r.driver.state() == ModemState::Ready);   // messages and the rest go on
+}
+
+void test_a_sim_that_does_not_answer_the_subscriber_question_holds_nothing_up() {
+  Rig r(noApn());
+  Script s;
+  s.apply(r.t);                                       // AT+CIMI is not scripted: the modem answers ERROR
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.loggedCount("the subscriber number could not be read"));
+  TEST_ASSERT_EQUAL(0, r.countPrefix("AT+CGDCONT="));
+  TEST_ASSERT_TRUE(r.driver.state() == ModemState::Ready);
+}
+
+// The card may be another after a restart, so it is asked again.
+void test_the_sim_is_asked_again_after_a_restart() {
+  Rig r(noApn());
+  Script s;
+  s.imsi = imsiOf("26202");
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.count("AT+CIMI"));
+  r.t.restart();
+  TEST_ASSERT_TRUE(r.runTo(ModemState::PoweringOn));
+  TEST_ASSERT_TRUE(r.runTo(ModemState::Ready));
+  TEST_ASSERT_EQUAL(2, r.count("AT+CIMI"));
+}
+
 // The APN ends up inside an AT command: a quote, a space or a semicolon never reaches the modem.
 void test_an_apn_with_characters_that_do_not_belong_in_one_is_refused_before_sending() {
   for (const char* bad : {"in ternet", "a\"b", "a;b", "a,b", "a\r\nAT+CPOF", "caf\xC3\xA9"}) {
@@ -921,6 +999,11 @@ int main(int, char**) {
   RUN_TEST(test_a_context_1_with_another_apn_or_another_type_is_rewritten);
   RUN_TEST(test_the_apn_is_compared_without_regard_to_case);
   RUN_TEST(test_without_an_apn_nothing_is_read_or_written_and_the_log_says_so_once);
+  RUN_TEST(test_without_an_apn_the_operator_list_chooses_one_by_the_sim);
+  RUN_TEST(test_a_configured_apn_wins_and_the_sim_is_not_asked);
+  RUN_TEST(test_an_operator_the_list_does_not_know_leaves_the_contexts_alone_and_says_so);
+  RUN_TEST(test_a_sim_that_does_not_answer_the_subscriber_question_holds_nothing_up);
+  RUN_TEST(test_the_sim_is_asked_again_after_a_restart);
   RUN_TEST(test_an_apn_with_characters_that_do_not_belong_in_one_is_refused_before_sending);
   RUN_TEST(test_an_apn_longer_than_100_characters_is_refused_before_sending);
   RUN_TEST(test_a_refused_context_write_does_not_stop_the_start_up);

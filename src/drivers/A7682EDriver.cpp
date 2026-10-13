@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "ApnTable.h"
 #include "SmsPdu.h"
 #include "Ucs2.h"
 
@@ -54,8 +55,8 @@ A7682EDriver::A7682EDriver(AtTransport& transport, const Config& config) : trans
 }
 
 bool A7682EDriver::apnUsable() const {
-  if (config_.apn.empty() || config_.apn.size() > 100) return false;
-  for (char c : config_.apn)
+  if (apn().empty() || apn().size() > 100) return false;
+  for (char c : apn())
     if (!isApnCharacter(c)) return false;
   return true;
 }
@@ -133,6 +134,8 @@ void A7682EDriver::begin() {
   simRetry_.clear();
   manualSelectDone_ = false;
   apnNoticeLogged_ = false;
+  chosenApn_.clear();
+  apnLookedUp_ = false;   // the card may be another one after a restart
   asleep_ = sleepPending_ = wakePending_ = shutdownPending_ = shuttingDown_ = false;
   cmtiPending_.clear();
   drainInboxPending_ = false;
@@ -197,6 +200,8 @@ void A7682EDriver::onRestart() {
   pinSentThisBoot_ = false;
   simTries_ = 0;
   manualSelectDone_ = false;
+  chosenApn_.clear();     // the card may be another one: it is asked again
+  apnLookedUp_ = false;
   setState(ModemState::PoweringOn);
   waitUntil_.set(transport_.now(), config_.restartSettleMs);
 }
@@ -265,9 +270,15 @@ void A7682EDriver::finishJob(bool ok) {
       if (simStatus_ == SimStatus::Missing || simStatus_ == SimStatus::PinRequired || simStatus_ == SimStatus::PinWrong ||
           simStatus_ == SimStatus::PukRequired) {
         setState(ModemState::Error);
+      } else if (config_.apn.empty() && !apnLookedUp_) {
+        startJob(Job::ReadImsi);   // no APN is set: the operator list may know one for this SIM
       } else {
         startJob(Job::DataBearer);
       }
+      break;
+
+    case Job::ReadImsi:
+      startJob(Job::DataBearer);   // whatever came of it: the bearer is set up with the APN known now, or left alone
       break;
 
     case Job::DataBearer:
@@ -391,7 +402,7 @@ void A7682EDriver::finishJob(bool ok) {
 }
 
 bool A7682EDriver::contextOneIsRight() const {
-  return context1Seen_ && strcmp(context1_.type, "IPV4V6") == 0 && equalsIgnoreCase(context1_.apn, config_.apn.c_str());
+  return context1Seen_ && strcmp(context1_.type, "IPV4V6") == 0 && equalsIgnoreCase(context1_.apn, apn().c_str());
 }
 
 void A7682EDriver::logIms() {
@@ -499,6 +510,33 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       return;
 
     // -----------------------------------------------------------------------
+    // The operator of the SIM, for the APN (decision D-9). Only when no APN is configured. AT+CIMI answers the
+    // subscriber number alone on a line; of it only the operator code (MCC and MNC) is looked up and logged, the
+    // number itself is never kept or logged.
+    case Job::ReadImsi:
+      if (!line) {
+        apnLookedUp_ = true;
+        send("AT+CIMI");
+        expect(config_.commandTimeoutMs);
+        return;
+      }
+      if (!answered) {
+        const apn::Entry* entry = apn::find(line);
+        if (entry && chosenApn_.empty()) {
+          chosenApn_ = entry->apn;
+          // The operator code as the list has it: three digits of the MCC and two or three of the MNC, with its zeros.
+          std::string mnc = std::to_string(entry->mnc);
+          while (mnc.size() < entry->mncDigits) mnc.insert(0, "0");
+          log(std::string("Cellular: APN ") + entry->apn + " chosen for the operator " + std::to_string(entry->mcc) + mnc);
+        }
+        return;
+      }
+      if (type == at::LineType::Error) log("SIM: the subscriber number could not be read, no APN is chosen");
+      else if (chosenApn_.empty()) log("Cellular: no APN known for the operator of this SIM");
+      finishJob(true);
+      return;
+
+    // -----------------------------------------------------------------------
     // The default bearer. The IMS bearer is created from PDP context 1, so context 1 has to be
     // IPV4V6 with the operator's APN: read the contexts, write only when context 1 differs, switch
     // the radio off and on so that the network builds the bearer again. Context 8 (the IMS bearer
@@ -508,8 +546,8 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       if (!line) {
         if (!apnUsable()) {
           if (!apnNoticeLogged_) {
-            log(config_.apn.empty() ? "Cellular: no APN set, the data contexts stay as the modem has them"
-                                    : "Cellular: the APN has a character that does not belong in one, it is not sent");
+            log(apn().empty() ? "Cellular: no APN set or known for this operator, the data contexts stay as the modem has them"
+                              : "Cellular: the APN has a character that does not belong in one, it is not sent");
             apnNoticeLogged_ = true;
           }
           finishJob(true);
@@ -530,7 +568,7 @@ void A7682EDriver::step(const char* line, at::LineType type) {
             finishJob(true);  // nothing to write: the modem's memory is not worn on every start
           } else {
             stepIndex_ = 1;
-            snprintf(buf, sizeof(buf), "AT+CGDCONT=1,\"IPV4V6\",\"%s\"", config_.apn.c_str());
+            snprintf(buf, sizeof(buf), "AT+CGDCONT=1,\"IPV4V6\",\"%s\"", apn().c_str());
             send(buf);
             expect(config_.commandTimeoutMs);
           }

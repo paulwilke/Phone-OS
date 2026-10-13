@@ -6,7 +6,7 @@ Code: `src/drivers/A7682EDriver.{h,cpp}` on the AT layer ([at-layer.md](at-layer
 
 This document covers start-up, the SIM, the data bearer for the IMS, registration, the periodic questions, restarts, calls, messages, sleeping, switching off and the diagnostic questions, and at the end why each quirk is there.
 
-The driver implements the `Modem` capability and passes its contract suite ([hardware-capabilities.md](hardware-capabilities.md)). It is a state machine: `poll()` is called from the main loop and never blocks, one **job** runs at a time (`Init`, `SimCheck`, `DataBearer`, `Register`, `ScanOperators`, `SelectOperator`, `Ims`, `Signal`, `Clock`, and for calls `Dial`, `Answer`, `Hangup`, `CallPoll`, `CallDiag`, `Volume`, and for messages `SendSms`, `ReadSms`, `DrainInbox`, and `Query`, `Sleep`, `Wake`, `Shutdown`), and a job that gets no answer in time ends itself, not the device. It includes nothing above `hal/`; its log lines are handed out through `pollLog()` and the host writes them through its log, which applies the level.
+The driver implements the `Modem` capability and passes its contract suite ([hardware-capabilities.md](hardware-capabilities.md)). It is a state machine: `poll()` is called from the main loop and never blocks, one **job** runs at a time (`Init`, `SimCheck`, `ReadImsi`, `DataBearer`, `Register`, `ScanOperators`, `SelectOperator`, `Ims`, `Signal`, `Clock`, and for calls `Dial`, `Answer`, `Hangup`, `CallPoll`, `CallDiag`, `Volume`, and for messages `SendSms`, `ReadSms`, `DrainInbox`, and `Query`, `Sleep`, `Wake`, `Shutdown`), and a job that gets no answer in time ends itself, not the device. It includes nothing above `hal/`; its log lines are handed out through `pollLog()` and the host writes them through its log, which applies the level.
 
 ## Start-up, in order
 
@@ -24,6 +24,7 @@ The driver implements the `Modem` capability and passes its contract suite ([har
 Outgoing calls hung the modem two seconds after `ATD` whenever the IMS was not registered ([hardware-lessons.md](hardware-lessons.md)). The IMS bearer is built from PDP context 1, so the driver sets that up itself:
 
 ```
+AT+CIMI                              only when no APN is configured: the operator code of the SIM picks the APN from the list (apn-table.md)
 AT+CGDCONT?                          read; look for context 1
   context 1 is IPV4V6 with the configured APN (case does not matter)  ->  done, nothing is written
   otherwise

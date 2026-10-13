@@ -37,6 +37,8 @@ python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.
 python3 scripts/make_font.py --check # generated fonts match assets/fonts/ (regenerate with --all)
 python3 scripts/gen_config.py --check # generated configuration files match config/schema.toml
 python3 test/test_schema_gen/test_gen.py # the generator of the configuration files and the page description
+python3 scripts/gen_apn_table.py --check # the stored list of operators and APNs is well formed (regenerate with --source, see docs/apn-table.md)
+python3 test/test_gen_apn/test_gen.py # the generator of that list
 python3 scripts/gen_device_assets.py --check # device/ShippedAssets.h matches the catalogs and VERSION
 python3 scripts/gen_web.py --check # web/index.html is current
 node test/test_web_page/test.mjs # the parents' page

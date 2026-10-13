@@ -87,6 +87,11 @@ jobs:
       - name: Generator tests
         run: python3 test/test_schema_gen/test_gen.py
 
+      - name: Operator list check and its generator test
+        run: |
+          python3 scripts/gen_apn_table.py --check
+          python3 test/test_gen_apn/test_gen.py
+
       - name: Generated device assets
         run: python3 scripts/gen_device_assets.py --check
 

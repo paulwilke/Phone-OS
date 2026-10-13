@@ -26,7 +26,7 @@ config.display.map_url.help = "URL template for the map link in SOS messages. Us
 
 config.modem.label = "Modem"
 config.modem.apn.label = "APN"
-config.modem.apn.help = "Access point name of the mobile network, for example from the provider's help pages. The modem needs it to register for calls over LTE. Leave empty to keep what the modem has stored. Letters, digits, dots, hyphens and underscores only."
+config.modem.apn.help = "Access point name of the mobile network. Leave it empty and the device chooses it by the SIM card; fill it in only when that choice is wrong for your SIM. Letters, digits, dots, hyphens and underscores only."
 
 config.battery.label = "Battery"
 config.battery.capacity_mah.label = "Battery capacity (mAh)"

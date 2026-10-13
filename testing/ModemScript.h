@@ -48,6 +48,7 @@ struct Script {
   std::vector<std::string> inbox;
   std::string smsFinal = "OK";
   std::string contextsFinal = "OK";   // the final line of AT+CGDCONT?
+  std::string imsi;                   // what AT+CIMI answers (an invented number); empty: the command is not scripted
   bool cpinSilent = false;            // the card is not asked about at all: no answer
   std::string silent;                 // a command that is never answered (the modem hangs on it)
 
@@ -74,6 +75,7 @@ struct Script {
     else if (contexts.size() == 1) reply("AT+CGDCONT?", {contexts[0]}, contextsFinal);
     else reply("AT+CGDCONT?", {contexts[0], contexts[1]}, contextsFinal);
     reply(std::string("AT+CGDCONT=1,\"IPV4V6\",\"") + kApn + "\"", {}, cgdcontWriteFinal);
+    if (!imsi.empty()) reply("AT+CIMI", {imsi});
     reply("AT+CFUN=0", {}, cfun0Final);
     reply("AT+CFUN=1", {}, cfun1Final);
     for (const std::string& c : creg) reply("AT+CREG?", {c});

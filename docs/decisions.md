@@ -121,7 +121,7 @@ Options: The explicit APN only (D-4: a parent must know it). A built-in list by 
 Decision: The firmware carries a list of operators with their APNs and chooses the entry that matches the SIM when it is inserted. The user sets nothing. `[modem] apn` in `settings.toml` stays as an override for the rare case, and an operator that is not in the list gets what the device does today (the modem's own contexts are left alone) and one log line that says so. This supersedes D-4.
 Reason: A device for children and parents must work with the SIM they put in. The list is data, which a public source can supply.
 Consequences: Agent's proposal for how: a script writes the list into the source at build time from a maintained public list (the Android Open Source Project's `apns-conf.xml` is Apache-2.0 and would be named in [THIRD_PARTY.md](../THIRD_PARTY.md)), with a test; an update of the list comes with a firmware update. No entry is written by hand from memory. The IMS bearer (context 8, APN "ims") is set up by the modem and is not part of the list. Open point 21.
-Verified: not verified; not built
+Verified: host-tested; compiled; not verified on the device (open point 21). Built from the sample file apns-full-conf.xml of the Android project (1146 operators); the file named above, apns-conf.xml, was not found at the addresses tried.
 
 ## D-10: Texts go out in PDU mode, in the GSM alphabet, as one concatenated message
 Date: 2026-10-12   Status: decided
