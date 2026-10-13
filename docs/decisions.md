@@ -298,3 +298,14 @@ Decision: The second: the line gives the share of passes in which sleep was allo
 Reason: A guess about 100 mA of current is worth less than one day of numbers; the cost is a few timer reads per pass.
 Consequences: Open points 20 and 25 are read from the line after a day. What the numbers show decides what is changed (the sleep policy, a part of the loop, the I2C clock); nothing is changed before.
 Verified: host-tested; compiled; not verified on the device
+
+## D-26: The parents' page keeps the password for the tab only
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: The page stored the Basic credential in `localStorage` after a login, so that a reload did not ask again. `localStorage` outlives the visit, and the page's origin is `http://192.168.4.1` on the device's own access point, the address every ESP32 access point has: a page served at that address later, by any device, could read the credential. The documentation said "in memory", which was not what the code did.
+Options: Leave it (no re-login after a reload, the credential stays on the phone for good). Keep it in memory only (every reload asks again). Keep it in `sessionStorage` (a reload in the same tab does not ask, closing the tab forgets it).
+Decision: `sessionStorage`.
+Reason: A reload is common while editing, closing the tab is the end of the visit; nothing of the password stays on the phone afterwards.
+Consequences: `scripts/gen_web.py` and the generated `web/index.html`; `test/test_web_page/test.mjs` (f2) pins that the credential is in `sessionStorage` and that the script never names `localStorage` with it. The page's language choice (`pp_lang`) stays in `localStorage`, it is not a secret.
+Verified: host-tested; not verified on the device

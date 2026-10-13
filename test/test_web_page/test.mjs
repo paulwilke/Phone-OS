@@ -253,7 +253,8 @@ function richElement(tag) {
 
 async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLang, helps = {}, helpFails = false, labelsFail = false, rich = false, settings = {}, onFetch = null, fileReader = null }) {
   const store = {};
-  if (storedAuth) store.pp_auth = storedAuth;
+  const session = {};   // sessionStorage: the credential, and nothing else
+  if (storedAuth) session.pp_auth = storedAuth;
   if (storedLang) store.pp_lang = storedLang;
   const els = {};
   const dataT = [];
@@ -299,6 +300,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     document, fetch: fetchFn, btoa: (x) => Buffer.from(x).toString('base64'), console,
     navigator: { language: browserLang || 'en-US' },
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+    sessionStorage: { getItem: (k) => session[k] ?? null, setItem: (k, v) => { session[k] = String(v); }, removeItem: (k) => { delete session[k]; } },
     setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, FileReader: fileReader || function () {}, Blob: function () {},
     URL: { createObjectURL: () => '' }, confirm: () => true, alert() {},
   };
@@ -308,7 +310,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
   const settle = () => new Promise((r) => setTimeout(r, 30));
   await settle();
   const shown = () => dataT.map((e) => e.textContent);
-  return { els, dataT, calls, store, settle, shown, document, context, T: () => vm.runInContext('T', context) };
+  return { els, dataT, calls, store, session, settle, shown, document, context, T: () => vm.runInContext('T', context) };
 }
 
 const catalogs = { en, de };
@@ -360,7 +362,19 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
 // (f) a stored credential that is no longer right: back to the login screen, English words
 {
   const pg = await runPage({ storedAuth: 'Basic ' + Buffer.from(':changed').toString('base64'), storedLang: 'de', catalogs });
-  assert(pg.store.pp_auth === undefined && rawKey(overlayWords(pg)).length === 0, 'a stale credential is dropped and the login screen stays English');
+  assert(pg.session.pp_auth === undefined && rawKey(overlayWords(pg)).length === 0, 'a stale credential is dropped and the login screen stays English');
+}
+
+// (f2) the credential is kept for the tab only (sessionStorage), never in localStorage, where it would outlive the
+// visit on the parent's phone under an address every ESP32 access point shares (D-26)
+{
+  const pg = await runPage({ catalogs });
+  pg.els['auth-pw'] = Object.assign(fakeElement('auth-pw'), { value: PASSWORD });
+  await pg.els['auth-form'].listeners.submit({ preventDefault() {} });
+  await pg.settle();
+  assert(pg.session.pp_auth === 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64'), 'the credential is in sessionStorage after the login');
+  assert(pg.store.pp_auth === undefined, 'nothing of the credential is in localStorage');
+  assert(!/localStorage\.(getItem|setItem|removeItem)\('pp_auth'/.test(script), 'the script never puts the credential into localStorage');
 }
 
 // (g) the device's own language wins over the browser's when the page has no choice of its own

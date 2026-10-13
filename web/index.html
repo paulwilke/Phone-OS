@@ -903,6 +903,9 @@ document.getElementById('lang-select').addEventListener('change', function() {
 });
 
 // ---------- Auth ----------
+// The credential lives in sessionStorage: it dies with the tab. localStorage would keep it on the parent's
+// phone for good, under an origin (http://192.168.4.1) that every ESP32 access point shares, so any page served
+// at that address later could read it (decision D-26).
 document.getElementById('auth-form').addEventListener('submit', function(e) {
   e.preventDefault();
   var pw = document.getElementById('auth-pw').value;
@@ -911,7 +914,7 @@ document.getElementById('auth-form').addEventListener('submit', function(e) {
   authHeader = 'Basic ' + btoa(':' + pw);
   api('GET', '/api/state').then(function(r) {
     if (r.ok) {
-      localStorage.setItem('pp_auth', authHeader);
+      sessionStorage.setItem('pp_auth', authHeader);
       document.getElementById('auth-overlay').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       r.json().catch(function() { return {}; }).then(init);
@@ -945,7 +948,7 @@ function init(state) {
 
 (function() {
   applyTranslations();
-  var storedAuth = localStorage.getItem('pp_auth');
+  var storedAuth = sessionStorage.getItem('pp_auth');
   if (!storedAuth) return;
   authHeader = storedAuth;
   api('GET', '/api/state').then(function(r) {
@@ -954,7 +957,7 @@ function init(state) {
       document.getElementById('app').style.display = 'flex';
       r.json().catch(function() { return {}; }).then(init);
     } else {
-      localStorage.removeItem('pp_auth');
+      sessionStorage.removeItem('pp_auth');
     }
   }).catch(function() {});
 })();
