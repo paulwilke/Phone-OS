@@ -122,7 +122,7 @@ void test_a_gauge_that_agrees_with_a_low_voltage_is_believed() {
 }
 
 void test_a_flat_cell_is_zero_by_the_gauge_and_by_the_voltage() {
-  const BatteryAssessment a = assessBattery(on(0, 3426, false));
+  const BatteryAssessment a = assessBattery(on(0, 3300, false));
   TEST_ASSERT_FALSE(a.estimated);
   TEST_ASSERT_EQUAL(0, a.percent);
 }
@@ -153,7 +153,8 @@ void test_the_curve_is_the_one_measured_and_never_leaves_0_to_100() {
   TEST_ASSERT_EQUAL(100, percentFromVoltage(4200));
   TEST_ASSERT_EQUAL(100, percentFromVoltage(4100));
   TEST_ASSERT_EQUAL(49, percentFromVoltage(3644));
-  TEST_ASSERT_EQUAL(0, percentFromVoltage(3430));
+  TEST_ASSERT_EQUAL(3, percentFromVoltage(3430));  // the last measured point; below it a line to the switch-off voltage
+  TEST_ASSERT_EQUAL(0, percentFromVoltage(3300));
   TEST_ASSERT_EQUAL(0, percentFromVoltage(3000));
   int last = 0;
   for (int mv = 3400; mv <= 4200; ++mv) {

@@ -24,7 +24,7 @@ enum class PowerDomain : uint8_t {
 // What the battery is: the cell's usable voltage range, measured on the device (docs/battery.md). Below the empty
 // mark the cell is flat; this is not the cell's safe limit, which nothing in this repository knows (the data
 // sheet of the cell is not here), and nothing below it is protected by the firmware.
-constexpr int kBatteryEmptyMv = 3430;
+constexpr int kBatteryEmptyMv = 3300;   // where the firmware switches off (D-5); this cell was flat at 3430 under 140 mA
 constexpr int kBatteryFullMv = 4200;
 // At or below this percentage on the battery the interface says the battery is almost empty.
 constexpr int kBatteryLowPercent = 10;

@@ -28,6 +28,7 @@
 #include <board/GDEQ031T10Profile.h>
 #include <board/EpdWire.h>
 #include <board/KeyboardDecoder.h>
+#include <board/LowVoltageGuard.h>
 #include <board/ModemTransport.h>
 #include <board/PinMap.h>
 #include <board/PowerUp.h>
@@ -120,6 +121,9 @@ std::unique_ptr<board::BoardGnss> gnss;
 std::unique_ptr<boot::Runtime> runtime;
 int batteryMah = board::kDefaultBatteryMah;
 bool powerOffLogged = false;
+bool lowVoltageOff = false;           // the switch-off was asked by the guard, not by a person
+board::LowVoltageGuard lowVoltageGuard;
+uint32_t lastVoltageCheckMs = 0;
 const char* const kBoardName = "T-Deck Pro MAX";   // on the status page and the splash picture
 const char* const kProjectName = "Phone OS";   // on the splash picture; never shortened, it wraps
 
@@ -178,6 +182,7 @@ void readKeys() {
 // modem shut down each time, and nobody was told. Fix host-tested where it can be (ui::drawSplash, the core's
 // refusal); the order below is to be verified on the device.
 void powerOff() {
+  const char* const reason = board::switchOffWordKey(lowVoltageOff);
   // A cable keeps the board alive whatever the battery switch does: refuse before anything is shut down.
   if (power->externalPower()) {
     runtime->core().notePowerOffFailed();   // the notice says "only without cable", the log says why
@@ -189,7 +194,7 @@ void powerOff() {
   }
   display.beginFrame();
   ui::drawSplash(display, kProjectName, kBoardName, "Version " + firmwareVersion,
-                 runtime->translator().get("power.switched-off"));
+                 runtime->translator().get(reason));
   display.endFrame();
   modem->shutdown();
   for (int i = 0; i < 200 && modem->state() != ModemState::Off; ++i) {
@@ -268,6 +273,19 @@ void loop() {
   drainModemLog();
   offerTimes();
   haptic.service();
+
+  // The cell is protected by the firmware (D-5): a minute below the limit on the battery switches off.
+  if (now - lastVoltageCheckMs >= 5000) {
+    lastVoltageCheckMs = now;
+    const int mv = power->batteryMillivolts();
+    const bool onBattery = !power->externalPower();
+    if (!onBattery) lowVoltageOff = false;   // a switch-off the cable refused is asked again after the next discharge
+    if (lowVoltageGuard.update(now, mv, onBattery) && !lowVoltageOff) {
+      lowVoltageOff = true;
+      eventLog.log("Battery: " + std::to_string(mv) + " mV for a minute, switching off to protect the cell");
+      runtime->core().requestPowerOff();
+    }
+  }
 
   const PowerDecision decision = runtime->step(now);
 

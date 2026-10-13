@@ -8,9 +8,10 @@ struct Point {
   int percent;
 };
 // Measured 2026-10-09 on the device: a discharge from full to flat at 135 to 147 mA, the charge counted in
-// time times current (1280 mAh used up to 3426 mV), so 0 % is where this cell was flat under that load.
+// time times current (1280 mAh used up to 3426 mV). Below 3430 mV nothing was measured: the last stretch down to the
+// switch-off voltage (D-5) is a straight line from 3 % to 0 %.
 constexpr Point kCurve[] = {{4100, 100}, {4014, 93}, {3941, 86}, {3874, 79}, {3810, 72}, {3749, 63}, {3692, 56}, {3644, 49},
-                            {3614, 41},  {3590, 34}, {3568, 26}, {3543, 19}, {3508, 11}, {3457, 4},  {3430, 0}};
+                            {3614, 41},  {3590, 34}, {3568, 26}, {3543, 19}, {3508, 11}, {3457, 4},  {3430, 3}, {3300, 0}};
 constexpr int kCurveSize = sizeof(kCurve) / sizeof(kCurve[0]);
 }  // namespace
 

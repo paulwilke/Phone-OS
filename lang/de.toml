@@ -221,6 +221,7 @@ notice.cellular-switched-off   = "Mobilfunk aus"
 notice.wifi-battery-low        = "Akku zu leer für WLAN"
 notice.power-off-refused       = "Ausschalten nur ohne Kabel"
 power.switched-off             = "Ausgeschaltet"
+power.battery-empty            = "Akku leer"
 notice.light-on                = "Licht an"
 notice.light-off               = "Licht aus"
 
