@@ -100,6 +100,16 @@ struct Parser {
   const char* p;
   const char* end;
   std::string error;
+  size_t depth = 0;   // objects and arrays open at this point; bounded by kMaxDepth
+
+  // Every object or array is one level and one stack frame: more than kMaxDepth of them is refused before
+  // the frame is made, so a body of nothing but brackets cannot run the loop task out of stack.
+  bool enter() {
+    if (depth >= kMaxDepth) { error = "nested too deep"; return false; }
+    ++depth;
+    return true;
+  }
+  void leave() { --depth; }
 
   void ws() {
     while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
@@ -198,6 +208,20 @@ struct Parser {
   }
 
   bool parseObject(toml::Value& out) {
+    if (!enter()) return false;
+    const bool ok = parseObjectBody(out);
+    leave();
+    return ok;
+  }
+
+  bool parseArray(toml::Value& out) {
+    if (!enter()) return false;
+    const bool ok = parseArrayBody(out);
+    leave();
+    return ok;
+  }
+
+  bool parseObjectBody(toml::Value& out) {
     out = toml::Value::table();
     if (!expect('{')) return false;
     ws();
@@ -218,7 +242,7 @@ struct Parser {
     return expect('}');
   }
 
-  bool parseArray(toml::Value& out) {
+  bool parseArrayBody(toml::Value& out) {
     if (!expect('[')) return false;
     ws();
     if (peek(']')) { ++p; out = toml::Value::array(); return true; }
@@ -314,7 +338,7 @@ size_t fromToml(const toml::Value& v, char* out, size_t size) {
 }
 
 bool toToml(const char* data, size_t len, toml::Value& out, std::string& error) {
-  Parser p{data, data + len, {}};
+  Parser p{data, data + len, {}, 0};
   if (!p.parseObject(out)) { error = p.error; return false; }
   p.ws();
   if (p.p != p.end) { error = "trailing garbage"; return false; }

@@ -24,13 +24,20 @@
 
 namespace web::json {
 
+// Deepest nesting of objects and arrays that toToml reads. A configuration file needs four levels (the file,
+// a section, its list of tables, a table's list of values); on the device every level is a stack frame of
+// the loop task, whose stack is 8 KB, and a request body of 8192 bytes could open 8192 brackets. Deeper
+// input is refused with an error, as the TOML reader refuses its own (toml::kMaxDepth).
+constexpr size_t kMaxDepth = 16;
+
 // Serialise `v` to a JSON string in `out[0..size-1]`, NUL-terminated.
 // Returns the number of bytes written (excluding the NUL), or 0 when the
 // result does not fit.
 size_t fromToml(const toml::Value& v, char* out, size_t size);
 
 // Parse a JSON object from `data[0..len-1]` into `out`.
-// Returns false on any parse error; `error` then holds a short description.
+// Returns false on any parse error, nesting deeper than kMaxDepth included; `error` then holds a short
+// description.
 bool toToml(const char* data, size_t len, toml::Value& out, std::string& error);
 
 // Find a top-level string value by `key` in a JSON object. The key may
