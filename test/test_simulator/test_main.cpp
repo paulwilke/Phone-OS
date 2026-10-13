@@ -752,7 +752,10 @@ void test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data
   const std::string before = settingsOf();
   sim::Options options = crawlOptions();
   options.dataDir = data.string();
-  options.workDir = (data.parent_path() / "crawl-work").string();
+  // The crawler adds "-crawl" to the work directory it is given; a directory of that name left by an earlier run
+  // that lost its marker would make the simulator refuse to start, so it is removed first.
+  options.workDir = (data.parent_path() / "phone-os-sim-test-crawl-work").string();
+  std::filesystem::remove_all(options.workDir + "-crawl");
   sim::Crawler crawler(options, "sim/demo/world.txt");
   // Home, the options tile (behind the seven tiles of the first page and three of the second), the language row
   // (third, above switching off), German: the choice is written to the card of that replay.
@@ -760,11 +763,32 @@ void test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data
   path.push_back("select");
   for (const char* key : {"down", "down", "select", "up", "select"}) path.push_back(key);
   std::unique_ptr<sim::Simulator> chosen = crawler.reach(path, "");
+  TEST_ASSERT_NOT_NULL_MESSAGE(chosen.get(), crawler.error().c_str());
   TEST_ASSERT_EQUAL_STRING("de", chosen->translator().language().c_str());
   TEST_ASSERT_TRUE(chosen->card().root() != data);
   std::unique_ptr<sim::Simulator> next = crawler.reach({}, "");
+  TEST_ASSERT_NOT_NULL_MESSAGE(next.get(), crawler.error().c_str());
   TEST_ASSERT_EQUAL_STRING("en", next->translator().language().c_str());
   TEST_ASSERT_EQUAL_STRING(before.c_str(), settingsOf().c_str());
+}
+
+// A simulator that cannot start (here: a work directory that is not the simulator's, as a run that lost its
+// marker leaves one) has no device behind it. The walk stops and names the reason; it does not run the prelude
+// on nothing. Counter-check: without the test of ok() in Crawler::reach the first `advance` of the prelude is a
+// crash (seen on 2026-10-13 with such a directory in the temp folder).
+void test_a_simulator_that_cannot_start_stops_the_crawl_with_the_reason_instead_of_a_crash() {
+  const std::filesystem::path work = scratch("crawl-refused");
+  const std::filesystem::path taken = work.string() + "-crawl";   // what the crawler will use
+  std::filesystem::create_directories(taken / "card");            // not empty, and no marker: not the simulator's
+  sim::Options options = crawlOptions();
+  options.workDir = work.string();
+  sim::Crawler crawler(options, "sim/demo/world.txt");
+  TEST_ASSERT_NULL(crawler.reach({}, "").get());
+  TEST_ASSERT_TRUE_MESSAGE(crawler.error().find("refusing to empty") != std::string::npos, crawler.error().c_str());
+  const sim::Crawl crawl = crawler.run(2, 4);
+  TEST_ASSERT_EQUAL(0u, crawl.nodes.size());
+  TEST_ASSERT_FALSE(crawler.error().empty());
+  TEST_ASSERT_TRUE(std::filesystem::exists(taken / "card"));      // nothing of the directory was touched
 }
 
 void test_the_same_path_leads_to_the_same_screen_in_every_language() {
@@ -856,6 +880,7 @@ int main() {
   RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);
   RUN_TEST(test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through);
   RUN_TEST(test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data_directory);
+  RUN_TEST(test_a_simulator_that_cannot_start_stops_the_crawl_with_the_reason_instead_of_a_crash);
   RUN_TEST(test_the_same_path_leads_to_the_same_screen_in_every_language);
   RUN_TEST(test_shot_writes_a_picture_into_the_directory_it_was_given);
   RUN_TEST(test_every_scenario_runs_to_its_end_on_its_own_card);

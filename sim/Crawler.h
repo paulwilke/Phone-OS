@@ -74,6 +74,7 @@ public:
     std::map<std::string, size_t> perScreenCount;
     {
       std::unique_ptr<Simulator> start = reach({}, "");
+      if (!start) return crawl;   // the device did not start: error() says why, and there is nothing to walk
       crawl.nodes.push_back({0, screenOf(*start), 0, {}});
       seen[{start->panel().shown().crc(), crawl.nodes[0].screen}] = 0;
       perScreenCount[crawl.nodes[0].screen] = 1;
@@ -89,6 +90,7 @@ public:
         std::vector<std::string> path = crawl.nodes[static_cast<size_t>(from)].path;
         path.push_back(key);
         std::unique_ptr<Simulator> sim = reach(path, "");
+        if (!sim) return crawl;
         const std::pair<uint32_t, std::string> identity{sim->panel().shown().crc(), screenOf(*sim)};
         auto known = seen.find(identity);
         if (known == seen.end()) {
@@ -118,11 +120,18 @@ public:
     return true;
   }
 
-  // A new device in the state the path leads to, in `language` (empty: the card's own). The prelude
+  // A new device in the state the path leads to, in `language` (empty: the card's own), or null when the
+  // simulator could not start (a work directory that is not its own, a card that cannot be copied): error()
+  // then says why. A simulator that did not start has no device behind it, and asking it to run is a crash,
+  // not an error message (seen on 2026-10-13 with a stale work directory in the temp folder). The prelude
   // is played after the language is chosen, so the entries it makes are worded in it too.
   std::unique_ptr<Simulator> reach(const std::vector<std::string>& path, const std::string& language) {
     sink_.str("");
     auto sim = std::make_unique<Simulator>(options_, sink_);
+    if (!sim->ok()) {
+      error_ = sim->error();
+      return nullptr;
+    }
     if (!language.empty()) sim->execute("language " + language);
     if (!prelude_.empty()) sim->runScript(prelude_);
     for (const std::string& key : path) sim->execute("key " + key);
@@ -153,10 +162,14 @@ public:
     return out.str();
   }
 
+  // Why the last reach() or run() stopped short; empty while every start worked.
+  const std::string& error() const { return error_; }
+
 private:
   Options options_;
   std::string prelude_;
   std::ostringstream sink_;
+  std::string error_;
 };
 
 }  // namespace sim
