@@ -23,7 +23,7 @@ Checks every Markdown file and every source file:
   * the old name of the project (PhonePlus, until 4.1.1) appears only where it must stay: the changelog and the
     release notes before 4.1.2, the upgrade from 3.2 (whose firmware had that name), the cards of 3.2 that the tests
     read, the test that the old header is refused, and the names earlier versions wrote and this one reads (the
-    format of the 4.0 backup bundle, the mark of the simulator's work directory) (OLD_NAME_KEPT, OLD_NAME_READ);
+    mark of the simulator's work directory) (OLD_NAME_KEPT, OLD_NAME_READ);
   * the text is English: no umlauts or typical German words. Files under `lang/`, under
     `docs/<language-code>/` (translated documentation) and files that carry the marker
     `allow-non-english` in their first lines (test data, examples of other languages) are exempt.
@@ -53,9 +53,10 @@ OLD_NAME_KEPT = {
     "test/test_http/test_main.cpp": "the header of the earlier page, which the device must refuse",
 }
 OLD_NAME_KEPT_DIRS = ("test/data/card-3.2/",)   # a card as 3.2 wrote it
-# Names that earlier versions wrote and this one still reads: the format inside every backup bundle of 4.0, and the
-# mark of a simulator's work directory, so that a directory made before 4.1.2 is still emptied.
-OLD_NAME_READ = ("phoneplus-backup-2", ".phoneplus-sim")
+# Names that earlier versions wrote and this one still reads: the mark of a simulator's work directory, so that a
+# directory made before 4.1.2 is still emptied. (The format name of the backup bundle of 4.0 was one until 4.2.3,
+# decision D-30; the test that refuses such a bundle spells the name apart.)
+OLD_NAME_READ = (".phoneplus-sim",)
 TICK = re.compile(r"`([A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+\.[A-Za-z0-9]+)`")
 
 

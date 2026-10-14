@@ -1094,7 +1094,7 @@ function init(state) {{
         '      <div style="margin-top:1rem">',
         '        <label>',
         '          <span data-t="web.backup.import"></span>',
-        '          <input type="file" id="backup-import-input" accept=".zip,.json"',
+        '          <input type="file" id="backup-import-input" accept=".zip"',
         '                 style="display:block;margin-top:.3rem">',
         "        </label>",
         '        <button id="backup-restore" class="btn-secondary action-btn"',

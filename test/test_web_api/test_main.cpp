@@ -668,12 +668,11 @@ void test_restore_rejects_foreign_files_and_writes_nothing() {
   Fixture f;
   TEST_ASSERT_EQUAL(422,
     f.call("POST", "/api/restore", "{\"format\":\"other\"}", kAuth));
-  TEST_ASSERT_EQUAL(422,
-    f.call("POST", "/api/restore",
-           "{\"format\":\"phoneplus-backup-2\",\"settings.toml\":\"[kaputt\"}", kAuth));
   const std::string good = "[child]\nname = \"Alex\"\n";
   const struct { const char* why; std::string archive; } bad[] = {
       {"not a ZIP file", "hello, not an archive"},
+      {"the JSON bundle of 4.0, which 4.2.3 no longer reads (D-30)",
+       "{\"format\":\"phone" "plus-backup-2\",\"settings.toml\":\"[child]\\nname = \\\"Alex\\\"\\n\"}"},
       {"the secrets file", zip::write({{"config/settings.toml", good}, {"config/secrets.toml", kSecrets}}, 0)},
       {"another file", zip::write({{"config/._settings.toml", good}}, 0)},
       {"a file twice", zip::write({{"config/settings.toml", good}, {"config/settings.toml", good}}, 0)},
@@ -695,14 +694,6 @@ void test_restore_rejects_foreign_files_and_writes_nothing() {
   TEST_ASSERT_EQUAL(422, f.callBytes("POST", "/api/restore", cut, kAuth));
   TEST_ASSERT_TRUE(f.has("cut off"));
   TEST_ASSERT_EQUAL(0, f.store.writes);
-}
-
-// A backup of 4.0 (the JSON bundle) is still restored in 4.1, once, so that nobody's backup is lost.
-void test_a_backup_of_4_0_is_still_restored() {
-  Fixture f;
-  const std::string bundle = "{\"format\":\"phoneplus-backup-2\",\"settings.toml\":\"[child]\\nname = \\\"Alex\\\"\\n\",\"contacts.toml\":\"\"}";
-  TEST_ASSERT_EQUAL(200, f.call("POST", "/api/restore", bundle.c_str(), kAuth));
-  TEST_ASSERT_EQUAL_STRING("[child]\nname = \"Alex\"\n", f.store.files["/config/settings.toml"].c_str());
 }
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -895,7 +886,6 @@ int main() {
   RUN_TEST(test_backup_has_settings_and_contacts_but_no_secrets);
   RUN_TEST(test_the_backup_is_a_zip_archive_of_the_files_as_they_are);
   RUN_TEST(test_backup_roundtrip);
-  RUN_TEST(test_a_backup_of_4_0_is_still_restored);
   RUN_TEST(test_restore_rejects_foreign_files_and_writes_nothing);
   RUN_TEST(test_restart_and_wifi_off_reach_the_host);
   RUN_TEST(test_every_authenticated_request_restarts_the_idle_time);

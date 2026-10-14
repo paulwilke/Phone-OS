@@ -275,54 +275,6 @@ struct Parser {
 
 };
 
-// ---------------------------------------------------------------------------
-// getString helpers
-// ---------------------------------------------------------------------------
-
-// Skip JSON whitespace.
-static const char* jsws(const char* p, const char* end) {
-  while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) ++p;
-  return p;
-}
-
-// Read a JSON string starting at *p (which must point at '"').
-// Returns the length of the string in `out`, or -1 on error.
-static int readJsonString(const char* p, const char* end, char* out, size_t outSize) {
-  if (p >= end || *p != '"') return -1;
-  ++p;
-  size_t n = 0;
-  while (p < end && *p != '"') {
-    if (*p == '\\') {
-      if (++p >= end) return -1;
-      char c = 0;
-      switch (*p) {
-        case '"': c = '"'; break; case '\\': c = '\\'; break;
-        case '/': c = '/'; break; case 'n':  c = '\n'; break;
-        case 'r': c = '\r'; break; case 't':  c = '\t'; break;
-        case 'b': c = '\b'; break; case 'f':  c = '\f'; break;
-        case 'u': {
-          if (p + 4 >= end) return -1;
-          char hex[5] = {p[1], p[2], p[3], p[4], 0};
-          char* ep = nullptr;
-          long cp = strtol(hex, &ep, 16);
-          if (ep != hex + 4 || cp > 0x7F) return -1;  // only ASCII for simplicity
-          c = (char)cp;
-          p += 4;
-          break;
-        }
-        default: return -1;
-      }
-      if (n + 1 < outSize) out[n++] = c;
-    } else {
-      if (n + 1 < outSize) out[n++] = (char)*p;
-    }
-    ++p;
-  }
-  if (p >= end) return -1;
-  out[n] = '\0';
-  return (int)n;
-}
-
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -343,63 +295,6 @@ bool toToml(const char* data, size_t len, toml::Value& out, std::string& error) 
   p.ws();
   if (p.p != p.end) { error = "trailing garbage"; return false; }
   return true;
-}
-
-bool getString(const char* json, size_t len, const char* key, char* out, size_t outSize) {
-  const char* p = json;
-  const char* end = json + len;
-  p = jsws(p, end);
-  if (p >= end || *p != '{') return false;
-  ++p;
-
-  const size_t klen = strlen(key);
-
-  while (true) {
-    p = jsws(p, end);
-    if (p >= end) return false;
-    if (*p == '}') return false;
-    if (*p == ',') { ++p; p = jsws(p, end); }
-    if (p >= end || *p != '"') return false;
-
-    // Read the JSON key.
-    char kbuf[128];
-    int kn = readJsonString(p, end, kbuf, sizeof(kbuf));
-    if (kn < 0) return false;
-    p += 2 + (size_t)kn;  // skip '...'
-
-    // Skip colon.
-    p = jsws(p, end);
-    if (p >= end || *p != ':') return false;
-    ++p;
-    p = jsws(p, end);
-
-    if ((size_t)kn == klen && memcmp(kbuf, key, klen) == 0) {
-      // Found the key — read its string value.
-      if (p >= end || *p != '"') return false;
-      return readJsonString(p, end, out, outSize) >= 0;
-    }
-
-    // Skip the value to advance to the next pair.
-    // Simple skip: count braces/brackets, handle strings.
-    int depth = 0;
-    bool inStr = false;
-    while (p < end) {
-      char c = *p++;
-      if (inStr) {
-        if (c == '\\') { if (p < end) ++p; }
-        else if (c == '"') inStr = false;
-      } else if (c == '"') {
-        inStr = true;
-      } else if (c == '{' || c == '[') {
-        ++depth;
-      } else if (c == '}' || c == ']') {
-        if (depth == 0) { --p; break; }  // end of object
-        --depth;
-      } else if (c == ',' && depth == 0) {
-        --p; break;
-      }
-    }
-  }
 }
 
 }  // namespace web::json
