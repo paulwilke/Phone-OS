@@ -2,6 +2,15 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.4
+
+What the night of 2026-10-13 on the battery showed, acted on (decisions D-31 to D-33). Host-tested and compiled; none of it is verified on the device yet. The owner flashes it and goes through the test protocol.
+
+- **The loop no longer reads the battery chips every pass** (D-31). The call state was asked through the whole core state, which read the fuel gauge and the charger over I2C five times, 52 ms of every 56 ms pass with nothing to do: the 105 mA of the night. The call state is asked alone, and one reading of the chips serves every question for a second. To look for: the loop line's "step" under 5 ms.
+- **The fuel gauge keeps what it learned** (D-32). After the first full discharge it reported a learned full charge of 1372 mAh, and the firmware wrote 1500 over it at every start. The configured size (`[battery] capacity_mah`) is written once, when the gauge's design capacity differs; the learned full charge is the gauge's own, and the start line names it.
+- **The loop line says what ends each sleep** (D-33): how often the processor slept, whether the timer or a line woke it, and which of the three wake lines (keyboard, touch, the modem's ring line) was low before the sleep. Sleep was allowed in every pass of the night and happened 1 % of the time; a line held low is the suspect, and this names it. No change of behaviour.
+- **Seen on the device on 2026-10-14** (4.2.2): the switch-off at 3291 mV (D-5), the battery percentage from the voltage with two lines in a night (D-24), the loop line (D-25), 12.8 hours on the battery at about 105 mA.
+
 ## 4.2.3
 
 What a review of the code on 2026-10-13 found, fixed on the host; none of it is verified on the device yet. Nothing changes for the child; the parents' page and the tools behave the same unless a sentence below says otherwise.
