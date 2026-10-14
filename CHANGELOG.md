@@ -2,6 +2,19 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.3
+
+What a review of the code on 2026-10-13 found, fixed on the host; none of it is verified on the device yet. Nothing changes for the child; the parents' page and the tools behave the same unless a sentence below says otherwise.
+
+- **The parents' page keeps the password for the tab only** (D-26). It was kept in the browser's `localStorage`, for good and under an address every ESP32 access point shares; now it dies with the tab. A reload in the same tab does not ask again, closing the tab does.
+- **A configuration file is the same file in any spelling.** The card is FAT, but the page compared names exactly: `/CONFIG/SECRETS.TOML` could be deleted and `/config/Settings.toml` written unchecked through the raw editor. Both meet the rules of the lowercase name now. The rule that a SIM PIN is four to eight digits is the loader's, so it holds for a file written over the USB console or on the card in a computer too.
+- **The page's JSON reader refuses nesting deeper than 16 levels** instead of running the device out of stack (a restart, with the web password). A fuzz suite covers it and the ZIP reader (`test_web_fuzz`).
+- **The JSON bundle of 4.0 is no longer restored** (D-30): a restore takes the ZIP archive and nothing else.
+- **A password that does not fit its buffer locks the page with a message** instead of being compared by its first 95 characters; a `%` in a query takes exactly two hex digits.
+- **Written down, not changed** (D-28, D-29): the USB console asks for no password (the user's guide says so; a restriction is open point 33), and the access point's random password stays eight digits.
+- **The licence names the owner** (D-27): "Paul Wilke and the Phone OS contributors". The Apache-2.0 text that the operator list requires is stored, and SensorLib is pinned to 0.5.0.
+- **The simulator's crawl stops with the reason** when a device cannot start, instead of a segmentation fault (seen with a stale work directory in the temp folder; CI never saw it).
+
 ## 4.2.2
 
 Fixes and measurements from the night of 2026-10-13. Host-tested and compiled; none of it is verified on the device yet (the open points named below).
