@@ -309,3 +309,14 @@ Decision: `sessionStorage`.
 Reason: A reload is common while editing, closing the tab is the end of the visit; nothing of the password stays on the phone afterwards.
 Consequences: `scripts/gen_web.py` and the generated `web/index.html`; `test/test_web_page/test.mjs` (f2) pins that the credential is in `sessionStorage` and that the script never names `localStorage` with it. The page's language choice (`pp_lang`) stays in `localStorage`, it is not a secret.
 Verified: host-tested; not verified on the device
+
+## D-27: The licence names the owner as the copyright holder
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: `LICENSE` said "Copyright (c) 2026 Phone OS contributors". Most commits are by an agent under a noreply address and the rest by the owner; "contributors" without a name is nobody a third party can ask, and the review of 2026-10-13 pointed it out.
+Options: Leave it. Name the owner. Name the owner and the contributors.
+Decision: "Copyright (c) 2026 Paul Wilke and the Phone OS contributors"; the MIT text is unchanged.
+Reason: Somebody is named who can answer for the work, and whoever contributes later is covered by the same line.
+Consequences: `LICENSE`, `THIRD_PARTY.md`. In the same change the Apache-2.0 text that the operator list requires is stored (`assets/licenses/LICENSE-Apache-2.0.txt`) and SensorLib is pinned to 0.5.0, so that nothing the build fetches changes its licence unread.
+Verified: not applicable

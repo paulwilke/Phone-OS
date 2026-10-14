@@ -66,6 +66,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to work on a change.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The display fonts are the exception: the letters are Adobe's Helvetica bitmap fonts under their own permission notice ([assets/fonts/LICENSE-Adobe-Helvetica.txt](assets/fonts/LICENSE-Adobe-Helvetica.txt), listed in [THIRD_PARTY.md](THIRD_PARTY.md)):
+MIT — see [LICENSE](LICENSE). Two things in the repository are under other terms, both listed in [THIRD_PARTY.md](THIRD_PARTY.md): the operator list of `src/drivers/ApnTable.cpp` is data from the Android Open Source Project under Apache-2.0 ([assets/licenses/LICENSE-Apache-2.0.txt](assets/licenses/LICENSE-Apache-2.0.txt)), and the letters of the display fonts are Adobe's Helvetica bitmap fonts under their own permission notice ([assets/fonts/LICENSE-Adobe-Helvetica.txt](assets/fonts/LICENSE-Adobe-Helvetica.txt)):
 
 Copyright 1984-1989, 1994 Adobe Systems Incorporated. Copyright 1988, 1994 Digital Equipment Corporation. Helvetica is a trademark of Linotype-Hell AG and/or its subsidiaries.
