@@ -1,6 +1,6 @@
 # Web interface
 
-Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `test/test_web_api/`, `test/test_web_page/`. A small HTTP/1.1 server that the parent opens in a browser over the device's Wi-Fi. The interface lets the parent read the device state, edit every configuration file, browse the card, view the log, and export or restore a backup. The page is a single HTML file (`web/index.html`) that the server answers; language switching is live.
+Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `test/test_web_fuzz/`, `test/test_web_api/`, `test/test_web_page/`. A small HTTP/1.1 server that the parent opens in a browser over the device's Wi-Fi. The interface lets the parent read the device state, edit every configuration file, browse the card, view the log, and export or restore a backup. The page is a single HTML file (`web/index.html`) that the server answers; language switching is live.
 
 ## HTTP layer
 
@@ -12,6 +12,8 @@ Code: `src/web/`; tests in `test/test_web_server/`, `test/test_http_fuzz/`, `tes
 | `kMaxBody` | 8192 bytes | Maximum body |
 
 `Parser::feed()` takes raw bytes in any chunk size and returns one of four states: `Head` (still reading headers), `Body` (reading body), `Done` (complete), `Error`. An error sets a status code — 400 (garbage), 411 (no Content-Length), 413 (body too large), 414 (URI too long), 431 (headers too large), 501 (chunked encoding). Once the parser reaches `Done` or `Error` it ignores further input. The fuzz suite (`test/test_http_fuzz/`) feeds random bytes and truncated valid requests under AddressSanitizer to check that no input causes a crash or an out-of-bounds read.
+
+**The two readers of a request body** are bounded the same way. `web::json::toToml` (`src/web/Json.{h,cpp}`, behind every `PUT` of a configuration file) reads objects and arrays to at most `kMaxDepth` (16) levels and refuses deeper input with "nested too deep": on the device every level is a stack frame of the loop task (8 KB of stack), and a body of 8192 bytes could open 8192 brackets, which was a restart until 4.2.3. `zip::read` (`src/web/Zip.{h,cpp}`, behind `/api/restore`) checks every length against the body before it reads. `test/test_web_fuzz/` feeds both random bytes, random JSON characters, every prefix and every damaged byte of valid inputs, lengths that point past the end and brackets 8000 deep; run it under AddressSanitizer with `pio test -e native-asan -f test_web_fuzz`.
 
 `formatHead()` writes the response status line and headers into a caller-supplied buffer; the body is a separate pointer so the firmware can point directly at flash.
 
@@ -86,7 +88,7 @@ What only the device can show: whether the log and contacts tabs load now, how m
 
 ### Security model
 
-1. **Password required.** The web password is read from `/config/secrets.toml` on every request (no caching): a parent who changes the password locks out any session that was using the old one immediately. A password shorter than four characters (`kMinWebPassword`) is not accepted as a credential — the API stays locked until a long-enough password is stored. Without any stored password the API is permanently locked.
+1. **Password required.** The web password is read from `/config/secrets.toml` on every request (no caching): a parent who changes the password locks out any session that was using the old one immediately. A password shorter than four characters (`kMinWebPassword`) is not accepted as a credential — the API stays locked until a long-enough password is stored. Without any stored password the API is permanently locked. A stored password longer than `kMaxWebPassword` (100, the buffer it is compared in) locks the API with a message too, instead of being compared by its first bytes as it was until 4.2.3; the same holds for the password a request carries (`http::basicPassword` refuses one that does not fit).
 
 2. **Lockout after repeated failures.** Five consecutive wrong passwords (`kMaxFailures`) lock the API for sixty seconds (`kLockSeconds`). The counter resets on a correct password. The lock is one for everybody, not per client: whoever is on the same network can keep the parents out for a minute at a time, and a server with one connection on a device has no better place to count.
 

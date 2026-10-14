@@ -38,6 +38,9 @@ public:
   // Minimum web password length (four characters, owner's decision 2026-10-01;
   // see docs/web-interface.md for the security trade-off).
   static constexpr size_t kMinWebPassword = 4;
+  // Longest web password the API compares. It is a buffer size, not a rule of the file: a stored password
+  // longer than this locks the API with a message instead of being compared by its first bytes.
+  static constexpr size_t kMaxWebPassword = 100;
   // Maximum bytes per config file, also for each file in a backup.
   static constexpr size_t kMaxConfigFile = 4096;
   // Maximum response body size.

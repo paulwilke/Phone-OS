@@ -536,6 +536,26 @@ void test_delete_a_file() {
   TEST_ASSERT_EQUAL(404, f.del("/api/file?path=/config/old.txt"));
 }
 
+// A percent sign in a query takes exactly two hex digits; strtol took "% 1", "%+1" and "%-1" as well.
+void test_a_query_value_takes_two_hex_digits_after_a_percent_sign() {
+  Fixture f;
+  TEST_ASSERT_EQUAL(200, f.get("/api/file?path=%2Fconfig%2fsecrets.toml"));
+  for (const char* bad : {"%2", "%+1", "%-1", "% 1", "%G1", "%"}) {
+    TEST_ASSERT_EQUAL_MESSAGE(400, f.get((std::string("/api/file?path=/config/secrets.toml") + bad).c_str()), bad);
+  }
+}
+
+// A stored password longer than the buffer locks the page with a message instead of being compared by its
+// first bytes (a 200-character password once matched its first 95).
+void test_a_stored_password_that_does_not_fit_locks_the_page_and_says_so() {
+  Fixture f;
+  f.store.files["/config/secrets.toml"] = "web_password = \"" + std::string(WebApi::kMaxWebPassword + 1, 'p') + "\"\n";
+  TEST_ASSERT_EQUAL(403, f.get("/api/state"));
+  TEST_ASSERT_TRUE(f.has("usable"));
+  f.store.files["/config/secrets.toml"] = "web_password = \"test-password-1\"\n";
+  TEST_ASSERT_EQUAL(200, f.get("/api/state"));
+}
+
 // Rule 5 counter-check: secrets.toml cannot be deleted, in any spelling: the card is FAT and
 // /CONFIG/SECRETS.TOML is the same file (an exact comparison let it through, found 2026-10-13).
 void test_secrets_toml_cannot_be_deleted_here() {
@@ -866,6 +886,8 @@ int main() {
   RUN_TEST(test_a_truncated_file_is_marked_so_the_editor_cannot_save_it_back);
   RUN_TEST(test_logs_are_read_from_the_end);
   RUN_TEST(test_delete_a_file);
+  RUN_TEST(test_a_query_value_takes_two_hex_digits_after_a_percent_sign);
+  RUN_TEST(test_a_stored_password_that_does_not_fit_locks_the_page_and_says_so);
   RUN_TEST(test_secrets_toml_cannot_be_deleted_here);
   RUN_TEST(test_raw_config_files_are_validated_in_any_spelling_of_their_name);
   RUN_TEST(test_logs_may_be_deleted);
