@@ -78,9 +78,6 @@ private:
   void deleteFile(const http::Request& req, http::Response& res);
   void backup(http::Response& res);
   void restore(const http::Request& req, http::Response& res);
-  // The JSON bundle of 4.0 ({"format":"phoneplus-backup-2",...}), still read in 4.1 so that a backup made
-  // with 4.0 can be restored once; 4.1 writes a ZIP archive.
-  void restoreJson(const http::Request& req, http::Response& res);
 
   // Validates a config file before writing. Returns false and sets `why` on
   // hard errors; soft problems accumulate in `warnings`.
@@ -103,8 +100,6 @@ private:
   bool locked_ = false;
 
   char resp_[kResponseMax];
-  char scratch_[kMaxConfigFile + 1];
-  char scratch2_[kMaxConfigFile + 1];
   // The backup archive while it is being sent: two files of at most kMaxConfigFile and about 250 bytes of
   // ZIP, more than resp_ holds.
   std::string archive_;

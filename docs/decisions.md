@@ -342,3 +342,14 @@ Decision: Leave it.
 Reason: The access point runs for minutes while somebody sets the device up and switches it off; the page behind it asks for its own password; a parent who wants more sets one of up to 63 characters in `secrets.toml`. The owner judges the risk as small next to the cost of typing.
 Consequences: No code changes; wifi-controller.md says why.
 Verified: not applicable
+
+## D-30: The JSON bundle of 4.0 is no longer restored
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: 4.0 exported a JSON bundle; 4.1 made the backup a ZIP archive and kept reading the bundle "so that a backup of 4.0 can be restored once". The review of 2026-10-13 found that this path read two buffers that nothing had set when a key of the bundle was missing, and that nothing else in the code uses the JSON string helper it needed.
+Options: Fix the buffers and keep the path. Remove the path.
+Decision: Remove it. A restore sends a ZIP archive and nothing else; the page's file choice offers `.zip` only.
+Reason: The owner's words: a leftover; the backup is the ZIP archive of the whole files now. Nobody is known to hold a bundle of 4.0, and a bundle that somebody holds is a text file whose two values can be put into the editor by hand.
+Consequences: `WebApi::restoreJson`, its two buffers and `web::json::getString` are gone; a body that starts with `{` is refused as "not a ZIP file" like any other text (`test_web_api`); the format name of the bundle is no longer a name the code reads (`scripts/check_docs.py`, `test_check_docs`).
+Verified: host-tested

@@ -1072,7 +1072,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     'the restore sends the file as it is, with the header, to /api/restore');
   assert(!pg.calls.some((c) => c.path === '/api/backup' && c.method === 'POST'), 'nothing is posted to /api/backup');
   assert(pg.els['backup-status'].textContent === 'Restored.', 'the page says Restored.: ' + pg.els['backup-status'].textContent);
-  assert(/accept="\.zip,\.json"/.test(html), 'the file choice takes the archive and a backup of 4.0');
+  assert(/accept="\.zip"/.test(html), 'the file choice takes the archive, and nothing else (the bundle of 4.0 is no longer read, D-30)');
 }
 
 // ---------- summary ----------

@@ -611,7 +611,6 @@ void WebApi::backup(http::Response& res) {
 // before anything is written, and each written through the card's safe write.
 void WebApi::restore(const http::Request& req, http::Response& res) {
   if (req.contentLength == 0) return jsonError(res, 400, "Empty body");
-  if (req.body[0] == '{') return restoreJson(req, res);
 
   std::vector<zip::Entry> entries;
   std::string why;
@@ -640,30 +639,6 @@ void WebApi::restore(const http::Request& req, http::Response& res) {
   }
   for (size_t i = 0; i < 2; ++i)
     if (files[i] && !commit(paths[i], files[i]->data.data(), files[i]->data.size(), res, warnings)) return;
-}
-
-void WebApi::restoreJson(const http::Request& req, http::Response& res) {
-
-  char format[48];
-  if (!web::json::getString(req.body, req.contentLength, "format", format, sizeof(format)) ||
-      strcmp(format, "phoneplus-backup-2") != 0)
-    return jsonError(res, 422, "Not a backup of this firmware");
-
-  web::json::getString(req.body, req.contentLength, "settings.toml", scratch_,  sizeof(scratch_));
-  web::json::getString(req.body, req.contentLength, "contacts.toml", scratch2_, sizeof(scratch2_));
-
-  const size_t slen = strlen(scratch_);
-  const size_t clen = strlen(scratch2_);
-  if (slen > kMaxConfigFile || clen > kMaxConfigFile) return jsonError(res, 413, "File too large");
-
-  std::string why, warnings, w2;
-  if (slen > 0 && !checkConfigText(kSettingsPath, scratch_,  slen, why, warnings))
-    return jsonError(res, 422, why.c_str());
-  if (clen > 0 && !checkConfigText(kContactsPath, scratch2_, clen, why, w2))
-    return jsonError(res, 422, why.c_str());
-  if (slen > 0 && !commit(kSettingsPath, scratch_,  slen, res, warnings)) return;
-  if (clen > 0) commit(kContactsPath, scratch2_, clen, res, warnings);
-  else ok(res, warnings.c_str());
 }
 
 // ---------------------------------------------------------------------------
