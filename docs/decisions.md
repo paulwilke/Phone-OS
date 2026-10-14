@@ -366,12 +366,12 @@ Consequences: Built in 4.2.4 ([device-power.md](device-power.md)); the loop line
 Verified: host-tested (`test_board_power`: five questions cost one reading); not verified on the device
 
 ## D-32: The gauge's learned full charge is left to the gauge
-Date: 2026-10-14   Status: open
-Decided by: agent (not confirmed by owner)
+Date: 2026-10-14   Status: decided
+Decided by: owner (2026-10-14: the size is entered once, the gauge learns the rest, "we only interfere")
 
 Context: After the first full discharge the fuel gauge reports a learned full charge of 1372 mAh next to the design capacity of 1500 mAh, and every start logs "wrote 1500 mAh to the fuel gauge but it reports design 1500 mAh, full charge 1372 mAh": the rule of D-14 writes on a difference, the gauge learns the difference back, and the write repeats at every start. The gauge's memory wears with every write, which the rule was meant to prevent.
 Options: Leave it. Write the design capacity only and compare only it; show the learned full charge in the diagnosis. Write both only while the cycle count is 0.
-Decision: None yet. Recommendation: the second.
-Reason: The learned value is the gauge doing its job; the night showed about 1340 mAh from 92 % to the switch-off, near what it learned.
-Consequences: If confirmed, the start line says "design 1500 mAh, nothing to write; the gauge has learned 1372 mAh" and the diagnosis shows both. Open point 35.
-Verified: not verified
+Decision: The second: the design capacity decides whether anything is written; when it is written, the full charge is seeded with the same size, and afterwards it is the gauge's alone.
+Reason: The learned value is the gauge doing its job; the night showed about 1340 mAh from 92 % to the switch-off, near what it learned. Whether the cell is a 1500 or a 1400 mAh one, the owner enters once in `[battery] capacity_mah`.
+Consequences: Built in 4.2.4: the start line says "nothing to write; it has learned a full charge of 1372 mAh", the diagnosis shows both as before (`test_fuel_gauge`).
+Verified: host-tested; not verified on the device

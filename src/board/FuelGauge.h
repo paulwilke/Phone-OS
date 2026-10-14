@@ -55,7 +55,7 @@ private:
 enum class CapacityOutcome : uint8_t {
   GaugeAbsent,      // no answer: nothing to check
   InvalidSetting,   // the configured capacity is outside what a battery of this kind can have: nothing written
-  AlreadyRight,     // both capacities equal the configured one: nothing written
+  AlreadyRight,     // the design capacity equals the configured one: nothing written; the full charge is the gauge's own
   Written,          // they differed, were written and read back as configured
   WriteRefused,     // the chip refused the write
   ReadBackDiffers,  // the write was accepted but the chip still reports something else

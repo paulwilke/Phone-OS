@@ -10,7 +10,7 @@ Things that went wrong on the real device, why, and the rule that keeps them fro
 
 **Driver rule.**
 
-1. At start, read the gauge's design and full-charge capacity. When they differ from the configured battery capacity (`[battery] capacity_mah`), write the configured value to both and read it back; write only on a difference, so the chip's memory is not worn by every start.
+1. At start, read the gauge's design and full-charge capacity. When the design capacity differs from the configured battery capacity (`[battery] capacity_mah`), write the configured value to both and read it back; write only on that difference, so the chip's memory is not worn by every start. The full-charge capacity is left to the gauge once the design is right: it learns it from a discharge (1372 mAh after the night of 2026-10-13), and writing the setting over it at every start undid the learning (decision D-32).
 2. Never show a percentage the voltage contradicts: a gauge that says "less than 70 %" while the cell is above 4.1 V and the charger reports the charge as done is wrong, and the interface must show the state it can trust (the charger's "full") instead of the number.
 3. A diagnostic command reads both chips without writing (gauge: voltage, remaining, full-charge and design capacity, cycle count, state of charge; charger: all registers, input current limit, charge state, battery voltage) so that nobody has to flash a special program to find out.
 
@@ -30,7 +30,7 @@ Outgoing calls hung the modem two seconds after dialling when the IMS was not re
 
 **What it means.** The 105 mA are the processor: the modem's sleep saves what it should, but the loop never rests, because `Runtime::followCalls` builds the core's whole state every pass, and that state reads the fuel gauge and the charger over I2C at 100 kHz five times (about thirty transactions, the 52 ms); and a light sleep that was allowed and lasted 1 % of the time ends at once, which points at a wake line that is held low (the keyboard's, the touch chip's or the modem's ring line). The gauge takes this cell for empty at about 3.6 V, which is why D-24 exists, and it has now learned a full charge from a real discharge.
 
-**Driver rule.** Open until the owner decides: D-31 (the state is not built every pass, a reading is kept for a second) and D-32 (the learned full charge is left to the gauge). **Owner's check:** the loop line after 4.2.4 says the step costs a few milliseconds and "asleep" is most of the half hour; the start line no longer writes 1500 mAh over 1372.
+**Driver rule.** D-31: the state is not built every pass, and a reading of the battery chips is kept for a second. D-32: the learned full charge is left to the gauge. D-33: the sleep is measured (which line was low before it, what ended it). All three in 4.2.4. **Owner's check:** the loop line after 4.2.4 says the step costs a few milliseconds and what ends the sleep; the start line says "nothing to write; it has learned a full charge of ... mAh".
 
 ## Smaller facts that cost time
 
