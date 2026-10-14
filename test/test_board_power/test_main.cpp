@@ -5,6 +5,7 @@
 #include <unity.h>
 
 #include <BoardPowerRig.h>
+#include <fakes/FakeMillis.h>
 
 using namespace board;
 
@@ -207,6 +208,58 @@ void test_a_missing_gauge_gives_unknown_battery_and_leaves_the_charger_alone() {
   TEST_ASSERT_EQUAL(0, r.writer.calls());
 }
 
+// The core's state asks five questions in one pass (percentage, voltage, minutes, charge state, cable), and each
+// was a reading of the gauge and the charger over I2C: 52 ms of every pass in the night of 2026-10-13 (D-31).
+// With a clock, one reading serves every question for a second; the next second reads again.
+void test_with_a_clock_one_reading_serves_every_question_for_a_second() {
+  BoardPowerRig r;
+  FakeMillis millis;
+  r.impl.setClock(millis);
+  millis.setTo(5000);
+  const size_t before = r.bus.transactions().size();
+  r.impl.batteryPercent();
+  const size_t oneReading = r.bus.transactions().size() - before;
+  TEST_ASSERT_TRUE(oneReading > 0);
+  r.impl.batteryMillivolts();
+  r.impl.batteryMinutesRemaining();
+  r.impl.chargeState();
+  r.impl.externalPower();
+  TEST_ASSERT_EQUAL(oneReading, r.bus.transactions().size() - before);   // nothing more was read
+  millis.advance(BoardPower::kReadingTtlMs - 1);
+  r.impl.batteryPercent();
+  TEST_ASSERT_EQUAL(oneReading, r.bus.transactions().size() - before);
+  millis.advance(1);
+  r.impl.batteryPercent();
+  TEST_ASSERT_EQUAL(2 * oneReading, r.bus.transactions().size() - before);  // a second later: read again
+  // A change on the chips is seen at the next reading, not before.
+  r.scriptGauge(3600, 40, 1500, 1500);
+  TEST_ASSERT_EQUAL(3900, r.impl.batteryMillivolts());
+  millis.advance(BoardPower::kReadingTtlMs);
+  TEST_ASSERT_EQUAL(3600, r.impl.batteryMillivolts());
+}
+
+void test_without_a_clock_every_question_reads_the_chips() {
+  BoardPowerRig r;
+  const size_t before = r.bus.transactions().size();
+  r.impl.batteryPercent();
+  const size_t oneReading = r.bus.transactions().size() - before;
+  r.impl.externalPower();
+  TEST_ASSERT_TRUE(r.bus.transactions().size() - before > oneReading);
+}
+
+void test_a_reading_that_was_kept_is_replaced_after_a_second_and_the_wrap_of_the_counter_is_harmless() {
+  BoardPowerRig r;
+  FakeMillis millis;
+  r.impl.setClock(millis);
+  millis.setTo(0xFFFFFFF0u);
+  r.scriptGauge(3900, 80, 1500, 1500);
+  TEST_ASSERT_EQUAL(3900, r.impl.batteryMillivolts());
+  r.scriptGauge(3700, 60, 1500, 1500);
+  TEST_ASSERT_EQUAL(3900, r.impl.batteryMillivolts());     // kept
+  millis.advance(BoardPower::kReadingTtlMs);                // across the wrap
+  TEST_ASSERT_EQUAL(3700, r.impl.batteryMillivolts());     // read again
+}
+
 void test_start_writes_the_capacity_once_and_logs_one_line_about_it() {
   BoardPowerRig r(false);
   r.scriptMeasured();
@@ -319,6 +372,9 @@ int main(int, char**) {
   RUN_TEST(test_no_charger_says_so_once_and_reports_unknown);
   RUN_TEST(test_a_charger_that_appears_later_is_found);
   RUN_TEST(test_a_missing_gauge_gives_unknown_battery_and_leaves_the_charger_alone);
+  RUN_TEST(test_with_a_clock_one_reading_serves_every_question_for_a_second);
+  RUN_TEST(test_without_a_clock_every_question_reads_the_chips);
+  RUN_TEST(test_a_reading_that_was_kept_is_replaced_after_a_second_and_the_wrap_of_the_counter_is_harmless);
   RUN_TEST(test_start_writes_the_capacity_once_and_logs_one_line_about_it);
   RUN_TEST(test_a_refused_capacity_write_is_logged_and_does_not_stop_the_start);
   RUN_TEST(test_start_puts_the_receiver_and_the_radio_into_their_idle_state);

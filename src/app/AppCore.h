@@ -145,6 +145,9 @@ public:
   void noteInput() { powerCoordination_.noteInput(); }
 
   // --- calls ---
+  // The call state alone, for whoever asks every pass: state() reads the battery chips over I2C and costs
+  // tens of milliseconds, which is why the loop never rested (decision D-31).
+  ModemState callState() const { return calls_.state(); }
   bool dial(const std::string& number) { return calls_.call(number); }
   bool answer() { return calls_.answer(); }
   bool hangup() { return calls_.hangup(); }

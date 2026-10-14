@@ -59,10 +59,16 @@ bool BoardPower::isEnabled(PowerDomain domain) {
 }
 
 BoardPower::Reading BoardPower::read() {
+  if (millis_ && haveReading_ && (uint32_t)(millis_->millis32() - readAt_) < kReadingTtlMs) return last_;
   Reading r;
   if (!charger_.found()) charger_.detect();  // a charger that was not there at start may be asked again
   r.chargerOk = charger_.readStatus(r.charger);
   r.gaugeOk = gauge_.read(r.gauge);
+  if (millis_) {
+    last_ = r;
+    haveReading_ = true;
+    readAt_ = millis_->millis32();
+  }
   return r;
 }
 
@@ -79,9 +85,8 @@ BatteryInputs BoardPower::inputsOf(const Reading& r) const {
 }
 
 bool BoardPower::externalPower() {
-  if (!charger_.found()) charger_.detect();
-  ChargerStatus s;
-  return charger_.readStatus(s) && s.powerGood;
+  const Reading r = read();
+  return r.chargerOk && r.charger.powerGood;
 }
 
 ChargeState BoardPower::chargeState() {

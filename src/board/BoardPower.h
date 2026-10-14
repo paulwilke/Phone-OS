@@ -20,6 +20,7 @@
 #include "Charger.h"
 #include "FuelGauge.h"
 #include "Gpio.h"
+#include "MillisSource.h"
 #include "Xl9555.h"
 
 namespace board {
@@ -34,6 +35,12 @@ public:
   // the rails nobody has asked for yet into their idle state (receiver and radio off). Says what it found
   // in the log, one line each.
   void begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer, EventLog& log);
+
+  // With a clock, one reading of the gauge and the charger serves every question for kReadingTtlMs: the
+  // core's state asks five questions in one pass, each a reading over I2C at 100 kHz, which cost the loop
+  // 52 ms of every pass in the night of 2026-10-13 (decision D-31). Without a clock every question reads.
+  void setClock(MillisSource& millis) { millis_ = &millis; }
+  static constexpr uint32_t kReadingTtlMs = 1000;
 
   // How often a domain was switched from off to on since the start. A receiver that was switched off and on
   // again between two readings still has to start afresh, and only a counter shows that it happened.
@@ -67,6 +74,10 @@ private:
   FuelGauge& gauge_;
   Modem& modem_;
   EventLog* log_ = nullptr;
+  MillisSource* millis_ = nullptr;
+  Reading last_;
+  bool haveReading_ = false;
+  uint32_t readAt_ = 0;
   bool estimating_ = false;  // the percentage is the voltage's: said once when it starts and when it ends
   bool frontlight_ = false;
   uint32_t switchOns_[4] = {};

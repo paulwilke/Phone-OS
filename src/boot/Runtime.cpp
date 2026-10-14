@@ -185,7 +185,7 @@ void Runtime::render() {
 // call is over. A call the child started is on the screen because the phone page opened it, and
 // stays until the child has read how it ended (ui/screens/CallScreen.h).
 void Runtime::followCalls(uint32_t nowMs) {
-  const ModemState call = core_.state().callState;
+  const ModemState call = core_.callState();   // not state(): that reads the battery chips, every pass (D-31)
   if (call == ModemState::RingingIn && !callInterrupt_ && stack_.visibleId() != ui::screen::kCall) {
     stack_.interrupt(ui::screen::kCall, nowMs / 1000);
     callInterrupt_ = true;
