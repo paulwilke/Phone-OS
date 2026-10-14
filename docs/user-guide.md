@@ -111,4 +111,4 @@ The screen keeps its last picture without power, so a picture that does not chan
 2. The battery may be **empty**: plug in the USB cable and wait a few minutes.
 3. The device may have been **switched off** in the **Options** or on the **Status** page: plug in the cable or start it again.
 4. With no card or a card the device cannot read, the device still starts, with defaults: no contacts, no call buttons, so no **Phone**, **Text** and **SOS** tiles. Put the card in again, or read the log as in the next step.
-5. If nothing helps, connect the USB cable to a computer: the device's console shows the log and the card's files (`scripts/deviceconfig.py`, [device-console.md](device-console.md)). Opening the port restarts the device.
+5. If nothing helps, connect the USB cable to a computer: the device's console shows the log and the card's files (`scripts/deviceconfig.py`, [device-console.md](device-console.md)). Opening the port restarts the device. The console asks for no password: do not leave the device plugged into a computer you do not trust.

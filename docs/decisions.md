@@ -320,3 +320,25 @@ Decision: "Copyright (c) 2026 Paul Wilke and the Phone OS contributors"; the MIT
 Reason: Somebody is named who can answer for the work, and whoever contributes later is covered by the same line.
 Consequences: `LICENSE`, `THIRD_PARTY.md`. In the same change the Apache-2.0 text that the operator list requires is stored (`assets/licenses/LICENSE-Apache-2.0.txt`) and SensorLib is pinned to 0.5.0, so that nothing the build fetches changes its licence unread.
 Verified: not applicable
+
+## D-28: The USB console asks for no password; the risk is written down, a restriction is open
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: The console on the USB port (`CONFIG READ`, `CONFIG WRITE`, `CONFIG RESTART`, `SMS`) answers any computer the device is plugged into: it can read `secrets.toml`, write the contacts and send a text in the child's name. It is the owner's tool, and the review of 2026-10-13 pointed out that a child may plug the device into a computer elsewhere. Only `CONFIG WEB` carries a password, the page's.
+Options: Leave it as it is and say so. Answer only while the device is unlocked. Answer only in the first minutes after a start. Ask for the web password on the lines that write or send.
+Decision: The first, today: the console stays as it is, and the documentation (device-console.md, the user's guide in three languages) says that it asks for no password. A restriction is open point 33 and comes with a version of its own.
+Reason: The console is how the device is read and set up today, and a restriction changes the owner's tools; it is worth thinking through, not doing on the side.
+Consequences: No code changes. Open point 33 names the choices.
+Verified: not applicable
+
+## D-29: The access point's random password stays eight digits
+Date: 2026-10-13   Status: decided
+Decided by: owner
+
+Context: Without a stored password the access point gets eight random digits, shown on the screen only. Eight digits are 10^8 choices, which a recording of the WPA2 handshake can try through offline in minutes; whoever gets in reads the page's password in clear, because the page speaks HTTP.
+Options: Leave it. Ten digits. Eight characters of letters and digits (harder to type from the screen).
+Decision: Leave it.
+Reason: The access point runs for minutes while somebody sets the device up and switches it off; the page behind it asks for its own password; a parent who wants more sets one of up to 63 characters in `secrets.toml`. The owner judges the risk as small next to the cost of typing.
+Consequences: No code changes; wifi-controller.md says why.
+Verified: not applicable
