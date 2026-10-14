@@ -23,7 +23,7 @@ A rail whose expander write is refused reports `false` and keeps its state. At s
 
 At start `BoardPower::begin()` reads the gauge's design capacity (register 0x3C) and full-charge capacity (0x12) and compares both with `[battery] capacity_mah` (default 1500, range 100 to 10000, [config-loader.md](config-loader.md)).
 
-- **Only a difference is written**, to both registers, and then read back; the chip's memory wears with every write. A second start writes nothing.
+- **Only a difference of the design capacity is written**, then to both registers (the full charge is seeded with the same size), and read back; the chip's memory wears with every write. A second start writes nothing. The full-charge capacity is what the gauge learns from a discharge, and once the design capacity is right it is the gauge's alone: after the night of 2026-10-13 it reported 1372 mAh next to the design 1500, and the earlier rule ("both equal the setting") wrote 1500 over it at every start (decision D-32). The start line then says "nothing to write; it has learned a full charge of 1372 mAh".
 - **One log line** says what happened: nothing to write, written (with what the chip held), refused, written but read back differently, or no gauge. A configured value outside 100 to 10000 is never written.
 - The write itself is the library's procedure (SensorLib's `setNewCapacity`: unseal, enter the configuration update, write the data memory with its checksum, leave, seal again), reached through the seam `board::GaugeCapacityWriter`. The host tests stand a fake in its place that changes the registers the way the chip would; **that the real procedure takes on the chip is not verified** (checklist item in `bring-up.md`).
 

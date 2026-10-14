@@ -67,7 +67,10 @@ CapacityResult ensureCapacity(FuelGauge& gauge, GaugeCapacityWriter& writer, uin
     r.outcome = CapacityOutcome::InvalidSetting;
     return r;
   }
-  if (r.designBefore == configuredMah && r.fullChargeBefore == configuredMah) {
+  // The design capacity is the battery's size and is written once; the full-charge capacity is what the gauge
+  // learns from a discharge, and after the first write it is the gauge's alone (decision D-32: with the rule
+  // "both equal the setting" the firmware wrote 1500 over a learned 1372 at every start).
+  if (r.designBefore == configuredMah) {
     r.outcome = CapacityOutcome::AlreadyRight;
     return r;
   }
@@ -92,7 +95,9 @@ std::string describeCapacityCheck(const CapacityResult& r) {
     case CapacityOutcome::GaugeAbsent: return "Battery: the fuel gauge does not answer, its capacity is not checked";
     case CapacityOutcome::InvalidSetting:
       return "Battery: the configured capacity " + want + " is not a plausible battery size, nothing written (gauge: " + was + ")";
-    case CapacityOutcome::AlreadyRight: return "Battery: the fuel gauge capacity is " + want + ", nothing to write";
+    case CapacityOutcome::AlreadyRight:
+      return "Battery: the fuel gauge capacity is " + want + ", nothing to write" +
+             (r.fullChargeBefore != r.configured ? "; it has learned a full charge of " + std::to_string(r.fullChargeBefore) + " mAh" : "");
     case CapacityOutcome::Written:
       return "Battery: the fuel gauge held " + was + "; written " + want + " to both and read back";
     case CapacityOutcome::WriteRefused:

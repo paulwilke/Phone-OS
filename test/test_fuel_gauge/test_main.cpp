@@ -102,17 +102,24 @@ void test_the_second_start_after_a_write_writes_nothing() {
   TEST_ASSERT_EQUAL(1, r.writer.calls());
 }
 
-void test_either_capacity_differing_is_enough_and_both_are_written() {
+// After the first discharge the gauge reported a learned full charge of 1372 mAh, and the rule "both equal the
+// setting" wrote 1500 over it at every start (2026-10-14, decision D-32). The design capacity decides; a learned
+// full charge is the gauge's own and is named in the line.
+void test_a_learned_full_charge_is_left_to_the_gauge_and_named() {
   Rig r;
-  r.bus.setRegister16(i2c::kFuelGauge, 0x3C, 1500);  // design right, full charge wrong
-  r.bus.setRegister16(i2c::kFuelGauge, 0x12, 1200);
-  TEST_ASSERT_TRUE(ensureCapacity(r.gauge, r.writer, 1500).outcome == CapacityOutcome::Written);
-  TEST_ASSERT_EQUAL(1500, r.writer.lastDesign());
-  TEST_ASSERT_EQUAL(1500, r.writer.lastFullCharge());
+  r.bus.setRegister16(i2c::kFuelGauge, 0x3C, 1500);  // design right, full charge learned
+  r.bus.setRegister16(i2c::kFuelGauge, 0x12, 1372);
+  const CapacityResult res = ensureCapacity(r.gauge, r.writer, 1500);
+  TEST_ASSERT_TRUE(res.outcome == CapacityOutcome::AlreadyRight);
+  TEST_ASSERT_EQUAL(0, r.writer.calls());
+  TEST_ASSERT_EQUAL(1372, r.bus.reg16(i2c::kFuelGauge, 0x12));
+  const std::string line = describeCapacityCheck(res);
+  TEST_ASSERT_TRUE_MESSAGE(line.find("nothing to write; it has learned a full charge of 1372 mAh") != std::string::npos, line.c_str());
   Rig q;
-  q.bus.setRegister16(i2c::kFuelGauge, 0x3C, 1200);  // the other way round
+  q.bus.setRegister16(i2c::kFuelGauge, 0x3C, 1200);  // a wrong design capacity is still written, with the full charge seeded
   q.bus.setRegister16(i2c::kFuelGauge, 0x12, 1500);
   TEST_ASSERT_TRUE(ensureCapacity(q.gauge, q.writer, 1500).outcome == CapacityOutcome::Written);
+  TEST_ASSERT_EQUAL(1500, q.writer.lastFullCharge());
 }
 
 void test_a_refused_write_is_reported_and_leaves_the_chip_as_it_was() {
@@ -171,7 +178,7 @@ int main(int, char**) {
   RUN_TEST(test_the_factory_capacity_is_replaced_in_both_registers_and_read_back);
   RUN_TEST(test_a_capacity_that_is_right_is_not_written);
   RUN_TEST(test_the_second_start_after_a_write_writes_nothing);
-  RUN_TEST(test_either_capacity_differing_is_enough_and_both_are_written);
+  RUN_TEST(test_a_learned_full_charge_is_left_to_the_gauge_and_named);
   RUN_TEST(test_a_refused_write_is_reported_and_leaves_the_chip_as_it_was);
   RUN_TEST(test_a_write_that_did_not_take_is_found_by_the_read_back);
   RUN_TEST(test_a_missing_gauge_writes_nothing);
