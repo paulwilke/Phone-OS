@@ -355,15 +355,15 @@ Consequences: `WebApi::restoreJson`, its two buffers and `web::json::getString` 
 Verified: host-tested
 
 ## D-31: The core's state is not built every pass, and a battery reading is kept for a second
-Date: 2026-10-14   Status: open
-Decided by: agent (not confirmed by owner)
+Date: 2026-10-14   Status: decided
+Decided by: owner (go, 2026-10-14: "build everything that is possible"); agent (the second option, the second as the time)
 
 Context: The loop lines of the night of 2026-10-13 (D-25) say that the application step costs 52 ms of every 56 ms pass, with the modem asleep and nothing to do. `Runtime::followCalls` asks `core_.state()` every pass for the call state, and `AppCore::state()` reads the battery percentage, the voltage, the minutes, the charge state and the cable, each a reading of the fuel gauge and the charger over I2C at 100 kHz: about thirty transactions, which is the 52 ms. `PowerCoordination::apply` asks the charger once more. The processor cannot save what the loop spends.
 Options: Leave it and raise the I2C clock to 400 kHz (a quarter of the cost, still every pass). `followCalls` asks the modem's call state alone, and `BoardPower` keeps its reading for a second, so that five questions in one pass are one reading (the step falls to the few milliseconds of the pages). Read the chips only when a page is on or a line is due (more to get wrong).
-Decision: None yet. Recommendation: the second.
+Decision: The second: `followCalls` asks `AppCore::callState()`, and `BoardPower::setClock` lets one reading serve every question for a second (`kReadingTtlMs`).
 Reason: The reading changes nothing in a second, and the status page and the energy log keep their numbers; the change is two small ones with tests.
-Consequences: If confirmed, 4.2.4 builds it, with a loop line that shows the step under 5 ms as the check. Open point 34.
-Verified: not verified
+Consequences: Built in 4.2.4 ([device-power.md](device-power.md)); the loop line of the next night is the check: the step under 5 ms. Open point 25 says what to read.
+Verified: host-tested (`test_board_power`: five questions cost one reading); not verified on the device
 
 ## D-32: The gauge's learned full charge is left to the gauge
 Date: 2026-10-14   Status: open

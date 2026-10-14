@@ -15,6 +15,10 @@ Code: `src/board/` (`BoardPower`, `FuelGauge`, `Charger`, `BatteryPlausibility`,
 
 A rail whose expander write is refused reports `false` and keeps its state. At start the receiver and the radio are switched off: the expander's boot state powers them, nobody has asked for them, and a receiver that stays on drains the battery.
 
+## One reading a second
+
+`AppCore::state()` asks the power capability five questions (percentage, voltage, minutes, charge state, cable), and each was a reading of the fuel gauge and the charger over I2C at 100 kHz, about six transactions for the gauge and three for the charger; `Runtime::followCalls` asked for the whole state every pass. In the night of 2026-10-13 that was 52 ms of every 56 ms pass with nothing to do ([hardware-lessons.md](hardware-lessons.md), decision D-31). Since 4.2.4 `followCalls` asks `AppCore::callState()` alone, and `BoardPower` with a clock (`setClock`, the firmware gives it the millisecond counter) keeps one reading for `kReadingTtlMs` (1000 ms): every question within that second is answered from it, the next second reads again, and the wrap of the counter is no gap. Without a clock (the contract suite) every question reads. The energy log reads the gauge on its own and is not affected; `powerOff()` reads the charger afresh. `test_board_power`: five questions cost one reading, the second reads again, the wrap, and that without a clock every question reads.
+
 ## The fuel gauge ships with the wrong battery size
 
 At start `BoardPower::begin()` reads the gauge's design capacity (register 0x3C) and full-charge capacity (0x12) and compares both with `[battery] capacity_mah` (default 1500, range 100 to 10000, [config-loader.md](config-loader.md)).

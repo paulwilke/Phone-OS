@@ -239,6 +239,7 @@ void setup() {
   modemConfig.simPin = loaded.simPin;
   modem.reset(new A7682EDriver(modemTransport, modemConfig));
   power.reset(new board::BoardPower(expander, gpio, charger, gauge, *modem));
+  power->setClock(millisSource);   // one reading of the battery chips a second serves every question (D-31)
   gnss.reset(new board::BoardGnss(*power, gnssUart, deviceClock));
 
   power->begin((uint16_t)batteryMah, gaugeWriter, eventLog);
