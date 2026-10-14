@@ -286,7 +286,7 @@ Options: Leave it. Only add a margin on the way back (no flapping, but 0 % for f
 Decision: The third. A gauge at 3 % or less is not believed while the voltage gives 6 % or more; once the voltage's number is shown it stays until the gauge is within 15 points of it, or, for an empty gauge, until the voltage gives less than 4 %.
 Reason: The device switches itself off at 3300 mV (D-5), so a cell above it is not empty whatever the gauge says; the margin ends the flapping.
 Consequences: The bar and the percentage on the screens follow the voltage in the last hours, and the log has one line per change. The numbers (3, 6, 15, 4) are the agent's and can be changed with a new entry. Open point 32.
-Verified: host-tested (five tests fail with the old rule put back); compiled; not verified on the device
+Verified: host-tested (five tests fail with the old rule put back); compiled; verified on the device on 2026-10-14: in the night of 2026-10-13 the log has one line at 20:19 ("the gauge says 7 % at 3624 mV; showing about 43 % from the voltage") and one at 00:55 ("the gauge agrees with the voltage again"), none in between, and the screen followed the voltage to the switch-off at 3291 mV
 
 ## D-25: The loop line tells where the time of a pass goes
 Date: 2026-10-13   Status: decided
@@ -297,7 +297,7 @@ Options: Guess (the touch chip, the e-ink drawing, the card). Time the parts of 
 Decision: The second: the line gives the share of passes in which sleep was allowed and the average cost per pass of the console, the keys, the modem, the application step and the housekeeping, and what is left.
 Reason: A guess about 100 mA of current is worth less than one day of numbers; the cost is a few timer reads per pass.
 Consequences: Open points 20 and 25 are read from the line after a day. What the numbers show decides what is changed (the sleep policy, a part of the loop, the I2C clock); nothing is changed before.
-Verified: host-tested; compiled; not verified on the device
+Verified: host-tested; compiled; verified on the device on 2026-10-14: 25 lines in the night of 2026-10-13, each "sleep allowed in 100 % of the passes; per pass (ms) console 0.0, keys 2.8, modem 0.1, step 52.0, housekeeping 0.2", 32,000 passes in 1800 s, asleep 1 %
 
 ## D-26: The parents' page keeps the password for the tab only
 Date: 2026-10-13   Status: decided
@@ -353,3 +353,25 @@ Decision: Remove it. A restore sends a ZIP archive and nothing else; the page's 
 Reason: The owner's words: a leftover; the backup is the ZIP archive of the whole files now. Nobody is known to hold a bundle of 4.0, and a bundle that somebody holds is a text file whose two values can be put into the editor by hand.
 Consequences: `WebApi::restoreJson`, its two buffers and `web::json::getString` are gone; a body that starts with `{` is refused as "not a ZIP file" like any other text (`test_web_api`); the format name of the bundle is no longer a name the code reads (`scripts/check_docs.py`, `test_check_docs`).
 Verified: host-tested
+
+## D-31: The core's state is not built every pass, and a battery reading is kept for a second
+Date: 2026-10-14   Status: open
+Decided by: agent (not confirmed by owner)
+
+Context: The loop lines of the night of 2026-10-13 (D-25) say that the application step costs 52 ms of every 56 ms pass, with the modem asleep and nothing to do. `Runtime::followCalls` asks `core_.state()` every pass for the call state, and `AppCore::state()` reads the battery percentage, the voltage, the minutes, the charge state and the cable, each a reading of the fuel gauge and the charger over I2C at 100 kHz: about thirty transactions, which is the 52 ms. `PowerCoordination::apply` asks the charger once more. The processor cannot save what the loop spends.
+Options: Leave it and raise the I2C clock to 400 kHz (a quarter of the cost, still every pass). `followCalls` asks the modem's call state alone, and `BoardPower` keeps its reading for a second, so that five questions in one pass are one reading (the step falls to the few milliseconds of the pages). Read the chips only when a page is on or a line is due (more to get wrong).
+Decision: None yet. Recommendation: the second.
+Reason: The reading changes nothing in a second, and the status page and the energy log keep their numbers; the change is two small ones with tests.
+Consequences: If confirmed, 4.2.4 builds it, with a loop line that shows the step under 5 ms as the check. Open point 34.
+Verified: not verified
+
+## D-32: The gauge's learned full charge is left to the gauge
+Date: 2026-10-14   Status: open
+Decided by: agent (not confirmed by owner)
+
+Context: After the first full discharge the fuel gauge reports a learned full charge of 1372 mAh next to the design capacity of 1500 mAh, and every start logs "wrote 1500 mAh to the fuel gauge but it reports design 1500 mAh, full charge 1372 mAh": the rule of D-14 writes on a difference, the gauge learns the difference back, and the write repeats at every start. The gauge's memory wears with every write, which the rule was meant to prevent.
+Options: Leave it. Write the design capacity only and compare only it; show the learned full charge in the diagnosis. Write both only while the cycle count is 0.
+Decision: None yet. Recommendation: the second.
+Reason: The learned value is the gauge doing its job; the night showed about 1340 mAh from 92 % to the switch-off, near what it learned.
+Consequences: If confirmed, the start line says "design 1500 mAh, nothing to write; the gauge has learned 1372 mAh" and the diagnosis shows both. Open point 35.
+Verified: not verified

@@ -24,6 +24,14 @@ Measured 2026-10-12: the SY6970 held a charge current of 2048 mA (the chip's def
 
 Outgoing calls hung the modem two seconds after dialling when the IMS was not registered. Defining PDP context 1 as IPV4V6 and restarting the radio fixed it. The modem driver sets this up itself at start (read the contexts first, write only when they differ) and refuses to dial while the IMS is not registered. How, what is proven and the owner's checklist for the device: [volte.md](volte.md).
 
+## A night on the battery: the state reads the chips every pass, and the gauge empties at 3.6 V
+
+**What was measured** (2026-10-13 to 14, firmware 4.2.2, modem asleep, radio off, no Wi-Fi, the device locked). The energy log: 12.8 hours from 4099 mV (gauge 91 %, 1363 mAh) to the switch-off at 3291 mV, at 100 to 113 mA the whole night, about 1340 mAh. The loop line every half hour: 32,000 passes in 1800 s, the power policy allowed sleep in 100 % of them, the processor slept 1 % of the time, and of each 56 ms pass the application step cost 52.0 ms, the keys 2.8 ms, the rest under 0.5 ms. The gauge fell from 45 % (663 mAh) to 7 % (93 mAh) between two lines at 3629 and 3623 mV, said 0 % from 3596 mV on, and the cell gave five more hours; the rule of D-24 showed the voltage's number from 20:19 (one line) until 00:55 (one line). After the charge the gauge reports a learned full charge of 1372 mAh.
+
+**What it means.** The 105 mA are the processor: the modem's sleep saves what it should, but the loop never rests, because `Runtime::followCalls` builds the core's whole state every pass, and that state reads the fuel gauge and the charger over I2C at 100 kHz five times (about thirty transactions, the 52 ms); and a light sleep that was allowed and lasted 1 % of the time ends at once, which points at a wake line that is held low (the keyboard's, the touch chip's or the modem's ring line). The gauge takes this cell for empty at about 3.6 V, which is why D-24 exists, and it has now learned a full charge from a real discharge.
+
+**Driver rule.** Open until the owner decides: D-31 (the state is not built every pass, a reading is kept for a second) and D-32 (the learned full charge is left to the gauge). **Owner's check:** the loop line after 4.2.4 says the step costs a few milliseconds and "asleep" is most of the half hour; the start line no longer writes 1500 mAh over 1372.
+
 ## Smaller facts that cost time
 
 - **The charger changed during the production series.** Newer boards carry an SY6970 on I2C address 0x6A, older ones a BQ25896 on 0x6B. A driver that looks at only one address treats the bus as broken.
