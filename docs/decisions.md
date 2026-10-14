@@ -375,3 +375,14 @@ Decision: The second: the design capacity decides whether anything is written; w
 Reason: The learned value is the gauge doing its job; the night showed about 1340 mAh from 92 % to the switch-off, near what it learned. Whether the cell is a 1500 or a 1400 mAh one, the owner enters once in `[battery] capacity_mah`.
 Consequences: Built in 4.2.4: the start line says "nothing to write; it has learned a full charge of 1372 mAh", the diagnosis shows both as before (`test_fuel_gauge`).
 Verified: host-tested; not verified on the device
+
+## D-33: The sleep is measured before it is changed
+Date: 2026-10-14   Status: decided
+Decided by: owner (go for building everything, 2026-10-14); agent (what is measured)
+
+Context: In the night of 2026-10-13 the power policy allowed the processor to sleep in every pass and it slept 1 % of the time (D-25). The sleep is a light sleep with a timer and three wake lines that wake on a low level (the keyboard's interrupt, the touch chip's, the modem's ring line); a line that is low before the sleep ends it at once, and nothing in the log says which.
+Options: Change the wake lines to edges blind (the ring line is the suspect). Measure first: before every sleep read the three lines, after it read what ended it, and count both for the loop line.
+Decision: Measure: the loop line gets "sleep: N times, ended by the timer, by a line, other; low before sleep: keyboard, touch, ring".
+Reason: The same reason as D-20: one night of numbers beats a guess, and the cost is three pin reads per pass.
+Consequences: `device/Sleep.h` reports, `board::LoopStats::sleep` counts (`test_loop_stats`); open point 25 says what to read. What the numbers show decides the change (an edge instead of a level, a line not used for waking, or the modem's ring line configured differently).
+Verified: host-tested; compiled; not verified on the device

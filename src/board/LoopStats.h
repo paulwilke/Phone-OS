@@ -25,6 +25,18 @@ public:
 
   void section(Section which, uint32_t micros) { sectionUs_[(size_t)which] += micros; }
 
+  // One light sleep: which wake lines were low before it (a line that is low ends the sleep at once: in the night
+  // of 2026-10-13 sleep was allowed in every pass and lasted 1 % of the time, decision D-33), and what ended it.
+  enum class WakeLine : uint8_t { Keyboard, Touch, Ring, kCount };
+  enum class WakeCause : uint8_t { Timer, Line, Other, kCount };
+  static constexpr uint8_t lineBit(WakeLine line) { return (uint8_t)(1u << (uint8_t)line); }
+  void sleep(uint8_t lowBeforeMask, WakeCause cause) {
+    ++sleeps_;
+    ++wakes_[(size_t)cause];
+    for (size_t i = 0; i < (size_t)WakeLine::kCount; ++i)
+      if (lowBeforeMask & (1u << i)) ++lowBefore_[i];
+  }
+
   // One pass: its work in microseconds (without the sleep or the pause), the milliseconds slept at its end, and
   // whether the power policy allowed the processor to sleep.
   void pass(uint32_t nowMs, uint32_t workUs, uint32_t sleptMs, bool maySleep) {
@@ -61,7 +73,16 @@ public:
       const uint64_t other = workUs_ > sections ? workUs_ - sections : 0;
       line += ", other " + tenths(other, passes_);
     }
+    if (sleeps_ > 0) {
+      line += "; sleep: " + std::to_string(sleeps_) + " times, ended by the timer " + std::to_string(wakes_[(size_t)WakeCause::Timer]) +
+              ", by a line " + std::to_string(wakes_[(size_t)WakeCause::Line]) + ", other " + std::to_string(wakes_[(size_t)WakeCause::Other]) +
+              "; low before sleep: keyboard " + std::to_string(lowBefore_[(size_t)WakeLine::Keyboard]) + ", touch " +
+              std::to_string(lowBefore_[(size_t)WakeLine::Touch]) + ", ring " + std::to_string(lowBefore_[(size_t)WakeLine::Ring]);
+    }
     windowStart_ = nowMs;
+    sleeps_ = 0;
+    for (auto& n : wakes_) n = 0;
+    for (auto& n : lowBefore_) n = 0;
     passes_ = 0;
     longestMs_ = 0;
     sleptMs_ = 0;
@@ -91,6 +112,9 @@ private:
   uint32_t maySleep_ = 0;
   uint64_t workUs_ = 0;
   uint64_t sectionUs_[(size_t)Section::kCount] = {};
+  uint32_t sleeps_ = 0;
+  uint32_t wakes_[(size_t)WakeCause::kCount] = {};
+  uint32_t lowBefore_[(size_t)WakeLine::kCount] = {};
 };
 
 }  // namespace board

@@ -9,13 +9,36 @@
 #include <driver/gpio.h>
 #include <esp_sleep.h>
 
+#include <board/LoopStats.h>
 #include <board/PinMap.h>
 
-inline void lightSleep(uint32_t milliseconds) {
-  for (uint8_t pin : {board::pin::kKeyboardInterrupt, board::pin::kTouchInterrupt, board::pin::kModemRing})
-    gpio_wakeup_enable((gpio_num_t)pin, GPIO_INTR_LOW_LEVEL);
+// What one sleep reports for the loop line (decision D-33): the wake lines that were low before it, which end a
+// sleep at once, and what ended it.
+struct SleepReport {
+  uint8_t lowBefore = 0;   // board::LoopStats::lineBit(...) of every wake line that read low
+  board::LoopStats::WakeCause cause = board::LoopStats::WakeCause::Other;
+};
+
+inline SleepReport lightSleep(uint32_t milliseconds) {
+  using board::LoopStats;
+  SleepReport report;
+  const struct { uint8_t pin; LoopStats::WakeLine line; } lines[] = {
+      {board::pin::kKeyboardInterrupt, LoopStats::WakeLine::Keyboard},
+      {board::pin::kTouchInterrupt, LoopStats::WakeLine::Touch},
+      {board::pin::kModemRing, LoopStats::WakeLine::Ring},
+  };
+  for (const auto& l : lines) {
+    if (digitalRead(l.pin) == LOW) report.lowBefore |= LoopStats::lineBit(l.line);
+    gpio_wakeup_enable((gpio_num_t)l.pin, GPIO_INTR_LOW_LEVEL);
+  }
   esp_sleep_enable_gpio_wakeup();
   esp_sleep_enable_timer_wakeup((uint64_t)milliseconds * 1000ULL);
   Serial.flush();
   esp_light_sleep_start();
+  switch (esp_sleep_get_wakeup_cause()) {
+    case ESP_SLEEP_WAKEUP_TIMER: report.cause = LoopStats::WakeCause::Timer; break;
+    case ESP_SLEEP_WAKEUP_GPIO: report.cause = LoopStats::WakeCause::Line; break;
+    default: report.cause = LoopStats::WakeCause::Other; break;
+  }
+  return report;
 }
