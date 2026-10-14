@@ -42,6 +42,21 @@ void test_where_the_work_goes_is_told_per_pass_in_tenths_of_a_millisecond() {
                            line.c_str());
 }
 
+// A wake line that is low before the sleep ends it at once (D-33): the line counts the sleeps, what ended them and
+// which lines were low before, so that a night says which line holds the processor awake.
+void test_the_sleeps_say_what_ended_them_and_which_lines_were_low_before() {
+  LoopStats s;
+  s.pass(0, 5000, 0, true);
+  for (int i = 0; i < 3; ++i) s.sleep(LoopStats::lineBit(LoopStats::WakeLine::Ring), LoopStats::WakeCause::Line);
+  s.sleep(0, LoopStats::WakeCause::Timer);
+  s.sleep(LoopStats::lineBit(LoopStats::WakeLine::Keyboard) | LoopStats::lineBit(LoopStats::WakeLine::Touch), LoopStats::WakeCause::Other);
+  const std::string line = s.takeLine(kLoopStatsIntervalMs);
+  TEST_ASSERT_TRUE_MESSAGE(line.find("; sleep: 5 times, ended by the timer 1, by a line 3, other 1; low before sleep: keyboard 1, touch 1, ring 3") != std::string::npos,
+                           line.c_str());
+  s.pass(kLoopStatsIntervalMs, 5000, 0, false);
+  TEST_ASSERT_TRUE(s.takeLine(2 * kLoopStatsIntervalMs).find("sleep:") == std::string::npos);   // a new window, no sleep in it
+}
+
 void test_a_window_without_sections_has_no_per_pass_part() {
   LoopStats s;
   s.pass(0, 6000, 0, false);
@@ -80,6 +95,7 @@ int main() {
   RUN_TEST(test_nothing_is_due_before_the_interval_and_before_the_first_pass);
   RUN_TEST(test_the_line_has_the_longest_pass_the_count_and_the_sleep_shares);
   RUN_TEST(test_where_the_work_goes_is_told_per_pass_in_tenths_of_a_millisecond);
+  RUN_TEST(test_the_sleeps_say_what_ended_them_and_which_lines_were_low_before);
   RUN_TEST(test_a_window_without_sections_has_no_per_pass_part);
   RUN_TEST(test_a_new_window_starts_after_the_line);
   RUN_TEST(test_the_sleep_share_never_passes_100_and_an_empty_window_is_safe);

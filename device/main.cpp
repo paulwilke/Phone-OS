@@ -338,8 +338,9 @@ void loop() {
   uint32_t sleptMs = 0;
   if (decision.cpuMaySleep && !haptic.busy() && decision.cpuSleepMs > 0) {
     const uint32_t before = millis();
-    lightSleep(decision.cpuSleepMs);
+    const SleepReport report = lightSleep(decision.cpuSleepMs);
     sleptMs = millis() - before;
+    loopStats.sleep(report.lowBefore, report.cause);
   } else {
     delay(5);
   }
