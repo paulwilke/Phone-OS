@@ -36,7 +36,15 @@ const char* wifiPhaseText(WifiPhase p) {
   }
 }
 
-// URL-decode `name=value` from a query string.
+int hexDigit(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+
+// URL-decode `name=value` from a query string. A percent sign takes exactly two hex digits (strtol took
+// "% 1", "%+1" and "%-1" as well); anything else is not a value.
 bool queryValue(const char* query, const char* name, char* out, size_t size) {
   const size_t n = strlen(name);
   const char* p = query;
@@ -48,12 +56,10 @@ bool queryValue(const char* query, const char* name, char* out, size_t size) {
         char c = *p++;
         if (c == '+') {
           c = ' ';
-        } else if (c == '%' && p[0] && p[1]) {
-          char hex[3] = {p[0], p[1], '\0'};
-          char* e = nullptr;
-          const long v = strtol(hex, &e, 16);
-          if (*e) return false;
-          c = (char)v;
+        } else if (c == '%') {
+          const int hi = hexDigit(p[0]), lo = p[0] ? hexDigit(p[1]) : -1;
+          if (hi < 0 || lo < 0) return false;
+          c = (char)(hi * 16 + lo);
           p += 2;
         }
         if (o + 1 >= size) return false;
@@ -188,17 +194,19 @@ bool WebApi::webPassword(char* out, size_t size) {
   // Zero the secrets from memory.
   std::fill(text.begin(), text.end(), '\0');
 
+  // A password that does not fit the buffer is not compared by its first bytes: the API stays locked and says why.
+  if (result.webPassword.size() >= size) return false;
   snprintf(out, size, "%s", result.webPassword.c_str());
   return strlen(out) >= kMinWebPassword;
 }
 
 // Returns false when authentication fails; the response is already set then.
 bool WebApi::authenticate(const http::Request& req, http::Response& res, uint32_t now) {
-  char expected[96];
+  char expected[kMaxWebPassword + 1];
   if (!webPassword(expected, sizeof(expected))) {
     memset(expected, 0, sizeof(expected));
     jsonError(res, 403,
-      "No web password: enter web_password (at least 4 characters) in /config/secrets.toml "
+      "No usable web password: enter web_password (4 to 100 characters) in /config/secrets.toml "
       "(scripts/deviceconfig.py write secrets.toml ...)");
     return false;
   }
@@ -213,7 +221,7 @@ bool WebApi::authenticate(const http::Request& req, http::Response& res, uint32_
     failures_ = 0;
   }
 
-  char given[96];
+  char given[kMaxWebPassword + 1];
   const bool parsed = http::basicPassword(req.authorization, given, sizeof(given));
   const bool good = parsed && http::constantTimeEquals(given, expected);
   memset(expected, 0, sizeof(expected));
@@ -335,7 +343,7 @@ void WebApi::state(http::Response& res, uint32_t now) {
   }
 
   const AppCore::State s = app_.state();
-  const WifiController* wifi = app_.wifi();
+  WifiController* wifi = app_.wifiController();
   const WifiPhase wp = wifi ? wifi->phase() : WifiPhase::Off;
 
   size_t n = 0;
@@ -357,12 +365,15 @@ void WebApi::state(http::Response& res, uint32_t now) {
   puts(",\"wifi\":{\"state\":");
   appendJsonStr(resp_, sizeof(resp_), n, wifiPhaseText(wp));
   puts(",\"ssid\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi ? wifi->ssid() : std::string());
-  puts(",\"address\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi ? const_cast<WifiController*>(wifi)->address() : std::string());
+  puts(",\"address\":"); appendJsonStr(resp_, sizeof(resp_), n, wifi ? wifi->address() : std::string());
   puts(",\"seconds_left\":"); putInt(wifi ? wifi->secondsLeft(now) : 0);
   puts("}");
   puts(",\"set\":{\"pin\":"); putBool(pinSet);
   puts(",\"web_password\":"); putBool(pwSet);
   puts("}}");
+  // A buffer that ran full holds cut JSON, which the page cannot read: say so instead (a child's name is
+  // bounded by the loader, so this is a guard, not an expected answer).
+  if (n + 1 >= sizeof(resp_)) return jsonError(res, 500, "Response too large");
   resp_[n] = '\0';
 
   jsonResp(res, 200, resp_);

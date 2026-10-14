@@ -159,6 +159,11 @@ void test_basic_password() {
   TEST_ASSERT_FALSE(http::basicPassword("Bearer abc", pw, sizeof(pw)));
   TEST_ASSERT_FALSE(http::basicPassword("Basic !!!", pw, sizeof(pw)));
   TEST_ASSERT_FALSE(http::basicPassword("", pw, sizeof(pw)));
+  // A password that does not fit the buffer is refused, not cut to a shorter one that would match its prefix.
+  char small[8];
+  TEST_ASSERT_TRUE(http::basicPassword("Basic OjEyMzQ1Njc=", small, sizeof(small)));    // ":1234567", 7 fit
+  TEST_ASSERT_EQUAL_STRING("1234567", small);
+  TEST_ASSERT_FALSE(http::basicPassword("Basic OjEyMzQ1Njc4", small, sizeof(small)));   // ":12345678", 8 do not
 }
 
 void test_constant_time_equals() {

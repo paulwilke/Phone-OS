@@ -205,6 +205,7 @@ bool basicPassword(const char* authorization, char* out, size_t size) {
   decoded[n] = '\0';
   const char* colon = strchr(decoded, ':');
   if (!colon) return false;
+  if (strlen(colon + 1) >= size) return false;   // a password that does not fit is not a shorter password
   copyTo(out, size, colon + 1, strlen(colon + 1));
   return true;
 }

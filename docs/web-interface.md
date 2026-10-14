@@ -88,7 +88,7 @@ What only the device can show: whether the log and contacts tabs load now, how m
 
 ### Security model
 
-1. **Password required.** The web password is read from `/config/secrets.toml` on every request (no caching): a parent who changes the password locks out any session that was using the old one immediately. A password shorter than four characters (`kMinWebPassword`) is not accepted as a credential — the API stays locked until a long-enough password is stored. Without any stored password the API is permanently locked.
+1. **Password required.** The web password is read from `/config/secrets.toml` on every request (no caching): a parent who changes the password locks out any session that was using the old one immediately. A password shorter than four characters (`kMinWebPassword`) is not accepted as a credential — the API stays locked until a long-enough password is stored. Without any stored password the API is permanently locked. A stored password longer than `kMaxWebPassword` (100, the buffer it is compared in) locks the API with a message too, instead of being compared by its first bytes as it was until 4.2.3; the same holds for the password a request carries (`http::basicPassword` refuses one that does not fit).
 
 2. **Lockout after repeated failures.** Five consecutive wrong passwords (`kMaxFailures`) lock the API for sixty seconds (`kLockSeconds`). The counter resets on a correct password. The lock is one for everybody, not per client: whoever is on the same network can keep the parents out for a minute at a time, and a server with one connection on a device has no better place to count.
 
