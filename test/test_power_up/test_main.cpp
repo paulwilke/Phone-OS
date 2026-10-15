@@ -113,6 +113,10 @@ void test_both_resets_end_released_and_the_pins_are_set() {
   TEST_ASSERT_FALSE(r.gpio.level(pin::kFrontlight));
   TEST_ASSERT_TRUE(r.gpio.mode(pin::kBootButton) == Gpio::Mode::Input);
   TEST_ASSERT_TRUE(r.gpio.mode(pin::kSpiMiso) == Gpio::Mode::InputPullUp);
+  // The wake lines idle high through the processor's pull-ups (D-34): the keyboard's interrupt is open-drain and
+  // read low all night without one, and so did the ring line.
+  for (uint8_t line : {pin::kKeyboardInterrupt, pin::kTouchInterrupt, pin::kModemRing})
+    TEST_ASSERT_TRUE_MESSAGE(r.gpio.mode(line) == Gpio::Mode::InputPullUp, "a wake line without a pull-up");
 }
 
 int main(int, char**) {

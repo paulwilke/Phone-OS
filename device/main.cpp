@@ -230,6 +230,11 @@ void setup() {
   // The card first: what the other parts say about themselves is then written to it.
   boardSpi();  // starts the one SPI bus before anything on it is asked
   sdCard.begin(eventLog);
+  // The idle level of the three wake lines, with the pull-ups of board::powerUp in place: a line that idles low
+  // is armed to wake on high (device/Sleep.h, D-34), and this line says which it is, on the cable too.
+  eventLog.log(std::string("Wake lines: keyboard ") + (gpio.read(board::pin::kKeyboardInterrupt) ? "high" : "low") +
+               ", touch " + (gpio.read(board::pin::kTouchInterrupt) ? "high" : "low") +
+               ", ring " + (gpio.read(board::pin::kModemRing) ? "high" : "low"));
   configStore.recover();
   const config::ConfigLoader::Result loaded = config::ConfigLoader(configStore).load();
   batteryMah = loaded.profile.batteryCapacityMah;
@@ -339,7 +344,10 @@ void loop() {
   if (decision.cpuMaySleep && !haptic.busy() && decision.cpuSleepMs > 0) {
     const uint32_t before = millis();
     const SleepReport report = lightSleep(decision.cpuSleepMs);
-    sleptMs = millis() - before;
+    // A sleep that nothing ended did not happen: the processor went down and came up at once (a wake line already
+    // at its level), which the night of 2026-10-14 counted as 23 % asleep at 105 mA. Only the timer or a line
+    // ending it is sleep.
+    sleptMs = report.cause == board::LoopStats::WakeCause::Other ? 0 : millis() - before;
     loopStats.sleep(report.lowBefore, report.cause);
   } else {
     delay(5);

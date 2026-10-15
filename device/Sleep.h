@@ -1,9 +1,14 @@
 #pragma once
 
 // Light sleep for the time the power logic allows. The processor wakes on the timer, on a key or touch
-// (their interrupt lines go low), and on the modem's ring line (an incoming call or text). **Nothing sleeps
+// (their interrupt lines change), and on the modem's ring line (an incoming call or text). **Nothing sleeps
 // while a cable is attached**: the USB bridge of the ESP32-S3 is switched off in light sleep and the console
 // disappears; that rule is the power policy's (docs/power-policy.md), this function only carries a decision out.
+//
+// A line wakes on a level, not an edge (that is what light sleep offers), and a line that already has the level
+// ends the sleep at once: in the night of 2026-10-14 the keyboard's interrupt and the ring line read low before
+// every one of 398,000 sleeps, and none lasted. So each line is armed with the level it does not have now: a
+// line that idles high wakes on low, one that idles low wakes on high, whatever its polarity (decision D-34).
 
 #include <Arduino.h>
 #include <driver/gpio.h>
@@ -28,8 +33,9 @@ inline SleepReport lightSleep(uint32_t milliseconds) {
       {board::pin::kModemRing, LoopStats::WakeLine::Ring},
   };
   for (const auto& l : lines) {
-    if (digitalRead(l.pin) == LOW) report.lowBefore |= LoopStats::lineBit(l.line);
-    gpio_wakeup_enable((gpio_num_t)l.pin, GPIO_INTR_LOW_LEVEL);
+    const bool low = digitalRead(l.pin) == LOW;
+    if (low) report.lowBefore |= LoopStats::lineBit(l.line);
+    gpio_wakeup_enable((gpio_num_t)l.pin, low ? GPIO_INTR_HIGH_LEVEL : GPIO_INTR_LOW_LEVEL);
   }
   esp_sleep_enable_gpio_wakeup();
   esp_sleep_enable_timer_wakeup((uint64_t)milliseconds * 1000ULL);

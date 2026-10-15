@@ -363,7 +363,7 @@ Options: Leave it and raise the I2C clock to 400 kHz (a quarter of the cost, sti
 Decision: The second: `followCalls` asks `AppCore::callState()`, and `BoardPower::setClock` lets one reading serve every question for a second (`kReadingTtlMs`).
 Reason: The reading changes nothing in a second, and the status page and the energy log keep their numbers; the change is two small ones with tests.
 Consequences: Built in 4.2.4 ([device-power.md](device-power.md)); the loop line of the next night is the check: the step under 5 ms. Open point 25 says what to read.
-Verified: host-tested (`test_board_power`: five questions cost one reading); not verified on the device
+Verified: host-tested (`test_board_power`: five questions cost one reading); verified on the device on 2026-10-15: the step costs 0.4 ms of a pass (52.0 before) in every loop line of the night of 2026-10-14
 
 ## D-32: The gauge's learned full charge is left to the gauge
 Date: 2026-10-14   Status: decided
@@ -374,7 +374,7 @@ Options: Leave it. Write the design capacity only and compare only it; show the 
 Decision: The second: the design capacity decides whether anything is written; when it is written, the full charge is seeded with the same size, and afterwards it is the gauge's alone.
 Reason: The learned value is the gauge doing its job; the night showed about 1340 mAh from 92 % to the switch-off, near what it learned. Whether the cell is a 1500 or a 1400 mAh one, the owner enters once in `[battery] capacity_mah`.
 Consequences: Built in 4.2.4: the start line says "nothing to write; it has learned a full charge of 1372 mAh", the diagnosis shows both as before (`test_fuel_gauge`).
-Verified: host-tested; not verified on the device
+Verified: host-tested; verified on the device on 2026-10-15: the start line names the learned 1372 mAh and writes nothing; the diagnosis shows cycle count 1
 
 ## D-33: The sleep is measured before it is changed
 Date: 2026-10-14   Status: decided
@@ -385,4 +385,15 @@ Options: Change the wake lines to edges blind (the ring line is the suspect). Me
 Decision: Measure: the loop line gets "sleep: N times, ended by the timer, by a line, other; low before sleep: keyboard, touch, ring".
 Reason: The same reason as D-20: one night of numbers beats a guess, and the cost is three pin reads per pass.
 Consequences: `device/Sleep.h` reports, `board::LoopStats::sleep` counts (`test_loop_stats`); open point 25 says what to read. What the numbers show decides the change (an edge instead of a level, a line not used for waking, or the modem's ring line configured differently).
+Verified: host-tested; compiled; verified on the device on 2026-10-15: the night of 2026-10-14 says that the keyboard's interrupt and the ring line read low before all 398,000 sleeps and that none was ended by the timer or a line; the change is D-34
+
+## D-34: The wake lines get pull-ups and are armed with the level they do not have
+Date: 2026-10-15   Status: decided
+Decided by: owner (the standing go of 2026-10-14 to build what the night shows); agent (what)
+
+Context: The measurement of D-33 says that the keyboard's interrupt line and the modem's ring line read low before every one of 398,000 sleeps in the night of 2026-10-14, that none of the sleeps was ended by the timer or a line, and that the "asleep 23 %" was the going down and coming up of a sleep that never lasted, at the same 105 mA. The keyboard chip's interrupt is open-drain and active low, and the board gives it no pull-up; the ring line idles low too. A light sleep wakes on a level, and a line that is armed for low and is low ends it at once.
+Options: Arm the two lines for high instead (right only if their idle level is low by design). Pull the lines up with the processor's own pull-ups so that an open-drain line idles high, and arm each line with the level it does not have at that moment, whatever its polarity. Stop using the two lines for waking (a call would wait for the timer, up to two seconds).
+Decision: The second, and a sleep that nothing ended counts as no sleep in the loop line, and the start logs the idle level of the three lines.
+Reason: It needs no knowledge of the lines' polarity, costs nothing when a line is driven, and the start line and the next night show whether it holds.
+Consequences: `board::powerUp` (`test_power_up`), `device/Sleep.h`, `device/main.cpp`. The checks: the start line "Wake lines: keyboard high, ...", and after a night most sleeps ended by the timer with "asleep" most of the half hour and a current well under 105 mA. If a line still idles low with the pull-up, it is driven low, and the arming for high is what wakes on it.
 Verified: host-tested; compiled; not verified on the device

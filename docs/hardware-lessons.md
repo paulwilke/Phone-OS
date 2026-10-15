@@ -32,6 +32,14 @@ Outgoing calls hung the modem two seconds after dialling when the IMS was not re
 
 **Driver rule.** D-31: the state is not built every pass, and a reading of the battery chips is kept for a second. D-32: the learned full charge is left to the gauge. D-33: the sleep is measured (which line was low before it, what ended it). All three in 4.2.4. **Owner's check:** the loop line after 4.2.4 says the step costs a few milliseconds and what ends the sleep; the start line says "nothing to write; it has learned a full charge of ... mAh".
 
+## The second night: the wake lines idle low, so no sleep lasts
+
+**What was measured** (2026-10-14 to 15, firmware 4.2.4, the same conditions). The step costs 0.4 ms of a pass (52.0 the night before: D-31 holds), the loop makes 398,000 passes in 1800 s, sleep is allowed in every one, and the new sleep part of the line says: 398,000 sleeps, none ended by the timer, none by a line, all "other"; before every one of them the keyboard's interrupt line and the modem's ring line read low, the touch chip's high. "Asleep 23 %" with the current unchanged at 103 to 114 mA is the time of going down and coming up 220 times a second. The battery: 12.2 hours from 99 % to the switch-off at 3291 mV. The gauge: "nothing to write; it has learned a full charge of 1372 mAh" at the start (D-32 holds), cycle count 1, and once more from 52 % to 7 % in ten minutes at 3.63 V with the voltage's number shown from 01:28 to 06:01 (D-24 holds).
+
+**What it means.** A light sleep wakes on a level. Two of the three lines were armed to wake on low and were low already: the keyboard chip's interrupt is open-drain and the board gives it no pull-up, and the ring line idles low too, whether by the modem's polarity or for the same reason. So every sleep ended before it began, and the processor never rested.
+
+**Driver rule.** The three wake lines get the processor's pull-ups at start (`board::powerUp`); `device/Sleep.h` arms each line with the level it does not have at that moment; a sleep that nothing ended counts as no sleep; the start logs "Wake lines: keyboard ..., touch ..., ring ..." (decision D-34). **Owner's check:** the start line after 4.2.5 shows the idle levels (high is what the pull-ups should give the keyboard's line); after a night the loop line says most sleeps were ended by the timer, "asleep" is most of the half hour, and the energy log's current is well under 105 mA.
+
 ## Smaller facts that cost time
 
 - **The charger changed during the production series.** Newer boards carry an SY6970 on I2C address 0x6A, older ones a BQ25896 on 0x6B. A driver that looks at only one address treats the bus as broken.
