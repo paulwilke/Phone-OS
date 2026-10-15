@@ -27,7 +27,7 @@ The rule behind the split: **a bug found on the device gets a host test.** The h
 
 ## The start-up order
 
-`board::powerUp()` (`src/board/PowerUp.cpp`) brings the board up: the expander first (all legs outputs, then the boot state `0x9E`/`0x02`, in which the modem is off and the resets are released), the front light off, the touch reset held low for 20 ms and given 50 ms to settle, the keyboard reset the same, the boot button as an input and the SPI's MISO with a pull-up. Without an answering expander nothing behind it is touched, the firmware says so, and the processor's own pins are still set.
+`board::powerUp()` (`src/board/PowerUp.cpp`) brings the board up: the expander first (all legs outputs, then the boot state `0x9E`/`0x02`, in which the modem is off and the resets are released), the front light off, the touch reset held low for 20 ms and given 50 ms to settle, the keyboard reset the same, the boot button as an input, the SPI's MISO with a pull-up, and the three wake lines (the keyboard's interrupt, the touch chip's, the modem's ring line) with the processor's pull-ups, so that an open-drain line idles high (decision D-34: without them the keyboard's and the ring line read low before every sleep of a night, and no sleep lasted). Without an answering expander nothing behind it is touched, the firmware says so, and the processor's own pins are still set.
 
 ## Building
 
