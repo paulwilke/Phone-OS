@@ -2,6 +2,13 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.5
+
+What the second night on the battery showed (2026-10-14, with 4.2.4), acted on. Host-tested and compiled; the wake lines are to be verified on the device (the start line, then a night).
+
+- **The wake lines get pull-ups and wake on the level they do not have** (D-34). The loop line of the night said: 398,000 sleeps, none ended by the timer or a line, the keyboard's interrupt and the modem's ring line low before every one, the current unchanged at 105 mA. The keyboard chip's interrupt is open-drain and the board has no pull-up; the processor's own pull-ups hold the three lines high now, and each is armed to wake on the level it does not have at that moment. A sleep that nothing ended no longer counts as sleep, and the start logs "Wake lines: keyboard ..., touch ..., ring ...", on the cable too.
+- **Seen on the device on 2026-10-15** (4.2.4): the step of the loop costs 0.4 ms instead of 52 (D-31); the gauge's start line names its learned 1372 mAh and writes nothing (D-32); the loop line's sleep part names the lines (D-33); the switch-off at 3291 mV after 12.2 hours; the battery percentage from the voltage from 01:28 to 06:01 with two lines (D-24).
+
 ## 4.2.4
 
 What the night of 2026-10-13 on the battery showed, acted on (decisions D-31 to D-33). Host-tested and compiled; none of it is verified on the device yet. The owner flashes it and goes through the test protocol.
