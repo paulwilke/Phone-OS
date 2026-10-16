@@ -40,6 +40,16 @@ Outgoing calls hung the modem two seconds after dialling when the IMS was not re
 
 **Driver rule.** The three wake lines get the processor's pull-ups at start (`board::powerUp`); `device/Sleep.h` arms each line with the level it does not have at that moment; a sleep that nothing ended counts as no sleep; the start logs "Wake lines: keyboard ..., touch ..., ring ..." (decision D-34). **Owner's check:** the start line after 4.2.5 shows the idle levels (high is what the pull-ups should give the keyboard's line); after a night the loop line says most sleeps were ended by the timer, "asleep" is most of the half hour, and the energy log's current is well under 105 mA.
 
+## The third night: the processor sleeps, 62 mA remain
+
+**What was measured** (2026-10-15 22:22 to 2026-10-16 07:40, firmware 4.2.5, locked, modem asleep, Wi-Fi off). The start line: "Wake lines: keyboard high, touch high, ring high". Every loop line of the night: 882 to 883 passes in 1800 s, asleep 97 to 98 %, sleep allowed in every pass, every sleep ended by the timer, no line low before a sleep; per pass keys 2.9 ms, step 32.6 ms, housekeeping 4.0 ms (a pass is now about two seconds long and holds one frame and one battery reading, so the per-pass figures grew while the work per half hour fell from 160 s to 29 s). The energy log: 58 to 63 mA, 61.9 mA on average from the slope, 1248 to 679 mAh in 9.19 hours, 92 % to 50 %. A call at 07:40 after nine hours of modem sleep went out at once ("Call: dialling", "ringing at the other end"). The display: five long passes in the night, three partial refreshes (the date at midnight, two bar changes) and two full refreshes of four-hour-old pictures. Switched off from 07:42 to 13:08 the gauge lost 1 mAh: the off state draws nothing that matters.
+
+**What it means.** D-34 holds: the pull-ups and the arming on the opposite level made the light sleep last. The processor is awake about 2 % of the time, about 1 mA on average, so the remaining 55 to 60 mA are elsewhere: the modem in its sleep (`AT+CSCLK=1` and DTR high, a few mA by the manual, tens if the sleep does not take), the display controller, the card, the keyboard and touch chips, the gauge and the charger, or a rail the firmware believes off (the keyboard backlight pin 42 is defined and never driven). Nothing in the logs tells them apart. By projection the cell gives about 21 hours from full to the switch-off, against 12 to 13 before.
+
+**The charge at the adapter the day before** (2026-10-15, 14:04 to 22:22): 516 falling to 420 mA, input-limited to 500 mA; termination after 3 h 10 min at 4200 mV and 255 mA; afterwards the cell fed the board with 35 mA while the adapter was attached, and a top-up started whenever the cell fell to about 4.10 V, five times in five hours; the gauge stayed between 90 and 93 % and never said 100 % (open point 26).
+
+**Driver rule.** None new. **Owner's check:** open point 25 (the ammeter) and 26 (the charger after "done").
+
 ## Smaller facts that cost time
 
 - **The charger changed during the production series.** Newer boards carry an SY6970 on I2C address 0x6A, older ones a BQ25896 on 0x6B. A driver that looks at only one address treats the bus as broken.
