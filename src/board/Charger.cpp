@@ -6,6 +6,7 @@ namespace board {
 
 namespace {
 constexpr uint8_t kRegInputLimit = 0x00;
+constexpr uint8_t kInputLimitBits = 0x3F;
 constexpr uint8_t kRegChargeCurrent = 0x04;
 constexpr uint8_t kRegWatchdog = 0x07;
 constexpr uint8_t kWatchdogBits = 0x30;
@@ -41,7 +42,7 @@ ChargerStatus decodeCharger(const uint8_t (&r)[kChargerRegisterCount]) {
   decodeStatusRegister(r[kRegStatus], s);
 
   s.inputLimitEnabled = (r[kRegInputLimit] & 0x40) != 0;
-  s.inputCurrentLimitMa = 100 + 50 * (r[kRegInputLimit] & 0x3F);
+  s.inputCurrentLimitMa = kInputBaseMa + kInputStepMa * (r[kRegInputLimit] & kInputLimitBits);
   s.chargeCurrentMa = 64 * (r[kRegChargeCurrent] & 0x7F);
   s.prechargeCurrentMa = 64 + 64 * (r[kRegPrecharge] >> 4);
   s.terminationCurrentMa = 64 + 64 * (r[kRegPrecharge] & 0x0F);
@@ -149,6 +150,23 @@ ChargeSetup Charger::limitCharging(int maxMa) {
   setup.watchdogSeconds = watchdogSecondsOf(watchdog);
   setup.chargeCurrentMa = kChargeStepMa * (current & 0x7F);
   setup.ok = setup.watchdogSeconds == 0 && current == wantCurrent;
+  return setup;
+}
+
+InputSetup Charger::limitInput(int maxMa) {
+  InputSetup setup;
+  if (!found()) return setup;
+  uint8_t reg = 0;
+  if (!bus_.readRegister(address_, kRegInputLimit, reg)) return setup;
+  setup.inputLimitBeforeMa = kInputBaseMa + kInputStepMa * (reg & kInputLimitBits);
+  const uint8_t want = (uint8_t)((reg & ~kInputLimitBits) | inputLimitBits(maxMa));
+  if (want != reg) {
+    if (!bus_.writeRegister(address_, kRegInputLimit, want)) return setup;
+    setup.changed = true;
+  }
+  if (!bus_.readRegister(address_, kRegInputLimit, reg)) return setup;
+  setup.inputLimitMa = kInputBaseMa + kInputStepMa * (reg & kInputLimitBits);
+  setup.ok = reg == want;
   return setup;
 }
 

@@ -69,6 +69,22 @@ constexpr int chargeCurrentLimitMa(int capacityMah) {
   return ma;
 }
 
+// The input current limit this firmware sets (decision D-38). The chip takes every supply for an "unknown
+// adapter" and limits itself to 500 mA, which charged the 1500 mAh cell at 516 falling to 420 mA for three
+// hours on 2026-10-15 while the charge current limit above (960 mA) was never reached. A mains adapter gives
+// at least 1 A, so 800 mA leaves a margin and the cell's own limit stays the one that holds. A computer's USB
+// port limits itself or the chip's input voltage regulation lowers the current; the owner accepts that.
+// Register 0x00 holds it in bits 5:0 as 100 mA + 50 mA per step.
+constexpr int kInputLimitMa = 800;
+constexpr int kInputBaseMa = 100;
+constexpr int kInputStepMa = 50;
+constexpr int kInputMaxMa = 3250;
+constexpr uint8_t inputLimitBits(int ma) {
+  if (ma < kInputBaseMa) ma = kInputBaseMa;
+  if (ma > kInputMaxMa) ma = kInputMaxMa;
+  return (uint8_t)((ma - kInputBaseMa) / kInputStepMa);
+}
+
 // What limitCharging() found and did.
 struct ChargeSetup {
   bool ok = false;               // the chip holds the wanted values, read back
@@ -77,6 +93,14 @@ struct ChargeSetup {
   int chargeCurrentMa = 0;       // as read back
   int watchdogBeforeSeconds = 0;
   int watchdogSeconds = 0;       // as read back
+};
+
+// What limitInput() found and did.
+struct InputSetup {
+  bool ok = false;               // the chip holds the wanted limit, read back
+  bool changed = false;          // the register was written
+  int inputLimitBeforeMa = 0;
+  int inputLimitMa = 0;          // as read back
 };
 
 ChargerStatus decodeCharger(const uint8_t (&registers)[kChargerRegisterCount]);
@@ -111,6 +135,11 @@ public:
   // read first and written only on a difference, only the bits of this setting change, and both are read
   // back. Nothing is written when the chip already holds the values.
   ChargeSetup limitCharging(int maxMa);
+
+  // Puts the input current limit (register 0x00 bits 5:0) to `maxMa`, rounded down to the chip's step of
+  // 50 mA. The register is read first and written only on a difference, the two top bits (EN_HIZ, EN_ILIM)
+  // are kept as they are, and the result is read back.
+  InputSetup limitInput(int maxMa);
 
 private:
   I2cBus& bus_;

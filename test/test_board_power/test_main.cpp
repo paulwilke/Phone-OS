@@ -164,6 +164,26 @@ void test_a_charger_that_refuses_the_limit_is_logged_and_the_start_goes_on() {
   TEST_ASSERT_TRUE(r.log.contains("fuel gauge capacity"));  // the rest of the start ran
 }
 
+void test_the_start_sets_the_input_limit_to_800_ma_once_and_says_so() {
+  BoardPowerRig r(false);  // register 0x00 as read on the device: 0x48, 500 mA
+  r.impl.begin(BoardPowerRig::kConfiguredMah, r.writer, r.log);
+  TEST_ASSERT_TRUE(r.log.contains("input current limit set to 800 mA (it was 500 mA)"));
+  TEST_ASSERT_EQUAL_HEX8(0x4E, r.bus.reg(board::i2c::kChargerSy6970, 0x00));
+  FakeEventLog second;
+  r.impl.begin(BoardPowerRig::kConfiguredMah, r.writer, second);
+  TEST_ASSERT_TRUE(second.contains("input current limit is 800 mA already, nothing to write"));
+  TEST_ASSERT_EQUAL(1, r.bus.writeCount(board::i2c::kChargerSy6970, 0x00));  // written once, not at every start
+}
+
+void test_a_charger_that_refuses_the_input_limit_is_logged_and_the_start_goes_on() {
+  BoardPowerRig r(false);
+  r.bus.refuseRegisterWrite(board::i2c::kChargerSy6970, 0x00);
+  r.impl.begin(BoardPowerRig::kConfiguredMah, r.writer, r.log);
+  TEST_ASSERT_TRUE(r.log.contains("input current limit could not be set, the charger keeps its own 500 mA"));
+  TEST_ASSERT_TRUE(r.log.contains("charge current limited to 960 mA"));  // the other setting was made
+  TEST_ASSERT_TRUE(r.log.contains("fuel gauge capacity"));  // the rest of the start ran
+}
+
 void test_no_charger_says_so_once_and_reports_unknown() {
   FakeDelay delay;
   FakeI2cBus bus(&delay);
@@ -369,6 +389,8 @@ int main(int, char**) {
   RUN_TEST(test_the_older_charger_at_6b_works_the_same);
   RUN_TEST(test_the_start_limits_the_charge_current_once_and_says_so);
   RUN_TEST(test_a_charger_that_refuses_the_limit_is_logged_and_the_start_goes_on);
+  RUN_TEST(test_the_start_sets_the_input_limit_to_800_ma_once_and_says_so);
+  RUN_TEST(test_a_charger_that_refuses_the_input_limit_is_logged_and_the_start_goes_on);
   RUN_TEST(test_no_charger_says_so_once_and_reports_unknown);
   RUN_TEST(test_a_charger_that_appears_later_is_found);
   RUN_TEST(test_a_missing_gauge_gives_unknown_battery_and_leaves_the_charger_alone);

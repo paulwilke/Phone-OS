@@ -15,6 +15,11 @@ void BoardPower::begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer,
     if (!setup.ok) log.log("Battery: the charge current could not be limited, the charger keeps its own " + std::to_string(setup.chargeCurrentBeforeMa) + " mA");
     else if (setup.changed) log.log("Battery: charge current limited to " + std::to_string(setup.chargeCurrentMa) + " mA (it was " + std::to_string(setup.chargeCurrentBeforeMa) + " mA), the charger's watchdog is off");
     else log.log("Battery: charge current is " + std::to_string(setup.chargeCurrentMa) + " mA already, nothing to write");
+    // The chip takes every supply for an "unknown adapter" and limits its input to 500 mA (D-38).
+    const InputSetup input = charger_.limitInput(kInputLimitMa);
+    if (!input.ok) log.log("Battery: the input current limit could not be set, the charger keeps its own " + std::to_string(input.inputLimitBeforeMa) + " mA");
+    else if (input.changed) log.log("Battery: input current limit set to " + std::to_string(input.inputLimitMa) + " mA (it was " + std::to_string(input.inputLimitBeforeMa) + " mA)");
+    else log.log("Battery: input current limit is " + std::to_string(input.inputLimitMa) + " mA already, nothing to write");
   } else {
     log.log("Battery: no charger answers at either address, charge state and cable are unknown");
   }
