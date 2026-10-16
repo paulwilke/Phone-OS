@@ -10,6 +10,8 @@
 //              failAllWrites(bool)                     every write fails before it starts (a write-protected card)
 //              failRenames(bool), failRemoves(bool)    renames/removes refuse
 //              failReads(bool)                         every readAt fails (a card that gave up in the middle)
+//              failReadsAt(offset, times)              the next `times` readAt calls at that offset fail, then it reads
+//                                                      (a block whose open fails now and then); they count in readCount()
 // The failure state: a mount that failed leaves the volume stuck until unmount(), like the library.
 // Power loss:  loseCardAfter(n)                        the n-th mutating operation from now is the last one that happens;
 //                                                      after it every call fails until powerBack()
@@ -71,6 +73,11 @@ public:
     const auto it = nodes_.find(key(path));
     if (it == nodes_.end() || it->second.isDir) return -1;
     ++reads_;
+    const auto failing = readFailures_.find(offset);
+    if (failing != readFailures_.end() && failing->second > 0) {
+      --failing->second;
+      return -1;
+    }
     const std::string& d = it->second.data;
     if (offset >= d.size()) return 0;
     const size_t n = std::min(len, d.size() - (size_t)offset);
@@ -162,6 +169,7 @@ public:
   void failRenames(bool fail) { failRenames_ = fail; }
   void failRemoves(bool fail) { failRemoves_ = fail; }
   void failReads(bool fail) { failReads_ = fail; }
+  void failReadsAt(uint64_t offset, int times) { readFailures_[offset] = times; }
   void loseCardAfter(int operations) { budget_ = operations; }
   void powerBack() {
     dead_ = false;
@@ -237,6 +245,7 @@ private:
   bool failRenames_ = false;
   bool failRemoves_ = false;
   bool failReads_ = false;
+  std::map<uint64_t, int> readFailures_;
   int budget_ = -1;
   bool dead_ = false;
   int reads_ = 0;

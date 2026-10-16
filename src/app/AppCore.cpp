@@ -75,6 +75,17 @@ void AppCore::applyTimeZone() {
 void AppCore::start() {
   if (!profile_.interfaceLanguage.empty()) translator_.select(profile_.interfaceLanguage);
   store_.restore();
+  // One line for every start: a restore that stopped early once showed 35 unread messages on the lock screen
+  // and left nothing in the log to explain it (F6 of the log analysis of 2026-10-16). "failed" keeps the
+  // second form on every log level.
+  const std::string restored = "restored " + std::to_string(store_.count()) + " (" + std::to_string(store_.unread()) +
+                               " unread), " + std::to_string(store_.damagedLines()) + " damaged lines";
+  if (store_.readStoppedEarly())
+    log(("Messages: reading the log failed after " + std::to_string(store_.linesRead()) + " lines: " + restored +
+         ", marks applied; the log is not written until it is read to the end")
+            .c_str());
+  else
+    log(("Messages: " + restored).c_str());
   configureTriggers();
   applyTimeZone();
   positioning_.startStartupFix();

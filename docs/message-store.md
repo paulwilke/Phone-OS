@@ -45,9 +45,21 @@ A text or a peer is written on one line: a tab becomes a blank and a line break 
 
 ### Restoring
 
-`restore()` reads the whole log and rebuilds the list; the newest 50 stay. It returns false when there is no log, it cannot be read, or lines were damaged; the readable rest is kept in every case, and `damagedLines()` counts the others. A line is damaged when it is not one of the five kinds above, a number is not made of digits only (or is too large), a field is missing or unknown (a cut-off last line usually lacks its last tab), or a message number is already in memory. Empty lines are skipped, a trailing `\r` (a file touched on Windows) is ignored, and fields that are too long for their buffer are cut on a character boundary.
+`restore()` reads the whole log and rebuilds the list; the newest 50 stay. It returns false when there is no log, it cannot be read to the end, or lines were damaged; the readable rest is kept in every case, and `damagedLines()` counts the others. A line is damaged when it is not one of the five kinds above, a number is not made of digits only (or is too large), a field is missing or unknown (a cut-off last line usually lacks its last tab), or a message number is already in memory. Empty lines are skipped, a trailing `\r` (a file touched on Windows) is ignored, and fields that are too long for their buffer are cut on a character boundary.
 
 The read mark is applied after all lines are read, because its line can come before or after the messages it covers. Marks for messages that have already left the ring are ignored.
+
+### A read that stops early
+
+The log says whether it read to the end, found no history (no file yet, or no card), or stopped in the middle of a file that is there (`MessageLog::Read`). On the card a block that cannot be read is tried once more before the read stops ([device-storage-network.md](device-storage-network.md)). When it stops all the same (decision D-37):
+
+- **What was read is kept, with its marks.** The read mark and the deletions, sending and delivery lines that were read are applied as after a whole read. Deletions in the unread rest are not known, so messages deleted there come back for this session; they are not counted as unread when the read mark covers them.
+- **Nothing is written to the log until a restore reads it to the end**, which is the next start. The next number would come from the lines read so far, and the unread rest may hold it already: a message line with it would be a repeat at the next whole read and be dropped, and a deletion line for it would delete the old message. The session works in memory as usual; every line that is not written is counted in `writeErrors()`, and messages that arrive in such a session are not in the history after the next start.
+- `readStoppedEarly()` says that it happened and `linesRead()` how many lines were read.
+
+At every start the core writes one line to the system log: "Messages: restored 34 (0 unread), 0 damaged lines", or after a read that stopped early "Messages: reading the log failed after 412 lines: restored 35 (0 unread), 0 damaged lines, marks applied; the log is not written until it is read to the end", which is kept on every log level.
+
+This was seen on 2026-10-13: a read that stopped after the eighth block of 512 bytes left 35 messages in memory and, before the fix, applied no read mark, so the lock screen counted all 35, outgoing ones included, as unread (open point 36).
 
 ### Why deleted numbers are not reused
 

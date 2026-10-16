@@ -10,6 +10,7 @@
 
 #include <app/MessageStore.h>
 #include <app/SystemEntry.h>
+#include <fakes/FakeMessageLog.h>
 
 namespace {
 
@@ -23,10 +24,10 @@ struct FakeLog : MessageLog {
     lines.push_back(line);
     return true;
   }
-  bool readAll(Visitor& v) override {
-    if (failRead) return false;
+  Read readAll(Visitor& v) override {
+    if (failRead) return Read::Missing;
     for (auto& l : lines) v.line(l.c_str());
-    return true;
+    return Read::Complete;
   }
 };
 
@@ -615,6 +616,102 @@ void test_restoring_twice_gives_the_same_list() {
   TEST_ASSERT_EQUAL(3, s.add(msg("+491701111111", "three")));
 }
 
+// ---------------------------------------------------------------------------
+// A read that stops early (F6 of the log analysis of 2026-10-16, open point 36)
+// ---------------------------------------------------------------------------
+
+namespace {
+// The owner's shape of history, small: incoming messages, the read mark, one of
+// them deleted, outgoing ones after the mark, and then, past the place where the
+// read stops, the other incoming ones deleted and one more outgoing message.
+// Read whole it is four outgoing messages; read up to the cut it is seven.
+constexpr int kLinesBeforeTheCut = 10;
+void writeTheOwnersShape(FakeMessageLog& log) {
+  MessageStore s;
+  s.attach(&log);
+  for (int i = 1; i <= 5; ++i) s.add(msg("+491701111111", ("incoming " + std::to_string(i)).c_str()));
+  s.markAllRead();                                                             // R 5
+  s.remove(2);                                                                 // X 2
+  for (int i = 6; i <= 8; ++i) s.add(msg("+491701111111", ("outgoing " + std::to_string(i)).c_str(), MsgDir::Out));
+  TEST_ASSERT_EQUAL(kLinesBeforeTheCut, log.lines().size());
+  for (uint32_t seq : {1u, 3u, 4u, 5u}) s.remove(seq);
+  s.add(msg("+491701111111", "outgoing 9", MsgDir::Out));
+}
+}  // namespace
+
+// Before the fix the store returned before the read mark was applied, and every
+// message read so far, outgoing ones included, counted as unread: 35 on the lock
+// screen on 2026-10-13, where the whole log had none.
+void test_a_read_that_stops_early_still_applies_the_read_mark_and_the_deletions_it_saw() {
+  FakeMessageLog log;
+  writeTheOwnersShape(log);
+  log.stopReadingAfter(kLinesBeforeTheCut);
+  MessageStore s;
+  s.attach(&log);
+  TEST_ASSERT_FALSE(s.restore());
+  TEST_ASSERT_TRUE(s.readStoppedEarly());
+  TEST_ASSERT_EQUAL(kLinesBeforeTheCut, s.linesRead());
+  TEST_ASSERT_EQUAL(0, s.damagedLines());
+  TEST_ASSERT_EQUAL(7, s.count());                 // 1, 3, 4, 5 come back: their deletions were not read
+  TEST_ASSERT_EQUAL(0, s.unread());
+  for (size_t i = 0; i < s.count(); ++i) TEST_ASSERT_NOT_EQUAL(2, s.at(i).seq);
+
+  log.stopReadingAfter(-1);
+  TEST_ASSERT_TRUE(s.restore());                   // read whole, it is what it was
+  TEST_ASSERT_FALSE(s.readStoppedEarly());
+  TEST_ASSERT_EQUAL(4, s.count());
+  TEST_ASSERT_EQUAL(0, s.unread());
+}
+
+// After a cut-off read the next number comes from the lines read so far (9 here),
+// and the file already holds a message 9. Written, the new message would be dropped
+// as a repeat at the next full restore, and its deletion would delete the old 9.
+void test_after_a_read_that_stopped_early_nothing_is_written_so_no_number_is_reused() {
+  FakeMessageLog log;
+  writeTheOwnersShape(log);
+  const std::vector<std::string> before = log.lines();
+  log.stopReadingAfter(kLinesBeforeTheCut);
+  size_t refused = 0;
+  {
+    MessageStore cut;
+    cut.attach(&log);
+    cut.restore();
+    const uint32_t seq = cut.add(msg("+491702222222", "arrives in the session"));
+    TEST_ASSERT_EQUAL(1, cut.unread());            // on the screen all the same
+    cut.markAllRead();
+    cut.remove(seq);
+    cut.remove(6);
+    refused = cut.writeErrors();
+  }
+
+  log.stopReadingAfter(-1);
+  MessageStore next;
+  next.attach(&log);
+  const bool whole = next.restore();
+  TEST_ASSERT_EQUAL(0, next.damagedLines());       // a second M 9 would be a repeat, and dropped
+  TEST_ASSERT_TRUE(whole);
+  TEST_ASSERT_EQUAL(4, next.count());              // 6 is still there: its deletion was not written
+  TEST_ASSERT_EQUAL(9, next.at(3).seq);
+  TEST_ASSERT_EQUAL_STRING("outgoing 9", next.at(3).text);
+  TEST_ASSERT_EQUAL(4, refused);
+  TEST_ASSERT_TRUE(log.lines() == before);
+  TEST_ASSERT_EQUAL(10, next.add(msg("+491702222222", "after a whole read")));
+  TEST_ASSERT_EQUAL(before.size() + 1, log.lines().size());  // written again
+  TEST_ASSERT_EQUAL(0, next.writeErrors());
+}
+
+// A history that is not there is not a read that stopped early: the store numbers
+// from 1 and writes.
+void test_a_missing_history_is_written_from_the_first_message() {
+  FakeMessageLog log;
+  MessageStore s;
+  s.attach(&log);
+  TEST_ASSERT_FALSE(s.restore());
+  TEST_ASSERT_FALSE(s.readStoppedEarly());
+  TEST_ASSERT_EQUAL(1, s.add(msg("+491701111111", "first")));
+  TEST_ASSERT_EQUAL(1, log.lines().size());
+}
+
 // A full card or a missing one must not lose the message on screen, and the failure
 // must be visible to whoever shows the status.
 void test_a_failed_write_keeps_the_message_and_is_counted() {
@@ -664,6 +761,9 @@ int main(int, char**) {
   RUN_TEST(test_a_repeated_number_is_damage);
   RUN_TEST(test_an_unreadable_log_gives_an_empty_list_and_false);
   RUN_TEST(test_restoring_twice_gives_the_same_list);
+  RUN_TEST(test_a_read_that_stops_early_still_applies_the_read_mark_and_the_deletions_it_saw);
+  RUN_TEST(test_after_a_read_that_stopped_early_nothing_is_written_so_no_number_is_reused);
+  RUN_TEST(test_a_missing_history_is_written_from_the_first_message);
   RUN_TEST(test_a_failed_write_keeps_the_message_and_is_counted);
   return UNITY_END();
 }

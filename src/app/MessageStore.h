@@ -54,6 +54,11 @@ public:
   // Rebuilds the list from the log; the newest kCapacity messages stay. Returns
   // false when there is no log, it cannot be read, or lines were damaged — the
   // readable rest is kept in every case (damagedLines() counts the others).
+  //
+  // A read that stops in the middle of the file keeps what it read, with the read
+  // mark and the deletions it saw applied, and then nothing is written to the log
+  // until the next restore() reads it to the end: the numbers in the unread rest
+  // are unknown, and a new message could get one of them (decision D-37).
   bool restore();
 
   // Appends a message: assigns the number, writes the log line, returns the
@@ -83,6 +88,11 @@ public:
 
   // Lines that could not be used during the last restore().
   size_t damagedLines() const { return damaged_; }
+  // Lines the last restore() was handed, damaged ones included.
+  size_t linesRead() const { return linesRead_; }
+  // The last restore() could not read the log to the end; until the next one that
+  // does, every write is refused and counted in writeErrors().
+  bool readStoppedEarly() const { return readStoppedEarly_; }
   // Log lines that could not be written since start.
   size_t writeErrors() const { return writeErrors_; }
 
@@ -101,5 +111,7 @@ private:
   uint32_t nextSeq_ = 1;
   uint32_t readUpTo_ = 0;  // every message with seq <= readUpTo_ is read
   size_t damaged_ = 0;
+  size_t linesRead_ = 0;
+  bool readStoppedEarly_ = false;
   size_t writeErrors_ = 0;
 };

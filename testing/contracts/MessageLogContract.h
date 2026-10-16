@@ -22,14 +22,14 @@ template <class Rig>
 struct MessageLogContract {
   static std::vector<std::string> all(Rig& rig) {
     message_log_contract::Collect c;
-    TEST_ASSERT_TRUE(rig.log().readAll(c));
+    TEST_ASSERT_TRUE(rig.log().readAll(c) == MessageLog::Read::Complete);
     return c.lines;
   }
 
   static void there_is_no_history_before_the_first_line() {
     Rig rig;
     message_log_contract::Collect c;
-    TEST_ASSERT_FALSE(rig.log().readAll(c));
+    TEST_ASSERT_TRUE(rig.log().readAll(c) == MessageLog::Read::Missing);
     TEST_ASSERT_EQUAL(0, c.lines.size());
   }
 
