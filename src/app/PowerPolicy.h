@@ -20,6 +20,12 @@
 //   7. A modem without a network must not sleep: asleep it no longer answers AT
 //      commands and registration never happens. That is exactly what happened on the
 //      device: 60 s after start it went to sleep in the middle of the operator search.
+//   9. A registered modem stays awake until its IMS is registered or the network carries
+//      SMS only, and at most kImsWaitSeconds after the registration. Asleep it is not asked
+//      about the IMS again: on the device (4.2.5) it went to sleep 14 s after registering,
+//      before the IMS, and the screens said "connecting" and a call was refused for 40
+//      minutes, until something woke it. The bound keeps a network without VoLTE from
+//      keeping the modem awake for good.
 //   4. The processor may sleep only with the display off, after the idle time, and
 //      with the modem asleep or switched off, and only until the next render is due.
 //      In light sleep the ESP32 stops the clock of the serial port; an awake modem
@@ -46,6 +52,8 @@ struct PowerInputs {
   bool radioRunning = false;       // the radio software uses the chip
   bool externalPower = false;
   bool modemRegistered = false;    // registered in the network
+  bool voiceSettled = false;       // the IMS is registered, or the network carries SMS only: nothing to wait for
+  uint32_t registeredSeconds = 0;  // since the modem registered in the network
   bool wifiActive = false;
 };
 
@@ -62,6 +70,10 @@ class PowerPolicy {
 public:
   // Quiet time before the modem may sleep. Shorter saves more but wakes more often.
   static constexpr uint32_t kIdleSeconds = 60;
+  // How long a registered modem waits awake for its IMS (rule 9). On the device the IMS came
+  // about 30 s after the network; two minutes are four of the driver's 30-second questions,
+  // and a network without VoLTE costs two minutes awake per registration, not more.
+  static constexpr uint32_t kImsWaitSeconds = 120;
   // Upper limit of one light-sleep stretch: the clock stays accurate enough and
   // incoming events are noticed promptly.
   static constexpr uint32_t kMaxCpuSleepMs = 2000;

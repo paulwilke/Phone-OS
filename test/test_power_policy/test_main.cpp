@@ -20,10 +20,12 @@ PowerInputs idleDevice() {
   in.modemSleepAllowed = true;
   in.displayOn = false;
   in.nextRenderInMs = 1000;
-  // The normal case: on battery and registered. Both must hold or nothing sleeps
-  // (rules 6 and 7).
+  // The normal case: on battery, registered, and the IMS registered too. All must hold
+  // or nothing sleeps (rules 6, 7 and 9).
   in.externalPower = false;
   in.modemRegistered = true;
+  in.voiceSettled = true;
+  in.registeredSeconds = 600;
   return in;
 }
 
@@ -181,6 +183,28 @@ void test_a_modem_without_a_network_stays_awake() {
   TEST_ASSERT_FALSE(d.cpuMaySleep);
 }
 
+// Rule 9. On the device (4.2.5) the modem went to sleep 14 s after registering, before
+// its IMS, and was not asked again for 40 minutes: "connecting" on the screens, and a
+// call refused. It waits awake for the IMS, at most kImsWaitSeconds; the boundary is
+// inclusive, as for the quiet time.
+void test_a_registered_modem_waits_awake_for_its_ims_up_to_the_bound() {
+  PowerInputs in = idleDevice();
+  in.voiceSettled = false;
+  in.registeredSeconds = 14;
+  PowerDecision d = PowerPolicy::decide(in);
+  TEST_ASSERT_FALSE(d.modemShouldSleep);
+  TEST_ASSERT_FALSE(d.cpuMaySleep);  // it would sleep through the modem's answers
+  in.registeredSeconds = PowerPolicy::kImsWaitSeconds - 1;
+  TEST_ASSERT_FALSE(PowerPolicy::decide(in).modemShouldSleep);
+  in.registeredSeconds = PowerPolicy::kImsWaitSeconds;  // a network without VoLTE does not keep it awake for good
+  d = PowerPolicy::decide(in);
+  TEST_ASSERT_TRUE(d.modemShouldSleep);
+  TEST_ASSERT_TRUE(d.cpuMaySleep);
+  in.registeredSeconds = 14;  // the IMS came (or the network carries SMS only): no wait
+  in.voiceSettled = true;
+  TEST_ASSERT_TRUE(PowerPolicy::decide(in).modemShouldSleep);
+}
+
 // Rule 8. Without a test in the previous code base. In light sleep the WLAN connection
 // drops and the web server stops answering.
 void test_wlan_keeps_the_cpu_awake_but_lets_the_modem_sleep() {
@@ -214,7 +238,7 @@ void test_no_sleep_time_without_permission() {
 // run, so that no rule, whatever its place in the code, can take the radio's power
 // away or give it to it.
 void test_the_radio_follows_only_its_own_input_in_every_combination() {
-  for (unsigned bits = 0; bits < 512; ++bits) {
+  for (unsigned bits = 0; bits < 1024; ++bits) {
     PowerInputs in = idleDevice();
     in.callActive = bits & 1;
     in.pendingWork = bits & 2;
@@ -225,6 +249,8 @@ void test_the_radio_follows_only_its_own_input_in_every_combination() {
     in.modemRegistered = bits & 64;
     in.wifiActive = bits & 128;
     in.lastInputSeconds = (bits & 256) ? in.nowSeconds : 0;
+    in.voiceSettled = bits & 512;
+    in.registeredSeconds = 0;
     in.radioRunning = true;
     TEST_ASSERT_TRUE(PowerPolicy::decide(in).radioShouldBePowered);
     in.radioRunning = false;
@@ -234,7 +260,7 @@ void test_the_radio_follows_only_its_own_input_in_every_combination() {
 
 // What may sleep implies what the rules require, over every combination.
 void test_sleep_implies_all_its_conditions_in_every_combination() {
-  for (unsigned bits = 0; bits < 1024; ++bits) {
+  for (unsigned bits = 0; bits < 2048; ++bits) {
     PowerInputs in = idleDevice();
     in.callActive = bits & 1;
     in.pendingWork = bits & 2;
@@ -247,10 +273,12 @@ void test_sleep_implies_all_its_conditions_in_every_combination() {
     const bool quiet = bits & 256;
     in.lastInputSeconds = quiet ? 0 : in.nowSeconds;
     in.nextRenderInMs = (bits & 512) ? 0 : 700;
+    in.voiceSettled = bits & 1024;
+    in.registeredSeconds = 0;  // just registered: only a settled voice lets the modem sleep
     const PowerDecision d = PowerPolicy::decide(in);
 
     if (d.modemShouldSleep) {
-      TEST_ASSERT_TRUE(quiet && in.cellularEnabled && in.modemSleepAllowed && in.modemRegistered);
+      TEST_ASSERT_TRUE(quiet && in.cellularEnabled && in.modemSleepAllowed && in.modemRegistered && in.voiceSettled);
       TEST_ASSERT_FALSE(in.callActive || in.pendingWork || in.externalPower);
     }
     if (d.cpuMaySleep) {
@@ -263,7 +291,7 @@ void test_sleep_implies_all_its_conditions_in_every_combination() {
     }
     // And the other way round: when every condition holds, it does sleep.
     if (quiet && !in.displayOn && !in.wifiActive && !in.callActive && !in.pendingWork && !in.externalPower &&
-        (in.cellularEnabled ? (in.modemSleepAllowed && in.modemRegistered) : true)) {
+        (in.cellularEnabled ? (in.modemSleepAllowed && in.modemRegistered && in.voiceSettled) : true)) {
       TEST_ASSERT_TRUE(d.cpuMaySleep);
     }
   }
@@ -285,6 +313,7 @@ int main(int, char**) {
   RUN_TEST(test_the_radio_survives_a_call_and_pending_work);
   RUN_TEST(test_nothing_sleeps_on_external_power);
   RUN_TEST(test_a_modem_without_a_network_stays_awake);
+  RUN_TEST(test_a_registered_modem_waits_awake_for_its_ims_up_to_the_bound);
   RUN_TEST(test_wlan_keeps_the_cpu_awake_but_lets_the_modem_sleep);
   RUN_TEST(test_wlan_keeps_the_cpu_awake_with_the_modem_switched_off_too);
   RUN_TEST(test_no_sleep_time_without_permission);

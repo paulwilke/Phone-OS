@@ -21,6 +21,13 @@ PowerDecision PowerCoordination::apply(const Needs& needs, bool displayOn, uint3
   const ModemState s = modem_.state();
   in.modemRegistered = s == ModemState::Ready || s == ModemState::Dialing || s == ModemState::RingingIn ||
                        s == ModemState::InCall;
+  // Rule 9 counts from the registration, and every new one (after a lost network, a restart of the modem,
+  // switching it on) starts the wait for the IMS again: the IMS registers after the network, each time.
+  if (in.modemRegistered && !wasRegistered_) registeredAt_ = in.nowSeconds;
+  wasRegistered_ = in.modemRegistered;
+  in.registeredSeconds = in.modemRegistered && in.nowSeconds > registeredAt_ ? in.nowSeconds - registeredAt_ : 0;
+  const VoiceStatus voice = modem_.voiceStatus();
+  in.voiceSettled = voice == VoiceStatus::Ready || voice == VoiceStatus::SmsOnly;
 
   const PowerDecision out = PowerPolicy::decide(in);
 
