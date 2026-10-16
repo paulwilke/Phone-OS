@@ -17,8 +17,9 @@ Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one
 | `FakeWifi` | `finishConnecting(success)`, `failAccessPoint`, `setStationAddress` | `ssid()`, `password()` |
 | `FakeTcpServer` | `connect()` returns a client to script: `fromPeer(bytes)`, `peerClose()`, `limitWritesTo(n)` | `sentToPeer()`, `closedBySoftware()`, `listening()`, `port()` |
 | `FakeMotion` | `setAvailable`, `failNextStart`, `tilt(x, y, z)`, `clearSample`, `shake()` | the interface |
-| `FakeSdVolume` | `removeCard`/`insertCard`, `mountsOnlyAtOrBelow(hz)`, `refuseMount`, `setCapacity`, `failNextWrite`, `failAllWrites`, `failRenames`, `failRemoves`, `failReads`, `loseCardAfter(n)`/`powerBack()` (the board's card classes run on it) | `operations()`, `mountAttempts()`, `file()`, `paths()`, `readCount()` |
+| `FakeSdVolume` | `removeCard`/`insertCard`, `mountsOnlyAtOrBelow(hz)`, `refuseMount`, `setCapacity`, `failNextWrite`, `failAllWrites`, `failRenames`, `failRemoves`, `failReads`, `failReadsAt(offset, times)`, `loseCardAfter(n)`/`powerBack()` (the board's card classes run on it) | `operations()`, `mountAttempts()`, `file()`, `paths()`, `readCount()` |
 | `FakeWifiRadio`, `FakeTcpListener` | `finishConnecting`, `failAccessPoint`, `setStationAddress`; `connect()` returns a client to script (the board's Wi-Fi and TCP classes run on them) | `beginStationCalls()`, `shutdowns()`, the client's `received()`, `stopped()` |
+| `FakeMessageLog` | `failNextAppend()`, `failAllAppends(bool)`, `stopReadingAfter(n)` (a read hands over n lines and stops early) | `lines()` |
 | `FakeRadioLink` | `setUp`, `addPeer`, `setDefaultPeer`, `deliver`, `confirm(arrived)` for the oldest open message, `setRssi` | `sent()` |
 
 ## What they keep
@@ -32,4 +33,4 @@ A fake that cheats would let a test pass that the device then fails. They theref
 - **`FakeClock`** refuses dates before 2020 and offsets outside −12:00 … +14:00, like the interface says.
 - **`FakeRadioLink`** reports one delivery per sent message, in the order of sending.
 
-The scripting surface of each is tested in `test/test_fakes/` (24 tests); that every implementation, the fakes included, honours the interface contracts is the business of the contract suites.
+The scripting surface of each is tested in `test/test_fakes/` (26 tests); that every implementation, the fakes included, honours the interface contracts is the business of the contract suites.

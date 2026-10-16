@@ -203,7 +203,7 @@ void test_a_file_that_was_touched_on_windows_reads_the_same() {
   SdMessageLog log(s.card);
   s.volume.put(kMessageLogPath, "a\r\nb\r\n\r\nc");
   Collect c;
-  TEST_ASSERT_TRUE(log.readAll(c));
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::Complete);
   TEST_ASSERT_EQUAL(3, c.lines.size());
   TEST_ASSERT_EQUAL_STRING("c", c.lines[2].c_str());
 }
@@ -213,7 +213,7 @@ void test_a_line_of_more_than_511_bytes_is_handed_over_cut_so_that_it_counts_as_
   SdMessageLog log(s.card);
   s.volume.put(kMessageLogPath, std::string(2000, 'x') + "\nok\n");
   Collect c;
-  TEST_ASSERT_TRUE(log.readAll(c));
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::Complete);
   TEST_ASSERT_EQUAL(2, c.lines.size());
   TEST_ASSERT_EQUAL(511, c.lines[0].size());
 }
@@ -225,7 +225,7 @@ void test_a_history_larger_than_one_read_block_comes_back_whole() {
   for (int i = 0; i < 400; ++i) text += "line number " + std::to_string(i) + "\n";
   s.volume.put(kMessageLogPath, text);
   Collect c;
-  TEST_ASSERT_TRUE(log.readAll(c));
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::Complete);
   TEST_ASSERT_EQUAL(400, c.lines.size());
   TEST_ASSERT_EQUAL_STRING("line number 399", c.lines[399].c_str());
 }
@@ -236,7 +236,76 @@ void test_a_card_that_fails_reading_the_history_is_reported_and_what_was_read_is
   s.volume.put(kMessageLogPath, "a\nb\n");
   s.volume.failReads(true);
   Collect c;
-  TEST_ASSERT_FALSE(log.readAll(c));
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::StoppedEarly);
+}
+
+namespace {
+std::string numberedLines(int count) {
+  std::string text;
+  for (int i = 0; i < count; ++i) text += "line number " + std::to_string(i) + "\n";
+  return text;
+}
+}  // namespace
+
+// The volume opens the file anew for every block, and on 2026-10-13 one of those opens failed and the
+// start read only the first eight blocks (F6 of the log analysis of 2026-10-16). One failure is read again.
+void test_a_block_that_fails_once_is_read_again_and_the_history_comes_back_whole() {
+  SdStack s;
+  SdMessageLog log(s.card);
+  const std::string text = numberedLines(400);
+  s.volume.put(kMessageLogPath, text);
+  s.volume.failReadsAt(4096, 1);
+  Collect c;
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::Complete);
+  TEST_ASSERT_EQUAL(400, c.lines.size());
+  TEST_ASSERT_EQUAL_STRING("line number 399", c.lines[399].c_str());
+  TEST_ASSERT_EQUAL((int)((text.size() + 511) / 512) + 1, s.volume.readCount());
+}
+
+void test_a_block_that_fails_twice_stops_the_read_after_the_lines_before_it() {
+  SdStack s;
+  SdMessageLog log(s.card);
+  s.volume.put(kMessageLogPath, numberedLines(400));
+  s.volume.failReadsAt(4096, 2);
+  Collect c;
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::StoppedEarly);
+  TEST_ASSERT_TRUE(c.lines.size() > 1 && c.lines.size() < 400);
+  TEST_ASSERT_EQUAL_STRING("line number 0", c.lines[0].c_str());
+}
+
+// Before the read result had three values, a first block that failed looked like no history at all, and
+// the store numbered from 1 into a file that holds those numbers.
+void test_a_first_block_that_cannot_be_read_is_not_a_missing_history() {
+  SdStack s;
+  SdMessageLog log(s.card);
+  s.volume.put(kMessageLogPath, numberedLines(10));
+  s.volume.failReadsAt(0, 2);
+  Collect c;
+  TEST_ASSERT_TRUE(log.readAll(c) == MessageLog::Read::StoppedEarly);
+  TEST_ASSERT_EQUAL(0, c.lines.size());
+}
+
+void test_the_store_over_a_block_that_fails_once_restores_everything() {
+  SdStack s;
+  SdMessageLog log(s.card);
+  MessageStore first;
+  first.attach(&log);
+  Message m;
+  m.time = 1790000000u;
+  std::snprintf(m.peer, sizeof(m.peer), "+491701111111");
+  for (int i = 0; i < 40; ++i) {
+    std::snprintf(m.text, sizeof(m.text), "message %d", i);
+    first.add(m);
+  }
+  first.markAllRead();
+  TEST_ASSERT_TRUE(s.volume.file(kMessageLogPath).size() > 1024);
+  s.volume.failReadsAt(512, 1);
+  MessageStore again;
+  again.attach(&log);
+  TEST_ASSERT_TRUE(again.restore());
+  TEST_ASSERT_FALSE(again.readStoppedEarly());
+  TEST_ASSERT_EQUAL(40, again.count());
+  TEST_ASSERT_EQUAL(0, again.unread());
 }
 
 void test_a_nearly_full_card_refuses_the_history_a_line_and_the_store_counts_it() {
@@ -287,6 +356,10 @@ int main(int, char**) {
   RUN_TEST(test_a_line_of_more_than_511_bytes_is_handed_over_cut_so_that_it_counts_as_damage);
   RUN_TEST(test_a_history_larger_than_one_read_block_comes_back_whole);
   RUN_TEST(test_a_card_that_fails_reading_the_history_is_reported_and_what_was_read_is_kept);
+  RUN_TEST(test_a_block_that_fails_once_is_read_again_and_the_history_comes_back_whole);
+  RUN_TEST(test_a_block_that_fails_twice_stops_the_read_after_the_lines_before_it);
+  RUN_TEST(test_a_first_block_that_cannot_be_read_is_not_a_missing_history);
+  RUN_TEST(test_the_store_over_a_block_that_fails_once_restores_everything);
   RUN_TEST(test_a_nearly_full_card_refuses_the_history_a_line_and_the_store_counts_it);
   RUN_TEST(test_without_a_card_the_history_is_unavailable_and_the_store_goes_on);
   return UNITY_END();

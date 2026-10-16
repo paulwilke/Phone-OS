@@ -11,6 +11,7 @@
 #include <CoreFakes.h>
 #include <app/AppCore.h>
 #include <app/SystemEntry.h>
+#include <fakes/FakeMessageLog.h>
 #include <fakes/FakeWifi.h>
 
 using namespace people;
@@ -62,9 +63,9 @@ struct ListLog : MessageLog {
     lines.push_back(line);
     return true;
   }
-  bool readAll(Visitor& visitor) override {
+  Read readAll(Visitor& visitor) override {
     for (const std::string& l : lines) visitor.line(l.c_str());
-    return true;
+    return Read::Complete;
   }
 };
 
@@ -595,6 +596,30 @@ void test_the_history_and_the_wifi_settings_are_loaded() {
   TEST_ASSERT_EQUAL_STRING("HomeNet", second.wifi.ssid().c_str());   // the profile's networks reached the controller
 }
 
+// A start that read the history only in part showed 35 unread messages and left nothing in the log to
+// explain it (F6 of the log analysis of 2026-10-16): the start now says what came back.
+void test_the_start_logs_what_the_history_came_back_as() {
+  FakeMessageLog file;
+  {
+    Device empty(ProfileBuilder().build(), false, &file);
+    TEST_ASSERT_TRUE(empty.logged("Messages: restored 0 (0 unread), 0 damaged lines"));
+  }
+  file.append("M\t1\t1790000000\ts\ti\t+491701111111\tone");
+  file.append("R\t1");
+  file.append("M\t2\t1790000100\ts\ti\t+491701111111\ttwo");
+  file.append("M\t3\t1790000200\ts\to\t+491701111111\tthree");
+  file.append("damage");
+  {
+    Device whole(ProfileBuilder().build(), false, &file);
+    TEST_ASSERT_TRUE(whole.logged("Messages: restored 3 (1 unread), 1 damaged lines"));
+    TEST_ASSERT_FALSE(whole.logged("failed"));
+  }
+  file.stopReadingAfter(2);
+  Device cut(ProfileBuilder().build(), false, &file);
+  TEST_ASSERT_TRUE(cut.logged("Messages: reading the log failed after 2 lines: restored 1 (0 unread), 0 damaged lines, "
+                              "marks applied; the log is not written until it is read to the end"));
+}
+
 // ---- the host's side ----------------------------------------------------------------------------
 
 void test_the_host_gets_the_decision_and_the_requests() {
@@ -753,5 +778,6 @@ int main() {
   RUN_TEST(test_the_position_page_and_the_test_page_hold_the_receiver);
   RUN_TEST(test_radio_contacts_are_listed);
   RUN_TEST(test_the_state_has_the_time_to_measure_ages_against_and_what_the_radio_says);
+  RUN_TEST(test_the_start_logs_what_the_history_came_back_as);
   return UNITY_END();
 }

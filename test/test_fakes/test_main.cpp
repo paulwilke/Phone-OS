@@ -9,6 +9,7 @@
 #include <fakes/FakeEventLog.h>
 #include <fakes/FakeGnss.h>
 #include <fakes/FakeHaptic.h>
+#include <fakes/FakeMessageLog.h>
 #include <fakes/FakeModem.h>
 #include <fakes/FakeMotion.h>
 #include <fakes/FakePower.h>
@@ -416,6 +417,40 @@ void test_config_store_a_full_card_refuses_every_write() {
   TEST_ASSERT_TRUE(store.write("/b.txt", "y"));
 }
 
+// ---- FakeMessageLog -----------------------------------------------------------------
+
+namespace {
+struct CollectLines : MessageLog::Visitor {
+  std::vector<std::string> lines;
+  void line(const char* text) override { lines.push_back(text); }
+};
+}  // namespace
+
+// The store must tell a history that is not there from one that was read only in part (F6 of the log
+// analysis of 2026-10-16), so the fake says which of the two it is.
+void test_message_log_a_read_that_stops_early_hands_over_the_lines_before_and_says_so() {
+  FakeMessageLog log;
+  CollectLines none;
+  TEST_ASSERT_TRUE(log.readAll(none) == MessageLog::Read::Missing);
+  log.append("one");
+  log.append("two");
+  log.append("three");
+  log.stopReadingAfter(2);
+  CollectLines part;
+  TEST_ASSERT_TRUE(log.readAll(part) == MessageLog::Read::StoppedEarly);
+  TEST_ASSERT_EQUAL(2, part.lines.size());
+  TEST_ASSERT_EQUAL_STRING("two", part.lines[1].c_str());
+  log.stopReadingAfter(0);
+  CollectLines nothing;
+  TEST_ASSERT_TRUE(log.readAll(nothing) == MessageLog::Read::StoppedEarly);  // a file that is there, unread
+  TEST_ASSERT_EQUAL(0, nothing.lines.size());
+  log.stopReadingAfter(-1);
+  CollectLines whole;
+  TEST_ASSERT_TRUE(log.readAll(whole) == MessageLog::Read::Complete);
+  TEST_ASSERT_EQUAL(3, whole.lines.size());
+  TEST_ASSERT_EQUAL(3, log.lines().size());
+}
+
 // ---- FakeWifi, FakeTcpServer, FakeRadioLink ------------------------------------------
 
 void test_wifi_station_stays_connecting_until_told() {
@@ -499,6 +534,7 @@ int main(int, char**) {
   RUN_TEST(test_motion_scripting);
   RUN_TEST(test_config_store_failed_write_keeps_the_old_file_and_hides_the_scratch_file);
   RUN_TEST(test_config_store_a_full_card_refuses_every_write);
+  RUN_TEST(test_message_log_a_read_that_stops_early_hands_over_the_lines_before_and_says_so);
   RUN_TEST(test_wifi_station_stays_connecting_until_told);
   RUN_TEST(test_tcp_server_scripting);
   RUN_TEST(test_radio_confirms_the_oldest_open_message_first);

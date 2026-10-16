@@ -24,11 +24,11 @@ bool SdMessageLog::append(const char* line) {
   return true;
 }
 
-bool SdMessageLog::readAll(Visitor& visitor) {
-  if (!card_.ready()) return false;
+MessageLog::Read SdMessageLog::readAll(Visitor& visitor) {
+  if (!card_.ready()) return Read::Missing;
   SdVolume& v = card_.volume();
   const int64_t size = v.fileSize(kMessageLogPath);
-  if (size < 0) return false;  // no history yet
+  if (size < 0) return Read::Missing;  // no history yet
   std::string line;
   uint8_t block[512];
   uint64_t offset = 0;
@@ -37,11 +37,15 @@ bool SdMessageLog::readAll(Visitor& visitor) {
     line.clear();
   };
   while (offset < (uint64_t)size) {
-    const int n = v.readAt(kMessageLogPath, offset, block, sizeof(block));
+    int n = v.readAt(kMessageLogPath, offset, block, sizeof(block));
+    // The volume opens the file anew for every block, and an open fails now and then: twice in the week of
+    // 2026-10-13 a start read only the first blocks (F6 of the log analysis of 2026-10-16). A second try of
+    // the same block costs nothing when it works and leaves a card that is really gone to the failure below.
+    if (n <= 0) n = v.readAt(kMessageLogPath, offset, block, sizeof(block));
     if (n <= 0) {
       emit();
       card_.operationFailed();
-      return false;
+      return Read::StoppedEarly;
     }
     for (int i = 0; i < n; ++i) {
       const char c = (char)block[i];
@@ -52,7 +56,7 @@ bool SdMessageLog::readAll(Visitor& visitor) {
   }
   emit();
   card_.operationSucceeded();
-  return true;
+  return Read::Complete;
 }
 
 }  // namespace board

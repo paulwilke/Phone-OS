@@ -59,6 +59,8 @@ void MessageStore::clear() {
   nextSeq_ = 1;
   readUpTo_ = 0;
   damaged_ = 0;
+  linesRead_ = 0;
+  readStoppedEarly_ = false;
 }
 
 void MessageStore::push(const Message& msg) {
@@ -79,7 +81,11 @@ Message* MessageStore::find(uint32_t seq) {
 }
 
 void MessageStore::write(const char* line) {
-  if (log_ && !log_->append(line)) ++writeErrors_;
+  if (!log_) return;
+  // After a read that stopped early nextSeq_ may be a number that the unread rest
+  // of the file already holds; a message line with it would be dropped as a repeat
+  // at the next full restore, and a mark line for it would hit the old message.
+  if (readStoppedEarly_ || !log_->append(line)) ++writeErrors_;
 }
 
 uint32_t MessageStore::add(const Message& input) {
@@ -235,17 +241,22 @@ bool MessageStore::restore() {
       std::string l(text);
       while (!l.empty() && l.back() == '\r') l.pop_back();
       if (l.empty()) return;
+      ++store.linesRead_;
       if (!store.parseLine(l.c_str())) ++store.damaged_;
     }
   } reader(*this);
 
-  if (!log_->readAll(reader)) return false;
+  const MessageLog::Read result = log_->readAll(reader);
+  if (result == MessageLog::Read::Missing) return false;
 
   // The read mark is applied at the end: its line can come before or after the
-  // messages it covers, depending on when it was written.
+  // messages it covers, depending on when it was written. It is applied after a
+  // read that stopped early too: without it every message read so far, outgoing
+  // ones included, counted as unread (35 on the lock screen on 2026-10-13).
   for (size_t i = 0; i < count_; ++i) {
     Message& m = slot(i);
     m.read = m.dir == MsgDir::Out || m.seq <= readUpTo_;
   }
-  return damaged_ == 0;
+  readStoppedEarly_ = result == MessageLog::Read::StoppedEarly;
+  return !readStoppedEarly_ && damaged_ == 0;
 }
