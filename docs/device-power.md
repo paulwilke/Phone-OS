@@ -51,6 +51,8 @@ Both revisions are probed: an SY6970 at 0x6A, else a BQ25896 at 0x6B (the regist
 
 **The charge current is limited at every start** (decision D-14). The chip charges with 2048 mA unless told otherwise, which is more than 1 C for the 1500 mAh cell, and its I2C watchdog (40 seconds) sets every register back to that default when nobody feeds it; the diagnosis of 2026-10-12 showed the chip on its defaults with the watchdog running (the fault register read 0x90 then and still does with the watchdog off, so it is not a watchdog fault; its meaning is not known). `BoardPower::begin` calls `Charger::limitCharging(chargeCurrentLimitMa(capacity))`: 0.65 C of the configured capacity, rounded down to the chip's step of 64 mA (960 mA for 1500 mAh), and the watchdog switched off so that the value stays. Each register is read, written only on a difference with only its own bits, and read back; the log says one of "charge current limited to 960 mA (it was 2048 mA), the charger's watchdog is off", "... is 960 mA already, nothing to write" or "could not be limited". The diagnosis shows the watchdog next to the charge current. The register map is the BQ25896's, which the SY6970 is documented to follow; the SY6970's own data sheet is not in this repository, which is why every write is read back.
 
+**The input current limit is set to 800 mA at every start** (decision D-38). The chip takes every supply for an "unknown adapter" and limits its input to 500 mA (register 0x00 = 0x48: EN_HIZ 0, EN_ILIM 1, IINLIM 0b001000 = 100 mA + 8 x 50 mA). On 2026-10-15 a mains adapter charged the 1500 mAh cell at 516 falling to 420 mA for 3 h 10 min, and the charge current limit of 960 mA above was never reached. `BoardPower::begin` calls `Charger::limitInput(kInputLimitMa)` after `limitCharging`: IINLIM = (800 - 100) / 50 = 14, the other bits of the register (EN_HIZ, EN_ILIM) kept, written only on a difference and read back. The log says one of "input current limit set to 800 mA (it was 500 mA)", "... is 800 mA already, nothing to write" or "could not be set, the charger keeps its own 500 mA". The constant `kInputLimitMa` is in `Charger.h`: a mains adapter gives at least 1 A, so 800 mA leaves a margin and the cell's 960 mA charge limit stays the one that holds. A computer's USB port that gives less limits itself, or the charger's input voltage regulation lowers the current; the owner accepts that. A chip that detects a supply again after the start may set the limit back to what it detects; that is not known for the SY6970 and is to be seen at the charge (open point 26).
+
 ## The diagnosis
 
 `board::readBatteryDiagnostic()` reads both chips **without writing** and `formatBatteryDiagnostic()` makes one line per statement:
@@ -75,11 +77,12 @@ Reading register 0x0C clears the charger's latched fault flags, as it does for a
 | the diagnosis reads both chips and writes nothing | `test_battery_diagnostic` |
 | the ADC values are marked as not measured while no conversion is started | `test_battery_diagnostic`, `test_charger` |
 | both charger revisions, a missing charger | `test_charger`, `test_board_power` |
+| the input limit: the register value, written only on a difference, the other bits kept, read back, the start line | `test_charger`, `test_board_power` |
 | the cable is the power-good bit | `test_charger`, `test_board_power` |
 
 ## Not verified on the device
 
-The charge current: that `battery` reads 960 mA and "watchdog off" after a start, what the fault register 0x90 means (it did not change), and what the energy log shows with a mains adapter on the cable (open point 26).
+The input limit of 800 mA: that the start line says "input current limit set to 800 mA", that `battery` reads it, and that the energy log shows a charge above 500 mA at the adapter (D-38). The charge current: that `battery` reads 960 mA and "watchdog off" after a start, what the fault register 0x90 means (it did not change), and what the energy log shows with a mains adapter on the cable (open point 26).
 
 
 Compiled and tested on the host are not verified on the device: that the capacity write takes (the gauge's data memory, the read back after the chip re-initialises), the register layout of the SY6970 against the values decoded here beyond the six measured registers, and the shutdown through the battery switch.

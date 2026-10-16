@@ -189,6 +189,63 @@ void test_a_refused_write_is_not_ok_and_says_what_the_chip_holds() {
   TEST_ASSERT_FALSE(none.limitCharging(960).ok);  // no chip found: nothing is claimed
 }
 
+void test_the_input_limit_is_100_plus_50_per_step_in_the_low_bits_of_register_0() {
+  TEST_ASSERT_EQUAL(800, kInputLimitMa);
+  TEST_ASSERT_EQUAL_HEX8(0x0E, inputLimitBits(800));  // (800 - 100) / 50 = 14
+  TEST_ASSERT_EQUAL_HEX8(0x08, inputLimitBits(500));  // the 0x48 of the device
+  TEST_ASSERT_EQUAL_HEX8(0x0E, inputLimitBits(849));  // rounded down to the step
+  TEST_ASSERT_EQUAL_HEX8(0x00, inputLimitBits(0));
+  TEST_ASSERT_EQUAL_HEX8(0x3F, inputLimitBits(9000));
+}
+
+void test_the_input_limit_is_written_keeping_the_other_bits_and_read_back() {
+  FakeI2cBus bus;
+  bus.addChip(i2c::kChargerSy6970);
+  bus.setRegister(i2c::kChargerSy6970, 0x00, 0x48);  // as read on the device: 500 mA, EN_ILIM set
+  Charger c(bus);
+  c.detect();
+  const InputSetup s = c.limitInput(kInputLimitMa);
+  TEST_ASSERT_TRUE(s.ok);
+  TEST_ASSERT_TRUE(s.changed);
+  TEST_ASSERT_EQUAL(500, s.inputLimitBeforeMa);
+  TEST_ASSERT_EQUAL(800, s.inputLimitMa);
+  TEST_ASSERT_EQUAL_HEX8(0x4E, bus.reg(i2c::kChargerSy6970, 0x00));
+  bus.setRegister(i2c::kChargerSy6970, 0x00, 0xC8);  // EN_HIZ and EN_ILIM both set: not ours to change
+  const InputSetup high = c.limitInput(kInputLimitMa);
+  TEST_ASSERT_TRUE(high.ok);
+  TEST_ASSERT_EQUAL_HEX8(0xCE, bus.reg(i2c::kChargerSy6970, 0x00));
+}
+
+void test_the_input_limit_is_written_only_on_a_difference() {
+  FakeI2cBus bus;
+  bus.addChip(i2c::kChargerSy6970);
+  bus.setRegister(i2c::kChargerSy6970, 0x00, 0x48);
+  Charger c(bus);
+  c.detect();
+  c.limitInput(kInputLimitMa);
+  const int before = bus.writeCount(i2c::kChargerSy6970, 0x00);
+  const InputSetup again = c.limitInput(kInputLimitMa);
+  TEST_ASSERT_TRUE(again.ok);
+  TEST_ASSERT_FALSE(again.changed);
+  TEST_ASSERT_EQUAL(800, again.inputLimitBeforeMa);
+  TEST_ASSERT_EQUAL(before, bus.writeCount(i2c::kChargerSy6970, 0x00));
+}
+
+void test_a_refused_input_limit_is_not_ok_and_says_what_the_chip_holds() {
+  FakeI2cBus bus;
+  bus.addChip(i2c::kChargerSy6970);
+  bus.setRegister(i2c::kChargerSy6970, 0x00, 0x48);
+  bus.refuseRegisterWrite(i2c::kChargerSy6970, 0x00);
+  Charger c(bus);
+  c.detect();
+  const InputSetup s = c.limitInput(kInputLimitMa);
+  TEST_ASSERT_FALSE(s.ok);
+  TEST_ASSERT_EQUAL(500, s.inputLimitBeforeMa);
+  FakeI2cBus empty;
+  Charger none(empty);
+  TEST_ASSERT_FALSE(none.limitInput(kInputLimitMa).ok);  // no chip found: nothing is claimed
+}
+
 void test_the_watchdog_decodes_from_register_7() {
   uint8_t r[kChargerRegisterCount] = {};
   r[0x07] = 0x9D;
@@ -274,6 +331,10 @@ int main(int, char**) {
   RUN_TEST(test_limiting_writes_the_current_and_switches_the_watchdog_off_keeping_the_other_bits);
   RUN_TEST(test_limiting_writes_nothing_when_the_chip_holds_the_values);
   RUN_TEST(test_a_refused_write_is_not_ok_and_says_what_the_chip_holds);
+  RUN_TEST(test_the_input_limit_is_100_plus_50_per_step_in_the_low_bits_of_register_0);
+  RUN_TEST(test_the_input_limit_is_written_keeping_the_other_bits_and_read_back);
+  RUN_TEST(test_the_input_limit_is_written_only_on_a_difference);
+  RUN_TEST(test_a_refused_input_limit_is_not_ok_and_says_what_the_chip_holds);
   RUN_TEST(test_the_watchdog_decodes_from_register_7);
   RUN_TEST(test_both_present_prefers_6a);
   RUN_TEST(test_reading_all_registers_writes_nothing);
