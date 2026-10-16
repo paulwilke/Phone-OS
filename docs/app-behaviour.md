@@ -463,6 +463,8 @@ Tests in `test/test_power_coordination/`.
 | POW-14 | A modem without a network does not sleep | `test_a_modem_without_a_network_does_not_sleep` | — | done |
 | POW-15 | A front light that will not switch says nothing | `test_a_light_that_will_not_switch_says_nothing` | — | done |
 | POW-16 | Battery level, charge state and minutes remaining are read through | `test_the_battery_is_read_through` | — | done |
+| POW-17 | A registered modem waits awake for its IMS and sleeps when it comes, or at once on a network for SMS only | `test_the_modem_waits_awake_for_the_ims_and_sleeps_when_it_comes` | — | done |
+| POW-18 | Without the IMS the modem sleeps after the bound, and a new registration waits again | `test_without_the_ims_the_modem_sleeps_after_the_bound_and_a_new_registration_waits_again` | — | done |
 
 ## AppCore
 

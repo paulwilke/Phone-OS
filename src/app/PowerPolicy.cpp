@@ -18,8 +18,9 @@ PowerDecision PowerPolicy::decide(const PowerInputs& in) {
   const uint32_t idle = in.nowSeconds > in.lastInputSeconds ? in.nowSeconds - in.lastInputSeconds : 0;
   const bool quiet = idle >= kIdleSeconds;
 
-  // Rules 2, 3 and 7. A modem that is switched off is not put to sleep.
-  out.modemShouldSleep = in.cellularEnabled && in.modemSleepAllowed && quiet && in.modemRegistered;
+  // Rules 2, 3, 7 and 9. A modem that is switched off is not put to sleep.
+  const bool imsWaitOver = in.voiceSettled || in.registeredSeconds >= kImsWaitSeconds;
+  out.modemShouldSleep = in.cellularEnabled && in.modemSleepAllowed && quiet && in.modemRegistered && imsWaitOver;
 
   // Rules 4 and 8. A switched-off modem cannot lose a message, so the processor may sleep.
   const bool modemSilent = out.modemShouldSleep || !in.cellularEnabled;

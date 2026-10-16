@@ -77,5 +77,7 @@ private:
   Logger& log_;
   uint32_t lastInput_ = 0;
   bool modemAsleep_ = false;
+  bool wasRegistered_ = false;   // at the last apply(): a change to registered starts the wait for the IMS
+  uint32_t registeredAt_ = 0;    // uptime in seconds of that change
   bool powerOffRequested_ = false;
 };

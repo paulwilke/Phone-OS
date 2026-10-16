@@ -155,6 +155,50 @@ void test_a_modem_without_a_network_does_not_sleep() {
   TEST_ASSERT_TRUE(r.modem.asleep());
 }
 
+// Seen on the device (4.2.5): the modem slept 14 s after registering, before its IMS, and the screens said
+// "connecting" for 40 minutes. It waits awake for the IMS now, and the processor with it.
+void test_the_modem_waits_awake_for_the_ims_and_sleeps_when_it_comes() {
+  Rig r;
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  TEST_ASSERT_FALSE(r.idle().cpuMaySleep);
+  TEST_ASSERT_FALSE(r.modem.asleep());
+  r.advance(30);
+  r.idle();
+  TEST_ASSERT_FALSE(r.modem.asleep());
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::Ready);
+  r.idle();
+  TEST_ASSERT_TRUE(r.modem.asleep());
+  // A network that carries SMS only has no IMS to wait for.
+  Rig s;
+  s.modem.setNetwork("Example Mobile", 4, VoiceStatus::SmsOnly);
+  s.idle();
+  TEST_ASSERT_TRUE(s.modem.asleep());
+}
+
+// A network without VoLTE does not keep the modem awake for good, and a new registration waits again.
+void test_without_the_ims_the_modem_sleeps_after_the_bound_and_a_new_registration_waits_again() {
+  Rig r;
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  r.idle();                                                         // the registration is seen here
+  r.advance(PowerPolicy::kImsWaitSeconds - 1);
+  r.idle();
+  TEST_ASSERT_FALSE(r.modem.asleep());
+  r.advance(1);
+  r.idle();
+  TEST_ASSERT_TRUE(r.modem.asleep());
+  r.networkLost();                                                  // the network goes, and comes back without the IMS
+  r.idle();
+  TEST_ASSERT_FALSE(r.modem.asleep());
+  r.advance(PowerPolicy::kImsWaitSeconds);                          // the time without a network does not count
+  r.idle();
+  r.modem.setNetwork("Example Mobile", 4, VoiceStatus::ImsMissing);
+  r.idle();
+  TEST_ASSERT_FALSE(r.modem.asleep());
+  r.advance(PowerPolicy::kImsWaitSeconds);
+  r.idle();
+  TEST_ASSERT_TRUE(r.modem.asleep());
+}
+
 void test_the_processor_may_sleep_when_everything_is_idle() {
   Rig r;
   const PowerDecision d = r.power_.apply(r.needs, false, 500);
@@ -220,6 +264,8 @@ int main() {
   RUN_TEST(test_pending_work);
   RUN_TEST(test_a_call_keeps_the_modem_awake);
   RUN_TEST(test_a_modem_without_a_network_does_not_sleep);
+  RUN_TEST(test_the_modem_waits_awake_for_the_ims_and_sleeps_when_it_comes);
+  RUN_TEST(test_without_the_ims_the_modem_sleeps_after_the_bound_and_a_new_registration_waits_again);
   RUN_TEST(test_the_processor_may_sleep_when_everything_is_idle);
   RUN_TEST(test_the_front_light_toggles);
   RUN_TEST(test_a_light_that_will_not_switch_says_nothing);

@@ -9,9 +9,14 @@
 #include <vector>
 
 #include <app/LogLevel.h>
+#include <app/PowerCoordination.h>
 #include <drivers/A7682EDriver.h>
 
 #include <ModemScript.h>
+#include <ProfileBuilder.h>
+#include <fakes/FakeClock.h>
+#include <fakes/FakeEventLog.h>
+#include <fakes/FakePower.h>
 
 using namespace modemtest;
 
@@ -388,6 +393,125 @@ void test_signal_network_operator_and_ims_are_asked_every_30_seconds_and_not_bef
   TEST_ASSERT_EQUAL(csqBefore + 1, r.count("AT+CSQ"));
   TEST_ASSERT_EQUAL(ciregBefore + 1, r.count("AT+CIREG?"));
   TEST_ASSERT_EQUAL(5, r.driver.signalBars());
+}
+
+// ---- sleeping and the IMS ---------------------------------------------------------------------------------------
+
+namespace {
+
+// The driver under the power coordination, as on the device: the coordination decides from the driver's state and
+// voice status when the modem sleeps, the driver carries it out. No key has been pressed since long before the
+// registration, so nothing but the modem's own state holds the sleep back.
+struct SleepRig : Rig {
+  FakeClock clock;
+  FakePower power{&clock};
+  Profile profile = ProfileBuilder().build();
+  FakeEventLog eventLog{&clock};
+  Logger logger{eventLog, profile};
+  Notices notices{clock};
+  PowerCoordination coordination{clock, power, driver, profile, notices, logger};
+  PowerCoordination::Needs needs;
+
+  SleepRig() {
+    power.setEnabled(PowerDomain::Cellular, true);
+    clock.advanceSeconds(PowerPolicy::kIdleSeconds + 40);
+  }
+  // As the main loop does it: the driver polls, then the coordination decides; the two clocks run together.
+  void live(uint32_t ms) {
+    for (uint32_t spent = 0; spent < ms; spent += 50) {
+      t.advance(50);
+      clock.advance(50);
+      driver.poll();
+      drain();
+      coordination.apply(needs, false, 10000);
+    }
+  }
+  bool liveToReady() {
+    driver.begin();
+    for (uint32_t spent = 0; spent < 400000 && driver.state() != ModemState::Ready; spent += 50) live(50);
+    return driver.state() == ModemState::Ready;
+  }
+  // The driver has told the modem to sleep, and the sleep line says so.
+  bool asleep() const { return count("AT+CSCLK=1") > 0 && t.dtr(); }
+};
+
+}  // namespace
+
+// Finding F3 of 2026-10-16 (4.2.5): the modem went to sleep 14 s after registering, before its IMS registered; asleep it
+// was not asked again, so the screens said "connecting" and a call was refused for 40 minutes, until something woke it.
+void test_the_modem_does_not_sleep_while_the_ims_is_not_registered() {
+  SleepRig r;
+  Script s;
+  s.cireg = {"+CIREG: 1,0,0"};
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.liveToReady());
+  TEST_ASSERT_TRUE(r.driver.voiceStatus() == VoiceStatus::ImsMissing);
+  const int ciregs = r.count("AT+CIREG?");
+  r.live(20000);
+  TEST_ASSERT_EQUAL(0, r.count("AT+CSCLK=1"));
+  TEST_ASSERT_FALSE(r.coordination.modemAsleep());
+  r.live(11000);                                     // awake, so the periodic question asks again
+  TEST_ASSERT_EQUAL(ciregs + 1, r.count("AT+CIREG?"));
+  TEST_ASSERT_EQUAL(0, r.count("AT+CSCLK=1"));
+}
+
+void test_the_modem_sleeps_once_the_ims_is_registered() {
+  SleepRig r;
+  Script s;
+  s.cireg = {"+CIREG: 1,0,0", "+CIREG: 1,1,15"};   // missing after the registration, there at the next question
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.liveToReady());
+  r.live(29000);
+  TEST_ASSERT_FALSE(r.asleep());
+  r.live(3000);
+  TEST_ASSERT_TRUE(r.driver.voiceStatus() == VoiceStatus::Ready);
+  TEST_ASSERT_TRUE(r.asleep());
+  TEST_ASSERT_TRUE(r.coordination.modemAsleep());
+}
+
+// A network without VoLTE must not keep the modem awake for good: after the bound it sleeps as before, and the IMS is
+// asked again after the next wake.
+void test_without_the_ims_the_modem_sleeps_after_the_bound_and_a_wake_finds_it() {
+  SleepRig r;
+  Script s;
+  s.cireg = {"+CIREG: 1,0,0"};
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.liveToReady());
+  r.live((PowerPolicy::kImsWaitSeconds - 2) * 1000);
+  TEST_ASSERT_FALSE(r.asleep());
+  TEST_ASSERT_TRUE(r.count("AT+CIREG?") >= 4);      // after the registration and at 30, 60 and 90 seconds
+  r.live(4000);
+  TEST_ASSERT_TRUE(r.asleep());
+  TEST_ASSERT_TRUE(r.driver.voiceStatus() == VoiceStatus::ImsMissing);
+
+  const int ciregs = r.count("AT+CIREG?");
+  r.live(5000);
+  TEST_ASSERT_EQUAL(ciregs, r.count("AT+CIREG?"));  // asleep it is not asked
+  r.t.clearReplies("AT+CIREG?");
+  r.t.reply("AT+CIREG?", {"+CIREG: 1,1,15"});      // it registered meanwhile
+  r.coordination.noteInput();                       // a key wakes the modem
+  r.live(2000);
+  TEST_ASSERT_FALSE(r.t.dtr());
+  TEST_ASSERT_EQUAL(ciregs + 1, r.count("AT+CIREG?"));
+  TEST_ASSERT_TRUE(r.driver.voiceStatus() == VoiceStatus::Ready);
+}
+
+// A wake asks for the IMS at once, not when the 30 seconds of the last question are over, so that the screens do not
+// say "connecting" longer than they must.
+void test_a_wake_asks_for_the_ims_at_once() {
+  SleepRig r;
+  Script s;
+  s.cireg = {"+CIREG: 1,0,0", "+CIREG: 1,1,15"};
+  s.apply(r.t);
+  TEST_ASSERT_TRUE(r.liveToReady());
+  r.live(32000);                                    // the question at 30 seconds found the IMS: asleep since
+  TEST_ASSERT_TRUE(r.asleep());
+  r.live(5000);
+  const int ciregs = r.count("AT+CIREG?");
+  r.coordination.noteInput();
+  r.live(2000);                                     // 25 seconds before the next periodic question would be due
+  TEST_ASSERT_FALSE(r.t.dtr());
+  TEST_ASSERT_EQUAL(ciregs + 1, r.count("AT+CIREG?"));
 }
 
 // ---- the SIM and its PIN ------------------------------------------------------------------------------------
@@ -1038,6 +1162,10 @@ int main(int, char**) {
   RUN_TEST(test_an_unanswered_ims_question_leaves_the_voice_unknown_and_the_modem_ready);
   RUN_TEST(test_the_ims_state_follows_the_periodic_question_and_a_change_is_logged_once);
   RUN_TEST(test_signal_network_operator_and_ims_are_asked_every_30_seconds_and_not_before);
+  RUN_TEST(test_the_modem_does_not_sleep_while_the_ims_is_not_registered);
+  RUN_TEST(test_the_modem_sleeps_once_the_ims_is_registered);
+  RUN_TEST(test_without_the_ims_the_modem_sleeps_after_the_bound_and_a_wake_finds_it);
+  RUN_TEST(test_a_wake_asks_for_the_ims_at_once);
   RUN_TEST(test_a_sim_with_a_pin_is_unlocked_once_before_registration);
   RUN_TEST(test_a_sim_that_wants_a_pin_without_one_stored_stops_and_says_so);
   RUN_TEST(test_a_wrong_pin_is_tried_exactly_once_even_across_restarts);
