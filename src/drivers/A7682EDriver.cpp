@@ -248,7 +248,7 @@ void A7682EDriver::finishJob(bool ok) {
         } else {
           pwrkeyTried_ = true;
           transport_.pwrkeyPulse();
-          log("Modem: power key pressed, it did not answer");
+          log("Modem: no answer, power key pressed");
           setState(ModemState::PoweringOn);
           waitUntil_.set(now, config_.powerOnDelayMs);
         }

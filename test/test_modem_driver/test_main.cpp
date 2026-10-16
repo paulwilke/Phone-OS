@@ -544,6 +544,26 @@ void test_a_silent_modem_gets_the_power_key_after_two_vain_questions() {
   TEST_ASSERT_EQUAL(0, r.driver.restartCount());   // the boot after the key is no restart
 }
 
+// After a switch-off the supply was cut, so the modem is silent and the key is the expected path. The line
+// names the two things in the order they happened (no answer, then the key) and does not read as a failure
+// of the key; it stays a detail line, as before.
+void test_the_start_line_of_a_silent_modem_names_the_silence_before_the_key() {
+  Rig r;
+  Script().apply(r.t);
+  r.t.setCold(true);
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.loggedCount("Modem: no answer, power key pressed"));
+  TEST_ASSERT_FALSE(r.logged("did not answer"));
+  TEST_ASSERT_TRUE(loglevel::classify("Modem: no answer, power key pressed") == loglevel::Importance::Detail);
+}
+
+void test_a_modem_that_answers_logs_no_power_key_line() {
+  Rig r;
+  Script().apply(r.t);
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_FALSE(r.logged("power key"));
+}
+
 // A modem that answered and then stops answering in the middle of the initialisation is running:
 // the power key would switch it off.
 void test_a_modem_that_stops_answering_in_the_middle_is_never_given_the_power_key() {
@@ -1030,6 +1050,8 @@ int main(int, char**) {
   RUN_TEST(test_the_log_never_carries_the_pin_or_the_apn);
   RUN_TEST(test_no_power_key_pulse_when_the_modem_already_answers);
   RUN_TEST(test_a_silent_modem_gets_the_power_key_after_two_vain_questions);
+  RUN_TEST(test_the_start_line_of_a_silent_modem_names_the_silence_before_the_key);
+  RUN_TEST(test_a_modem_that_answers_logs_no_power_key_line);
   RUN_TEST(test_a_modem_that_stops_answering_in_the_middle_is_never_given_the_power_key);
   RUN_TEST(test_a_modem_that_never_answers_is_given_the_key_once_and_then_an_error);
   RUN_TEST(test_the_modem_is_powered_on_and_starting_before_it_is_asked);

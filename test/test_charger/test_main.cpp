@@ -41,6 +41,23 @@ void test_the_registers_measured_on_the_device_decode() {
   TEST_ASSERT_EQUAL(4164, s.batteryMv);        // the cell the notes call 4.16 V
 }
 
+// The ADC converts only after CONV_START (bit 7) or with CONV_RATE (bit 6) of register 0x02. The device had
+// 0x02 = 0x1D on 2026-10-16: the values in 0x0E, 0x11 and 0x12 were not a measurement.
+void test_the_adc_counts_as_started_only_with_bit_7_or_6_of_register_2() {
+  uint8_t r[kChargerRegisterCount];
+  measured(r);
+  r[0x02] = 0x1D;  // the device on 2026-10-16
+  TEST_ASSERT_FALSE(decodeCharger(r).adcStarted);
+  r[0x02] = 0x80;
+  TEST_ASSERT_TRUE(decodeCharger(r).adcStarted);
+  r[0x02] = 0x40;
+  TEST_ASSERT_TRUE(decodeCharger(r).adcStarted);
+  r[0x02] = 0xDD;
+  TEST_ASSERT_TRUE(decodeCharger(r).adcStarted);
+  r[0x02] = 0x3F;
+  TEST_ASSERT_FALSE(decodeCharger(r).adcStarted);
+}
+
 void test_every_charge_phase_decodes() {
   uint8_t r[kChargerRegisterCount] = {};
   const ChargePhase expected[] = {ChargePhase::NotCharging, ChargePhase::PreCharge, ChargePhase::FastCharge, ChargePhase::Done};
@@ -246,6 +263,7 @@ void test_a_refused_write_to_the_switch_is_reported() {
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_the_registers_measured_on_the_device_decode);
+  RUN_TEST(test_the_adc_counts_as_started_only_with_bit_7_or_6_of_register_2);
   RUN_TEST(test_every_charge_phase_decodes);
   RUN_TEST(test_the_cable_is_the_power_good_bit_not_the_phase);
   RUN_TEST(test_input_kinds_and_the_limit_range);
