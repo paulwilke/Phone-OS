@@ -59,7 +59,7 @@ The log says whether it read to the end, found no history (no file yet, or no ca
 
 At every start the core writes one line to the system log: "Messages: restored 34 (0 unread), 0 damaged lines", or after a read that stopped early "Messages: reading the log failed after 412 lines: restored 35 (0 unread), 0 damaged lines, marks applied; the log is not written until it is read to the end", which is kept on every log level.
 
-This was seen on 2026-10-13: a read that stopped after the eighth block of 512 bytes left 35 messages in memory and, before the fix, applied no read mark, so the lock screen counted all 35, outgoing ones included, as unread (open point 36).
+This was seen on 2026-10-13: a read that stopped after the eighth block of 512 bytes left 35 messages in memory and, before the fix, applied no read mark, so the lock screen counted all 35, outgoing ones included, as unread (D-37).
 
 ### Why deleted numbers are not reused
 

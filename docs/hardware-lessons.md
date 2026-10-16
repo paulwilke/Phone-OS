@@ -50,6 +50,14 @@ Outgoing calls hung the modem two seconds after dialling when the IMS was not re
 
 **Driver rule.** None new. **Owner's check:** open point 25 (the ammeter) and 26 (the charger after "done").
 
+## The modem slept before its IMS registered
+
+**What was measured** (log of 2026-10-16, firmware 4.2.5). "IMS not registered" at the registration (13:09:13), "Modem sleeps" 14 s later, "Modem woken" 40 minutes later, and "IMS registered" at the first periodic question 30 s after the wake.
+
+**What it means.** The IMS registers some seconds after the network, under 30 s here. A modem that sleeps in between is not asked again until it is woken, so the device says "connecting" and refuses calls long after the IMS is there.
+
+**Driver rule.** The power policy keeps a registered modem awake until the IMS is registered or the network carries SMS only, at most 120 s after the registration (rule 9, decision D-35); a wake asks for the IMS at once. **Owner's check:** open point 37.
+
 ## Smaller facts that cost time
 
 - **The charger changed during the production series.** Newer boards carry an SY6970 on I2C address 0x6A, older ones a BQ25896 on 0x6B. A driver that looks at only one address treats the bus as broken.
