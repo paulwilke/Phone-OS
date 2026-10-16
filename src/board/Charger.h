@@ -23,6 +23,12 @@ enum class InputKind : uint8_t { None, UsbHost, UsbCharging, UsbDedicated, Adjus
 
 constexpr uint8_t kChargerRegisterCount = 0x15;
 
+// Register 0x02 bit 7 (CONV_START) starts one conversion of the ADC and bit 6 (CONV_RATE) runs it once a
+// second. With both clear nothing converts, and the values in 0x0E, 0x0F, 0x11 and 0x12 are whatever the
+// chip holds, not a measurement.
+constexpr uint8_t kRegAdcControl = 0x02;
+constexpr uint8_t kAdcStartBits = 0xC0;
+
 struct ChargerStatus {
   // 0x0B: the power-good bit says a supply is attached, whatever the charge state is. A full battery on a
   // cable reads "not charging" or "done", and decisions about a cable (nothing sleeps while one is attached;
@@ -40,7 +46,9 @@ struct ChargerStatus {
   int chargeVoltageMv = 0;
   // 0x07: the I2C watchdog in seconds, 0 when it is off. When it runs out the chip falls back to its defaults.
   int watchdogSeconds = 0;
-  // 0x0E, 0x0F, 0x11, 0x12: what it measures.
+  // 0x0E, 0x0F, 0x11, 0x12: what it measures, but only when `adcStarted` is set. This firmware never starts
+  // a conversion, so on the device these four are left-over register contents.
+  bool adcStarted = false;  // 0x02 bits 7 and 6: a conversion was started or runs continuously
   int batteryMv = 0;
   int systemMv = 0;
   int vbusMv = 0;

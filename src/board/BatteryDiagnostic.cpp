@@ -33,6 +33,10 @@ BatteryInputs inputsOf(const BatteryDiagnostic& d) {
   return in;
 }
 
+// The ADC registers are shown as the chip holds them, with a note when they are not a measurement: the
+// diagnosis writes nothing, so it cannot start a conversion to get a real value.
+constexpr const char* kNotConverted = " (not measured: no ADC conversion started)";
+
 void addGaugeLines(const BatteryDiagnostic& d, int configuredMah, std::vector<std::string>& lines) {
   if (!d.gaugeAnswers) {
     lines.push_back("gauge: BQ27220 does not answer");
@@ -65,16 +69,20 @@ void addChargerLines(const BatteryDiagnostic& d, std::vector<std::string>& lines
   std::string registers = "charger: registers";
   for (int i = 0; i < kChargerRegisterCount; ++i) registers += " " + hex2((unsigned)i) + "=" + hex2(d.chargerRegisters[i]);
   lines.push_back(registers);
+  // With the ADC running, a good VBUS that reads 0 is the bare offset of 2600 mV: no measurement either.
+  std::string vbus = "VBUS " + to_string(c.vbusMv) + " mV";
+  if (!c.adcStarted) vbus += kNotConverted;
+  else if (c.vbusGood && c.vbusMv == 2600) vbus = "VBUS not measured";
   lines.push_back("charger: input current limit " + to_string(c.inputCurrentLimitMa) + " mA (" +
                   (c.inputLimitEnabled ? "limit register in force" : "limit register not in force") +
-                  "), input: " + inputKindName(c.input) + ", VBUS " + to_string(c.vbusMv) + " mV");
+                  "), input: " + inputKindName(c.input) + ", " + vbus);
   lines.push_back(std::string("charger: ") + chargePhaseName(c.phase) + ", power good " + (c.powerGood ? "yes" : "no") +
                   ", fault register 0x" + hex2(c.fault));
   lines.push_back("charger: charge voltage " + to_string(c.chargeVoltageMv) + " mV, charge current " + to_string(c.chargeCurrentMa) +
                   " mA, pre-charge " + to_string(c.prechargeCurrentMa) + " mA, termination " + to_string(c.terminationCurrentMa) + " mA, watchdog " +
                   (c.watchdogSeconds ? to_string(c.watchdogSeconds) + " s" : std::string("off")));
   lines.push_back("charger: battery " + to_string(c.batteryMv) + " mV, system " + to_string(c.systemMv) +
-                  " mV, charging current " + to_string(c.chargingCurrentMa) + " mA");
+                  " mV, charging current " + to_string(c.chargingCurrentMa) + " mA" + (c.adcStarted ? "" : kNotConverted));
 }
 }  // namespace
 

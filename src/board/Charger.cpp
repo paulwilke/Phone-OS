@@ -47,6 +47,7 @@ ChargerStatus decodeCharger(const uint8_t (&r)[kChargerRegisterCount]) {
   s.terminationCurrentMa = 64 + 64 * (r[kRegPrecharge] & 0x0F);
   s.chargeVoltageMv = 3840 + 16 * (r[kRegChargeVoltage] >> 2);
   s.watchdogSeconds = watchdogSecondsOf(r[kRegWatchdog]);
+  s.adcStarted = (r[kRegAdcControl] & kAdcStartBits) != 0;
   s.batteryMv = 2304 + 20 * (r[kRegBattery] & 0x7F);
   s.systemMv = 2304 + 20 * (r[kRegSystem] & 0x7F);
   s.vbusGood = (r[kRegVbus] & 0x80) != 0;

@@ -56,8 +56,10 @@ Both revisions are probed: an SY6970 at 0x6A, else a BQ25896 at 0x6B (the regist
 `board::readBatteryDiagnostic()` reads both chips **without writing** and `formatBatteryDiagnostic()` makes one line per statement:
 
 - gauge: voltage, current, average current, temperature, remaining, full-charge and design capacity (a difference from the configured size is called out), state of charge, cycle count, time to empty;
-- charger: chip and address, all registers 0x00 to 0x14, the input current limit, the kind of input, VBUS, the charge phase, power good, the fault register, the charge voltage, charge, pre-charge and termination currents, the battery and system voltage, the charging current;
+- charger: chip and address, all registers 0x00 to 0x14, the input current limit, the kind of input, VBUS, the charge phase, power good, the fault register, the charge voltage, charge, pre-charge and termination currents, the battery and system voltage, the charging current (these four marked as not measured while register 0x02 starts no conversion);
 - a verdict: whether the gauge's percentage agrees with the voltage.
+
+**The ADC values are marked when nothing measured them.** The charger's ADC (register 0x0E battery, 0x0F system, 0x11 VBUS, 0x12 charging current) converts only after CONV_START (register 0x02 bit 7) or with CONV_RATE (bit 6) set, and this firmware sets neither, so the four registers hold whatever the chip left in them. The device showed it on 2026-10-16 (registers 0x02 = 0x1D, 0x11 = 0x80, 0x0E = 0x47, 0x12 = 0x02, power good yes): VBUS read the bare offset of 2600 mV, the cell was 80 mV away from the gauge, the charging current 370 mA away from the gauge's. When both bits are clear, `ChargerStatus::adcStarted` is false and the diagnosis prints the VBUS value and the battery, system and charging-current values each followed by "(not measured: no ADC conversion started)". It does not start a conversion, because the diagnosis writes nothing; a one-shot conversion that finished earlier looks the same, and nothing is claimed for it. When a conversion has run and a good VBUS still reads 0, the line says "VBUS not measured" instead of 2600 mV. Only the diagnosis changed: the cell voltage that the verdict and the charger fallback of `BoardPower::batteryMillivolts` use is still decoded from register 0x0E.
 
 Decoding is tested with the values read from the device on 2026-10-06 (charger registers 0x00 = 0x48, 0x04 = 0x20, 0x05 = 0x13, 0x06 = 0x5E, 0x0B = 0xBE, 0x0E = 0x5D give a 500 mA input limit, 2048 mA charge current, 4208 mV target, 4164 mV cell, "charge done"). Until the USB console exists the firmware prints the diagnosis once at start; the console command comes with the console.
 
@@ -71,6 +73,7 @@ Reading register 0x0C clears the charger's latched fault flags, as it does for a
 | `[battery] capacity_mah` through the schema | `test_config_loader` |
 | no percentage the voltage contradicts | `test_battery_plausibility`, `test_board_power` |
 | the diagnosis reads both chips and writes nothing | `test_battery_diagnostic` |
+| the ADC values are marked as not measured while no conversion is started | `test_battery_diagnostic`, `test_charger` |
 | both charger revisions, a missing charger | `test_charger`, `test_board_power` |
 | the cable is the power-good bit | `test_charger`, `test_board_power` |
 

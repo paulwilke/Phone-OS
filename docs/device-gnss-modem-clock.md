@@ -17,7 +17,7 @@ Code: `src/drivers/NmeaParser.*` and `CivilTime.h`; `src/board/` (`BoardGnss`, `
 
 `ModemTransport` is the `AtTransport` of the modem driver on the board: the UART at 115200 baud (the processor receives on the modem's TXD, pin 11, and sends on its RXD, pin 10), the supply on expander leg 0, the power key on leg 8, DTR on a pin of the processor, and the sound path.
 
-- **The supply never presses the key.** The modem hangs on the expander, so after a reset of the processor it still runs; a pulse on a running modem switches it off. The driver asks first and presses only when the modem stays silent, and `test_modem_on_board` runs the real driver on this transport against a scripted modem: a running modem gets no pulse, a silent one exactly one.
+- **The supply never presses the key.** The modem hangs on the expander, so after a reset of the processor it still runs; a pulse on a running modem switches it off. The driver asks first and presses only when the modem stays silent (after a switch-off the supply was cut, so that is the usual start, and the log says "Modem: no answer, power key pressed"), and `test_modem_on_board` runs the real driver on this transport against a scripted modem: a running modem gets no pulse, a silent one exactly one.
 - **The pulse** is high for 100 ms, low for 1200 ms, high again, the shape the device was brought up with. It blocks for 1.3 s, once, at the start of a modem that did not answer.
 - **Sound.** For a call the switch goes to the modem first and the amplifier comes on after; at the end the amplifier goes off first and then the switch goes back to the codec. The amplifier is off whenever no call runs.
 - **DTR** starts low (the modem is awake); high lets it sleep.

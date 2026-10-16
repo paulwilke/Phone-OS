@@ -40,6 +40,60 @@ void test_the_measurement_shows_every_value_and_the_verdict() {
   TEST_ASSERT_TRUE(has(lines, "shows full"));
 }
 
+// Register 0x02 had CONV_START and CONV_RATE clear on the device, so 0x0E, 0x11 and 0x12 were left-over
+// contents: VBUS read the bare offset of 2600 mV with power good, the cell 80 mV away from the gauge, the
+// charging current 370 mA away from the gauge's. The diagnosis says so instead of printing them as readings.
+void test_the_registers_of_2026_10_16_are_marked_as_not_measured() {
+  BoardPowerRig r(false);
+  r.scriptMeasured();
+  const uint8_t a = i2c::kChargerSy6970;
+  r.bus.setRegister(a, 0x02, 0x1D);
+  r.bus.setRegister(a, 0x11, 0x80);
+  r.bus.setRegister(a, 0x0E, 0x47);
+  r.bus.setRegister(a, 0x12, 0x02);
+  const auto lines = formatBatteryDiagnostic(readBatteryDiagnostic(r.gauge, r.charger), 1500);
+  TEST_ASSERT_TRUE(has(lines, "02=1D"));
+  TEST_ASSERT_TRUE(has(lines, "VBUS 2600 mV (not measured: no ADC conversion started)"));
+  TEST_ASSERT_TRUE(has(lines, "battery 3724 mV"));
+  TEST_ASSERT_TRUE(has(lines, "charging current 100 mA (not measured: no ADC conversion started)"));
+  TEST_ASSERT_TRUE(has(lines, "power good yes"));
+}
+
+// The values of 2026-10-06 come from a script whose register 0x02 is clear as well.
+void test_the_values_of_2026_10_06_are_marked_as_not_measured_too() {
+  BoardPowerRig r(false);
+  r.scriptMeasured();
+  const auto lines = formatBatteryDiagnostic(readBatteryDiagnostic(r.gauge, r.charger), 1500);
+  TEST_ASSERT_TRUE(has(lines, "VBUS 5000 mV (not measured: no ADC conversion started)"));
+  TEST_ASSERT_TRUE(has(lines, "battery 4164 mV"));
+  TEST_ASSERT_TRUE(has(lines, "mA (not measured: no ADC conversion started)"));
+}
+
+void test_a_started_conversion_is_shown_without_a_note() {
+  BoardPowerRig r(false);
+  r.scriptMeasured();
+  const uint8_t a = i2c::kChargerSy6970;
+  for (const uint8_t control : {0x80, 0x40}) {
+    r.bus.setRegister(a, 0x02, control);
+    const auto lines = formatBatteryDiagnostic(readBatteryDiagnostic(r.gauge, r.charger), 1500);
+    TEST_ASSERT_TRUE(has(lines, "VBUS 5000 mV"));
+    TEST_ASSERT_TRUE(has(lines, "battery 4164 mV"));
+    TEST_ASSERT_FALSE(has(lines, "not measured"));
+  }
+}
+
+// With the ADC running, a good VBUS that reads 0 is the chip's offset and not a voltage.
+void test_a_running_conversion_that_reads_the_bare_offset_says_not_measured() {
+  BoardPowerRig r(false);
+  r.scriptMeasured();
+  const uint8_t a = i2c::kChargerSy6970;
+  r.bus.setRegister(a, 0x02, 0x40);
+  r.bus.setRegister(a, 0x11, 0x80);
+  const auto lines = formatBatteryDiagnostic(readBatteryDiagnostic(r.gauge, r.charger), 1500);
+  TEST_ASSERT_TRUE(has(lines, "VBUS not measured"));
+  TEST_ASSERT_FALSE(has(lines, "2600 mV"));
+}
+
 void test_a_right_capacity_is_not_called_out() {
   BoardPowerRig r;
   const auto lines = formatBatteryDiagnostic(readBatteryDiagnostic(r.gauge, r.charger), 1500);
@@ -87,6 +141,10 @@ void test_the_temperature_below_zero_keeps_its_sign() {
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_the_measurement_shows_every_value_and_the_verdict);
+  RUN_TEST(test_the_registers_of_2026_10_16_are_marked_as_not_measured);
+  RUN_TEST(test_the_values_of_2026_10_06_are_marked_as_not_measured_too);
+  RUN_TEST(test_a_started_conversion_is_shown_without_a_note);
+  RUN_TEST(test_a_running_conversion_that_reads_the_bare_offset_says_not_measured);
   RUN_TEST(test_a_right_capacity_is_not_called_out);
   RUN_TEST(test_the_diagnosis_writes_nothing_to_either_chip);
   RUN_TEST(test_the_older_charger_is_named_with_its_address);
