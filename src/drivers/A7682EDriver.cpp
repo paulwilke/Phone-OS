@@ -124,7 +124,7 @@ void A7682EDriver::begin() {
   atTries_ = 0;
   pwrkeyTried_ = false;
   restarts_ = 0;
-  registered_ = smsOnly_ = roaming_ = manualOperator_ = false;
+  registered_ = smsOnly_ = roaming_ = manualOperator_ = automaticPending_ = false;
   nextReselect_.clear();
   imsKnown_ = false;
   operator_.clear();
@@ -135,6 +135,7 @@ void A7682EDriver::begin() {
   manualSelectDone_ = false;
   apnNoticeLogged_ = false;
   chosenApn_.clear();
+  homeOperator_.clear();
   apnLookedUp_ = false;   // the card may be another one after a restart
   asleep_ = sleepPending_ = wakePending_ = shutdownPending_ = shuttingDown_ = false;
   cmtiPending_.clear();
@@ -191,7 +192,7 @@ void A7682EDriver::onRestart() {
   responded_ = false;
   atTries_ = 0;
   pwrkeyTried_ = false;
-  registered_ = smsOnly_ = roaming_ = manualOperator_ = false;
+  registered_ = smsOnly_ = roaming_ = manualOperator_ = automaticPending_ = false;
   nextReselect_.clear();
   imsKnown_ = false;
   lastLoggedIms_ = -1;
@@ -201,6 +202,7 @@ void A7682EDriver::onRestart() {
   simTries_ = 0;
   manualSelectDone_ = false;
   chosenApn_.clear();     // the card may be another one: it is asked again
+  homeOperator_.clear();
   apnLookedUp_ = false;
   setState(ModemState::PoweringOn);
   waitUntil_.set(transport_.now(), config_.restartSettleMs);
@@ -311,7 +313,14 @@ void A7682EDriver::finishJob(bool ok) {
       break;
 
     case Job::SelectOperator:
-      manualOperator_ = ok;  // from now on the modem stays on this network, whatever happens to the air around it
+      if (ok && !homeOperator_.empty() && homeOperator_ == pickedOperator_) {
+        // The SIM's own network: a cold modem was only slower than the automatic phase (2026-10-16). A search for
+        // the home network would find this one again, after half a minute without calls at the child's first key.
+        log("Cellular: the network chosen by hand is the home network, no new search");
+        automaticPending_ = true;
+      } else {
+        manualOperator_ = ok;  // from now on the modem stays on this network, whatever happens to the air around it
+      }
       startJob(Job::Register);
       break;
 
@@ -336,6 +345,12 @@ void A7682EDriver::finishJob(bool ok) {
       } else {
         nextReselect_.clear();  // at home
       }
+      break;
+
+    case Job::Automatic:
+      // Refused: the modem stays on the home network by hand, and the search of a quarter of an hour is what
+      // brings it back to automatic, as for any network chosen by hand.
+      if (!ok) manualOperator_ = true;
       break;
 
     case Job::Reselect:
@@ -527,7 +542,8 @@ void A7682EDriver::step(const char* line, at::LineType type) {
           // The operator code as the list has it: three digits of the MCC and two or three of the MNC, with its zeros.
           std::string mnc = std::to_string(entry->mnc);
           while (mnc.size() < entry->mncDigits) mnc.insert(0, "0");
-          log(std::string("Cellular: APN ") + entry->apn + " chosen for the operator " + std::to_string(entry->mcc) + mnc);
+          homeOperator_ = std::to_string(entry->mcc) + mnc;
+          log(std::string("Cellular: APN ") + entry->apn + " chosen for the operator " + homeOperator_);
         }
         return;
       }
@@ -621,6 +637,18 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       if (!line) {
         snprintf(buf, sizeof(buf), "AT+COPS=1,2,\"%s\"", pickedOperator_);
         send(buf);
+        expect(config_.operatorScanTimeoutMs);
+        return;
+      }
+      if (answered) finishJob(type == at::LineType::Ok);
+      return;
+
+    // -----------------------------------------------------------------------
+    // Automatic again after the home network was chosen by hand. Without AT+COPS=2: a registered modem answers
+    // AT+COPS=0 at once and keeps its network, and a manual mode would keep it off any other network abroad.
+    case Job::Automatic:
+      if (!line) {
+        send("AT+COPS=0");
         expect(config_.operatorScanTimeoutMs);
         return;
       }
@@ -1268,6 +1296,12 @@ void A7682EDriver::pickNextJob() {
   }
   if (asleep_) return;  // the periodic questions would only wake the modem for nothing
 
+  if (automaticPending_) {
+    automaticPending_ = false;
+    startJob(Job::Automatic);
+    return;
+  }
+
   // On a foreign network, or on one chosen by hand: look for the home network again now and then. Only here,
   // where nothing is sent, read or dialled, so that it never cuts into anything.
   if ((roaming_ || manualOperator_) && nextReselect_.armed() && nextReselect_.expired(now)) {
@@ -1687,7 +1721,7 @@ void A7682EDriver::finishPowerOff() {
   transport_.setDtr(false);
   transport_.power(false);
   setState(ModemState::Off);
-  registered_ = smsOnly_ = roaming_ = manualOperator_ = false;
+  registered_ = smsOnly_ = roaming_ = manualOperator_ = automaticPending_ = false;
   nextReselect_.clear();
   imsKnown_ = false;
   operator_.clear();

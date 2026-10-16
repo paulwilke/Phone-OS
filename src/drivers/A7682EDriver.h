@@ -55,8 +55,10 @@ public:
     uint32_t operatorScanTimeoutMs = 120000;  // AT+COPS=? searches for a long time
     // After so many fruitless AT+CREG? rounds (every 2 s) the network is chosen by hand. On
     // 2026-09-30 a foreign SIM found no network in Germany with AT+COPS=0, while
-    // AT+COPS=1,2,"<code>" registered within seconds.
-    int autoRegisterAttempts = 8;
+    // AT+COPS=1,2,"<code>" registered within seconds. Thirty rounds, about a minute: with eight (16 s) a cold
+    // modem, after five hours switched off, had not registered on its home network by itself, and the choice by
+    // hand fired at home (2026-10-16). A foreign SIM pays the longer wait once per start.
+    int autoRegisterAttempts = 30;
     // A modem that sits on a foreign network (roaming) or on one chosen by hand does not go back to its own by
     // itself while the foreign one still carries: on the German-French border it stayed on the French network
     // for a long time after coming home (2026-10). So often, when nothing else is going on, it is told to
@@ -143,7 +145,7 @@ private:
   // What the driver is doing. One at a time.
   enum class Job : uint8_t { None, Init, SimCheck, ReadImsi, DataBearer, Register, ScanOperators, SelectOperator, Ims, Signal, Clock,
                              Dial, Answer, Hangup, CallPoll, CallDiag, Volume,
-                             SendSms, ReadSms, DrainInbox, Query, Sleep, Wake, Shutdown, Reselect };
+                             SendSms, ReadSms, DrainInbox, Query, Sleep, Wake, Shutdown, Reselect, Automatic };
 
   void send(const char* command);
   void startJob(Job job);
@@ -227,6 +229,9 @@ private:
   bool apnNoticeLogged_ = false;
   std::string chosenApn_;       // from the operator list, when no APN is configured
   bool apnLookedUp_ = false;    // the SIM was asked once for its operator since the start
+  // The operator code (MCC and MNC) of the SIM, as the operator list gives it; empty when the list does not know
+  // it or the SIM was not asked (a configured APN). A network chosen by hand with this code is the home network.
+  std::string homeOperator_;
   at::PdpContext context1_;
   bool context1Seen_ = false;
   char pdn8Type_[12] = {};
@@ -292,6 +297,9 @@ private:
   bool smsOnly_ = false;
   bool roaming_ = false;         // +CREG says 5 or 7
   bool manualOperator_ = false;  // the network was chosen by hand (AT+COPS=1): the modem stays there until told otherwise
+  // The home network was chosen by hand: the modem is set back to automatic (AT+COPS=0) when it is idle, without
+  // deregistering, so that it can follow the child across a border.
+  bool automaticPending_ = false;
   std::string operator_;
   std::string loggedOperator_;  // the network is logged when it changes, not at every question
   // The modem gave a blank name: the operator is asked for as its code (AT+COPS=3,2), which the

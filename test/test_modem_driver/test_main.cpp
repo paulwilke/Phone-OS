@@ -763,6 +763,25 @@ void test_registration_gives_up_after_the_window_and_says_so() {
 // hand, is told to deregister and search again every 15 minutes, when nothing else is going on.
 namespace {
 constexpr uint32_t kQuarterHour = 15 * 60 * 1000;
+
+// The answers of AT+CREG?: `fruitless` rounds without a network, then the home network.
+std::vector<std::string> cregAfter(int fruitless) {
+  std::vector<std::string> creg(fruitless, "+CREG: 0,2");
+  creg.push_back("+CREG: 0,1");
+  return creg;
+}
+// As many fruitless rounds as the automatic phase has: the network is then chosen by hand.
+std::vector<std::string> cregAfterTheAutomaticPhase() { return cregAfter(A7682EDriver::Config().autoRegisterAttempts); }
+
+// A SIM of the operator 26201 without a configured APN: the list gives its APN, and the modem already has it in
+// context 1, so the start writes nothing.
+Script homeSim() {
+  Script s;
+  s.imsi = imsiOf("26201");
+  s.contexts = {"+CGDCONT: 1,\"IPV4V6\",\"internet.v6.telekom\",\"0.0.0.0\",0,0",
+                "+CGDCONT: 8,\"IPV4V6\",\"ims\",\"0.0.0.0\",0,0"};
+  return s;
+}
 }
 
 void test_a_modem_that_roams_looks_for_the_home_network_again_every_quarter_hour() {
@@ -817,7 +836,7 @@ void test_a_modem_on_its_home_network_is_never_asked_to_search() {
 void test_a_network_chosen_by_hand_is_given_up_after_a_quarter_hour() {
   Rig r;
   Script s;
-  s.creg = {"+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,1"};
+  s.creg = cregAfterTheAutomaticPhase();
   s.apply(r.t);
   r.t.reply("AT+COPS=?", {"+COPS: (1,\"Orange F\",\"Orange\",\"20801\",0),(1,\"Telekom.de\",\"TDG\",\"26201\",0)"});
   r.t.reply("AT+COPS=1,2,\"20801\"", {});                              // the first of the list is the foreign one
@@ -831,6 +850,106 @@ void test_a_network_chosen_by_hand_is_given_up_after_a_quarter_hour() {
   TEST_ASSERT_TRUE(r.logged("a network was chosen by hand, asking for the home network again"));
   r.run(4 * kQuarterHour);
   TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));                           // automatic again and at home: no more
+}
+
+// 2026-10-16, firmware 4.2.5: at a start after five hours switched off the cold modem had not registered after the
+// automatic phase, the first network of the list was the SIM's own, and a quarter of an hour later the search for
+// the home network cost half a minute without calls at the child's first key. The home network chosen by hand is
+// the home network: the modem is set back to automatic without deregistering, and nothing is searched again.
+void test_the_home_network_chosen_by_hand_is_not_searched_again() {
+  Rig r(noApn());
+  Script s = homeSim();
+  s.creg = cregAfterTheAutomaticPhase();
+  s.apply(r.t);
+  r.t.reply("AT+COPS=?", {"+COPS: (1,\"Telekom.de\",\"TDG\",\"26201\",0),(1,\"Vodafone.de\",\"VODAFONE\",\"26202\",0)"});
+  r.t.reply("AT+COPS=1,2,\"26201\"", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=1,2,\"26201\""));
+  TEST_ASSERT_EQUAL(1, r.loggedCount("Cellular: the network chosen by hand is the home network, no new search"));
+  r.run(4 * kQuarterHour);
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=2"));                           // never deregistered
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=0"));                           // automatic again, once
+  TEST_ASSERT_TRUE(r.indexOf("AT+COPS=1,2,\"26201\"") < r.indexOf("AT+COPS=0"));
+  TEST_ASSERT_FALSE(r.logged("asking for the home network again"));
+  TEST_ASSERT_FALSE(r.logged("searching again"));
+  TEST_ASSERT_TRUE(r.driver.state() == ModemState::Ready);
+  TEST_ASSERT_EQUAL(0, r.t.unexpected().size());
+}
+
+// The SIM is known, but the first network of the list is a foreign one: the search of a quarter of an hour stays.
+void test_a_foreign_network_chosen_by_hand_is_searched_again_although_the_home_network_is_known() {
+  Rig r(noApn());
+  Script s = homeSim();
+  s.creg = cregAfterTheAutomaticPhase();
+  s.apply(r.t);
+  r.t.reply("AT+COPS=?", {"+COPS: (1,\"Orange F\",\"Orange\",\"20801\",0),(1,\"Telekom.de\",\"TDG\",\"26201\",0)"});
+  r.t.reply("AT+COPS=1,2,\"20801\"", {});
+  r.t.reply("AT+COPS=2", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  TEST_ASSERT_FALSE(r.logged("is the home network"));
+  r.run(kQuarterHour - 60000);
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=0"));                           // not set back to automatic at once
+  r.run(180000);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));
+  TEST_ASSERT_TRUE(r.indexOf("AT+COPS=2") < r.indexOf("AT+COPS=0"));
+  TEST_ASSERT_TRUE(r.logged("a network was chosen by hand, asking for the home network again"));
+}
+
+// A modem that refuses the automatic mode stays on its home network by hand: then the search of a quarter of an hour
+// is what sets it back, as for any network chosen by hand.
+void test_a_refused_automatic_mode_leaves_the_search_of_a_quarter_hour() {
+  Rig r(noApn());
+  Script s = homeSim();
+  s.creg = cregAfterTheAutomaticPhase();
+  s.apply(r.t);
+  r.t.reply("AT+COPS=?", {"+COPS: (1,\"Telekom.de\",\"TDG\",\"26201\",0)"});
+  r.t.reply("AT+COPS=1,2,\"26201\"", {});
+  r.t.reply("AT+COPS=0", {}, "+CME ERROR: operation not allowed");
+  r.t.reply("AT+COPS=2", {});
+  r.t.reply("AT+COPS=0", {});
+  TEST_ASSERT_TRUE(r.start());
+  r.run(60000);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=0"));
+  TEST_ASSERT_EQUAL(0, r.count("AT+COPS=2"));
+  r.run(kQuarterHour + 60000);
+  TEST_ASSERT_EQUAL(1, r.count("AT+COPS=2"));
+}
+
+// A cold modem needs more than the 16 s of eight rounds to register by itself: thirty rounds, about a minute, pass
+// before the network is chosen by hand.
+void test_the_automatic_phase_lasts_thirty_rounds_before_the_choice_by_hand() {
+  TEST_ASSERT_EQUAL(30, A7682EDriver::Config().autoRegisterAttempts);
+  {
+    Rig r;
+    Script s;
+    s.creg = cregAfter(29);                       // registered in the last round of the automatic phase
+    s.apply(r.t);
+    TEST_ASSERT_TRUE(r.start());
+    TEST_ASSERT_EQUAL(30, r.count("AT+CREG?"));
+    TEST_ASSERT_EQUAL(0, r.count("AT+COPS=?"));
+    TEST_ASSERT_FALSE(r.logged("choosing by hand"));
+  }
+  {
+    Rig r;
+    Script s;
+    s.creg = cregAfter(30);
+    s.apply(r.t);
+    r.t.reply("AT+COPS=?", {"+COPS: (1,\"Telekom.de\",\"TDG\",\"26201\",0)"});
+    r.t.reply("AT+COPS=1,2,\"26201\"", {});
+    r.driver.begin();
+    TEST_ASSERT_TRUE(r.runTo(ModemState::Registering));
+    const uint32_t registering = r.t.now();
+    for (int i = 0; i < 2000 && r.count("AT+COPS=?") == 0; ++i) r.run(50);
+    TEST_ASSERT_EQUAL(1, r.count("AT+COPS=?"));
+    int roundsBefore = 0;
+    for (int i = 0; i < r.indexOf("AT+COPS=?"); ++i)
+      if (r.t.sent()[i] == "AT+CREG?") ++roundsBefore;
+    TEST_ASSERT_EQUAL(30, roundsBefore);
+    TEST_ASSERT_TRUE(r.t.now() - registering >= 58000);      // about a minute, not 16 s
+    TEST_ASSERT_TRUE(r.runTo(ModemState::Ready));
+  }
 }
 
 // Nothing is cut off: a call comes first (the search is a job of the idle modem, after the outbox and the inbox).
@@ -853,7 +972,7 @@ void test_the_search_waits_for_a_call() {
 void test_a_network_that_the_automatic_search_does_not_find_is_chosen_by_hand() {
   Rig r;
   Script s;
-  s.creg = {"+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,1"};
+  s.creg = cregAfterTheAutomaticPhase();
   s.apply(r.t);
   r.t.reply("AT+COPS=?", {"+COPS: (1,\"Telekom.de\",\"TDG\",\"26201\",0),(1,\"Vodafone.de\",\"VODAFONE\",\"26202\",0)"});
   r.t.reply("AT+COPS=1,2,\"26201\"", {});
@@ -869,8 +988,7 @@ void test_the_operator_scan_may_outlast_the_registration_window() {
   Rig r;
   Script s;
   // The first round after the search still finds nothing: only the extended window keeps the modem out of Error.
-  s.creg = {"+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2", "+CREG: 0,2",
-            "+CREG: 0,2", "+CREG: 0,1"};
+  s.creg = cregAfter(A7682EDriver::Config().autoRegisterAttempts + 1);
   s.apply(r.t);
   r.t.replyAfter(100000, "AT+COPS=?", {"+COPS: (1,\"Telekom.de\",\"TDG\",\"26201\",0)"});
   r.t.reply("AT+COPS=1,2,\"26201\"", {});
@@ -1135,6 +1253,10 @@ int main(int, char**) {
   RUN_TEST(test_back_home_the_modem_stops_asking);
   RUN_TEST(test_a_modem_on_its_home_network_is_never_asked_to_search);
   RUN_TEST(test_a_network_chosen_by_hand_is_given_up_after_a_quarter_hour);
+  RUN_TEST(test_the_home_network_chosen_by_hand_is_not_searched_again);
+  RUN_TEST(test_a_foreign_network_chosen_by_hand_is_searched_again_although_the_home_network_is_known);
+  RUN_TEST(test_a_refused_automatic_mode_leaves_the_search_of_a_quarter_hour);
+  RUN_TEST(test_the_automatic_phase_lasts_thirty_rounds_before_the_choice_by_hand);
   RUN_TEST(test_the_search_waits_for_a_call);
   RUN_TEST(test_the_whole_start_up_is_one_readable_sequence);
   RUN_TEST(test_begin_twice_changes_nothing);
