@@ -158,6 +158,7 @@ private:
   void setState(ModemState s);
   void expect(uint32_t timeoutMs);
   void log(const std::string& line);
+  void searchOn();
   void beginRegistering(bool startWindow);
   bool apnUsable() const;
   // The APN in force: the configured one, else the one the operator list gives for the SIM (decision D-9).

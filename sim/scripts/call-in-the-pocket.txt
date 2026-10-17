@@ -1,0 +1,38 @@
+# data: sim/data
+# A call to a device in a pocket: it rings through the lock, a cheek on the keys under the screen does not
+# take the call page away, ringing or connected, and when the call is over the device is locked again, so
+# that the next touch in the pocket opens nothing.
+advance 5s
+key back
+check locked yes
+call +491701111111
+advance 2s
+check screen call
+check call ringing
+key home inbox compose
+check screen call
+key select
+advance 1s
+check call incall
+key home inbox compose
+check screen call
+advance 150s
+check screen call
+check locked no
+remote hangup
+advance 2s
+check call idle
+check locked yes
+check screen lock
+
+# The same call missed: locked again too.
+call +491701111111
+advance 2s
+check screen call
+remote hangup
+advance 2s
+check locked yes
+tap 200 80
+advance 1s
+check screen lock
+check sos idle

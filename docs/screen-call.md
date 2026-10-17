@@ -18,8 +18,10 @@ Code: `src/ui/screens/CallScreen.{h,cpp}`; tests in `test/test_screen_call/`. It
 
 **Lock:** a call in progress keeps the device from locking (`preventsAutoLock`), proven with a real stack.
 
+**The keys under the screen** are the page's while a call is dialled, rings or is connected (`wantsHardwareKeys`): they are touch keys, a cheek or a finger touches them by accident, and the stack would take the page away with nothing to bring it back during the call: no way to answer or to hang up. They do nothing on the page; after the call they are the stack's again. A call that rang through the lock leaves the device locked again when it is over ([ui-framework.md](ui-framework.md)).
+
 Back during dialling, ringing or a call hangs up or rejects and does not leave; Enter answers a ringing call.
 
 ## Tests
 
-`test_screen_call`: every phase's words, name and buttons; answer, reject, hang up; a number that is no contact, and a stranger and a hidden number that are not on the page at all; the number in the next smaller font; the volume (boxes, both ends, none before the call); every failure reason in three languages; the failure going by with the notice; a missed call; touch on the buttons, Hang up at the right end of the bar, Quieter and Louder found by their words in three languages; the lock; layout in four languages; pictures in English and German.
+`test_runtime` and the scenario `call-in-the-pocket`: the keys under the screen leave neither a ringing nor a connected call, and work again after it; a call through the lock locks again. `test_screen_call`: every phase's words, name and buttons; answer, reject, hang up; a number that is no contact, and a stranger and a hidden number that are not on the page at all; the number in the next smaller font; the volume (boxes, both ends, none before the call); every failure reason in three languages; the failure going by with the notice; a missed call; touch on the buttons, Hang up at the right end of the bar, Quieter and Louder found by their words in three languages; the lock; layout in four languages; pictures in English and German.

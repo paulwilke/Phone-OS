@@ -56,6 +56,10 @@ The country code for national numbers is `+49` unless `ContactBook::setCountryCo
 
 Digits without a `+`, `00` or `0` in front (`491701111111`) are not guessed to carry a country code: they stay as they are and do not match `+491701111111`. A network that reports callers that way would be rejected, and the whitelist stays strict.
 
+### What reaches the modem
+
+The modem takes a dial string only: digits, `*`, `#` and a leading `+` ([at-layer.md](at-layer.md)). The numbers of the SOS recipients and the call buttons are kept as the parents wrote them, so every text and every call passes through `phone::dialable(number, cc)` on its way to the modem (`Messaging::deliver`, `Calls::call`): the canonical form when the input is a number, the input itself when it is not (the modem refuses it then). `+49 170 1111111` reaches the modem as `+491701111111`, and `0170 1111111` as `+491701111111` too, also abroad, where the visited network would read a national number as its own. Before 4.2.7 such a number was handed over as written: the modem refused it, the SOS reported "sent" for a text that waited in the queue for ever, and the call button did nothing (`test_runtime`: `test_numbers_written_with_blanks_reach_the_modem_as_dial_strings`; the `Modem` contract refuses such a number in every rig).
+
 ## The contact book
 
 `phone::ContactBook` holds up to 16 contacts, each with a canonical number, a name of at most 23 bytes and an `admin` flag. Parents are the contacts with `admin`: they may send remote commands. Everyone else on the list may only call and write.

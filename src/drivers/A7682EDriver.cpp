@@ -228,6 +228,15 @@ void A7682EDriver::beginRegistering(bool startWindow) {
   startJob(Job::Register);
 }
 
+// The window of the first registration ran out without a network (a start in a basement, a tunnel, the
+// underground). Not an error (decision D-40): the driver went to Error there and never came back, even when the
+// network did, so calls, texts and the SOS stayed dead until a restart. It goes on as for a lost network: no
+// window, the registration asked every two seconds, and the network is taken when it comes.
+void A7682EDriver::searchOn() {
+  log("Cellular: no network found, searching on");
+  beginRegistering(false);
+}
+
 void A7682EDriver::finishJob(bool ok) {
   const Job done = job_;
   job_ = Job::None;
@@ -293,8 +302,7 @@ void A7682EDriver::finishJob(bool ok) {
       if (ok && registered_) {
         startJob(Job::Ims);
       } else if (registerWindow_.expired(now)) {
-        setState(ModemState::Error);
-        log("Cellular: registration failed, no network found");
+        searchOn();
       } else if (++registerTries_ >= config_.autoRegisterAttempts && !manualSelectDone_ && registerWindow_.armed()) {
         // The automatic search finds nothing. Look which networks can be reached and choose the first
         // by hand. The search needs time of its own, and the registration its full window after it:
@@ -1222,8 +1230,7 @@ void A7682EDriver::pickNextJob() {
   }
   if (state_ == ModemState::Registering) {
     if (registerWindow_.expired(now)) {
-      setState(ModemState::Error);
-      log("Cellular: registration failed, no network found");
+      searchOn();
       return;
     }
     // Only ask when nothing runs: otherwise the loop would overwrite a search that is still going.

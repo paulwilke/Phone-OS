@@ -111,4 +111,9 @@ std::string canonical(const char* input, const char* countryCode) {
   return normalize(input, countryCode, out, sizeof out) ? std::string(out) : std::string();
 }
 
+std::string dialable(const std::string& input, const char* countryCode) {
+  const std::string c = canonical(input.c_str(), countryCode);
+  return c.empty() ? input : c;
+}
+
 }  // namespace phone

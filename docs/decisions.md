@@ -442,6 +442,28 @@ Reason: A mains adapter gives at least 1 A, so 800 mA leaves a margin, and the c
 Consequences: `Charger::limitInput` and the start line of `BoardPower::begin` ("Battery: input current limit set to 800 mA (it was 500 mA)", "... is 800 mA already, nothing to write", "... could not be set"); tests in `test_charger` and `test_board_power`; [device-power.md](device-power.md). Not known: whether the SY6970 keeps the value when it detects a supply after the start (the BQ25896 sets the limit from its detection); open point 26 watches the next charge at the adapter.
 Verified: host-tested; compiled; not verified on the device
 
+## D-39: A call during the SOS countdown does not cancel it
+Date: 2026-10-17   Status: decided
+Decided by: owner (2026-10-17: not cancelled, as long as the call can be answered and the SOS page with what was sent comes back after the call); agent (how)
+
+Context: The review of 2026-10-17 found in the simulator that a call ringing during the 40-second choice of the SOS page cancelled the emergency: the call page covered the SOS page, the page's `onLeave()` called `leaveSos()`, and `SosFlow::leave()` sends nothing, now or later. After the call the page said "No emergency is running". No decision covered it; docs/screen-sos.md named only Back, home and the lock as ways out.
+Options: Leave it (a call from anybody in the contact book cancels an automatic emergency). A call does not cancel the choice: the call page covers the SOS page, the countdown goes on, and the stack returns to the SOS page after the call. Hold the call until the choice is made (the parent who calls back would not get through).
+Decision: The second. The SOS page does not close its choice when it is left for a call that rings (`SosScreen::onLeave`); the child can answer, the countdown goes on, and when nobody chose the emergency goes out by itself during the call. When the call is over `ScreenStack::endInterrupt` brings back the SOS page, which shows the countdown or what the ping did.
+Reason: An emergency that runs out its countdown was meant to go out; a call that happens to come in is no decision by the child to cancel it, and the child must still be able to talk to whoever calls.
+Consequences: `src/ui/screens/SosScreen.h`; [screen-sos.md](screen-sos.md), [sos-flow.md](sos-flow.md). Tests: `test_runtime` (`test_a_call_during_the_sos_countdown_does_not_cancel_it_and_the_page_comes_back_after_it`) and the scenario `sos-during-a-call`, both failing with the old `onLeave()`. Whether the modem sends the text during a voice call is not known on the device; if it refuses, the text waits in the queue and goes when the call is over. The check on the device is open point 38.
+Verified: host-tested; not verified on the device
+
+## D-40: A start without a network searches on instead of giving up
+Date: 2026-10-17   Status: decided
+Decided by: owner (2026-10-17: yes, search on as for a lost network); agent (how)
+
+Context: The review of 2026-10-17 found, and reproduced on the scripted modem, that the modem driver went to `Error` when the window of the first registration (90 s, extended for the choice by hand, about 4.5 minutes in all) ran out without a network, and that nothing ever left that state: `pickNextJob()` does nothing in `Error`, a ring is ignored and `sendSms()` refuses. A device switched on in a basement, a tunnel or the underground stayed without calls, texts and SOS until a restart, even when the network came back. A network lost after the start already searches on without a window ("a device in the woods is not in error").
+Options: Leave it. Search on after the window as for a lost network: no window, the registration asked every two seconds. Search on with a slower interval after a while (less traffic on the serial line, the same current, because a modem that is not registered stays awake by rule 7 of the power policy either way).
+Decision: The second. At the end of the window the driver logs "Cellular: no network found, searching on" and goes on in `Registering` without a window (`A7682EDriver::searchOn`). `Error` is left for what the SIM refuses and a modem that does not answer.
+Reason: An emergency phone that has been in a cellar must work when the child comes out; the lost network already behaves this way, and the start should not be stricter than the woods.
+Consequences: `src/drivers/A7682EDriver.{h,cpp}`; [modem-driver.md](modem-driver.md), [hardware-capabilities.md](hardware-capabilities.md). Test: `test_modem_driver` (`test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_network_when_it_comes`, in the automatic phase and after the choice by hand; it fails with the old `Error`). The current is the one of the old `Error` state, in which the modem was not registered and so awake as well. The check on the device is open point 39.
+Verified: host-tested; not verified on the device
+
 ## D-41: The web server's socket never waits, and the modem's receive queue is 4096 bytes
 Date: 2026-10-17   Status: decided
 Decided by: owner (2026-10-17: build step 3 of the review and prepare it for the USB log run of 2026-10-18); agent (how)
