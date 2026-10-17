@@ -7,7 +7,7 @@ else. Only the people in the contact book can call or write to the child. The in
 multilingual: English, German and French ship with it, and anyone can add a language by
 writing one text file.
 
-This is version 4.2.6 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.2.md](docs/release-4.2.md)); the LoRa radio is not part of it.
+This is version 4.2.7 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.2.md](docs/release-4.2.md)); the LoRa radio is not part of it.
 
 Parents start with the user's guide: [English](docs/user-guide.md),
 [Deutsch](docs/de/benutzerhandbuch.md), [Français](docs/fr/guide-utilisateur.md).
