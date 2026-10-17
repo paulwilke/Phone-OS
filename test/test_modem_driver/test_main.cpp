@@ -743,17 +743,34 @@ void test_registration_takes_a_few_attempts() {
   TEST_ASSERT_EQUAL_STRING("Example Mobile", r.driver.operatorName().c_str());
 }
 
-void test_registration_gives_up_after_the_window_and_says_so() {
-  A7682EDriver::Config c = Rig::defaultConfig();
-  c.autoRegisterAttempts = 100000;               // no manual choice in this test
-  Rig r(c);
-  Script s;
-  s.creg = {"+CREG: 0,2"};
-  s.apply(r.t);
-  r.driver.begin();
-  TEST_ASSERT_TRUE(r.runTo(ModemState::Error));
-  TEST_ASSERT_TRUE(r.logged("registration failed, no network found"));
-  TEST_ASSERT_TRUE(r.t.unexpected().empty());
+// D-40: a start without a network (a basement, a tunnel, the underground) is not an error. The window of the
+// first registration runs out, the driver says so once and goes on asking, without a window, as for a network
+// lost later; when the network comes, ten minutes on, it is taken, and texts and calls work again. Before, the
+// driver went to Error at the end of the window and never came back.
+void test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_network_when_it_comes() {
+  for (bool byHand : {false, true}) {
+    A7682EDriver::Config c = Rig::defaultConfig();
+    if (!byHand) c.autoRegisterAttempts = 100000;    // the window runs out in the automatic phase
+    Rig r(c);                                       // or after the choice by hand found nothing either
+    Script s;
+    s.creg = std::vector<std::string>(300, "+CREG: 0,2");   // ten minutes without a network ...
+    s.creg.push_back("+CREG: 0,1");                         // ... then the home network
+    s.apply(r.t);
+    r.t.reply("AT+COPS=?", {"+COPS: ,,(0,1,2,3,4),(0,1,2)"});   // the search by hand finds no network either
+    r.driver.begin();
+    bool everError = false;
+    for (uint32_t spent = 0; spent < 15 * 60 * 1000 && r.driver.state() != ModemState::Ready; spent += 50) {
+      r.t.advance(50);
+      r.driver.poll();
+      r.drain();
+      everError = everError || r.driver.state() == ModemState::Error;
+    }
+    TEST_ASSERT_FALSE_MESSAGE(everError, byHand ? "by hand" : "automatic");
+    TEST_ASSERT_TRUE_MESSAGE(r.driver.state() == ModemState::Ready, byHand ? "by hand" : "automatic");
+    TEST_ASSERT_TRUE(r.logged("no network found, searching on"));
+    TEST_ASSERT_TRUE(r.driver.sendSms("+491701111111", "Hello from Alex"));
+    TEST_ASSERT_TRUE(r.t.unexpected().empty());
+  }
 }
 
 // ---- back to the home network ---------------------------------------------------------------------------------
@@ -1306,7 +1323,7 @@ int main(int, char**) {
   RUN_TEST(test_a_modem_that_never_answers_is_given_the_key_once_and_then_an_error);
   RUN_TEST(test_the_modem_is_powered_on_and_starting_before_it_is_asked);
   RUN_TEST(test_registration_takes_a_few_attempts);
-  RUN_TEST(test_registration_gives_up_after_the_window_and_says_so);
+  RUN_TEST(test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_network_when_it_comes);
   RUN_TEST(test_a_network_that_the_automatic_search_does_not_find_is_chosen_by_hand);
   RUN_TEST(test_the_operator_scan_may_outlast_the_registration_window);
   RUN_TEST(test_the_network_mode_comes_from_the_configuration);

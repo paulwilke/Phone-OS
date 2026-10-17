@@ -452,3 +452,14 @@ Decision: The second. The SOS page does not close its choice when it is left for
 Reason: An emergency that runs out its countdown was meant to go out; a call that happens to come in is no decision by the child to cancel it, and the child must still be able to talk to whoever calls.
 Consequences: `src/ui/screens/SosScreen.h`; [screen-sos.md](screen-sos.md), [sos-flow.md](sos-flow.md). Tests: `test_runtime` (`test_a_call_during_the_sos_countdown_does_not_cancel_it_and_the_page_comes_back_after_it`) and the scenario `sos-during-a-call`, both failing with the old `onLeave()`. Whether the modem sends the text during a voice call is not known on the device; if it refuses, the text waits in the queue and goes when the call is over. The check on the device is open point 38.
 Verified: host-tested; not verified on the device
+
+## D-40: A start without a network searches on instead of giving up
+Date: 2026-10-17   Status: decided
+Decided by: owner (2026-10-17: yes, search on as for a lost network); agent (how)
+
+Context: The review of 2026-10-17 found, and reproduced on the scripted modem, that the modem driver went to `Error` when the window of the first registration (90 s, extended for the choice by hand, about 4.5 minutes in all) ran out without a network, and that nothing ever left that state: `pickNextJob()` does nothing in `Error`, a ring is ignored and `sendSms()` refuses. A device switched on in a basement, a tunnel or the underground stayed without calls, texts and SOS until a restart, even when the network came back. A network lost after the start already searches on without a window ("a device in the woods is not in error").
+Options: Leave it. Search on after the window as for a lost network: no window, the registration asked every two seconds. Search on with a slower interval after a while (less traffic on the serial line, the same current, because a modem that is not registered stays awake by rule 7 of the power policy either way).
+Decision: The second. At the end of the window the driver logs "Cellular: no network found, searching on" and goes on in `Registering` without a window (`A7682EDriver::searchOn`). `Error` is left for what the SIM refuses and a modem that does not answer.
+Reason: An emergency phone that has been in a cellar must work when the child comes out; the lost network already behaves this way, and the start should not be stricter than the woods.
+Consequences: `src/drivers/A7682EDriver.{h,cpp}`; [modem-driver.md](modem-driver.md), [hardware-capabilities.md](hardware-capabilities.md). Test: `test_modem_driver` (`test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_network_when_it_comes`, in the automatic phase and after the choice by hand; it fails with the old `Error`). The current is the one of the old `Error` state, in which the modem was not registered and so awake as well. The check on the device is open point 39.
+Verified: host-tested; not verified on the device
