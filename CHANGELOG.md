@@ -2,6 +2,17 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.7
+
+What the review of 2026-10-17 found, fixed, with the owner's decisions on the SOS countdown and the start without a network. Host-tested and compiled; none of it is verified on the device yet (open points 38 to 41).
+
+- **A call keeps its page.** The three keys under the screen are touch keys; touched during a call, ringing or connected, they took the call page away and nothing brought it back: no way to answer or to hang up, and the device locked in the middle of the call. During a call they do nothing now. Host-tested and compiled; not verified on the device.
+- **A call through the lock leaves the device locked.** After a call that rang on a locked device, answered or missed, the device stayed unlocked, and a touch in the pocket could start an SOS. It is locked again when the call is over. Host-tested and compiled; not verified on the device.
+- **A call does not cancel the SOS countdown** (D-39). A call that rang during the 40 seconds of the SOS choice cancelled the emergency, and nothing was sent. Now the call can be answered, the countdown goes on and the emergency goes out by itself, and after the call the SOS page shows what was sent. Host-tested and compiled; not verified on the device.
+- **Numbers reach the modem however the parents wrote them.** An SOS contact or a call button written with blanks or dashes ("+49 170 1111111", "0170 1111111") was refused by the modem: the SOS said "sent" for a text that never left, and the button did nothing. Every number now goes to the modem in its international form. Host-tested and compiled; not verified on the device.
+- **A start without a network searches on** (D-40). Switched on in a cellar, a tunnel or the underground, the modem gave up after about four and a half minutes and stayed without calls, texts and SOS until a restart, even when the network came back. It searches on now, as it does for a network lost later; the log says "Cellular: no network found, searching on". Host-tested and compiled; not verified on the device.
+- **A slow browser no longer stops the device, and the modem's bytes are not lost** (D-41). A phone that loaded the parents' page slowly held the whole device, the SOS, the calls and the keys, for as long as it read; the page is now sent in pieces between the device's other work. The modem's receive buffer is 4096 bytes instead of 256, an overflow is logged ("Modem UART: receiving failed ..."), and a text that came in broken on the line stays on the SIM to be read again instead of arriving empty. Host-tested and compiled; not verified on the device (open point 40, the run at the cable).
+
 ## 4.2.6
 
 What the log of 2026-10-16 (4.2.5) and the charge at the adapter on 2026-10-15 showed, acted on. Host-tested and compiled; none of it is verified on the device yet (open points 19, 26 and 37).
