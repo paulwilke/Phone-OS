@@ -38,6 +38,11 @@ bool normalize(const char* input, const char* countryCode, char* out, size_t out
 // that may name a number and nothing else about a sender.
 std::string canonical(const char* input, const char* countryCode);
 
+// What goes to the modem for `input`: its canonical form, so that a number the parents wrote with blanks,
+// dashes or brackets is a dial string, and a national one ("0170 ...") is dialled with the country code
+// also abroad. Input that is not a phone number comes back unchanged (the modem refuses it, as before).
+std::string dialable(const std::string& input, const char* countryCode);
+
 // True when both are phone numbers and denote the same one. Two unreadable
 // inputs are never "the same".
 bool same(const char* a, const char* b, const char* countryCode);

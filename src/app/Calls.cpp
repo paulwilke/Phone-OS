@@ -58,7 +58,7 @@ bool Calls::call(const std::string& number) {
     notices_.set(NoticeKind::NoNetwork);
     return false;
   }
-  if (!modem_.dial(number)) {
+  if (!modem_.dial(phone::dialable(number, profile_.contacts.countryCode()))) {
     log_.log("Call to " + nameOf(number) + " refused by the modem");
     // A modem that refuses to dial says why through its voice status: the child sees the reason
     // instead of a call that silently did not start.

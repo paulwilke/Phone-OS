@@ -451,6 +451,30 @@ void test_an_sos_runs_through_the_real_wiring_and_reaches_the_parent() {
   TEST_ASSERT_TRUE(w.modem.sent()[0].body.find("Alex sends SOS") != std::string::npos);
 }
 
+// The parents write numbers as they read them ("+49 170 1111111", "0170 1111111"; contacts.md lists those
+// spellings). The modem takes a dial string only: digits, '*', '#' and a leading '+'. The SOS reported "sent"
+// for a text the modem refused, and the call button did nothing, until both handed over the canonical form.
+void test_numbers_written_with_blanks_reach_the_modem_as_dial_strings() {
+  World w;
+  w.store.put("/config/contacts.toml",
+              "[[contact]]\nnumber = \"+49 170 1111111\"\nname = \"Parent One\"\nrole = \"parent\"\nsos = true\n");
+  w.store.put("/config/settings.toml",
+              "[child]\nname = \"Alex\"\n[interface]\nlanguage = \"en\"\n[sms]\nlanguage = \"en\"\n"
+              "[time]\ntimezone = \"Europe/Berlin\"\n"
+              "[[tiles]]\nlabel = \"Parent Two\"\naction = \"call\"\ntarget = \"0170 2222222\"\n");
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(2);
+  TEST_ASSERT_TRUE(w.runtime->core().beginSos());
+  w.run(90);
+  TEST_ASSERT_EQUAL(1, static_cast<int>(w.modem.sent().size()));
+  TEST_ASSERT_EQUAL_STRING("+491701111111", w.modem.sent()[0].phone.c_str());
+  TEST_ASSERT_EQUAL(0, static_cast<int>(w.state().queued));             // out, not waiting for ever
+
+  TEST_ASSERT_TRUE(w.runtime->core().dial("0170 2222222"));               // the call button's target
+  TEST_ASSERT_EQUAL_STRING("+491702222222", w.modem.callPhone().c_str());
+}
+
 // ---- language -----------------------------------------------------------------------------------------
 
 void test_a_change_of_language_at_run_time_changes_the_next_frame_and_nothing_else() {
@@ -667,6 +691,7 @@ int main() {
   RUN_TEST(test_the_processor_may_sleep_only_while_the_device_is_locked);
   RUN_TEST(test_input_is_drawn_at_once_not_at_the_next_second);
   RUN_TEST(test_an_sos_runs_through_the_real_wiring_and_reaches_the_parent);
+  RUN_TEST(test_numbers_written_with_blanks_reach_the_modem_as_dial_strings);
   RUN_TEST(test_a_change_of_language_at_run_time_changes_the_next_frame_and_nothing_else);
   RUN_TEST(test_an_unknown_language_changes_nothing);
   RUN_TEST(test_the_shipped_languages_draw_the_home_screen_without_cut_off);
