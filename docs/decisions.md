@@ -451,6 +451,8 @@ Options: Leave it (a call from anybody in the contact book cancels an automatic 
 Decision: The second. The SOS page does not close its choice when it is left for a call that rings (`SosScreen::onLeave`); the child can answer, the countdown goes on, and when nobody chose the emergency goes out by itself during the call. When the call is over `ScreenStack::endInterrupt` brings back the SOS page, which shows the countdown or what the ping did.
 Reason: An emergency that runs out its countdown was meant to go out; a call that happens to come in is no decision by the child to cancel it, and the child must still be able to talk to whoever calls.
 Consequences: `src/ui/screens/SosScreen.h`; [screen-sos.md](screen-sos.md), [sos-flow.md](sos-flow.md). Tests: `test_runtime` (`test_a_call_during_the_sos_countdown_does_not_cancel_it_and_the_page_comes_back_after_it`) and the scenario `sos-during-a-call`, both failing with the old `onLeave()`. Whether the modem sends the text during a voice call is not known on the device; if it refuses, the text waits in the queue and goes when the call is over. The check on the device is open point 38.
+Verified: host-tested; not verified on the device
+
 ## D-40: A start without a network searches on instead of giving up
 Date: 2026-10-17   Status: decided
 Decided by: owner (2026-10-17: yes, search on as for a lost network); agent (how)
