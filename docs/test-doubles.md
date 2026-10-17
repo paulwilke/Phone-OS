@@ -26,7 +26,7 @@ Every capability of [hardware-capabilities.md](hardware-capabilities.md) has one
 
 A fake that cheats would let a test pass that the device then fails. They therefore keep the contracts:
 
-- **`FakeModem`** delivers call events in a legal order (see the contract in the `Modem` header), reports a scripted send failure exactly once with the modem's reason, ends a call when it is switched off, refuses to dial while its voice status is `SmsOnly` or `ImsMissing`, fails or ends a call that a restart cuts off, accepts only read forms in `query()`, and clamps the volume to 0–7.
+- **`FakeModem`** refuses a number that is no dial string for texts and calls, as the driver does (`at::isValidDialString`), delivers call events in a legal order (see the contract in the `Modem` header), reports a scripted send failure exactly once with the modem's reason, ends a call when it is switched off, refuses to dial while its voice status is `SmsOnly` or `ImsMissing`, fails or ends a call that a restart cuts off, accepts only read forms in `query()`, and clamps the volume to 0–7.
 - **`FakeAtTransport`** answers over the byte protocol of the real modem (CR LF framing, the prompt `> ` without a line end, Ctrl-Z, `*ATREADY` after a restart) and says what it was asked that nobody scripted; see [at-layer.md](at-layer.md).
 - **`FakeConfigStore`** writes through a scratch file; a failed write leaves the old content and the scratch file is invisible to `read`, `fileSize` and `list`. Names are compared without regard to case. Paths go through `SafePath`.
 - **`FakeGnss`** follows the power domain: off gives `false`, and every switch-on (seen or not) starts the scenario again, so a position from an earlier run is never returned.

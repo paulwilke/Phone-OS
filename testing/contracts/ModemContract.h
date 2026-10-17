@@ -227,6 +227,19 @@ struct ModemContract {
     TEST_ASSERT_FALSE(rig.modem().sendSms("+491701111111", std::string(kMaxSmsBytes + 1, 'x')));
   }
 
+  // A number reaches the modem as a dial string: digits, '*', '#' and a leading '+'. A number as the parents
+  // wrote it ("+49 170 1111111") is refused, by the real modem and by every fake, so that the application has
+  // to hand over the canonical form (Messaging, Calls).
+  static void a_number_that_is_no_dial_string_is_refused_for_texts_and_calls() {
+    Rig rig;
+    ready(rig);
+    for (const char* written : {"+49 170 1111111", "0170-1111111", "(0170) 1111111", "0170/1111111"}) {
+      TEST_ASSERT_FALSE_MESSAGE(rig.modem().sendSms(written, "text"), written);
+      TEST_ASSERT_FALSE_MESSAGE(rig.modem().dial(written), written);
+    }
+    TEST_ASSERT_TRUE(rig.modem().dial("+491701111111"));
+  }
+
   static void a_refused_message_leaves_no_failure_report() {
     Rig rig;
     ready(rig);
@@ -561,6 +574,7 @@ struct ModemContract {
   RUN_TEST(ModemContract<Rig>::sleeping_and_waking_do_not_change_the_state_or_lose_messages);                       \
   RUN_TEST(ModemContract<Rig>::a_message_is_accepted_when_the_modem_is_ready);                                      \
   RUN_TEST(ModemContract<Rig>::an_empty_number_or_text_or_one_that_is_too_long_is_refused);                         \
+  RUN_TEST(ModemContract<Rig>::a_number_that_is_no_dial_string_is_refused_for_texts_and_calls);                     \
   RUN_TEST(ModemContract<Rig>::a_refused_message_leaves_no_failure_report);                                         \
   RUN_TEST(ModemContract<Rig>::a_sent_message_that_goes_through_leaves_no_failure_report);                          \
   RUN_TEST(ModemContract<Rig>::a_failed_sending_is_reported_exactly_once_with_the_reason);                          \

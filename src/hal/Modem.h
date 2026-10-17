@@ -111,7 +111,9 @@ public:
   virtual void wake() = 0;
 
   // Hands a message to the modem. True means *accepted*, not delivered: false when the
-  // modem is not ready to send, the number is empty or the text is empty or longer
+  // modem is not ready to send, the number is empty or no dial string (digits, '*', '#'
+  // and a leading '+': a number as the parents wrote it, "+49 170 1111111", is refused;
+  // the application hands over phone::dialable()), or the text is empty or longer
   // than kMaxSmsBytes. A message that is accepted and then refused by the network is
   // reported once through pollSendFailure().
   virtual bool sendSms(const std::string& phone, const std::string& body) = 0;
@@ -120,7 +122,7 @@ public:
   // The next failed sending, in the order they failed, each exactly once.
   virtual bool pollSendFailure(SmsFailure& out) = 0;
 
-  // False when no call can be started (not Ready, empty number, or voiceStatus() is
+  // False when no call can be started (not Ready, an empty number or no dial string, as for sendSms, or voiceStatus() is
   // SmsOnly or ImsMissing: nothing is sent to the modem then); the state is unchanged.
   virtual bool dial(const std::string& phone) = 0;
   // Answers a ringing call; false when nothing is ringing.

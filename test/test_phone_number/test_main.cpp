@@ -157,6 +157,18 @@ void test_digits_without_a_prefix_do_not_match_the_international_form() {
   TEST_ASSERT_FALSE(phone::same("491701111111", "+491701111111", "+49"));
 }
 
+// What goes to the modem: the canonical form of a number, whatever the parents wrote; what is not a number
+// stays as it is, so that the modem refuses it rather than something else being dialled.
+void test_dialable_is_the_canonical_form_and_leaves_what_is_no_number_alone() {
+  TEST_ASSERT_EQUAL_STRING("+491701111111", phone::dialable("+49 170 1111111", "+49").c_str());
+  TEST_ASSERT_EQUAL_STRING("+491701111111", phone::dialable("0170-111 11 11", "+49").c_str());
+  TEST_ASSERT_EQUAL_STRING("+491701111111", phone::dialable("(0170) 1111111", nullptr).c_str());
+  TEST_ASSERT_EQUAL_STRING("+493012345678", phone::dialable("030 / 123 456 78", "+49").c_str());
+  TEST_ASSERT_EQUAL_STRING("112", phone::dialable("112", "+49").c_str());
+  TEST_ASSERT_EQUAL_STRING("Provider", phone::dialable("Provider", "+49").c_str());
+  TEST_ASSERT_EQUAL_STRING("", phone::dialable("", "+49").c_str());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_every_notation_of_a_number_gives_the_same_form);
@@ -174,5 +186,6 @@ int main(int, char**) {
   RUN_TEST(test_unreadable_numbers_never_match_each_other);
   RUN_TEST(test_the_country_code_takes_part_in_the_comparison);
   RUN_TEST(test_digits_without_a_prefix_do_not_match_the_international_form);
+  RUN_TEST(test_dialable_is_the_canonical_form_and_leaves_what_is_no_number_alone);
   return UNITY_END();
 }
