@@ -683,7 +683,7 @@ void test_the_page_keeps_an_answer_going_through_a_link_glitch() {
   TEST_ASSERT_TRUE(w.tcp.listening());
   FakeTcpConnection* client = w.tcp.connect();
   TEST_ASSERT_NOT_NULL(client);
-  client->limitWritesTo(40);                                                  // the answer takes many turns of the loop
+  client->limitWritesTo(5);                // eight writes of five bytes a turn: the answer takes many turns of the loop
   client->fromPeer(kAuthorized);
   w.run(2);
   const size_t before = client->sentToPeer().size();

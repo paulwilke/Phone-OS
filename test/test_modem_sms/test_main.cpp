@@ -162,6 +162,28 @@ void test_a_message_that_does_not_parse_stays_on_the_sim_and_is_read_with_the_ne
   TEST_ASSERT_TRUE(m.r.count("AT+CMGL=\"ALL\"") >= 2);  // the read of the whole SIM that follows
 }
 
+// A text that came in broken on the line (D-41) is neither delivered nor deleted: it stays on the SIM, the log says
+// so, and the read of the whole SIM that follows tries again; read whole there, it arrives and is deleted.
+void test_a_text_broken_on_the_line_stays_on_the_sim_and_arrives_when_it_is_read_whole() {
+  Rig r;
+  Script s;
+  s.apply(r.t);                                                          // the SIM is empty at the start ...
+  r.t.reply("AT+CMGL=\"ALL\"", {header(5, kNumber), ucs2("Pick me up")}); // ... and holds the text at the next read
+  const std::string cmgr = "+CMGR: \"REC UNREAD\",\"" + ucs2(kNumber) + "\",\"\",\"26/09/15,14:32:10+08\"";
+  r.t.reply("AT+CMGR=5", {cmgr, ucs2("Pick me up").substr(0, 21)});      // read with three hex digits lost
+  TEST_ASSERT_TRUE(r.start());
+  r.run(500);
+  r.urc("+CMTI: \"SM\",5", 5000);
+  TEST_ASSERT_TRUE(r.logged("reading a text failed, it came in broken on the line"));
+  TEST_ASSERT_TRUE(r.indexOf("AT+CMGR=5") < r.indexOf("AT+CMGD=5"));     // not deleted after the broken read ...
+  TEST_ASSERT_EQUAL(1, r.count("AT+CMGD=5"));                            // ... but after the whole one
+  std::vector<SmsMessage> got;
+  SmsMessage msg;
+  while (r.driver.pollSms(msg)) got.push_back(msg);
+  TEST_ASSERT_EQUAL(1, got.size());
+  TEST_ASSERT_EQUAL_STRING("Pick me up", got[0].body.c_str());
+}
+
 // The modem does not answer the read: the job times out, the driver goes on, and later sending works.
 void test_a_read_that_is_never_answered_times_out_and_the_driver_goes_on() {
   Ready m;
@@ -783,6 +805,7 @@ int main(int, char**) {
   RUN_TEST(test_a_message_that_reads_busy_is_no_busy_signal);
   RUN_TEST(test_several_announced_messages_are_read_in_the_order_announced);
   RUN_TEST(test_a_message_that_does_not_parse_stays_on_the_sim_and_is_read_with_the_next_read_of_it);
+  RUN_TEST(test_a_text_broken_on_the_line_stays_on_the_sim_and_arrives_when_it_is_read_whole);
   RUN_TEST(test_a_read_that_is_never_answered_times_out_and_the_driver_goes_on);
   RUN_TEST(test_a_message_arrives_during_a_call_and_the_call_is_untouched);
   RUN_TEST(test_plain_text_goes_out_as_a_pdu_between_pdu_mode_and_text_mode);

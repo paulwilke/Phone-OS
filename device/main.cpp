@@ -95,7 +95,7 @@ Esp32Bhi260Hub motionHub;
 board::BoardMotion motion(expander, motionHub, delays);
 
 // The pins are given from the processor's side: it receives on the line the modem transmits on.
-Esp32UartPort modemUart(Serial1, 115200, board::pin::kModemUartRx, board::pin::kModemUartTx);
+Esp32UartPort modemUart(Serial1, 115200, board::pin::kModemUartRx, board::pin::kModemUartTx, 4096);  // D-41
 Esp32UartPort gnssUart(Serial2, 38400, board::pin::kGnssUartRx, board::pin::kGnssUartTx);
 board::ModemTransport modemTransport(modemUart, expander, gpio, delays, millisSource, eventLog);
 board::TimeSync timeSync(deviceClock, eventLog);
@@ -354,4 +354,14 @@ void loop() {
   }
   loopStats.pass(now, workUs, sleptMs, decision.cpuMaySleep);
   if (loopStats.due(millis())) eventLog.log(loopStats.takeLine(millis()));
+  // Bytes from the modem lost in the receive queue (D-41): at most one line a minute, with the count. None is
+  // expected with the larger queue; the line is what tells whether it is large enough.
+  static uint32_t uartOverflows = 0;
+  static uint32_t uartReportedMs = 0;
+  uartOverflows += modemUart.takeOverflows();
+  if (uartOverflows > 0 && millis() - uartReportedMs >= 60000) {
+    eventLog.log("Modem UART: receiving failed " + std::to_string(uartOverflows) + " times, the buffer overflowed and bytes were lost");
+    uartOverflows = 0;
+    uartReportedMs = millis();
+  }
 }

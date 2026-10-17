@@ -551,6 +551,28 @@ void test_cmgl_ucs2_urc_between_messages_is_unsolicited() {
   TEST_ASSERT_EQUAL_STRING(expected.c_str(), f.unsolicited.c_str());
 }
 
+// Bytes lost on the line (the UART's receive queue overflowed, D-41): a line in the text that is not hex in whole
+// units (three digits lost) or not hex at all, and no URC, marks the text damaged, so that the driver leaves it on
+// the SIM. Before, it was delivered empty or cut and then deleted.
+void test_cmgl_ucs2_text_that_lost_characters_on_the_line_is_damaged_and_a_whole_one_is_not() {
+  const std::string cut = ucs2("hello").substr(0, 17);                // three hex digits lost
+  const std::string resp = "\r\n" + cmglHeader(1, ucs2("+491701111111").c_str(), kScts) + cut + "\r\n" +
+                           cmglHeader(2, ucs2("+491701111111").c_str(), kScts) + "0068006Z0065\r\n" +
+                           cmglHeader(3, ucs2("+493012345678").c_str(), kScts) + ucs2("two") + "\r\n" +
+                           "RING\r\n" + "\r\nOK\r\n";
+  ParsedSms out[4];
+  SmsResponseParser p(Charset::Ucs2, out, 4);
+  Feeder f;
+  f.run(p, resp.c_str());
+
+  TEST_ASSERT_EQUAL(3, p.count());
+  TEST_ASSERT_TRUE(out[0].damaged);
+  TEST_ASSERT_TRUE(out[1].damaged);
+  TEST_ASSERT_FALSE(out[2].damaged);
+  TEST_ASSERT_EQUAL_STRING("two", out[2].msg.body.c_str());
+  TEST_ASSERT_EQUAL_STRING("RING|", f.unsolicited.c_str());          // a URC in the answer is still the caller's
+}
+
 // A timeout cut the answer: only messages whose end is seen are delivered; the last one stays on the SIM.
 void test_cmgl_truncated_response_keeps_the_last_message_on_the_sim() {
   const std::string resp = "\r\n" + cmglHeader(1, "+491701111111", kScts) + "one\r\n" +
@@ -765,6 +787,7 @@ int main(int, char**) {
   RUN_TEST(test_cmgl_multiline_body_gsm);
   RUN_TEST(test_cmgl_ucs2_umlauts_emoji_newline);
   RUN_TEST(test_cmgl_ucs2_urc_between_messages_is_unsolicited);
+  RUN_TEST(test_cmgl_ucs2_text_that_lost_characters_on_the_line_is_damaged_and_a_whole_one_is_not);
   RUN_TEST(test_cmgl_truncated_response_keeps_the_last_message_on_the_sim);
   RUN_TEST(test_cmgl_capacity_exceeded_counts_dropped);
   RUN_TEST(test_cmgl_empty_list_and_error);

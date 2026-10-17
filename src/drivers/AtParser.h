@@ -208,6 +208,11 @@ struct ParsedSms {
   SmsMessage msg;
   bool senderValid = false;  // the number is readable and fits; otherwise msg.phone is empty
   bool bodyTruncated = false;
+  // A UCS2 text that lost characters on the line: a line inside it that is neither hex in whole units nor a URC
+  // (isUcs2Hex refuses a line whose length is no multiple of four). It is not delivered and not deleted from the
+  // SIM, so that it can be read again; delivered, it was an empty or cut text and the parents' words were gone
+  // (found by the review of 2026-10-17).
+  bool damaged = false;
 };
 
 enum class Feed {
