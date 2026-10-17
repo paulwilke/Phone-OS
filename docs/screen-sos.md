@@ -26,6 +26,8 @@ Code: `src/ui/screens/SosScreen.{h,cpp}`; tests in `test/test_screen_sos/`. The 
 
 **Leaving** the page by any way (Back, home, lock) calls `leaveSos()` from `onLeave()`, so the receiver is released. An emergency that has been chosen is not cancelled by this: the text goes out all the same.
 
+**A call is no way out** (decision [D-39](decisions.md)): a call that rings covers the page with the call page, and the choice stays open. The child can answer; the countdown goes on and the emergency goes out by itself during the call when nobody chose. When the call is over the stack comes back to this page, to the countdown or to what the ping did.
+
 **Lock:** the page keeps the device from locking while an emergency is open or running (`preventsAutoLock`).
 
 ## Wording
@@ -34,4 +36,4 @@ Every word is from the catalogs (`sos.*`, `home.sos`, `key.*`); the sentences wi
 
 ## Tests
 
-`test_screen_sos`: the choice and its countdown; every way to choose (keys, touch, Enter, Back); school time and the five taps; each phase of the ping; the bars; a failed text and trying again; a remote query not shown; every way out releasing the search, through a real stack; the lock; the page in French and German; layout of every phase in four languages; pictures in English and German.
+`test_screen_sos`: the choice and its countdown; every way to choose (keys, touch, Enter, Back); school time and the five taps; each phase of the ping; the bars; a failed text and trying again; a remote query not shown; every way out releasing the search, through a real stack; a call during the choice (`test_runtime`, the scenario `sos-during-a-call`); the lock; the page in French and German; layout of every phase in four languages; pictures in English and German.

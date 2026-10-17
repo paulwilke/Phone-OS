@@ -380,6 +380,95 @@ void test_an_incoming_call_comes_through_the_lock() {
   TEST_ASSERT_EQUAL(ui::screen::kCall, w.runtime->stack().visibleId());
 }
 
+// The three keys under the screen are touch keys: a cheek or a finger hits them during a call. They
+// must not take the call page away, ringing or connected, or nothing brings it back until the call ends.
+void test_the_keys_under_the_screen_do_not_take_a_call_away() {
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(2);
+  w.modem.injectIncomingCall(kParentOne);
+  w.run(1);
+  for (ui::Key key : {ui::Key::Home, ui::Key::Inbox, ui::Key::Compose}) {
+    w.runtime->input(ui::Input::pressed(key), w.ms);
+    TEST_ASSERT_EQUAL(ui::screen::kCall, w.runtime->stack().visibleId());   // ringing: still there to answer
+  }
+  w.runtime->input(ui::Input::pressed(ui::Key::Select), w.ms);
+  w.run(1);
+  TEST_ASSERT_TRUE(w.state().callState == ModemState::InCall);
+  for (ui::Key key : {ui::Key::Home, ui::Key::Inbox, ui::Key::Compose}) {
+    w.runtime->input(ui::Input::pressed(key), w.ms);
+    TEST_ASSERT_EQUAL(ui::screen::kCall, w.runtime->stack().visibleId());   // connected: still there to hang up
+  }
+  w.run(boot::Runtime::kAutoLockSeconds + 1);
+  TEST_ASSERT_FALSE(w.runtime->stack().locked());
+  w.runtime->input(ui::Input::pressed(ui::Key::Back), w.ms);              // hang up
+  w.run(1);
+  TEST_ASSERT_EQUAL(ui::screen::kHome, w.runtime->stack().visibleId());
+  w.runtime->input(ui::Input::pressed(ui::Key::Inbox), w.ms);             // no call: the keys are the stack's again
+  TEST_ASSERT_EQUAL(ui::screen::kMessages, w.runtime->stack().visibleId());
+}
+
+// A call that rang through the lock leaves the device locked again, answered or not: a pocket that was
+// locked before the call must not be open to the next touch.
+void test_a_call_that_came_through_the_lock_locks_the_device_again_when_it_is_over() {
+  for (bool answered : {false, true}) {
+    World w;
+    FrameBuffer fb;
+    w.boot(fb);
+    w.run(2);
+    w.runtime->stack().lock();
+    w.modem.injectIncomingCall(kParentOne);
+    w.run(1);
+    TEST_ASSERT_FALSE(w.runtime->stack().locked());
+    if (answered) {
+      w.runtime->input(ui::Input::pressed(ui::Key::Select), w.ms);
+      w.run(5);
+    }
+    w.modem.remoteHangup();
+    w.run(1);
+    TEST_ASSERT_TRUE_MESSAGE(w.runtime->stack().locked(), answered ? "answered" : "missed");
+    TEST_ASSERT_EQUAL(ui::screen::kLock, w.runtime->stack().visibleId());
+  }
+  // Unlocked before the call: unlocked after it.
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(2);
+  w.modem.injectIncomingCall(kParentOne);
+  w.run(1);
+  w.modem.remoteHangup();
+  w.run(1);
+  TEST_ASSERT_FALSE(w.runtime->stack().locked());
+  TEST_ASSERT_EQUAL(ui::screen::kHome, w.runtime->stack().visibleId());
+}
+
+// D-39: a call during the choice does not cancel it. The child can answer, the countdown goes on and the
+// emergency goes out by itself during the call; after the call the SOS page is back and says what was sent.
+void test_a_call_during_the_sos_countdown_does_not_cancel_it_and_the_page_comes_back_after_it() {
+  World w;
+  FrameBuffer fb;
+  w.boot(fb);
+  w.run(2);
+  TEST_ASSERT_TRUE(w.runtime->core().beginSos());
+  w.runtime->stack().open(ui::screen::kSos);
+  w.run(5);
+  w.modem.injectIncomingCall(kParentOne);
+  w.run(1);
+  TEST_ASSERT_EQUAL(ui::screen::kCall, w.runtime->stack().visibleId());
+  TEST_ASSERT_TRUE(w.state().sosPhase == SosFlow::Phase::Choosing);         // the choice is still open
+  w.runtime->input(ui::Input::pressed(ui::Key::Select), w.ms);              // answered
+  w.run(1);
+  TEST_ASSERT_TRUE(w.state().callState == ModemState::InCall);
+  w.run(SosFlow::kAutoSeconds + 30);
+  TEST_ASSERT_EQUAL(1, static_cast<int>(w.modem.sent().size()));           // out during the call
+  TEST_ASSERT_TRUE(w.modem.sent()[0].body.find("Alex sends SOS") != std::string::npos);
+  w.modem.remoteHangup();
+  w.run(1);
+  TEST_ASSERT_EQUAL(ui::screen::kSos, w.runtime->stack().visibleId());
+  TEST_ASSERT_TRUE(w.state().pingStage == SosPing::Stage::Done);
+}
+
 void test_the_device_locks_itself_after_the_auto_lock_time() {
   World w;
   FrameBuffer fb;
@@ -661,6 +750,9 @@ int main() {
   RUN_TEST(test_an_incoming_message_is_counted_and_changes_the_next_picture);
   RUN_TEST(test_an_incoming_call_takes_the_screen_and_gives_it_back);
   RUN_TEST(test_an_incoming_call_comes_through_the_lock);
+  RUN_TEST(test_the_keys_under_the_screen_do_not_take_a_call_away);
+  RUN_TEST(test_a_call_that_came_through_the_lock_locks_the_device_again_when_it_is_over);
+  RUN_TEST(test_a_call_during_the_sos_countdown_does_not_cancel_it_and_the_page_comes_back_after_it);
   RUN_TEST(test_the_device_locks_itself_after_the_auto_lock_time);
   RUN_TEST(test_a_key_press_is_input_for_the_screen_and_the_power_logic);
   RUN_TEST(test_a_key_press_starts_the_quiet_time_again);

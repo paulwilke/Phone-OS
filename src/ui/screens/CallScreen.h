@@ -23,7 +23,11 @@
 // to a child, and boxes are drawn, so they need no glyphs. It can be changed only during a call, where
 // the sound runs through the modem; the core refuses at any other time and the page shows no boxes.
 //
-// A call in progress keeps the device from locking.
+// A call in progress keeps the device from locking, and **keeps the three keys under the screen**
+// while it is dialled, rings or is connected: they are touch keys, a cheek or a finger touches them
+// by accident, and the stack would leave the page with nothing to bring it back during the call (no
+// way to answer, to hang up or to see that a call runs). Back hangs up as before; after the call the
+// keys work again.
 
 #include "ui/AppScreen.h"
 
@@ -34,6 +38,7 @@ public:
   using AppScreen::AppScreen;
 
   bool preventsAutoLock() const override;
+  bool wantsHardwareKeys() const override;
 
 protected:
   void draw(Display& display, const Rect& area) override;

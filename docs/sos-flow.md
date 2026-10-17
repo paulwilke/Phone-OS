@@ -24,7 +24,7 @@ Pressing SOS **starts the location search at once** (`startSearch`), not after a
 
 ## The host closes the flow
 
-**The host must call `leave()` when the screen closes.** In school time the flow has no timeout of its own, and the receiver stays powered (the search is held) until the flow ends. A choice outside school time ends by itself after 40 seconds; a warning does not.
+**The host must call `leave()` when the screen closes.** A call that covers the screen does not close it (decision [D-39](decisions.md)). In school time the flow has no timeout of its own, and the receiver stays powered (the search is held) until the flow ends. A choice outside school time ends by itself after 40 seconds; a warning does not.
 
 ## Rules for every path
 

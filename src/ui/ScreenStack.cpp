@@ -82,14 +82,21 @@ void ScreenStack::interrupt(ScreenId id, uint32_t nowSeconds) {
   if (!screen(id)) return;
   lastInput_ = nowSeconds;
   transition([&] {
+    if (visibleId() != id) relockAfterInterrupt_ = locked_;  // the same interrupt again keeps what the first found
     locked_ = false;
     push(id);
   });
 }
 
 void ScreenStack::endInterrupt(ScreenId id) {
-  if (path_[depth_ - 1] != id) return;  // back() ignores a locked device by itself
-  back();
+  const bool relock = relockAfterInterrupt_;
+  relockAfterInterrupt_ = false;
+  if (locked_ || path_[depth_ - 1] != id) return;
+  // One transition: the screen under the interrupt is not entered on the way back to the lock.
+  transition([&] {
+    if (depth_ > 1) --depth_;
+    if (relock && hasLock_ && screen(lock_)) locked_ = true;
+  });
 }
 
 bool ScreenStack::handle(const Input& input, uint32_t nowSeconds) {

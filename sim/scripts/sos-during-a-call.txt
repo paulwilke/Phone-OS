@@ -1,0 +1,28 @@
+# data: sim/data
+# A call during the SOS countdown (D-39): the call takes the screen and can be answered, the countdown goes
+# on, the emergency goes out by itself during the call, and when the call is over the SOS page is back and
+# says what was sent.
+advance 5s
+key down down select
+check screen sos
+check sos choosing
+advance 5s
+call +493012345678
+advance 2s
+check screen call
+check sos choosing
+key select
+advance 1s
+check call incall
+advance 40s
+check sos running
+advance 60s
+check sms-sent 1
+check last-sms-has Alex sends SOS
+check screen call
+remote hangup
+advance 2s
+check screen sos
+see sos.step-sent
+key back
+check screen home
