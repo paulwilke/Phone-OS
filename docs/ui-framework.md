@@ -40,8 +40,8 @@ They always alternate, and they are the only place a screen starts or stops anyt
 | `home()` | back to the root | leave visible, enter root |
 | `lock()` | the path is kept | leave visible, enter the lock screen |
 | `unlock()` | back to the root | leave the lock screen, enter root |
-| `interrupt(id)` (an incoming call) | pushed, also from the lock screen, which is left | leave visible, enter id |
-| `endInterrupt(id)` | pops, only while id is still the visible one | leave id, enter the one below |
+| `interrupt(id)` (an incoming call) | pushed, also from the lock screen, which is left; the stack remembers that it was locked | leave visible, enter id |
+| `endInterrupt(id)` | pops, only while id is still the visible one, and locks again when the interrupt found the device locked | leave id, enter the one below (or the lock screen) |
 | `begin()` | the root | enter root (leave the visible one first if started before) |
 
 The open filter (`setOpenFilter`) lets a role that has no messages refuse the messages screen; the root, the lock screen and interrupts are not subject to it. A screen must not navigate from inside `onEnter()` or `onLeave()`: such a call is ignored, so the path stays consistent while a transition runs. An action bound to a hardware key may make several navigation calls; each is a transition of its own.
