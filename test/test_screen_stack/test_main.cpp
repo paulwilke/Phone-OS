@@ -315,6 +315,28 @@ void test_end_of_an_interrupt_goes_back_only_while_it_is_still_visible() {
   TEST_ASSERT_TRUE(r.stack.locked());
 }
 
+void test_an_interrupt_that_found_the_device_locked_locks_it_again_when_it_ends() {
+  Rig r;
+  r.start();
+  r.stack.open(Messages);
+  r.stack.lock();
+  r.stack.interrupt(Call, 5);
+  r.stack.interrupt(Call, 6);   // the same interrupt again keeps what the first one found
+  r.log.clear();
+  r.stack.endInterrupt(Call);
+  ASSERT_LOG(r, "-call +lock");  // one transition: the screen under the call is not entered on the way
+  TEST_ASSERT_TRUE(r.stack.locked());
+  TEST_ASSERT_EQUAL_STRING("home>messages", r.path().c_str());
+
+  // Unlocked before: unlocked after, and the next interrupt does not remember the old lock.
+  r.stack.unlock();
+  r.stack.interrupt(Call, 7);
+  r.log.clear();
+  r.stack.endInterrupt(Call);
+  ASSERT_LOG(r, "-call +home");
+  TEST_ASSERT_FALSE(r.stack.locked());
+}
+
 void test_navigation_is_ignored_while_locked_except_interrupt_and_unlock() {
   Rig r;
   r.start();
@@ -638,6 +660,7 @@ int main() {
   RUN_TEST(test_interrupt_from_a_screen_keeps_the_path_under_it);
   RUN_TEST(test_interrupt_from_the_lock_screen_unlocks_and_leaves_the_lock_screen);
   RUN_TEST(test_end_of_an_interrupt_goes_back_only_while_it_is_still_visible);
+  RUN_TEST(test_an_interrupt_that_found_the_device_locked_locks_it_again_when_it_ends);
   RUN_TEST(test_navigation_is_ignored_while_locked_except_interrupt_and_unlock);
   RUN_TEST(test_an_unknown_screen_is_not_opened);
   RUN_TEST(test_lock_without_a_lock_screen_does_nothing);

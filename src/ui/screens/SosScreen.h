@@ -19,9 +19,14 @@
 //   not sent    "Not sent. No network and no radio. Try again." with an action that starts again.
 //
 // **Leaving the page releases the search** (`leaveSos()`, called from `onLeave()`, so every way out —
-// back, the lock, the home key, a call — does it): nothing is sent and the receiver is let go. A ping
+// back, the lock, the home key — does it): nothing is sent and the receiver is let go. A ping
 // that is already running is not stopped by leaving (the core's rule: a text that has been decided
 // on must not be lost by a tap on Back), so the soft key says "Back" and not "Cancel" there.
+//
+// **A call that rings is no way out** (decision D-39): the call page covers this one, the child can
+// answer, and the choice keeps its countdown, so the emergency goes out by itself during the call
+// when nobody chose. When the call is over the stack comes back here, to the countdown or to what
+// the ping did. Only the ringing call is let through: the stack brings the call page up exactly then.
 //
 // The page keeps the device from locking while an emergency is open or running, because locking
 // would leave the page and cancel the choice.
@@ -35,7 +40,9 @@ public:
   using AppScreen::AppScreen;
 
   void onEnter() override { selection_ = 0; }
-  void onLeave() override { app().leaveSos(); }
+  void onLeave() override {
+    if (app().callState() != ModemState::RingingIn) app().leaveSos();
+  }
   bool preventsAutoLock() const override;
 
 protected:

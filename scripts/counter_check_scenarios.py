@@ -58,6 +58,9 @@ MUTATIONS = [
      "a request without the password restarts the idle time"),
     ("wifi-admin-page", [("src/web/WebApi.cpp", 'strcmp(p, "/wifi-extend") == 0', 'strcmp(p, "/wifi-extend-x") == 0')],
      "the button \"keep Wi-Fi on\" is not there"),
+    ('call-in-the-pocket', [('src/ui/screens/CallScreen.cpp', 'const ModemState call = context().app.callState();', 'const ModemState call = ModemState::Off;')], 'a key under the screen takes the call page away during a call'),
+    ('call-in-the-pocket', [('src/ui/ScreenStack.cpp', 'if (relock && hasLock_', 'if (false && relock && hasLock_')], 'a call that rang through the lock leaves the device unlocked'),
+    ('sos-during-a-call', [('src/ui/screens/SosScreen.h', 'if (app().callState() != ModemState::RingingIn) app().leaveSos();', 'app().leaveSos();')], 'a call during the SOS countdown cancels the emergency'),
 ]
 
 

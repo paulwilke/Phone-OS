@@ -26,6 +26,13 @@ const Font& fontThatFits(const std::string& words, int width) {
 
 bool CallScreen::preventsAutoLock() const { return context().app.state().callActive; }
 
+// Asked by the stack before the input reaches the page, so from the core and not from the state of the
+// last frame; callState() is the cheap question (D-31).
+bool CallScreen::wantsHardwareKeys() const {
+  const ModemState call = context().app.callState();
+  return call == ModemState::Dialing || call == ModemState::RingingIn || call == ModemState::InCall;
+}
+
 CallScreen::Phase CallScreen::phase() const {
   switch (state().callState) {
     case ModemState::Dialing: return Phase::Dialling;
@@ -137,6 +144,7 @@ bool CallScreen::onInput(const Input& input, const Rect&) {
   // The arrows are the volume. The core changes it only during a call, and says no otherwise.
   if (input.isKey(Key::Up)) return app().changeVolume(+1);
   if (input.isKey(Key::Down)) return app().changeVolume(-1);
+  if (input.isHardwareKey()) return true;  // only during a call (wantsHardwareKeys): held, so the page stays
   if (input.isKey(Key::Back)) {
     const Phase now = phase();
     if (now == Phase::None || now == Phase::Failed) nav().back();

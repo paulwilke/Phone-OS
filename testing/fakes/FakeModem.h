@@ -34,6 +34,7 @@
 #include <string>
 #include <vector>
 
+#include <drivers/AtParser.h>
 #include <hal/Clock.h>
 #include <hal/Modem.h>
 
@@ -62,7 +63,7 @@ public:
   void wake() override { asleep_ = false; }
 
   bool sendSms(const std::string& phone, const std::string& body) override {
-    if (!canSend() || phone.empty() || body.empty() || body.size() > kMaxSmsBytes) return false;
+    if (!canSend() || !at::isValidDialString(phone.c_str()) || body.empty() || body.size() > kMaxSmsBytes) return false;
     sent_.push_back({phone, body});
     if (failingSms_ > 0) {
       --failingSms_;
@@ -84,7 +85,7 @@ public:
   }
 
   bool dial(const std::string& phone) override {
-    if (state_ != ModemState::Ready || voice_ != VoiceStatus::Ready || phone.empty()) return false;
+    if (state_ != ModemState::Ready || voice_ != VoiceStatus::Ready || !at::isValidDialString(phone.c_str())) return false;
     callPhone_ = phone;
     state_ = ModemState::Dialing;
     return true;

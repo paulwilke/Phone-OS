@@ -48,7 +48,11 @@ Four domains: cellular, positioning, front light, radio. `setEnabled()` returns 
 
 The implementation for the device is `A7682EDriver` ([modem-driver.md](modem-driver.md), [volte.md](volte.md)); it passes this contract on a scripted modem, **not yet on the real one**.
 
+<<<<<<< HEAD
 States: `Off`, `PoweringOn`, `Initializing`, `Registering` (searching a network), `Ready` (registered and idle), `Error` (a locked or missing SIM, or a modem that does not answer; a start without a network searches on in `Registering`, D-40), `Dialing`, `RingingIn`, `InCall`. `sendSms()` returning true means *accepted*; a refusal after that arrives through `pollSendFailure()` exactly once, with the modem's own reason (for the log, not the child). Call events are `Incoming`, `Connected`, `Ended`, `Missed`, `Busy`, `NoAnswer`, `DialFailed`:
+=======
+States: `Off`, `PoweringOn`, `Initializing`, `Registering` (searching a network), `Ready` (registered and idle), `Error` (also a locked or missing SIM), `Dialing`, `RingingIn`, `InCall`. `sendSms()` and `dial()` refuse a number that is no dial string (digits, `*`, `#`, a leading `+`; the contract case `a_number_that_is_no_dial_string_is_refused_for_texts_and_calls`), so the application hands over `phone::dialable()`. `sendSms()` returning true means *accepted*; a refusal after that arrives through `pollSendFailure()` exactly once, with the modem's own reason (for the log, not the child). Call events are `Incoming`, `Connected`, `Ended`, `Missed`, `Busy`, `NoAnswer`, `DialFailed`:
+>>>>>>> origin/main
 
 - an incoming call produces `Incoming`, then `Connected` and `Ended`, or `Missed`;
 - an outgoing call produces `Connected` and `Ended`, or one of `Busy`, `NoAnswer`, `DialFailed`;

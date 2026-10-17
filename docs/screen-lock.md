@@ -4,7 +4,7 @@ Code: `src/ui/screens/LockScreen.{h,cpp}`; tests in `test/test_screen_lock/`. A 
 
 ## Unlocking
 
-**Two presses of the keyboard's Enter key in a row.** A tap on the screen and the three sensor keys under it never unlock — in a pocket the cloth touches the screen, and two taps came together too easily on the device. Any key between the two presses, a typed character included, starts again; a touch neither unlocks nor breaks a first press. Every input is used up here: nothing gets through to the device behind. The hardware keys do nothing while locked (the stack's rule); the screen would ignore them too.
+**Two presses of the keyboard's Enter key in a row.** A tap on the screen and the three sensor keys under it never unlock — in a pocket the cloth touches the screen, and two taps came together too easily on the device. Any key between the two presses, a typed character included, starts again; a touch neither unlocks nor breaks a first press. Every input is used up here: nothing gets through to the device behind. The hardware keys do nothing while locked (the stack's rule); the screen would ignore them too. A call comes through the lock and **leaves the device locked again** when it is over, answered or missed: otherwise the next touch in the pocket would reach the home screen (seen in the simulator: a tap after a call started an SOS).
 
 The screen has **no soft keys**: a button that did nothing when tapped would be a lie. The hint says what to do instead and names the key by its symbol, as it is printed on the keyboard: "Press ↵ twice to unlock", and after the first press "Press ↵ once more". Entering the screen again forgets a first press of an earlier lock.
 

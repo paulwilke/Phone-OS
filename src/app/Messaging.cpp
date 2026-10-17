@@ -130,7 +130,7 @@ void Messaging::recordCommand(const CommandRecord& rec, CommandNotice notice) {
 // Cellular first, then the radio. The radio has no phone numbers, only contact names: the
 // recipient is the radio's own default contact, so none is passed.
 bool Messaging::deliver(const std::string& peer, const std::string& text, MsgSource& path) {
-  if (registered() && modem_.sendSms(peer, text)) {
+  if (registered() && modem_.sendSms(phone::dialable(peer, profile_.contacts.countryCode()), text)) {
     path = MsgSource::Sms;
     return true;
   }

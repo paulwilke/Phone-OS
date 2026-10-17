@@ -69,7 +69,9 @@ public:
   void poll(uint32_t nowSeconds);
 
   // Brings a screen to the front even from the lock screen (an incoming call), keeping the path
-  // under it. endInterrupt() goes back when that screen is still the visible one.
+  // under it. endInterrupt() goes back when that screen is still the visible one, and locks the device
+  // again when the interrupt found it locked: a call that rang in a pocket must not leave the device open
+  // to the next touch (seen in the simulator: a tap after the call started an SOS).
   void interrupt(ScreenId id, uint32_t nowSeconds);
   void endInterrupt(ScreenId id);
 
@@ -101,6 +103,7 @@ private:
   ScreenId path_[kMaxDepth];
   size_t depth_ = 1;
   bool locked_ = false;
+  bool relockAfterInterrupt_ = false;
   bool begun_ = false;
   bool transitioning_ = false;
   uint32_t lastInput_ = 0;
