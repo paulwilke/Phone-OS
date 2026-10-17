@@ -952,7 +952,9 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       }
       if (!answered) return;
       if (stepIndex_ == 0) {
-        if (smsParser_.count() > 0 && inbox_.size() < kInboxSize) {
+        if (smsParser_.count() > 0 && parsed_[0].damaged) {
+          log("Messages: reading a text failed, it came in broken on the line; left on the SIM to be read again");
+        } else if (smsParser_.count() > 0 && inbox_.size() < kInboxSize) {
           queueSms(parsed_[0].msg);
           stepIndex_ = 1;
           snprintf(buf, sizeof(buf), "AT+CMGD=%d", readingIndex_);
@@ -979,6 +981,10 @@ void A7682EDriver::step(const char* line, at::LineType type) {
       if (stepIndex_ == 0) {
         stepIndex_ = 1;
         for (size_t i = 0; i < smsParser_.count() && inbox_.size() < kInboxSize; ++i) {
+          if (parsed_[i].damaged) {   // left on the SIM; the next read of the whole SIM tries again
+            log("Messages: reading a text failed, it came in broken on the line; left on the SIM to be read again");
+            continue;
+          }
           queueSms(parsed_[i].msg);
           if (parsed_[i].index >= 0 && deleteCount_ < 2) deleteIndex_[deleteCount_++] = parsed_[i].index;
         }

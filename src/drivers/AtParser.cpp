@@ -487,7 +487,15 @@ Feed SmsResponseParser::feedLine(const char* line) {
 
   if (cs_ == Charset::Ucs2) {
     if (t == LineType::Empty) return Feed::Consumed;
-    if (!text::isUcs2Hex(line, strlen(line))) return Feed::Unsolicited;
+    if (!text::isUcs2Hex(line, strlen(line))) {
+      // A URC between the lines of the text (a RING, a +CMTI) is the caller's. Anything else here is the text
+      // itself, broken on the line.
+      if (t == LineType::Other && line[0] != '+' && line[0] != '*') {
+        cur_.damaged = true;
+        return Feed::Consumed;
+      }
+      return Feed::Unsolicited;
+    }
   }
   appendBody(line);
   return Feed::Consumed;

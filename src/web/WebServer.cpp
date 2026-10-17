@@ -174,21 +174,23 @@ void WebServer::poll(uint32_t now) {
   }
 
   if (phase_ == Phase::Writing) {
-    size_t w = 0;
-    if (sent_ < headLen_)
-      w = conn_->write((const uint8_t*)head_ + sent_, headLen_ - sent_);
-    else
-      w = conn_->write((const uint8_t*)body_ + (sent_ - headLen_), headLen_ + bodyLen_ - sent_);
-    if (w > 0) {
+    // As much as the network takes now, in a few chunks, and the rest in the next pass. The socket never waits
+    // (on the device: decision D-41), so the main loop goes on however slowly the browser reads.
+    for (int i = 0; i < 8 && sent_ < headLen_ + bodyLen_; ++i) {
+      size_t w = 0;
+      if (sent_ < headLen_)
+        w = conn_->write((const uint8_t*)head_ + sent_, headLen_ - sent_);
+      else
+        w = conn_->write((const uint8_t*)body_ + (sent_ - headLen_), headLen_ + bodyLen_ - sent_);
+      if (w == 0) {
+        // Nothing was taken: no room yet, or a dead connection, which must not hold the one slot for the idle
+        // time. Reading says which: -1 is "gone".
+        uint8_t probe;
+        if (conn_->read(&probe, 1) < 0) { finish(End::PeerGone, now); return; }
+        break;
+      }
       sent_ += w;
       lastProgress_ = now;
-    } else {
-      // Nothing was taken. On the device WiFiClient::write waits for room itself and gives up only after
-      // ten seconds without progress, or when the connection is dead; the interface cannot tell those
-      // two from "try again", and a dead connection must not hold the one slot for the idle time too.
-      // Reading says it: -1 is "gone".
-      uint8_t probe;
-      if (conn_->read(&probe, 1) < 0) { finish(End::PeerGone, now); return; }
     }
     if (sent_ >= headLen_ + bodyLen_) {
       if (parser_.state() == http::Parser::State::Error) {

@@ -142,6 +142,28 @@ void test_a_slow_reader_gets_the_whole_answer() {
   TEST_ASSERT_TRUE(c.closed);
 }
 
+// A pass sends what the network takes, in up to eight chunks, and leaves the rest for the next pass: on the device
+// the socket never waits (D-41), so one pass may not try to push a whole page through a slow link either.
+void test_a_pass_sends_up_to_eight_chunks_and_leaves_the_rest_for_the_next() {
+  Fixture f;
+  f.server.begin();
+  FakeConn c;
+  f.handler.page = std::string(2000, 'x');
+  c.fromPeer("GET / HTTP/1.1\r\n\r\n");
+  c.writeLimit = 10;
+  f.tcp.waiting.push_back(&c);
+  f.server.poll(0);                       // reads the request and sends the first chunks
+  const size_t first = c.outbox.size();
+  TEST_ASSERT_TRUE(first > 10 && first <= 80);       // more than one chunk, at most eight
+  f.server.poll(0);
+  const size_t second = c.outbox.size() - first;
+  TEST_ASSERT_TRUE(second > 10 && second <= 80);
+  TEST_ASSERT_FALSE(c.closed);
+  f.run();
+  TEST_ASSERT_TRUE(c.closed);
+  TEST_ASSERT_TRUE(c.outbox.find(std::string(2000, 'x')) != std::string::npos);
+}
+
 // The web page is larger than any response buffer (on the device the simulator
 // returned "response too large"). It is not copied but sent from its own storage
 // in chunks.
@@ -515,6 +537,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_serves_the_page_in_pieces_and_closes);
   RUN_TEST(test_a_slow_reader_gets_the_whole_answer);
+  RUN_TEST(test_a_pass_sends_up_to_eight_chunks_and_leaves_the_rest_for_the_next);
   RUN_TEST(test_a_page_larger_than_any_buffer_arrives_intact);
   RUN_TEST(test_request_body_reaches_the_handler);
   RUN_TEST(test_connections_are_served_one_after_another);
