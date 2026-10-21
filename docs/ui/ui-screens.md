@@ -66,6 +66,10 @@ The core's notice is a kind with a number (for who it concerns) and a minute (fo
 
 The tests walk **every** notice kind, system entry kind, call reason, Wi-Fi reason and network label in English, German and French and assert real words (no catalog key, no unfilled placeholder) and that no language fell back to English or asked for a missing key. A code without a catalog entry therefore fails a test and never shows a key on the child's screen.
 
+## The picture of the device
+
+`ui::drawSplash` (`src/ui/Splash.h`) draws the project's name, the board and the version, centred, with an optional line under them. It is drawn at start before anything else, before the catalogs are read, so it has no catalog words, and again before the device switches off, with a line under it, because e-ink keeps its last picture without power ([device-power.md](../hardware/device-power.md)).
+
 ## Testing a screen
 
 `testing/DeviceRig.h` is a whole device for screen tests: the core on the fakes with all catalogs and the pseudo-language loaded, the clock at a Tuesday afternoon, `RecordingNavigation` for what a screen asked the stack to do, and a frame buffer. `testing/Shows.h` answers "does this screen say that?": `shows::text(fb, "School time until 15:00", FontSize::Small, region, onBlack)` draws the text into a small buffer with the text engine and looks for exactly that pattern in the picture, so a test asserts on what the child reads in the language of the moment — and a word drawn in the wrong font, cut off or overlapped is not found. A word is not found inside a longer one (three clear columns on either side). A screen test scripts the world through the fakes, drives the screen with keys and touches, and asserts on what the screen did to the core, to the navigation and to the picture. Layouts run in every language (`languages::forEach`, see [ui-layout-testing.md](ui-layout-testing.md)); pictures are kept in English and German for whole screens.

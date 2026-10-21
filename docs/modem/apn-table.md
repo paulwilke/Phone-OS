@@ -19,6 +19,6 @@ To renew it: fetch the file again into an empty directory (`https://android.goog
 
 ## What is known and what is not
 
-The list is the Android project's, not a statement of the operators. It is checked here for its shape (sorted, unique, clean APNs, every operator can be found by a number with its code), not against the operators' own pages. For Telekom (262-01) it gives `internet.v6.telekom`, the dual-stack name, where the owner's SIM works with `internet.telekom`; with a configured APN the owner's setting is used as before.
+The list is the Android project's, not a statement of the operators. It is checked here for its shape (sorted, unique, clean APNs, every operator can be found by a number with its code), not against the operators' own pages. For Telekom (262-01) it gives `internet.v6.telekom`, the dual-stack name, where the owner's SIM had been set up with `internet.telekom`; with a configured APN the owner's setting is used as before.
 
-**Not verified on the device:** that a SIM without a configured APN registers the IMS with the list's APN, and that `AT+CIMI` answers as the driver reads it (the subscriber number alone on a line) (open point 21).
+**Seen on the device on 2026-10-12** (decision [D-9](../decisions.md)): with the APN field cleared, the log said "APN internet.v6.telekom chosen for the operator 26201" and then "IMS registered", so `AT+CIMI` answered as the driver reads it and the owner's SIM registered the IMS with the list's APN. **Not tried:** a call with that APN, and any other SIM or operator.

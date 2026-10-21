@@ -23,6 +23,6 @@ Code: `src/drivers/SmsPdu.{h,cpp}`; tests in `test/test_sms_pdu/` (with `testing
 
 `test_sms_pdu`: the user data of the example that every tutorial uses ("hellohello": E8329BFD4697D9EC37); an SOS with an umlaut as one 7-bit message; the umlauts at their septets; the extension characters at two places; the length where one message becomes two (160), two parts (306) and three (307); an escape pair that would straddle the cut; the reference and the count in every part; UCS2 with Cyrillic letters and an emoji; 70 and 67; a surrogate pair at the cut; the number as the specification writes it, 20 digits, 21 refused; bad UTF-8, overlong forms, a surrogate, a NUL and a text cut short. A decoder written in the test from the specification reads back every PDU, so the test does not check the encoder against itself. `test_at_fuzz` encodes random numbers and texts and checks the shape of what comes out.
 
-## Not verified on the device
+## On the device
 
-That the A7682E accepts `AT+CMGF=0` and `AT+CMGS=<length>` with these PDUs, that the service centre stored in the SIM is used, and that a receiving phone shows the parts of a long text as one message (open point 22).
+Seen on 2026-10-12 (decision [D-10](../decisions.md)): the A7682E accepted these PDUs with the service centre stored in the SIM; a text of 127 characters with an umlaut went out as "1 part, GSM 7-bit" and arrived as one message with the umlaut right, and a text of 181 characters with umlauts went out as "2 parts, GSM 7-bit" and arrived complete. Not seen on the device: a text sent as UCS2, and a text of three parts.

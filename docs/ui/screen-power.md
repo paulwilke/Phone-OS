@@ -19,7 +19,7 @@ Code: `src/ui/screens/PowerScreen.{h,cpp}` with the widget `src/ui/OptionRows.{h
 
 **Power save.** What it should do is decision D-13, which is open ([open-points.md](../open-points.md), point 25); a button that promised to save power would be wrong while the setting underneath (`modem_sleep`) decides whether anything sleeps.
 
-**The switch on the side of the case.** The firmware does not read it; open point 24.
+**The switch on the side of the case.** The firmware does not read it (decision D-11).
 
 ## Tests
 

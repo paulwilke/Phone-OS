@@ -26,6 +26,6 @@ The voltage table (`percentFromVoltage`) was measured down to 3430 mV; from ther
 - **What the firmware does since 4.2.0:** `LowVoltageGuard` (`src/board/LowVoltageGuard.h`, tests in `test/test_low_voltage_guard/`). When the voltage on the battery stays below 3300 mV for 60 seconds, the main loop logs "Battery: <mV> mV for a minute, switching off to protect the cell" and asks for the same switch-off as the menu entry, so the modem says goodbye first and the picture says "Battery empty". The loop reads the voltage every five seconds. A reading at or above the limit, a cable, or an unknown reading starts the minute again, so a dip while the modem sends does not switch the device off. On a cable the switch-off is refused as always.
 - **The number is the agent's.** 3300 mV is above the 3.0 V below which lithium-polymer cells are generally harmed and 130 mV under the voltage where this cell was flat. If a dip switches the device off too early on the device, a new entry in [decisions.md](../decisions.md) changes it.
 
-## Not verified on the device
+## On the device
 
-That the rule shows the right number at a lower load (modem asleep), what the gauge does after a full learning cycle, and the cell's real limits.
+Seen on the device: the rule at a lower load, with the modem asleep, in the night of 2026-10-13 and on 2026-10-21 at about 61 mA (decision D-24), and what the gauge learns from its discharges: a full charge of 1372, then 1107, then 988 mAh (D-32, D-42). Not verified on the device: the cell's real limits, and a discharge with the thresholds of 4.2.9 (D-45, open point 3).

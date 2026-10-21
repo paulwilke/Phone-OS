@@ -72,7 +72,7 @@ Every widget draws inside the rectangle it is given and nothing outside it; the 
 | `OptionRows` | boxes that each set one thing: the question in the small font, the answer under it; a row without an answer is a button, and one marked `current` has a second outline; Up/Down stop at the ends, the window follows the focus | none |
 | `PageTitle` | the title of an options or instrument page and its rule; wraps in a long language, so the page lays out what is left below it | none |
 | `TextBlock` | wrapped paragraph, scrolled by line, with a scroll bar | none (scrolling reaches the end) |
-| `shapes` | rounded rectangles and a scroll bar | |
+| `shapes` (`src/ui/Shapes.h`) | rounded rectangles and a scroll bar | |
 
 `ui::format` (`Formats.h`) writes what the instrument pages share: a coordinate with five decimals, one decimal for a quality figure, and an age in words ("just now", "3 min ago", "2 days ago") from `age.*` of the catalogs; a coordinate reads the same in every language, an age is worded.
 

@@ -35,6 +35,6 @@ Read it over the cable with `python3 scripts/deviceconfig.py read energy.log` (t
 
 A discharge with the state `awake` all day is the setting, not the battery. A discharge with `modem-sleep` that is still fast points at something else that is awake: Wi-Fi, the receiver, the front light. The system log has the lines for those.
 
-## Not verified on the device
+## On the device
 
-Compiled and host-tested only. The first thing to look at on the device is that lines arrive every ten minutes, that `mA` is negative while the device is on its own battery, and that `cable` appears while charging.
+Seen on the device since 2026-10-12: a line every ten minutes, read over the cable; the states `awake` and `cable` on 2026-10-12 (decision D-13); the nights and charges from 2026-10-13 on were read from it ([hardware-lessons.md](hardware-lessons.md): about 105 mA, then 58 to 63 mA with the processor asleep, 812 mA at the adapter). Host-tested only: the rotation to `/energy.old.log` at 64 KB and the line with dashes when the gauge does not answer; the records quote the current without its sign.

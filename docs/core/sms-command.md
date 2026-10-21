@@ -6,7 +6,7 @@ There is exactly one remote query: the location. A message that consists of **no
 
 ## Trigger words
 
-The words are given by the caller in `Config::triggers` so that every language has its own. The shipped catalogs provide them as the message `sms.command.where` (`#WhereAreYou`, `#WoBistDu`, `#OuEsTu`); a caller collects the word of every language, so a parent may use any of them.
+The words are given by the caller in `Config::triggers` so that every language has its own. The shipped catalogs provide them as the message `sms.command.where` (`#WhereAreYou`, `#WoBistDu`, `#OuEsTu`); a caller collects the word of every language, so a parent may use any of them. The setting `[sms] extra_trigger_words` in `settings.toml` (a list of words, empty by default, taken at the next start; [configuration-reference.md](../configuration-reference.md)) adds words of the parents' own: `AppCore::configureTriggers` appends them to the words of the catalogs.
 
 - Letters A–Z match in either case; other characters (umlauts, accents) must match as written.
 - Blanks around a configured word are ignored; empty or blank entries are skipped, because an empty word would match every blank message.

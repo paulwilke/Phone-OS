@@ -62,23 +62,25 @@ What only the device can show: whether the log and contacts tabs load now, how m
 
 ### Routes
 
+Every route that writes answers PUT and POST alike (`WebApi::handle` takes the two methods as one); DELETE is only for a file.
+
 | Method | Path | Action |
 |---|---|---|
 | GET | `/` | The web page (index.html) |
 | GET | `/api/state` | Device state as JSON |
 | GET | `/api/settings` | `/config/settings.toml` as JSON |
-| PUT | `/api/settings` | Write `/config/settings.toml` |
+| PUT, POST | `/api/settings` | Write `/config/settings.toml` |
 | GET | `/api/contacts` | `/config/contacts.toml` as JSON |
-| PUT | `/api/contacts` | Write `/config/contacts.toml`: this file is also the list of who may write to the device and call it, nobody else ([contacts.md](../core/contacts.md)) |
+| PUT, POST | `/api/contacts` | Write `/config/contacts.toml`: this file is also the list of who may write to the device and call it, nobody else ([contacts.md](../core/contacts.md)) |
 | GET | `/api/secrets` | `/config/secrets.toml` as JSON |
-| PUT | `/api/secrets` | Write `/config/secrets.toml` |
+| PUT, POST | `/api/secrets` | Write `/config/secrets.toml` |
 | GET | `/api/files` | One directory (query: `path=`, default `/`) as `{"path":"/config","entries":[{"name":"contacts.toml","size":210,"dir":false}, …]}`; names of the device's own scratch files are left out, everything else is listed (macOS `._*` leftovers too) |
 | GET | `/api/file` | Download a file (query: `path=`): the start of a file, of a `.log` its end, at most 12287 bytes (`kResponseMax` less one), `X-Truncated: 1` when the file is larger. With `from=<offset>` (digits only, at most nine; anything else is 400) the bytes from that offset on, as many as the buffer holds, with the headers `X-File-From: <offset>` and `X-File-Size: <total>`, and `X-Truncated: 1` unless the answer is the whole file; at or past the end the body is empty. The page and `curl` read a whole log in pieces this way; without `from=` nothing changed |
-| PUT | `/api/file` | Upload or overwrite a file (query: `path=`) |
+| PUT, POST | `/api/file` | Upload or overwrite a file (query: `path=`) |
 | DELETE | `/api/file` | Delete a file (query: `path=`) |
 | GET | `/api/backup` | A ZIP archive (`phone-os-backup.zip`) of `settings.toml` and `contacts.toml` in a folder `config` of the archive, as the card has them, stored without compression (`src/web/Zip.{h,cpp}`); `secrets.toml` is never in it (rule 5) |
 | PUT, POST | `/api/restore` | Restore such an archive. Refused with 422 and nothing written: not a ZIP file (the JSON bundle of 4.0 among that: 4.1 and 4.2 still read it, 4.2.3 does not, decision D-30), a compressed or encrypted entry (as the Mac's own "Compress" writes), a wrong checksum, a cut file, a file over 4096 bytes, any name but the two (`secrets.toml` included), a file twice, or a file the device would refuse at start. Every file is validated before the first is written, each through the card's safe write and logged (`WEB: /config/settings.toml written (632 bytes)`). The whole archive must fit one request body (8192 bytes, `http::kMaxBody`): two files of the full 4096 bytes do not, the usual ones (well under 1 KB each) do |
-| PUT | `/api/restart` | Ask the device to restart |
+| PUT, POST | `/api/restart` | Ask the device to restart |
 | PUT, POST | `/api/wifi-off` | Ask Wi-Fi to switch off (done after the answer has gone out) |
 | PUT, POST | `/api/wifi-extend` | Keep Wi-Fi on: restarts the idle time on purpose; answers with `seconds_left`; logged like every change |
 | GET | `/api/languages` | Installed language catalog list |

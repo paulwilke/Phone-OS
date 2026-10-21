@@ -1,6 +1,6 @@
 # Changelog
 
-Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/hardware/bring-up.md](docs/hardware/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
+Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, as the "Verified" line of the decision in [docs/decisions.md](docs/decisions.md) records it with a date. An entry says what was known at its release; what was seen on the device later is in those lines. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
 ## 4.2.9
 
