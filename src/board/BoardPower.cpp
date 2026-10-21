@@ -24,6 +24,7 @@ void BoardPower::begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer,
     log.log("Battery: no charger answers at either address, charge state and cable are unknown");
   }
   log.log(describeCapacityCheck(ensureCapacity(gauge_, writer, batteryCapacityMah)));
+  log.log(describeEndOfDischargeCheck(ensureEndOfDischarge(gauge_, writer)));
   // The boot state of the expander powers the receiver and the radio. Nobody has asked for them yet, and a
   // receiver that stays on drains the battery for nothing.
   setEnabled(PowerDomain::Positioning, false);

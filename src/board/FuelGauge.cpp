@@ -109,4 +109,103 @@ std::string describeCapacityCheck(const CapacityResult& r) {
   return "";
 }
 
+DataMemoryBlock dataMemoryBlock(uint16_t address, uint16_t value) {
+  DataMemoryBlock b;
+  b.bytes[0] = (uint8_t)(address & 0xFF);
+  b.bytes[1] = (uint8_t)(address >> 8);
+  b.bytes[2] = (uint8_t)(value >> 8);
+  b.bytes[3] = (uint8_t)(value & 0xFF);
+  const unsigned sum = b.bytes[0] + b.bytes[1] + b.bytes[2] + b.bytes[3];
+  b.checksum = (uint8_t)(0xFF - (sum & 0xFF));
+  b.length = sizeof(b.bytes) + 2;
+  return b;
+}
+
+namespace {
+// The Gauging Configuration's range in the manual's table (p.30): a value above it was not read from a chip.
+constexpr uint16_t kGaugingConfigurationMax = 0x1FFF;
+
+bool readEndOfDischarge(GaugeCapacityWriter& writer, EndOfDischarge& out) {
+  DataMemoryWord words[4];
+  words[0].address = kGaugingConfigurationAddress;
+  words[1].address = kFixedEdv0Address;
+  words[2].address = kFixedEdv1Address;
+  words[3].address = kFixedEdv2Address;
+  if (!writer.readDataMemory(words, 4)) return false;
+  out.gaugingConfiguration = words[0].value;
+  out.edv0Mv = words[1].value;
+  out.edv1Mv = words[2].value;
+  out.edv2Mv = words[3].value;
+  return true;
+}
+
+bool sameEndOfDischarge(const EndOfDischarge& a, const EndOfDischarge& b) {
+  return a.gaugingConfiguration == b.gaugingConfiguration && a.edv0Mv == b.edv0Mv && a.edv1Mv == b.edv1Mv &&
+         a.edv2Mv == b.edv2Mv;
+}
+
+std::string thresholds(const EndOfDischarge& e) {
+  return std::to_string(e.edv0Mv) + "/" + std::to_string(e.edv1Mv) + "/" + std::to_string(e.edv2Mv) + " mV, compensation " +
+         (e.compensated() ? "on" : "off");
+}
+}  // namespace
+
+EndOfDischargeResult ensureEndOfDischarge(FuelGauge& gauge, GaugeCapacityWriter& writer) {
+  EndOfDischargeResult r;
+  if (!gauge.present()) return r;
+  if (!readEndOfDischarge(writer, r.before) || r.before.gaugingConfiguration > kGaugingConfigurationMax) {
+    r.outcome = EndOfDischargeOutcome::ReadFailed;
+    return r;
+  }
+  r.after = r.before;
+  EndOfDischarge wanted = r.before;
+  wanted.gaugingConfiguration = (uint16_t)(r.before.gaugingConfiguration & ~kEdvCompensationBit);
+  wanted.edv0Mv = kEdv0Mv;
+  wanted.edv1Mv = kEdv1Mv;
+  wanted.edv2Mv = kEdv2Mv;
+  if (sameEndOfDischarge(r.before, wanted)) {
+    r.outcome = EndOfDischargeOutcome::AlreadyRight;
+    return r;
+  }
+  DataMemoryWord changes[4];
+  int n = 0;
+  const auto change = [&](uint16_t address, uint16_t was, uint16_t want) {
+    if (was == want) return;
+    changes[n].address = address;
+    changes[n].value = want;
+    ++n;
+  };
+  change(kGaugingConfigurationAddress, r.before.gaugingConfiguration, wanted.gaugingConfiguration);
+  change(kFixedEdv0Address, r.before.edv0Mv, wanted.edv0Mv);
+  change(kFixedEdv1Address, r.before.edv1Mv, wanted.edv1Mv);
+  change(kFixedEdv2Address, r.before.edv2Mv, wanted.edv2Mv);
+  r.written = n;
+  if (!writer.writeDataMemory(changes, (size_t)n)) {
+    r.outcome = EndOfDischargeOutcome::WriteRefused;
+    return r;
+  }
+  if (!readEndOfDischarge(writer, r.after) || !sameEndOfDischarge(r.after, wanted)) {
+    r.outcome = EndOfDischargeOutcome::ReadBackDiffers;
+    return r;
+  }
+  r.outcome = EndOfDischargeOutcome::Written;
+  return r;
+}
+
+std::string describeEndOfDischargeCheck(const EndOfDischargeResult& r) {
+  const std::string lead = "Battery: the fuel gauge's end-of-discharge thresholds ";
+  switch (r.outcome) {
+    case EndOfDischargeOutcome::GaugeAbsent: return lead + "are not checked, the fuel gauge does not answer";
+    case EndOfDischargeOutcome::ReadFailed: return lead + "could not be read, nothing written";
+    case EndOfDischargeOutcome::AlreadyRight: return lead + "are " + thresholds(r.before) + " already, nothing to write";
+    case EndOfDischargeOutcome::Written:
+      return lead + "set to " + thresholds(r.after) + " (they were " + thresholds(r.before) + ")";
+    case EndOfDischargeOutcome::WriteRefused:
+      return lead + "could not be set, the chip refused (they are " + thresholds(r.before) + ")";
+    case EndOfDischargeOutcome::ReadBackDiffers:
+      return lead + "could not be set, the chip reads back " + thresholds(r.after) + " (they were " + thresholds(r.before) + ")";
+  }
+  return "";
+}
+
 }  // namespace board
