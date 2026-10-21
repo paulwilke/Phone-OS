@@ -2,6 +2,13 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.9
+
+Two changes worked out in the cloud on 2026-10-21 from the owner's decisions of that day. Host-tested and compiled; neither is verified on the device yet (open points 3 and 42).
+
+- **The fuel gauge no longer takes the cell for empty at 3.6 V** (D-42, D-45). The gauge fell from about 45 % to 7 % within ten minutes at 3.63 V and learned a smaller full charge at every such discharge (1372, 1107, 988 mAh), while the cell gave seven more hours. At start the firmware now sets the gauge's end-of-discharge thresholds for this cell, 3300/3420/3470 mV with the chip's compensation off, from the chip's reference manual, written once like the battery size; the start logs "Battery: the fuel gauge's end-of-discharge thresholds set to ...". Host-tested and compiled; not verified on the device.
+- **A whole log can be read with the card in the device** (D-44): `deviceconfig.py read system.log --all` over the cable, and **Load the whole log** on the page's log tab; without them the end of a long log is shown as before. Host-tested and compiled; not verified on the device.
+
 ## 4.2.8
 
 What the logs of 2026-10-21 (4.2.6, two charges and a day on the table) showed, acted on and recorded. Host-tested and compiled; the change is not verified on the device yet (open point 26).
