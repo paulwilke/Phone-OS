@@ -2,6 +2,13 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, which is only what [docs/bring-up.md](docs/bring-up.md) records with a date. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.8
+
+What the logs of 2026-10-21 (4.2.6, two charges and a day on the table) showed, acted on and recorded. Host-tested and compiled; the change is not verified on the device yet (open point 26).
+
+- **The charger keeps its 800 mA when the cable comes while the device runs** (D-43). The chip sets the input limit back to 500 mA from its own detection at every new supply, after what the start wrote; a cable attached to a running device charged at 500 mA as before 4.2.6, and only a start with the adapter attached charged at 800. While a cable feeds the board the firmware now writes the limit again whenever the chip changed it, and says so once per plug-in: "Battery: input current limit set to 800 mA again (it was 500 mA: the charger set its own when it detected the supply)". Host-tested and compiled; not verified on the device.
+- **Seen on the device on 2026-10-21** (4.2.6): the charge at the adapter at 812 falling to 759 mA, 13 to 95 % in 70 minutes (D-38); a day on the table at 61.7 mA with the processor asleep 96 to 98 % and every sleep ended by the timer (as in the third night, open point 25); the battery percentage from the voltage once more, with one line at 01:31 and one when the cable came (D-24). The gauge's learned full charge fell from 1372 to 1107 to 988 mAh, because the gauge ends its discharge at 3.63 V while the cell gives seven more hours: what to do about it is decision D-42, open for the owner (open point 3).
+
 ## 4.2.7
 
 What the review of 2026-10-17 found, fixed, with the owner's decisions on the SOS countdown and the start without a network. Host-tested and compiled; none of it is verified on the device yet (open points 38 to 41).
