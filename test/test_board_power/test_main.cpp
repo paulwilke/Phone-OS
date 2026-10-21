@@ -184,6 +184,65 @@ void test_a_charger_that_refuses_the_input_limit_is_logged_and_the_start_goes_on
   TEST_ASSERT_TRUE(r.log.contains("fuel gauge capacity"));  // the rest of the start ran
 }
 
+void test_the_input_limit_is_written_again_when_the_charger_set_its_own_at_a_plug_in() {
+  BoardPowerRig r;  // started: the limit is 800 mA (0x4E)
+  FakeMillis millis;
+  r.impl.setClock(millis);
+  millis.setTo(5000);
+  TEST_ASSERT_FALSE(r.impl.externalPower());
+  const uint8_t addr = r.chargerAddress();
+  r.bus.setRegister(addr, 0x00, 0x48);  // the chip's input detection at the plug-in: "unknown adapter", 500 mA
+  r.setStatus(0x14);                    // power good, charging
+  millis.advance(BoardPower::kReadingTtlMs);
+  TEST_ASSERT_TRUE(r.impl.externalPower());
+  TEST_ASSERT_EQUAL_HEX8(0x4E, r.bus.reg(addr, 0x00));
+  TEST_ASSERT_TRUE(r.log.contains("input current limit set to 800 mA again (it was 500 mA"));
+  millis.advance(BoardPower::kReadingTtlMs);
+  r.impl.batteryPercent();
+  millis.advance(BoardPower::kReadingTtlMs);
+  r.impl.batteryPercent();
+  TEST_ASSERT_EQUAL(2, r.bus.writeCount(addr, 0x00));  // the start and the plug-in, not every reading
+}
+
+void test_on_the_battery_the_input_limit_register_is_left_alone() {
+  BoardPowerRig r;
+  const uint8_t addr = r.chargerAddress();
+  r.bus.setRegister(addr, 0x00, 0x48);
+  r.setStatus(0x00);  // no cable
+  TEST_ASSERT_FALSE(r.impl.externalPower());
+  TEST_ASSERT_EQUAL_HEX8(0x48, r.bus.reg(addr, 0x00));
+  TEST_ASSERT_EQUAL(1, r.bus.writeCount(addr, 0x00));  // the start only
+}
+
+static int linesWith(const FakeEventLog& log, const std::string& part) {
+  int n = 0;
+  for (const std::string& line : log.lines()) n += line.find(part) != std::string::npos;
+  return n;
+}
+
+void test_a_refused_write_at_the_cable_is_said_once_per_cable() {
+  BoardPowerRig r;
+  FakeMillis millis;
+  r.impl.setClock(millis);
+  millis.setTo(5000);
+  const uint8_t addr = r.chargerAddress();
+  r.bus.setRegister(addr, 0x00, 0x48);
+  r.bus.refuseRegisterWrite(addr, 0x00);
+  r.setStatus(0x14);
+  for (int i = 0; i < 3; ++i) {
+    millis.advance(BoardPower::kReadingTtlMs);
+    r.impl.externalPower();
+  }
+  TEST_ASSERT_EQUAL(1, linesWith(r.log, "could not be set again at the cable, the charger keeps its own 500 mA"));
+  r.setStatus(0x00);
+  millis.advance(BoardPower::kReadingTtlMs);
+  r.impl.externalPower();
+  r.setStatus(0x14);
+  millis.advance(BoardPower::kReadingTtlMs);
+  r.impl.externalPower();
+  TEST_ASSERT_EQUAL(2, linesWith(r.log, "could not be set again at the cable"));  // the next cable says it again
+}
+
 void test_no_charger_says_so_once_and_reports_unknown() {
   FakeDelay delay;
   FakeI2cBus bus(&delay);
@@ -391,6 +450,9 @@ int main(int, char**) {
   RUN_TEST(test_a_charger_that_refuses_the_limit_is_logged_and_the_start_goes_on);
   RUN_TEST(test_the_start_sets_the_input_limit_to_800_ma_once_and_says_so);
   RUN_TEST(test_a_charger_that_refuses_the_input_limit_is_logged_and_the_start_goes_on);
+  RUN_TEST(test_the_input_limit_is_written_again_when_the_charger_set_its_own_at_a_plug_in);
+  RUN_TEST(test_on_the_battery_the_input_limit_register_is_left_alone);
+  RUN_TEST(test_a_refused_write_at_the_cable_is_said_once_per_cable);
   RUN_TEST(test_no_charger_says_so_once_and_reports_unknown);
   RUN_TEST(test_a_charger_that_appears_later_is_found);
   RUN_TEST(test_a_missing_gauge_gives_unknown_battery_and_leaves_the_charger_alone);

@@ -67,6 +67,10 @@ private:
   };
   Reading read();
   BatteryInputs inputsOf(const Reading& r) const;
+  // While a cable feeds the board, every reading checks the input current limit and writes it again when
+  // the chip set its own: the SY6970 runs its input detection at every new supply and puts 500 mA into the
+  // register, over what begin() wrote (seen on 2026-10-21, decision D-43).
+  void keepInputLimit();
 
   Xl9555& expander_;
   Gpio& gpio_;
@@ -79,6 +83,7 @@ private:
   bool haveReading_ = false;
   uint32_t readAt_ = 0;
   bool estimating_ = false;  // the percentage is the voltage's: said once when it starts and when it ends
+  bool inputLimitRefused_ = false;  // a refused write while on the cable is said once, not every second
   bool frontlight_ = false;
   uint32_t switchOns_[4] = {};
 };

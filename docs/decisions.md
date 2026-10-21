@@ -485,3 +485,14 @@ Decision: open. The agent recommends (c), prepared from the reference manual (th
 Reason: (c) is the only option that makes the gauge's own numbers right; it needs the manual, which the repository does not have, as with the charger's settings after "done" (open point 26).
 Consequences: Open point 3 says what the device shows until then.
 Verified: nothing yet
+
+## D-43: The input current limit is written again while a cable feeds the board
+Date: 2026-10-21   Status: decided
+Decided by: owner (800 mA, D-38; the standing go of 2026-10-16 to decide the charger's behaviour from what the device shows); agent (the rule)
+
+Context: D-38 left open whether the SY6970 keeps the limit the start wrote when it detects a supply later. The logs of 2026-10-21 answer it: switched on with the adapter attached, the device charged at 812 falling to 759 mA (the start wrote 800 mA after the chip's detection); a cable attached while the device ran left register 0x00 at 0x48, 500 mA "limit register in force", "unknown adapter". The chip's input detection runs at every new supply and writes the register, over what the firmware wrote, so a plug-in while the device runs charged at 500 mA as before D-38.
+Options: Leave it (the adapter charges at 800 mA only after a start with the cable attached). Write the limit once when the power-good bit appears (the detection may end after that reading and set 500 mA back; the reading comes at most once a second). Write it again at every reading while a cable feeds the board, which reads one register a second and writes only on a difference. Read the chip's detection result and write only when it says "unknown adapter" (the data sheet is not in the repository, and the other kinds were never seen).
+Decision: The third: `BoardPower::read` calls `Charger::limitInput(kInputLimitMa)` whenever the charger says power good, which reads register 0x00 and writes only on a difference; a write is logged ("Battery: input current limit set to 800 mA again (it was 500 mA: the charger set its own when it detected the supply)"), a refused write once per cable.
+Reason: It holds whenever the chip writes the register, however late its detection ends, and it costs one register read a second only while a cable is attached. A plug-in that the chip answers twice shows as two log lines, which is what the log is for.
+Consequences: `BoardPower::keepInputLimit` ([device-power.md](device-power.md)); tests in `test_board_power` (`test_the_input_limit_is_written_again_when_the_charger_set_its_own_at_a_plug_in`, which fails without the change, `test_on_the_battery_the_input_limit_register_is_left_alone`, `test_a_refused_write_at_the_cable_is_said_once_per_cable`). On the device: open point 26 (the log line at a plug-in while running, `battery` reading 800 mA, about 800 mA in the energy log at the adapter).
+Verified: host-tested; compiled; not verified on the device
