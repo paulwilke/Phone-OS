@@ -31,7 +31,8 @@ public:
       : expander_(expander), gpio_(gpio), charger_(charger), gauge_(gauge), modem_(modem) {}
 
   // The start of the power side, once, after board::powerUp(): finds the charger (both addresses), checks
-  // the gauge's capacity against the configured battery size and writes only on a difference, and puts
+  // the gauge's capacity against the configured battery size and its end-of-discharge thresholds against
+  // this cell's (D-42), writes each only on a difference, and puts
   // the rails nobody has asked for yet into their idle state (receiver and radio off). Says what it found
   // in the log, one line each.
   void begin(uint16_t batteryCapacityMah, GaugeCapacityWriter& writer, EventLog& log);

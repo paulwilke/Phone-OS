@@ -1,6 +1,6 @@
 # The device's power side: rails, battery, charger
 
-Code: `src/board/` (`BoardPower`, `FuelGauge`, `Charger`, `BatteryPlausibility`, `BatteryDiagnostic`, `Xl9555`), the device's part in `device/Esp32GaugeWriter.h`; tests in `test/test_board_power/`, `test_fuel_gauge/`, `test_charger/`, `test_battery_plausibility/`, `test_battery_diagnostic/` and, for the `Power` contract, `test/test_hardware_contracts/`. The rules come from [hardware-lessons.md](hardware-lessons.md); the start-up order of the board is in [device.md](device.md).
+Code: `src/board/` (`BoardPower`, `FuelGauge`, `Charger`, `BatteryPlausibility`, `BatteryDiagnostic`, `Xl9555`), the device's part in `device/Esp32GaugeWriter.h` ([fuel-gauge-data-memory.md](fuel-gauge-data-memory.md)); tests in `test/test_board_power/`, `test_fuel_gauge/`, `test_charger/`, `test_battery_plausibility/`, `test_battery_diagnostic/` and, for the `Power` contract, `test/test_hardware_contracts/`. The rules come from [hardware-lessons.md](hardware-lessons.md); the start-up order of the board is in [device.md](device.md).
 
 `BoardPower` is the `Power` capability ([hardware-capabilities.md](hardware-capabilities.md)) on the T-Deck Pro MAX. It runs the same `PowerContract` suite as the fake (`BoardPowerRig` in `testing/BoardPowerRig.h`, on a scripted I2C bus with the three chips).
 
@@ -26,6 +26,15 @@ At start `BoardPower::begin()` reads the gauge's design capacity (register 0x3C)
 - **Only a difference of the design capacity is written**, then to both registers (the full charge is seeded with the same size), and read back; the chip's memory wears with every write. A second start writes nothing. The full-charge capacity is what the gauge learns from a discharge, and once the design capacity is right it is the gauge's alone: after the night of 2026-10-13 it reported 1372 mAh next to the design 1500, and the earlier rule ("both equal the setting") wrote 1500 over it at every start (decision D-32). The start line then says "nothing to write; it has learned a full charge of 1372 mAh".
 - **One log line** says what happened: nothing to write, written (with what the chip held), refused, written but read back differently, or no gauge. A configured value outside 100 to 10000 is never written.
 - The write itself is the library's procedure (SensorLib's `setNewCapacity`: unseal, enter the configuration update, write the data memory with its checksum, leave, seal again), reached through the seam `board::GaugeCapacityWriter`. The host tests stand a fake in its place that changes the registers the way the chip would; **that the real procedure takes on the chip is not verified** (checklist item in `bring-up.md`).
+
+## The gauge's end of discharge is set for this cell
+
+The gauge says 7 %, 3 % and 0 % at three voltages, EDV2, EDV1 and EDV0, and learns its full charge at EDV2. As shipped it computes them from a profile of another cell, and with this cell it said 7 % at about 3.63 V, hours before the switch-off, and learned a smaller full charge from each such discharge (decision D-42, [hardware-lessons.md](hardware-lessons.md)). At start `BoardPower::begin()` therefore runs `ensureEndOfDischarge()` after the capacity check:
+
+- It reads the Gauging Configuration and the three fixed thresholds from the chip's data memory and wants the compensation off (bit EDV_CMP clear, every other bit as read) and the thresholds at 3300, 3420 and 3470 mV (`kEdv0Mv` to `kEdv2Mv` in `FuelGauge.h`, with the reason for each).
+- **Only the items that differ are written**, then all four are read back. A second start writes nothing; a chip that lost them (the write is to its RAM) gets them again at the next start. A configuration read outside the manual's range, or no answer, writes nothing.
+- **One log line**: "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3420/3470 mV, compensation off (they were 3031/3385/3501 mV, compensation on)", "... are 3300/3420/3470 mV, compensation off already, nothing to write", "... could not be set" (refused, or read back differently) or "... could not be read".
+- The bus sequence is in `device/Esp32GaugeWriter.h` behind the same seam as the capacity, `board::GaugeCapacityWriter` (`readDataMemory`, `writeDataMemory`); SensorLib has no general write, so it repeats the manual's on the library's raw register calls. The items, their addresses, the sequence and what the manual leaves open: [fuel-gauge-data-memory.md](fuel-gauge-data-memory.md). **Not verified on the device.**
 
 ## Never show a percentage the voltage contradicts
 
@@ -72,6 +81,7 @@ Reading register 0x0C clears the charger's latched fault flags, as it does for a
 | Rule | Test |
 |---|---|
 | gauge capacity checked at start, written only on a difference, read back, one line | `test_fuel_gauge`, `test_board_power` |
+| the gauge's end-of-discharge thresholds: read, only the differing items written, the other configuration bits kept, read back, one line; the block's bytes, checksum and length | `test_fuel_gauge`, `test_board_power` |
 | `[battery] capacity_mah` through the schema | `test_config_loader` |
 | no percentage the voltage contradicts | `test_battery_plausibility`, `test_board_power` |
 | the diagnosis reads both chips and writes nothing | `test_battery_diagnostic` |
@@ -85,4 +95,4 @@ Reading register 0x0C clears the charger's latched fault flags, as it does for a
 The input limit of 800 mA: that the start line says "input current limit set to 800 mA", that `battery` reads it, and that the energy log shows a charge above 500 mA at the adapter (D-38). The charge current: that `battery` reads 960 mA and "watchdog off" after a start, what the fault register 0x90 means (it did not change), and what the energy log shows with a mains adapter on the cable (open point 26).
 
 
-Compiled and tested on the host are not verified on the device: that the capacity write takes (the gauge's data memory, the read back after the chip re-initialises), the register layout of the SY6970 against the values decoded here beyond the six measured registers, and the shutdown through the battery switch.
+Compiled and tested on the host are not verified on the device: that the capacity write takes (the gauge's data memory, the read back after the chip re-initialises), that the end-of-discharge thresholds are written, held and change where the gauge says 7 % (D-42), the register layout of the SY6970 against the values decoded here beyond the six measured registers, and the shutdown through the battery switch.

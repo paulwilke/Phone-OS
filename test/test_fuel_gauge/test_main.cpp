@@ -170,6 +170,157 @@ void test_the_log_line_says_what_happened() {
   TEST_ASSERT_TRUE(describeCapacityCheck(ensureCapacity(g, w, 1500)).find("does not answer") != std::string::npos);
 }
 
+// ---- the end-of-discharge thresholds (D-42) -------------------------------------------------------------------
+// The chip's defaults, as the fake holds them: compensation on (0x102A), 3031/3385/3501 mV. With them the gauge
+// said 7 % at about 3630 mV and learned 1372, 1107 and 988 mAh from four discharges.
+
+void test_the_thresholds_are_set_with_the_compensation_off_and_the_other_bits_kept() {
+  Rig r;
+  const EndOfDischargeResult res = ensureEndOfDischarge(r.gauge, r.writer);
+  TEST_ASSERT_TRUE(res.outcome == EndOfDischargeOutcome::Written);
+  TEST_ASSERT_EQUAL_HEX16(0x1022, r.writer.dataMemory(0x929B));  // 0x102A without EDV_CMP (0x0008)
+  TEST_ASSERT_EQUAL(3300, r.writer.dataMemory(0x92B4));
+  TEST_ASSERT_EQUAL(3420, r.writer.dataMemory(0x92B7));
+  TEST_ASSERT_EQUAL(3470, r.writer.dataMemory(0x92BA));
+  TEST_ASSERT_EQUAL(4, res.written);
+  TEST_ASSERT_EQUAL(3031, res.before.edv0Mv);
+  TEST_ASSERT_TRUE(res.before.compensated());
+  TEST_ASSERT_FALSE(res.after.compensated());
+  TEST_ASSERT_EQUAL(2, r.writer.dataMemoryReads());  // the read and the read-back
+}
+
+// The thresholds lie at the firmware's switch-off and below the voltage at which the gauge fell to 7 %.
+void test_the_thresholds_lie_between_the_switch_off_and_the_fall_in_order() {
+  TEST_ASSERT_EQUAL(3300, kEdv0Mv);
+  TEST_ASSERT_TRUE(kEdv0Mv < kEdv1Mv && kEdv1Mv < kEdv2Mv);
+  TEST_ASSERT_TRUE(kEdv2Mv < 3621);
+}
+
+// Only the four items, and of them only those that differ: a chip that already has the compensation off and
+// one threshold right gets the other two and nothing else.
+void test_only_the_items_that_differ_are_written() {
+  Rig r;
+  r.writer.setDataMemory(0x929B, 0x1022);
+  r.writer.setDataMemory(0x92B4, 3300);
+  const EndOfDischargeResult res = ensureEndOfDischarge(r.gauge, r.writer);
+  TEST_ASSERT_TRUE(res.outcome == EndOfDischargeOutcome::Written);
+  TEST_ASSERT_EQUAL(2, (int)r.writer.dataMemoryWrites().size());
+  TEST_ASSERT_EQUAL_HEX16(0x92B7, r.writer.dataMemoryWrites()[0]);
+  TEST_ASSERT_EQUAL_HEX16(0x92BA, r.writer.dataMemoryWrites()[1]);
+  TEST_ASSERT_EQUAL(0, r.writer.calls());  // the capacities are not touched
+}
+
+void test_thresholds_that_are_right_are_not_written_and_the_second_start_writes_nothing() {
+  Rig r;
+  ensureEndOfDischarge(r.gauge, r.writer);
+  const size_t first = r.writer.dataMemoryWrites().size();
+  const EndOfDischargeResult again = ensureEndOfDischarge(r.gauge, r.writer);
+  TEST_ASSERT_TRUE(again.outcome == EndOfDischargeOutcome::AlreadyRight);
+  TEST_ASSERT_EQUAL(first, r.writer.dataMemoryWrites().size());
+}
+
+// A chip that lost its RAM after a write (a reset) is found at the next start and written again.
+void test_thresholds_lost_by_the_chip_are_written_again_at_the_next_start() {
+  Rig r;
+  ensureEndOfDischarge(r.gauge, r.writer);
+  r.writer.setDataMemory(0x929B, 0x102A);
+  r.writer.setDataMemory(0x92B4, 3031);
+  r.writer.setDataMemory(0x92B7, 3385);
+  r.writer.setDataMemory(0x92BA, 3501);
+  TEST_ASSERT_TRUE(ensureEndOfDischarge(r.gauge, r.writer).outcome == EndOfDischargeOutcome::Written);
+  TEST_ASSERT_EQUAL(3470, r.writer.dataMemory(0x92BA));
+}
+
+void test_a_compensated_chip_with_our_numbers_gets_only_the_compensation_bit() {
+  Rig r;
+  r.writer.setDataMemory(0x92B4, 3300);
+  r.writer.setDataMemory(0x92B7, 3420);
+  r.writer.setDataMemory(0x92BA, 3470);
+  r.writer.setDataMemory(0x929B, 0x0008);
+  TEST_ASSERT_TRUE(ensureEndOfDischarge(r.gauge, r.writer).outcome == EndOfDischargeOutcome::Written);
+  TEST_ASSERT_EQUAL(1, (int)r.writer.dataMemoryWrites().size());
+  TEST_ASSERT_EQUAL_HEX16(0x0000, r.writer.dataMemory(0x929B));
+}
+
+void test_an_unreadable_or_implausible_configuration_writes_nothing() {
+  Rig r;
+  r.writer.failDataMemoryRead();
+  TEST_ASSERT_TRUE(ensureEndOfDischarge(r.gauge, r.writer).outcome == EndOfDischargeOutcome::ReadFailed);
+  Rig q;
+  q.writer.setDataMemory(0x929B, 0xFFFF);  // outside the manual's 0x0 to 0x1FFF: not what a chip holds
+  TEST_ASSERT_TRUE(ensureEndOfDischarge(q.gauge, q.writer).outcome == EndOfDischargeOutcome::ReadFailed);
+  TEST_ASSERT_EQUAL(0, (int)r.writer.dataMemoryWrites().size() + (int)q.writer.dataMemoryWrites().size());
+}
+
+void test_a_refused_or_lost_threshold_write_is_reported() {
+  Rig r;
+  r.writer.keepDataMemory();
+  const EndOfDischargeResult kept = ensureEndOfDischarge(r.gauge, r.writer);
+  TEST_ASSERT_TRUE(kept.outcome == EndOfDischargeOutcome::ReadBackDiffers);
+  TEST_ASSERT_EQUAL(3501, kept.after.edv2Mv);
+  Rig q;
+  q.writer.refuseDataMemory();
+  const EndOfDischargeResult refused = ensureEndOfDischarge(q.gauge, q.writer);
+  TEST_ASSERT_TRUE(refused.outcome == EndOfDischargeOutcome::WriteRefused);
+  TEST_ASSERT_EQUAL(3501, q.writer.dataMemory(0x92BA));
+  TEST_ASSERT_EQUAL_STRING(
+      "Battery: the fuel gauge's end-of-discharge thresholds could not be set, the chip refused (they are 3031/3385/3501 mV, compensation on)",
+      describeEndOfDischargeCheck(refused).c_str());
+}
+
+void test_a_missing_gauge_checks_no_thresholds() {
+  FakeI2cBus bus;
+  FuelGauge gauge(bus);
+  FakeGaugeWriter writer(bus);
+  TEST_ASSERT_TRUE(ensureEndOfDischarge(gauge, writer).outcome == EndOfDischargeOutcome::GaugeAbsent);
+  TEST_ASSERT_EQUAL(0, writer.dataMemoryReads());
+}
+
+void test_the_threshold_log_lines_say_what_happened() {
+  Rig r;
+  const std::string written = describeEndOfDischargeCheck(ensureEndOfDischarge(r.gauge, r.writer));
+  TEST_ASSERT_EQUAL_STRING(
+      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3420/3470 mV, compensation off "
+      "(they were 3031/3385/3501 mV, compensation on)",
+      written.c_str());
+  TEST_ASSERT_EQUAL_STRING(
+      "Battery: the fuel gauge's end-of-discharge thresholds are 3300/3420/3470 mV, compensation off already, nothing to write",
+      describeEndOfDischargeCheck(ensureEndOfDischarge(r.gauge, r.writer)).c_str());
+  Rig q;
+  q.writer.keepDataMemory();
+  const std::string kept = describeEndOfDischargeCheck(ensureEndOfDischarge(q.gauge, q.writer));
+  TEST_ASSERT_TRUE_MESSAGE(kept.find("could not be set") != std::string::npos, kept.c_str());
+  Rig f;
+  f.writer.failDataMemoryRead();
+  TEST_ASSERT_TRUE(describeEndOfDischargeCheck(ensureEndOfDischarge(f.gauge, f.writer)).find("could not be read") != std::string::npos);
+}
+
+// The bytes of one block against the facts taken from the manual (docs/fuel-gauge-data-memory.md): the address
+// low byte first to 0x3E, the value high byte first from 0x40 (p.65, 1200 mAh as 0x04, 0xB0), the checksum
+// 0xFF minus the low byte of the sum of address and value, the length four plus two (p.52: address 0x9221 with
+// one data byte 0x00 gives 0x4C and 5).
+void test_a_data_memory_block_has_the_manuals_bytes_checksum_and_length() {
+  const DataMemoryBlock edv2 = dataMemoryBlock(0x92BA, 3501);  // the default Fixed EDV 2, 0x0DAD
+  TEST_ASSERT_EQUAL_HEX8(0xBA, edv2.bytes[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x92, edv2.bytes[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x0D, edv2.bytes[2]);
+  TEST_ASSERT_EQUAL_HEX8(0xAD, edv2.bytes[3]);
+  TEST_ASSERT_EQUAL_HEX8(0xF9, edv2.checksum);
+  TEST_ASSERT_EQUAL(6, edv2.length);
+  const DataMemoryBlock design = dataMemoryBlock(0x929F, 1200);
+  TEST_ASSERT_EQUAL_HEX8(0x04, design.bytes[2]);
+  TEST_ASSERT_EQUAL_HEX8(0xB0, design.bytes[3]);
+  // SensorLib's formula for the capacity it writes: 0xFF - ((0x9F + 0x92 + 0x04 + 0xB0) & 0xFF).
+  TEST_ASSERT_EQUAL_HEX8(0x1A, design.checksum);
+  // The p.52 example's sum (0x21 + 0x92 + 0x00) as the low address byte and a zero value: the same checksum.
+  TEST_ASSERT_EQUAL_HEX8(0x4C, dataMemoryBlock(0x00B3, 0x0000).checksum);
+  const DataMemoryBlock config = dataMemoryBlock(0x929B, 0x1022);
+  TEST_ASSERT_EQUAL_HEX8(0x9B, config.bytes[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x10, config.bytes[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x22, config.bytes[3]);
+  TEST_ASSERT_EQUAL_HEX8((uint8_t)(0xFF - ((0x9B + 0x92 + 0x10 + 0x22) & 0xFF)), config.checksum);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_the_values_measured_on_the_device_read_back);
@@ -184,5 +335,16 @@ int main(int, char**) {
   RUN_TEST(test_a_missing_gauge_writes_nothing);
   RUN_TEST(test_an_implausible_setting_is_never_written);
   RUN_TEST(test_the_log_line_says_what_happened);
+  RUN_TEST(test_the_thresholds_are_set_with_the_compensation_off_and_the_other_bits_kept);
+  RUN_TEST(test_the_thresholds_lie_between_the_switch_off_and_the_fall_in_order);
+  RUN_TEST(test_only_the_items_that_differ_are_written);
+  RUN_TEST(test_thresholds_that_are_right_are_not_written_and_the_second_start_writes_nothing);
+  RUN_TEST(test_thresholds_lost_by_the_chip_are_written_again_at_the_next_start);
+  RUN_TEST(test_a_compensated_chip_with_our_numbers_gets_only_the_compensation_bit);
+  RUN_TEST(test_an_unreadable_or_implausible_configuration_writes_nothing);
+  RUN_TEST(test_a_refused_or_lost_threshold_write_is_reported);
+  RUN_TEST(test_a_missing_gauge_checks_no_thresholds);
+  RUN_TEST(test_the_threshold_log_lines_say_what_happened);
+  RUN_TEST(test_a_data_memory_block_has_the_manuals_bytes_checksum_and_length);
   return UNITY_END();
 }

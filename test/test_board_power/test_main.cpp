@@ -358,6 +358,29 @@ void test_a_refused_capacity_write_is_logged_and_does_not_stop_the_start() {
   TEST_ASSERT_FALSE(r.impl.isEnabled(PowerDomain::Positioning));
 }
 
+// The gauge said 7 % at about 3630 mV with its compensated thresholds and learned a smaller full charge from
+// each such discharge (D-42): the start sets this cell's, once, and says so in one line.
+void test_start_sets_the_end_of_discharge_thresholds_once_and_logs_one_line_about_it() {
+  BoardPowerRig r(false);
+  r.impl.begin(1500, r.writer, r.log);
+  TEST_ASSERT_TRUE(r.log.contains(
+      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3420/3470 mV, compensation off "
+      "(they were 3031/3385/3501 mV, compensation on)"));
+  TEST_ASSERT_EQUAL(4, (int)r.writer.dataMemoryWrites().size());
+  FakeEventLog second;
+  r.impl.begin(1500, r.writer, second);
+  TEST_ASSERT_TRUE(second.contains("end-of-discharge thresholds are 3300/3420/3470 mV, compensation off already, nothing to write"));
+  TEST_ASSERT_EQUAL(4, (int)r.writer.dataMemoryWrites().size());  // the second start writes nothing
+}
+
+void test_thresholds_the_gauge_refuses_are_logged_and_do_not_stop_the_start() {
+  BoardPowerRig r(false);
+  r.writer.refuseDataMemory();
+  r.impl.begin(1500, r.writer, r.log);
+  TEST_ASSERT_TRUE(r.log.contains("end-of-discharge thresholds could not be set"));
+  TEST_ASSERT_FALSE(r.impl.isEnabled(PowerDomain::Positioning));
+}
+
 void test_start_puts_the_receiver_and_the_radio_into_their_idle_state() {
   BoardPowerRig r(false);
   TEST_ASSERT_TRUE(r.expander.level(leg::kGnssPower));  // the boot state powers them
@@ -461,6 +484,8 @@ int main(int, char**) {
   RUN_TEST(test_a_reading_that_was_kept_is_replaced_after_a_second_and_the_wrap_of_the_counter_is_harmless);
   RUN_TEST(test_start_writes_the_capacity_once_and_logs_one_line_about_it);
   RUN_TEST(test_a_refused_capacity_write_is_logged_and_does_not_stop_the_start);
+  RUN_TEST(test_start_sets_the_end_of_discharge_thresholds_once_and_logs_one_line_about_it);
+  RUN_TEST(test_thresholds_the_gauge_refuses_are_logged_and_do_not_stop_the_start);
   RUN_TEST(test_start_puts_the_receiver_and_the_radio_into_their_idle_state);
   RUN_TEST(test_the_domains_switch_their_own_legs);
   RUN_TEST(test_a_refused_expander_write_leaves_the_domain_as_it_was);

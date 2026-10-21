@@ -40,7 +40,8 @@ The documents describe what exists in this repository — each one is written fr
 | [device-console.md](device-console.md) | the firmware's wiring and loop, the USB console and the two host tools |
 | [device-display.md](device-display.md) | the e-ink pipeline (frame buffer, dirty rectangle, refresh sequences) and what is not built: the panel's own values |
 | [device-input.md](device-input.md) | keyboard, touch and the three keys under the screen, vibration and the motion sensor on the board: the decoding, the layout, what is host-tested |
-| [device-power.md](device-power.md) | the Power capability on the board: rails, the fuel gauge capacity check, the plausibility rule, the charger revisions, the diagnosis |
+| [device-power.md](device-power.md) | the Power capability on the board: rails, the fuel gauge capacity check and its end-of-discharge thresholds, the plausibility rule, the charger revisions, the diagnosis |
+| [fuel-gauge-data-memory.md](fuel-gauge-data-memory.md) | the fuel gauge's data memory: the end-of-discharge items the firmware writes, where they come from in the manual, the write sequence, what is not known |
 | [hardware-lessons.md](hardware-lessons.md) | what went wrong on the real device, why, and the rule that prevents it (fuel gauge capacity, IMS context, charger, USB) |
 | [modem-driver.md](modem-driver.md) | the modem driver: start-up, SIM and PIN, the data bearer and the IMS, registration, restarts |
 | [volte.md](volte.md) | voice over LTE: what the measurements prove, what the driver does about it, what is not proven or not built, and the owner's checklist on the device |
