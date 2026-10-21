@@ -68,6 +68,8 @@ BoardPower::Reading BoardPower::read() {
   Reading r;
   if (!charger_.found()) charger_.detect();  // a charger that was not there at start may be asked again
   r.chargerOk = charger_.readStatus(r.charger);
+  if (r.chargerOk && r.charger.powerGood) keepInputLimit();
+  else inputLimitRefused_ = false;
   r.gaugeOk = gauge_.read(r.gauge);
   if (millis_) {
     last_ = r;
@@ -75,6 +77,21 @@ BoardPower::Reading BoardPower::read() {
     readAt_ = millis_->millis32();
   }
   return r;
+}
+
+void BoardPower::keepInputLimit() {
+  const InputSetup input = charger_.limitInput(kInputLimitMa);
+  if (input.ok) {
+    inputLimitRefused_ = false;
+    if (input.changed && log_)
+      log_->log("Battery: input current limit set to " + std::to_string(input.inputLimitMa) + " mA again (it was " +
+                std::to_string(input.inputLimitBeforeMa) + " mA: the charger set its own when it detected the supply)");
+    return;
+  }
+  if (!inputLimitRefused_ && log_)
+    log_->log("Battery: the input current limit could not be set again at the cable, the charger keeps its own " +
+              std::to_string(input.inputLimitBeforeMa) + " mA");
+  inputLimitRefused_ = true;
 }
 
 BatteryInputs BoardPower::inputsOf(const Reading& r) const {
