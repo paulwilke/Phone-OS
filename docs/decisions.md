@@ -476,15 +476,15 @@ Consequences: `device/Esp32TcpListener.h`, `device/Esp32UartPort.h`, `device/mai
 Verified: host-tested; not verified on the device
 
 ## D-42: The gauge's end-of-discharge thresholds are set for this cell, or its learned full charge is corrected
-Date: 2026-10-21   Status: open
-Decided by: nobody yet: the owner (what the battery screen shows; a write to the gauge's configuration memory) or the agent under the standing go, once the BQ27220's reference manual has been read
+Date: 2026-10-21   Status: decided
+Decided by: owner (2026-10-21: work out what the manual gives and build it in; nothing more to decide by the owner); agent (the thresholds and the sequence, from the reference manual)
 
 Context: Four discharges (2026-10-13 to 2026-10-21) fell from about 45 % to 7 % within ten minutes at 3623 to 3637 mV and said 0 % from about 3.60 V, while the cell gave five to eight more hours to the switch-off at 3291 mV (D-5). D-24 shows the voltage's number on the screen for those hours. Each discharge that passed 3.63 V taught the gauge a smaller full charge, 1372, 1107 and 988 mAh, because the gauge learns at its own end of discharge, and its thresholds are not this cell's (hardware-lessons.md, "Two charges and a day on the table"). The percentage above the fall is counted against a full charge that shrinks, and the fall comes at a higher percentage each time.
 Options: (a) Leave it: the screen is right below the fall (D-24) and roughly right above it. (b) At the start, write the design capacity over a learned full charge that fell below a bound, as D-32 did before 4.2.4 at every start: the percentage stays relative to 1500 mAh, the fall to 7 % stays where it is. (c) Set the gauge's end-of-discharge voltages to this cell, down to the switch-off, once and through the chip's configuration update mode, as the design capacity is set once (D-32): the gauge would count to the real end and learn a true full charge. (d) Leave the gauge's percentage out and compute it in the firmware from the voltage and the gauge's count.
-Decision: open. The agent recommends (c), prepared from the reference manual (the data memory's subclass and offsets, the update sequence and its checksum), with (b) as the fallback when the manual does not give the thresholds.
+Decision: (c), prepared from the BQ27220's reference manual (the data memory's subclass and offsets, the update sequence and its checksum), written once like the design capacity and read back; (b) as the fallback when the manual does not give usable thresholds. The owner's go of 2026-10-21 covers both; the numbers and the sequence are the agent's and go into the Consequences line of the change's own entry.
 Reason: (c) is the only option that makes the gauge's own numbers right; it needs the manual, which the repository does not have, as with the charger's settings after "done" (open point 26).
-Consequences: Open point 3 says what the device shows until then.
-Verified: nothing yet
+Consequences: Open point 3 says what the device shows until the change is built; the change comes with its own pull request, tests against a scripted gauge, and a check on the device (a discharge past 3.63 V that no longer falls to 7 %, and a learned full charge that does not shrink).
+Verified: nothing yet; the change is not built
 
 ## D-43: The input current limit is written again while a cable feeds the board
 Date: 2026-10-21   Status: decided
@@ -495,4 +495,4 @@ Options: Leave it (the adapter charges at 800 mA only after a start with the cab
 Decision: The third: `BoardPower::read` calls `Charger::limitInput(kInputLimitMa)` whenever the charger says power good, which reads register 0x00 and writes only on a difference; a write is logged ("Battery: input current limit set to 800 mA again (it was 500 mA: the charger set its own when it detected the supply)"), a refused write once per cable.
 Reason: It holds whenever the chip writes the register, however late its detection ends, and it costs one register read a second only while a cable is attached. A plug-in that the chip answers twice shows as two log lines, which is what the log is for.
 Consequences: `BoardPower::keepInputLimit` ([device-power.md](device-power.md)); tests in `test_board_power` (`test_the_input_limit_is_written_again_when_the_charger_set_its_own_at_a_plug_in`, which fails without the change, `test_on_the_battery_the_input_limit_register_is_left_alone`, `test_a_refused_write_at_the_cable_is_said_once_per_cable`). On the device: open point 26 (the log line at a plug-in while running, `battery` reading 800 mA, about 800 mA in the energy log at the adapter).
-Verified: host-tested; compiled; not verified on the device
+Verified: host-tested; compiled; verified on the device on 2026-10-21 (4.2.8): the cable pulled and attached again while the device ran gave one line "Battery: input current limit set to 800 mA again (it was 500 mA: the charger set its own when it detected the supply)", and `battery` read "input current limit 800 mA (limit register in force)" at 837 mA from the computer's port
