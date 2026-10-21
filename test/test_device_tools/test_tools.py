@@ -151,6 +151,58 @@ out, err = capture_both(lambda: run(["--port", "x", "read", "contacts.toml"],
                                     {"CONFIG READ contacts.toml": ["CONFIG CONTENT contacts.toml 0 0 from 0 of 0", "", "CONFIG END"]}))
 check("read of a file that is empty or missing says so", out == "" and "empty or does not exist" in err, repr((out, err)))
 
+def piece_answer(name, data, first, total):
+    """The device's answer to "CONFIG READ <name> <first>": the header, the bytes, a line break, "CONFIG END"."""
+    head = f"CONFIG CONTENT {name} {len(data)} {deviceconfig.checksum(data)} from {first} of {total}"
+    return [head] + data.decode("latin-1").split("\n") + ["CONFIG END"]
+
+
+# A log longer than two answers, with an umlaut cut in two by the end of the first piece.
+WHOLE = ("line 1 start of the boot\n" + "x" * 8166).encode() + "\u00fc\n".encode() + b"y" * 9000 + b"\nlast line\n"
+PIECES = {at: WHOLE[at:at + 8192] for at in range(0, len(WHOLE), 8192)}
+check("the umlaut of the test log is cut by the first piece", WHOLE[8191:8193] == "\u00fc".encode())
+answers = {f"CONFIG READ {SYSTEM_LOG} {at}": piece_answer(SYSTEM_LOG, data, at, len(WHOLE)) for at, data in PIECES.items()}
+ser = None
+
+
+def read_all():
+    global ser
+    ser = run(["--port", "x", "read", SYSTEM_LOG, "--all"], answers)
+
+
+out, err = capture_both(read_all)
+check("read --all prints the whole log from its first line, joined before it is decoded",
+      out == WHOLE.decode() and err == "", repr((out[:60], out[-30:], err)))
+check("read --all asks for the pieces from 0 over the one port",
+      ser.written.decode() == "".join(f"CONFIG READ {SYSTEM_LOG} {at}\n" for at in PIECES), repr(ser.written))
+
+disturbed = dict(answers)
+second = f"CONFIG READ {SYSTEM_LOG} 8192"
+good = answers[second]
+disturbed[second] = [good[:2] + ["[log] a line of the device in the middle"] + good[2:], good]
+out, err = capture_both(lambda: run(["--port", "x", "read", SYSTEM_LOG, "--whole"], disturbed))
+check("read --all repeats a disturbed piece and prints the whole log once", out == WHOLE.decode() and "disturbed" in err, repr(err))
+
+GROWN = WHOLE + b"a line written meanwhile\n"
+grown = dict(answers)
+grown[f"CONFIG READ {SYSTEM_LOG} 16384"] = piece_answer(SYSTEM_LOG, GROWN[16384:], 16384, len(GROWN))
+out, err = capture_both(lambda: run(["--port", "x", "read", SYSTEM_LOG, "--all"], grown))
+check("read --all follows a log that grew during the read to its new end", out == GROWN.decode(), repr(out[-40:]))
+
+out, err = capture_both(lambda: run(["--port", "x", "read", "contacts.toml", "--all"],
+                                    {"CONFIG READ contacts.toml 0": ["CONFIG CONTENT contacts.toml 0 0 from 0 of 0", "", "CONFIG END"]}))
+check("read --all of a missing file says so", out == "" and "empty or does not exist" in err, repr((out, err)))
+
+# A firmware before the offset ignores it and sends the end of the log for every piece.
+TAIL_ONLY = WHOLE[-8192:]
+try:
+    capture_both(lambda: run(["--port", "x", "read", SYSTEM_LOG, "--all"],
+                             {f"CONFIG READ {SYSTEM_LOG}": piece_answer(SYSTEM_LOG, TAIL_ONLY, len(WHOLE) - 8192, len(WHOLE))}))
+    check("read --all stops at a firmware that cannot read from an offset", False)
+except SystemExit as e:
+    check("read --all stops at a firmware that cannot read from an offset", "cannot read from an offset" in str(e), str(e))
+
+
 with tempfile.NamedTemporaryFile(delete=False) as f:
     f.write(b"language = \"en\"\n")
     source = f.name

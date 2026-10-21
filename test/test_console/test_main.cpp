@@ -219,6 +219,45 @@ void test_read_of_a_long_log_gives_the_end_and_says_where_it_starts() {
   TEST_ASSERT_TRUE(a.find("Z\nCONFIG END\n") != std::string::npos);
 }
 
+void test_read_with_an_offset_gives_the_pieces_of_the_whole_log() {
+  Rig r;
+  std::string log(10000, 'a');
+  log.replace(0, 1, "A");
+  log.replace(8192, 1, "B");
+  r.store.put("/system.log", log);
+  r.type("CONFIG READ system.log 0\n");
+  std::string a = r.answer();
+  TEST_ASSERT_TRUE(a.find("CONFIG CONTENT system.log 8192 ") == 0);
+  TEST_ASSERT_TRUE(a.find("from 0 of 10000\nA") != std::string::npos);
+  const size_t before = r.answer().size();
+  r.type("CONFIG READ system.log 8192\n");
+  const std::string rest = log.substr(8192);
+  const std::string sum = std::to_string(consoleChecksum(reinterpret_cast<const uint8_t*>(rest.data()), rest.size()));
+  TEST_ASSERT_EQUAL_STRING(("CONFIG CONTENT system.log 1808 " + sum + " from 8192 of 10000\n" + rest + "\nCONFIG END\n").c_str(),
+                           r.answer().substr(before).c_str());
+}
+
+void test_read_at_or_past_the_end_is_empty_and_still_says_the_total() {
+  Rig r;
+  r.store.put("/system.log", "abc");
+  r.type("CONFIG READ system.log 3\n");
+  TEST_ASSERT_EQUAL_STRING("CONFIG CONTENT system.log 0 0 from 3 of 3\n\nCONFIG END\n", r.answer().c_str());
+  const size_t before = r.answer().size();
+  r.type("CONFIG READ system.log 50000\n");
+  TEST_ASSERT_EQUAL_STRING("CONFIG CONTENT system.log 0 0 from 50000 of 3\n\nCONFIG END\n", r.answer().substr(before).c_str());
+}
+
+void test_the_offset_of_a_read_is_digits_only() {
+  const auto c = parseConsoleLine("CONFIG READ system.log 8192");
+  TEST_ASSERT_TRUE(c.kind == Kind::Read);
+  TEST_ASSERT_TRUE(c.hasFrom);
+  TEST_ASSERT_EQUAL(8192, c.from);
+  TEST_ASSERT_FALSE(parseConsoleLine("CONFIG READ system.log").hasFrom);
+  const char* bad[] = {"CONFIG READ system.log -1", "CONFIG READ system.log 12abc", "CONFIG READ system.log x",
+                       "CONFIG READ system.log 1000000000"};
+  for (const char* line : bad) TEST_ASSERT_TRUE_MESSAGE(parseConsoleLine(line).kind == Kind::Unknown, line);
+}
+
 void test_a_write_is_announced_collected_checked_and_stored() {
   Rig r;
   const std::string data = "language = \"en\"\n";
@@ -425,6 +464,9 @@ int main(int, char**) {
   RUN_TEST(test_read_gives_the_header_the_content_and_the_end_marker);
   RUN_TEST(test_read_of_a_missing_file_is_empty_and_tells_so);
   RUN_TEST(test_read_of_a_long_log_gives_the_end_and_says_where_it_starts);
+  RUN_TEST(test_read_with_an_offset_gives_the_pieces_of_the_whole_log);
+  RUN_TEST(test_read_at_or_past_the_end_is_empty_and_still_says_the_total);
+  RUN_TEST(test_the_offset_of_a_read_is_digits_only);
   RUN_TEST(test_a_write_is_announced_collected_checked_and_stored);
   RUN_TEST(test_the_bytes_of_a_write_may_come_in_pieces_and_with_newlines_inside);
   RUN_TEST(test_a_wrong_checksum_stores_nothing_and_leaves_the_old_file);

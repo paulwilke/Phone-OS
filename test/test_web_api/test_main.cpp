@@ -52,6 +52,13 @@ struct MemStore : ConfigStore {
     out = v.size() <= maxBytes ? v : v.substr(v.size() - maxBytes);
     return true;
   }
+  bool readAt(const std::string& path, uint64_t offset, std::string& out, size_t maxBytes) override {
+    out.clear();
+    auto it = files.find(path);
+    if (it == files.end()) return false;
+    if (offset < it->second.size()) out = it->second.substr((size_t)offset, maxBytes);
+    return true;
+  }
   int64_t fileSize(const std::string& path) override {
     auto it = files.find(path);
     return it == files.end() ? -1 : (int64_t)it->second.size();
@@ -526,6 +533,51 @@ void test_logs_are_read_from_the_end() {
   TEST_ASSERT_TRUE(f.has("TAIL"));
 }
 
+void test_a_log_is_read_in_pieces_from_an_offset_with_its_size_in_the_headers() {
+  Fixture f;
+  std::string log;
+  for (int i = 0; i < 3000; ++i) log += "line " + std::to_string(i) + "\n";
+  f.store.files["/system.log"] = log;
+  std::string whole;
+  for (size_t at = 0; at < log.size();) {
+    const std::string url = "/api/file?path=/system.log&from=" + std::to_string(at);
+    TEST_ASSERT_EQUAL(200, f.get(url.c_str()));
+    TEST_ASSERT_TRUE(f.res.length > 0);
+    TEST_ASSERT_NOT_NULL(f.res.extraHeader);
+    const std::string head = f.res.extraHeader;
+    TEST_ASSERT_TRUE(head.find("X-File-From: " + std::to_string(at) + "\r\n") == 0);
+    TEST_ASSERT_TRUE(head.find("X-File-Size: " + std::to_string(log.size())) != std::string::npos);
+    TEST_ASSERT_TRUE(head.find("X-Truncated: 1") != std::string::npos);
+    whole.append(f.res.body, f.res.length);
+    at += f.res.length;
+  }
+  TEST_ASSERT_TRUE(whole == log);
+  // At the end: empty, and the size is still there.
+  const std::string end = "/api/file?path=/system.log&from=" + std::to_string(log.size());
+  TEST_ASSERT_EQUAL(200, f.get(end.c_str()));
+  TEST_ASSERT_EQUAL(0, f.res.length);
+  TEST_ASSERT_NOT_NULL(strstr(f.res.extraHeader, "X-File-Size: "));
+}
+
+void test_a_small_file_read_from_0_is_whole_and_not_marked_truncated() {
+  Fixture f;
+  f.store.files["/config/notes.txt"] = "hello";
+  TEST_ASSERT_EQUAL(200, f.get("/api/file?path=/config/notes.txt&from=0"));
+  TEST_ASSERT_EQUAL_STRING("X-File-From: 0\r\nX-File-Size: 5", f.res.extraHeader);
+  TEST_ASSERT_EQUAL(5, f.res.length);
+}
+
+void test_an_offset_that_is_not_digits_is_refused() {
+  Fixture f;
+  f.store.files["/system.log"] = "abc";
+  const char* bad[] = {"", "-1", "1x", "0x10", "1000000000", "%31%20"};
+  for (const char* v : bad) {
+    const std::string url = std::string("/api/file?path=/system.log&from=") + v;
+    TEST_ASSERT_EQUAL_MESSAGE(400, f.get(url.c_str()), v);
+  }
+  TEST_ASSERT_EQUAL(404, f.get("/api/file?path=/nothing.log&from=0"));
+}
+
 // ─── Delete and the log ───────────────────────────────────────────────────────
 
 void test_delete_a_file() {
@@ -876,6 +928,9 @@ int main() {
   RUN_TEST(test_paths_cannot_leave_the_card);
   RUN_TEST(test_a_truncated_file_is_marked_so_the_editor_cannot_save_it_back);
   RUN_TEST(test_logs_are_read_from_the_end);
+  RUN_TEST(test_a_log_is_read_in_pieces_from_an_offset_with_its_size_in_the_headers);
+  RUN_TEST(test_a_small_file_read_from_0_is_whole_and_not_marked_truncated);
+  RUN_TEST(test_an_offset_that_is_not_digits_is_refused);
   RUN_TEST(test_delete_a_file);
   RUN_TEST(test_a_query_value_takes_two_hex_digits_after_a_percent_sign);
   RUN_TEST(test_a_stored_password_that_does_not_fit_locks_the_page_and_says_so);

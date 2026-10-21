@@ -147,6 +147,7 @@ void test_without_a_card_every_call_fails_and_nothing_crashes() {
   TEST_ASSERT_FALSE(store.read("/config/settings.toml", out, 100));
   TEST_ASSERT_EQUAL_STRING("", out.c_str());
   TEST_ASSERT_FALSE(store.readTail("/system.log", out, 100));
+  TEST_ASSERT_FALSE(store.readAt("/system.log", 0, out, 100));
   TEST_ASSERT_EQUAL(-1, store.fileSize("/a"));
   TEST_ASSERT_FALSE(store.write("/a.txt", "x"));
   TEST_ASSERT_FALSE(store.remove("/a.txt"));
@@ -198,6 +199,24 @@ void test_the_tail_of_a_large_log_is_its_end() {
   TEST_ASSERT_EQUAL_STRING(log.substr(log.size() - 20).c_str(), out.c_str());
 }
 
+void test_a_piece_of_a_large_log_is_read_from_its_offset_in_blocks_and_a_failing_card_gives_none() {
+  SdStack s;
+  std::string log;
+  for (int i = 0; i < 400; ++i) log += "line " + std::to_string(i) + "\n";
+  s.volume.put("/system.log", log);
+  SdConfigStore store(s.card);
+  std::string out;
+  TEST_ASSERT_TRUE(store.readAt("/system.log", 100, out, 2500));
+  TEST_ASSERT_EQUAL_STRING(log.substr(100, 2500).c_str(), out.c_str());
+  TEST_ASSERT_EQUAL(3, s.volume.readCount());
+  TEST_ASSERT_TRUE(store.readAt("/system.log", log.size(), out, 2500));
+  TEST_ASSERT_EQUAL_STRING("", out.c_str());
+  s.volume.failReads(true);
+  out = "leftover";
+  TEST_ASSERT_FALSE(store.readAt("/system.log", 100, out, 2500));
+  TEST_ASSERT_EQUAL_STRING("", out.c_str());
+}
+
 void test_the_listing_hides_scratch_files_and_names_the_page_cannot_use() {
   SdStack s;
   s.volume.put("/config/settings.toml", "a");
@@ -239,6 +258,7 @@ int main(int, char**) {
   RUN_TEST(test_a_read_is_taken_in_blocks_of_1_kb_and_cut_at_the_limit);
   RUN_TEST(test_a_card_that_fails_in_the_middle_of_a_read_gives_no_half_file);
   RUN_TEST(test_the_tail_of_a_large_log_is_its_end);
+  RUN_TEST(test_a_piece_of_a_large_log_is_read_from_its_offset_in_blocks_and_a_failing_card_gives_none);
   RUN_TEST(test_the_listing_hides_scratch_files_and_names_the_page_cannot_use);
   RUN_TEST(test_a_directory_is_not_removed_or_read_as_a_file);
   return UNITY_END();

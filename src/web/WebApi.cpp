@@ -89,6 +89,12 @@ public:
     out = data.size() <= maxBytes ? data : data.substr(data.size() - maxBytes);
     return true;
   }
+  bool readAt(const std::string& p, uint64_t offset, std::string& out, size_t maxBytes) override {
+    out.clear();
+    if (p != path) return false;
+    if (offset < data.size()) out = data.substr((size_t)offset, maxBytes);
+    return true;
+  }
   int64_t fileSize(const std::string& p) override {
     return p == path ? (int64_t)data.size() : -1;
   }
@@ -539,11 +545,24 @@ void WebApi::getFile(const http::Request& req, http::Response& res) {
   const int64_t size = store_.fileSize(path);
   if (size < 0) return jsonError(res, 404, "File not found");
 
+  // from=<offset>: the piece from there on, so that the page and curl read a whole log, one buffer at a time.
+  char fromText[12];
+  const bool piece = queryValue(req.query, "from", fromText, sizeof(fromText));
+  uint32_t from = 0;
+  if (piece) {
+    if (!fromText[0] || strlen(fromText) > 9) return jsonError(res, 400, "from= is not a byte offset");
+    for (const char* p = fromText; *p; ++p) {
+      if (*p < '0' || *p > '9') return jsonError(res, 400, "from= is not a byte offset");
+      from = from * 10 + (uint32_t)(*p - '0');
+    }
+  }
+
   const bool tail = safepath::endsWith(path, ".log");
   const size_t cap = sizeof(resp_) - 1;
   std::string text;
-  if (tail) store_.readTail(path, text, cap);
-  else      store_.read(path, text, cap);
+  if (piece)     store_.readAt(path, from, text, cap);
+  else if (tail) store_.readTail(path, text, cap);
+  else           store_.read(path, text, cap);
 
   const size_t n = text.size() <= cap ? text.size() : cap;
   memcpy(resp_, text.data(), n);
@@ -553,7 +572,15 @@ void WebApi::getFile(const http::Request& req, http::Response& res) {
   res.contentType = "text/plain; charset=utf-8";
   res.body = resp_;
   res.length = n;
-  if ((size_t)size > n) res.extraHeader = "X-Truncated: 1";
+  if (piece) {
+    // A piece that is not the whole file is marked like a cut one, so that the editor does not save it back.
+    const bool whole = from == 0 && (size_t)size <= n;
+    snprintf(pieceHeader_, sizeof(pieceHeader_), "X-File-From: %lu\r\nX-File-Size: %llu%s", (unsigned long)from,
+             (unsigned long long)size, whole ? "" : "\r\nX-Truncated: 1");
+    res.extraHeader = pieceHeader_;
+  } else if ((size_t)size > n) {
+    res.extraHeader = "X-Truncated: 1";
+  }
 }
 
 void WebApi::putFile(const http::Request& req, http::Response& res) {

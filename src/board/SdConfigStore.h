@@ -41,13 +41,15 @@ public:
 
   bool read(const std::string& path, std::string& out, size_t maxBytes) override;
   bool readTail(const std::string& path, std::string& out, size_t maxBytes) override;
+  bool readAt(const std::string& path, uint64_t offset, std::string& out, size_t maxBytes) override;
   int64_t fileSize(const std::string& path) override;
   bool write(const std::string& path, std::string_view data) override;
   bool remove(const std::string& path) override;
   bool list(const std::string& dir, std::vector<FileEntry>& out) override;
 
 private:
-  bool readRange(const std::string& path, bool fromEnd, std::string& out, size_t maxBytes);
+  enum class From : uint8_t { Start, End, Offset };
+  bool readRange(const std::string& path, From from, uint64_t start, std::string& out, size_t maxBytes);
   bool ensureParent(const std::string& path);
   int recoverIn(const std::string& dir);
 

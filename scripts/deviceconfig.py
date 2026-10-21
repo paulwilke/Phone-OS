@@ -3,6 +3,7 @@
 
   python3 scripts/deviceconfig.py list
   python3 scripts/deviceconfig.py read settings.toml
+  python3 scripts/deviceconfig.py read system.log --all
   python3 scripts/deviceconfig.py write secrets.toml my-secrets.toml [--restart]
   python3 scripts/deviceconfig.py battery
   python3 scripts/deviceconfig.py sms +491701111111 "test message"
@@ -14,7 +15,9 @@ system.log, system.old.log, messages.log, energy.log and energy.old.log read. Ev
 
 `read` prints the file byte for byte (of a long log the last 8 KB, and says where they start); the device sends the
 length and a checksum with it, and a read that a log line of the device disturbed is repeated. A file that does not
-exist reads like an empty one. `sms` says "accepted" when the text was sent or is waiting for the network; only an
+exist reads like an empty one. `read <log> --all` prints the whole file: it asks for it in pieces of 8 KB from the
+start (`CONFIG READ <file> <from>`) over the one open port, checks each piece the same way and goes on until the
+end the device names; a log that grows meanwhile is read to its new end. `sms` says "accepted" when the text was sent or is waiting for the network; only an
 empty text, one that is too long, or a full queue is refused. `battery` reads the fuel gauge and the charger
 without writing anything and prints one line for each value.
 
@@ -104,21 +107,49 @@ def read_exact(ser, count, timeout=20.0):
     return data
 
 
-def do_read(ser, name):
-    """Prints the file byte for byte. The device announces length and checksum, so a read that one of its own log
-    lines disturbed is noticed and repeated instead of being printed with the line inside it."""
+def read_piece(ser, name, offset=None):
+    """One answer of the device: (bytes, first, total). The device announces length and checksum, so a read that one
+    of its own log lines disturbed is noticed and repeated instead of being printed with the line inside it."""
+    command = f"CONFIG READ {name}" if offset is None else f"CONFIG READ {name} {offset}"
     for attempt in range(3):
-        send(ser, f"CONFIG READ {name}")
+        send(ser, command)
         head, _ = read_until(ser, "CONFIG CONTENT")
         fields = head.split()  # CONFIG CONTENT <file> <length> <sum> from <first> of <total>
         length, expected, first, total = int(fields[3]), int(fields[4]), int(fields[6]), int(fields[8])
         data = read_exact(ser, length)
         read_until(ser, "CONFIG END", timeout=5)
         if len(data) == length and checksum(data) == expected:
-            break
+            return data, first, total
         print("The answer was disturbed (a log line of the device in it?). Reading again.", file=sys.stderr)
-    else:
-        sys.exit("The file could not be read without a disturbance in three tries.")
+    sys.exit("The file could not be read without a disturbance in three tries.")
+
+
+def read_whole(ser, name):
+    """All of the file, piece after piece from 0. The bytes are joined before they are decoded, because a piece may
+    end in the middle of a character."""
+    data = b""
+    while True:
+        piece, first, total = read_piece(ser, name, len(data))
+        if first != len(data):
+            # A firmware before the offset ignores it and answers the end again: joining those would never finish.
+            sys.exit(f"The device answered from byte {first} instead of {len(data)}: its firmware cannot read from an offset.")
+        data += piece
+        if not piece or len(data) >= total:
+            return data, total
+
+
+def do_read(ser, name, whole=False):
+    """Prints the file byte for byte: by default what one answer holds (of a long log its end), with `whole` all of it."""
+    if whole:
+        data, total = read_whole(ser, name)
+        sys.stdout.write(data.decode("utf-8", "replace"))
+        if total == 0:
+            print("(the file is empty or does not exist)", file=sys.stderr)
+        elif len(data) < total:
+            print(f"(only {len(data)} of {total} bytes: the device gave no more)", file=sys.stderr)
+        return
+    data, first, total = read_piece(ser, name)
+    length = len(data)
     sys.stdout.write(data.decode("utf-8", "replace"))
     if length == 0:
         print("(the file is empty or does not exist)", file=sys.stderr)
@@ -177,6 +208,7 @@ def build_parser():
     sub.add_parser("list", help="the files in /config with their sizes")
     r = sub.add_parser("read", help="print a file (of a long log the end)")
     r.add_argument("file", choices=READABLE)
+    r.add_argument("--all", "--whole", dest="whole", action="store_true", help="the whole file, read in pieces")
     w = sub.add_parser("write", help="replace a configuration file")
     w.add_argument("file", choices=WRITABLE)
     w.add_argument("source", help="the local file to send")
@@ -197,7 +229,7 @@ def main(argv=None, opener=open_port):
         if args.cmd == "list":
             do_list(ser)
         elif args.cmd == "read":
-            do_read(ser, args.file)
+            do_read(ser, args.file, args.whole)
         elif args.cmd == "write":
             do_write(ser, args.file, args.source, args.restart)
         elif args.cmd == "battery":

@@ -82,6 +82,7 @@ WEB_KEYS = [
     "web.files.mac-folders-left",
     "web.files.unused-32",
     "web.log.refresh",
+    "web.log.whole",
     "web.log.empty",
     "web.log.clear",
     "web.log.confirm-clear",
@@ -808,23 +809,53 @@ function showEditor(path, text) {{
 
 // ---------- Log ----------
 var LOG_PATH = '/system.log';
-function loadLog() {{
+function showLog(text) {{
   var pre = document.getElementById('log-content');
   var emptyEl = document.getElementById('log-empty');
+  var lines = text.split('\\n').filter(function(l) {{ return l.length > 0; }});
+  if (lines.length === 0) {{ pre.textContent = ''; emptyEl.hidden = false; return; }}
+  emptyEl.hidden = true;
+  pre.textContent = lines.join('\\n');
+}}
+function loadLog() {{
   api('GET', '/api/file?path=' + LOG_PATH).then(function(r) {{
     // No log file yet is an empty log, not an error. The device sends the end of a long log.
     return r.ok ? r.text() : '';
-  }}).then(function(text) {{
-    var lines = text.split('\\n').filter(function(l) {{ return l.length > 0; }});
-    if (lines.length === 0) {{ pre.textContent = ''; emptyEl.hidden = false; return; }}
-    emptyEl.hidden = true;
-    pre.textContent = lines.join('\\n');
-  }}).catch(function() {{}});
+  }}).then(showLog).catch(function() {{}});
+}}
+// The whole log: one answer holds only the end of a long log, so the pieces are asked for from 0 (from=) up to the
+// size the device names in X-File-Size. The bytes are joined before they are decoded, because a piece may end in
+// the middle of a character. A device that does not name the offset it answered from has no from= and is left at
+// the end it showed.
+function loadWholeLog() {{
+  var button = document.getElementById('log-whole');
+  var pieces = [], received = 0;
+  button.disabled = true;
+  function next() {{
+    return api('GET', '/api/file?path=' + LOG_PATH + '&from=' + received).then(function(r) {{
+      if (!r.ok || r.headers.get('X-File-From') !== String(received)) return false;
+      var size = Number(r.headers.get('X-File-Size'));
+      return r.arrayBuffer().then(function(buffer) {{
+        var bytes = new Uint8Array(buffer);
+        pieces.push(bytes);
+        received += bytes.length;
+        return bytes.length > 0 && received < size ? next() : true;
+      }});
+    }});
+  }}
+  next().then(function(done) {{
+    button.disabled = false;
+    if (!done) return;
+    var all = new Uint8Array(received), at = 0;
+    pieces.forEach(function(p) {{ all.set(p, at); at += p.length; }});
+    showLog(new TextDecoder().decode(all));
+  }}).catch(function() {{ button.disabled = false; }});
 }}
 
 document.getElementById('files-show-hidden').addEventListener('change', function() {{ loadFiles(); }});
 document.getElementById('files-remove-mac').addEventListener('click', removeMacLeftovers);
 document.getElementById('log-refresh').addEventListener('click', loadLog);
+document.getElementById('log-whole').addEventListener('click', loadWholeLog);
 document.getElementById('log-clear').addEventListener('click', function() {{
   if (!confirm(t('web.log.confirm-clear'))) return;
   api('DELETE', '/api/file?path=' + LOG_PATH, {{}}).then(function() {{ loadLog(); }});
@@ -1079,6 +1110,8 @@ function init(state) {{
         '      <div class="form-actions" style="margin-bottom:.5rem">',
         '        <button id="log-refresh" class="btn-primary action-btn"',
         '                data-t="web.log.refresh"></button>',
+        '        <button id="log-whole"   class="btn-secondary action-btn"',
+        '                data-t="web.log.whole"></button>',
         '        <button id="log-clear"   class="btn-secondary action-btn"',
         '                data-t="web.log.clear"></button>',
         "      </div>",

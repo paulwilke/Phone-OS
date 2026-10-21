@@ -35,6 +35,9 @@ public:
   // The **end** of the file, for logs: what just went wrong is at the back. The last
   // `maxBytes` bytes, or the whole file if it is smaller.
   virtual bool readTail(const std::string& path, std::string& out, size_t maxBytes) = 0;
+  // The bytes from `offset` on, at most `maxBytes`: a long log is read in pieces, one after the other. An offset
+  // at or past the end gives an empty `out` and true, because the file exists; fileSize() says where the end is.
+  virtual bool readAt(const std::string& path, uint64_t offset, std::string& out, size_t maxBytes) = 0;
   // Size in bytes; -1 when there is no such file.
   virtual int64_t fileSize(const std::string& path) = 0;
 
