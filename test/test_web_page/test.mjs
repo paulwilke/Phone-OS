@@ -302,7 +302,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     sessionStorage: { getItem: (k) => session[k] ?? null, setItem: (k, v) => { session[k] = String(v); }, removeItem: (k) => { delete session[k]; } },
     setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, FileReader: fileReader || function () {}, Blob: function () {},
-    URL: { createObjectURL: () => '' }, confirm: () => true, alert() {},
+    URL: { createObjectURL: () => '' }, confirm: () => true, alert() {}, TextDecoder,
   };
   context.window = context;
   vm.createContext(context);
@@ -1073,6 +1073,51 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   assert(!pg.calls.some((c) => c.path === '/api/backup' && c.method === 'POST'), 'nothing is posted to /api/backup');
   assert(pg.els['backup-status'].textContent === 'Restored.', 'the page says Restored.: ' + pg.els['backup-status'].textContent);
   assert(/accept="\.zip"/.test(html), 'the file choice takes the archive, and nothing else (the bundle of 4.0 is no longer read, D-30)');
+}
+
+// (r) the log tab loads the whole log in pieces of the device's response buffer (from=), joined before they are
+// decoded, so an umlaut cut by the end of a piece stays one character; a device without from= leaves the end shown
+{
+  const auth = 'Basic ' + Buffer.from(':' + PASSWORD).toString('base64');
+  const PIECE = 12287;  // WebApi::kResponseMax less the terminating zero
+  const head = 'line 1 start of the boot\n';
+  const whole = Buffer.from(head + 'x'.repeat(PIECE - head.length - 1) + '\u00fc\n' + 'y'.repeat(20000) + '\nlast line\n');
+  assert(whole.subarray(PIECE - 1, PIECE + 1).toString() === '\u00fc', 'the umlaut of the test log is cut by the end of the first piece');
+  const expected = whole.toString().split('\n').filter((l) => l.length > 0).join('\n');
+  const pieceReply = (from, withOffset) => {
+    const bytes = whole.subarray(Math.min(from, whole.length), from + PIECE);
+    const headers = withOffset ? { 'X-File-From': String(from), 'X-File-Size': String(whole.length) } : {};
+    return { ok: true, status: 200, headers: { get: (n) => headers[n] ?? null },
+      text: async () => bytes.toString(), arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length) };
+  };
+  const open = async (withOffset) => {
+    const onFetch = (path) => {
+      const m = path.match(/^\/api\/file\?path=\/system\.log&from=(\d+)$/);
+      if (m) return pieceReply(Number(m[1]), withOffset);
+      if (path === '/api/file?path=/system.log') return pieceReply(whole.length - PIECE, false);
+      return null;
+    };
+    const pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: { en, de }, onFetch });
+    pg.dataT.find((e) => e.attrs['data-tab'] === 'log').listeners.click();
+    await pg.settle();
+    return pg;
+  };
+  const pg = await open(true);
+  assert(!pg.els['log-content'].textContent.includes('start of the boot'), 'the tab shows the end of a long log at first');
+  pg.els['log-whole'].listeners.click();
+  for (let i = 0; i < 5; ++i) await pg.settle();
+  const offsets = pg.calls.filter((c) => c.path.includes('&from=')).map((c) => c.path.split('&from=')[1]);
+  assert(offsets.join('|') === ['0', String(PIECE), String(2 * PIECE)].join('|'), 'the pieces are asked for from 0 to the size the device names: ' + offsets.join('|'));
+  assert(pg.els['log-content'].textContent === expected, 'the whole log is shown, from its first line, with the umlaut whole');
+  assert(pg.els['log-whole'].disabled === false, 'the button can be pressed again afterwards');
+  assert(pg.dataT.some((e) => e.attrs['data-t'] === 'web.log.whole' && e.textContent === 'Load the whole log'), 'the button says what it does');
+
+  const old = await open(false);
+  const before = old.els['log-content'].textContent;
+  old.els['log-whole'].listeners.click();
+  for (let i = 0; i < 3; ++i) await old.settle();
+  assert(old.calls.filter((c) => c.path.includes('&from=')).length === 1 && old.els['log-content'].textContent === before,
+    'a device that does not name the offset it answered from is asked once and the end stays shown');
 }
 
 // ---------- summary ----------

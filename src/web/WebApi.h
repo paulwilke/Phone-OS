@@ -100,6 +100,8 @@ private:
   bool locked_ = false;
 
   char resp_[kResponseMax];
+  // The headers of a piece of a file (from=): where it starts, how large the file is, whether it is all of it.
+  char pieceHeader_[96];
   // The backup archive while it is being sent: two files of at most kMaxConfigFile and about 250 bytes of
   // ZIP, more than resp_ holds.
   std::string archive_;

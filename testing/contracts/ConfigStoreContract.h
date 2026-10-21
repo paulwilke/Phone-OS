@@ -45,6 +45,9 @@ struct ConfigStoreContract {
     out = "leftover";
     TEST_ASSERT_FALSE(rig.store().readTail("/nothing.txt", out, 100));
     TEST_ASSERT_EQUAL_STRING("", out.c_str());
+    out = "leftover";
+    TEST_ASSERT_FALSE(rig.store().readAt("/nothing.txt", 0, out, 100));
+    TEST_ASSERT_EQUAL_STRING("", out.c_str());
     TEST_ASSERT_EQUAL(-1, rig.store().fileSize("/nothing.txt"));
     TEST_ASSERT_FALSE(rig.store().remove("/nothing.txt"));
   }
@@ -87,6 +90,32 @@ struct ConfigStoreContract {
     TEST_ASSERT_EQUAL_STRING("line 3\n", out.c_str());
     TEST_ASSERT_TRUE(rig.store().readTail("/system.log", out, 1000));
     TEST_ASSERT_EQUAL_STRING("line 1\nline 2\nline 3\n", out.c_str());
+  }
+
+  // A long log is read in pieces: the pieces from 0 to the end are the whole file, and past the end there is
+  // nothing, but the file is still there.
+  static void a_file_read_in_pieces_from_offsets_is_the_whole_file() {
+    Rig rig;
+    std::string log;
+    for (int i = 0; i < 300; ++i) log += "line " + std::to_string(i) + "\n";
+    TEST_ASSERT_TRUE(rig.store().write("/system.log", log));
+    std::string out, whole;
+    TEST_ASSERT_TRUE(rig.store().readAt("/system.log", 7, out, 5));
+    TEST_ASSERT_EQUAL_STRING(log.substr(7, 5).c_str(), out.c_str());
+    for (uint64_t at = 0; at < log.size(); at += out.size()) {
+      TEST_ASSERT_TRUE(rig.store().readAt("/system.log", at, out, 1000));
+      TEST_ASSERT_TRUE(!out.empty());
+      whole += out;
+    }
+    TEST_ASSERT_TRUE(whole == log);
+    out = "leftover";
+    TEST_ASSERT_TRUE(rig.store().readAt("/system.log", log.size(), out, 1000));
+    TEST_ASSERT_EQUAL_STRING("", out.c_str());
+    out = "leftover";
+    TEST_ASSERT_TRUE(rig.store().readAt("/system.log", log.size() + 5000, out, 1000));
+    TEST_ASSERT_EQUAL_STRING("", out.c_str());
+    TEST_ASSERT_TRUE(rig.store().readAt("/system.log", log.size() - 3, out, 1000));
+    TEST_ASSERT_EQUAL_STRING(log.substr(log.size() - 3).c_str(), out.c_str());
   }
 
   static void any_bytes_survive_including_zero_bytes_and_text_with_umlauts() {
@@ -177,6 +206,7 @@ struct ConfigStoreContract {
       TEST_ASSERT_FALSE_MESSAGE(rig.store().write(path, "data"), path);
       TEST_ASSERT_FALSE_MESSAGE(rig.store().read(path, out, 100), path);
       TEST_ASSERT_FALSE_MESSAGE(rig.store().readTail(path, out, 100), path);
+      TEST_ASSERT_FALSE_MESSAGE(rig.store().readAt(path, 0, out, 100), path);
       TEST_ASSERT_EQUAL_MESSAGE(-1, rig.store().fileSize(path), path);
       TEST_ASSERT_FALSE_MESSAGE(rig.store().remove(path), path);
     }
@@ -282,6 +312,7 @@ struct ConfigStoreContract {
   RUN_TEST(ConfigStoreContract<Rig>::a_write_replaces_the_whole_file);                                         \
   RUN_TEST(ConfigStoreContract<Rig>::a_reading_larger_than_the_limit_is_cut_and_the_size_says_how_large_it_is); \
   RUN_TEST(ConfigStoreContract<Rig>::the_tail_is_the_end_of_the_file);                                         \
+  RUN_TEST(ConfigStoreContract<Rig>::a_file_read_in_pieces_from_offsets_is_the_whole_file);                    \
   RUN_TEST(ConfigStoreContract<Rig>::any_bytes_survive_including_zero_bytes_and_text_with_umlauts);            \
   RUN_TEST(ConfigStoreContract<Rig>::files_are_independent);                                                   \
   RUN_TEST(ConfigStoreContract<Rig>::a_failed_write_leaves_the_old_content_intact);                            \

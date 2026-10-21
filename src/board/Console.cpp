@@ -104,6 +104,11 @@ ConsoleCommand parseConsoleLine(const std::string& input) {
   if (verb == "READ" ? !readable(c.file) : !writable(c.file)) return fail("unknown file");
   c.path = (writable(c.file) ? "/config/" : "/") + c.file;
   if (verb == "READ") {
+    const std::string from = take(rest);
+    if (!from.empty()) {
+      if (!number(from, 999999999, c.from)) return fail("bad offset");
+      c.hasFrom = true;
+    }
     c.kind = ConsoleCommand::Kind::Read;
     return c;
   }
@@ -189,8 +194,13 @@ void Console::execute(const ConsoleCommand& c) {
       std::string content;
       uint32_t from = 0;
       if (total >= 0) {
-        // Of a long log the end: what just went wrong is at the back.
-        if (total > (int64_t)kConsoleMaxFile) {
+        if (c.hasFrom) {
+          // A piece of a whole log, for a tool that reads it from 0 to the end: past the end it is empty, and the
+          // header still says the total.
+          from = c.from;
+          store_.readAt(c.path, from, content, kConsoleMaxFile);
+        } else if (total > (int64_t)kConsoleMaxFile) {
+          // Of a long log the end: what just went wrong is at the back.
           store_.readTail(c.path, content, kConsoleMaxFile);
           from = (uint32_t)(total - (int64_t)content.size());
         } else {

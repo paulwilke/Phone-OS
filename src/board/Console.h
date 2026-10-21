@@ -4,7 +4,8 @@
 // taking the SD card out. The parsing is plain C++ and tested on the host; the port behind it is a UartPort.
 //
 //   CONFIG LIST                       the files in /config with their sizes
-//   CONFIG READ <file>                the file between markers (of a long log the end)
+//   CONFIG READ <file> [<from>]       the file between markers (of a long log the end); with <from> the bytes from
+//                                     that offset on, so that a tool reads a whole log in pieces
 //   CONFIG WRITE <file> <n> <sum>     then n raw bytes; <sum> is their 16-bit sum
 //   CONFIG RESTART                    restart the device so that a new file counts
 //   CONFIG WEB <n>                    then n bytes of an HTTP request; the answer is "CONFIG WEB <m>" and m bytes
@@ -57,6 +58,8 @@ struct ConsoleCommand {
   std::string text;
   uint32_t length = 0;  // of the raw bytes that follow (Write, Web)
   uint16_t sum = 0;     // Write
+  bool hasFrom = false;  // Read: an offset was given
+  uint32_t from = 0;     // Read: the offset
   const char* error = nullptr;
 };
 

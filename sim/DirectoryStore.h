@@ -55,6 +55,23 @@ public:
     return true;
   }
 
+  bool readAt(const std::string& path, uint64_t offset, std::string& out, size_t maxBytes) override {
+    out.clear();
+    std::filesystem::path file;
+    if (!existingFile(path, file)) return false;
+    std::error_code ec;
+    const uintmax_t size = std::filesystem::file_size(file, ec);
+    if (ec) return false;
+    if (offset >= size) return true;
+    std::ifstream in(file, std::ios::binary);
+    if (!in) return false;
+    in.seekg(static_cast<std::streamoff>(offset));
+    out.resize(static_cast<size_t>(std::min<uintmax_t>(size - offset, maxBytes)));
+    in.read(&out[0], static_cast<std::streamsize>(out.size()));
+    out.resize(static_cast<size_t>(in.gcount()));
+    return true;
+  }
+
   int64_t fileSize(const std::string& path) override {
     std::filesystem::path file;
     if (!existingFile(path, file)) return -1;

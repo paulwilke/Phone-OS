@@ -40,6 +40,13 @@ public:
     out = f->data.size() > maxBytes ? f->data.substr(f->data.size() - maxBytes) : f->data;
     return true;
   }
+  bool readAt(const std::string& path, uint64_t offset, std::string& out, size_t maxBytes) override {
+    out.clear();
+    const File* f = file(path);
+    if (!f) return false;
+    if (offset < f->data.size()) out = f->data.substr((size_t)offset, maxBytes);
+    return true;
+  }
   int64_t fileSize(const std::string& path) override {
     const File* f = file(path);
     return f ? (int64_t)f->data.size() : -1;

@@ -13,15 +13,16 @@ std::string scratchOf(const std::string& path) { return path + safepath::kTempSu
 std::string withoutSlash(const std::string& dir) { return dir.size() > 1 && dir.back() == '/' ? dir.substr(0, dir.size() - 1) : dir; }
 }  // namespace
 
-bool SdConfigStore::readRange(const std::string& path, bool fromEnd, std::string& out, size_t maxBytes) {
+bool SdConfigStore::readRange(const std::string& path, From from, uint64_t start, std::string& out, size_t maxBytes) {
   out.clear();
   if (!card_.ready() || !safepath::valid(path.c_str())) return false;
   SdVolume& v = card_.volume();
   const int64_t size = v.fileSize(path);
   if (size < 0) return false;
   const uint64_t total = (uint64_t)size;
-  const uint64_t want = std::min<uint64_t>(total, maxBytes);
-  uint64_t offset = fromEnd ? total - want : 0;
+  const uint64_t begin = from == From::Offset ? std::min(start, total) : 0;
+  const uint64_t want = std::min<uint64_t>(total - begin, maxBytes);
+  uint64_t offset = from == From::End ? total - want : begin;
   uint8_t block[kSdReadBlock];
   while (out.size() < want) {
     const size_t chunk = (size_t)std::min<uint64_t>(kSdReadBlock, want - out.size());
@@ -38,8 +39,11 @@ bool SdConfigStore::readRange(const std::string& path, bool fromEnd, std::string
   return true;
 }
 
-bool SdConfigStore::read(const std::string& path, std::string& out, size_t maxBytes) { return readRange(path, false, out, maxBytes); }
-bool SdConfigStore::readTail(const std::string& path, std::string& out, size_t maxBytes) { return readRange(path, true, out, maxBytes); }
+bool SdConfigStore::read(const std::string& path, std::string& out, size_t maxBytes) { return readRange(path, From::Start, 0, out, maxBytes); }
+bool SdConfigStore::readTail(const std::string& path, std::string& out, size_t maxBytes) { return readRange(path, From::End, 0, out, maxBytes); }
+bool SdConfigStore::readAt(const std::string& path, uint64_t offset, std::string& out, size_t maxBytes) {
+  return readRange(path, From::Offset, offset, out, maxBytes);
+}
 
 int64_t SdConfigStore::fileSize(const std::string& path) {
   if (!card_.ready() || !safepath::valid(path.c_str())) return -1;
