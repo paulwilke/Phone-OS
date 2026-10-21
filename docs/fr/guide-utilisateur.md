@@ -1,6 +1,6 @@
 # Guide de l'utilisateur
 
-Pour les parents. Ce guide est écrit à partir du code et des autres documents de ce dépôt ; les touches et les pages portent le nom que leur donne le catalogue français (`lang/fr.toml`). Il dit ce que fait le logiciel. Ce qui a été confirmé sur l'appareil réel n'y figure pas : voir [bring-up.md](../bring-up.md) et [hardware-lessons.md](../hardware-lessons.md) (en anglais). Le guide existe aussi en anglais ([user-guide.md](../user-guide.md)) et en allemand ([de/benutzerhandbuch.md](../de/benutzerhandbuch.md)), avec la même structure.
+Pour les parents. Ce guide est écrit à partir du code et des autres documents de ce dépôt ; les touches et les pages portent le nom que leur donne le catalogue français (`lang/fr.toml`). Il dit ce que fait le logiciel. Ce qui a été confirmé sur l'appareil réel n'y figure pas : voir [bring-up.md](../hardware/bring-up.md) et [hardware-lessons.md](../hardware/hardware-lessons.md) (en anglais). Le guide existe aussi en anglais ([user-guide.md](../user-guide.md)) et en allemand ([de/benutzerhandbuch.md](../de/benutzerhandbuch.md)), avec la même structure.
 
 ## Ce qu'est l'appareil
 
@@ -95,7 +95,7 @@ L'anglais, l'allemand et le français sont dans l'appareil. La langue de l'enfan
 
 L'appareil se charge par son câble USB. La page **État** montre "Batterie : 80%" (et ", en charge" ou ", pleine sur secteur" tant qu'un câble est branché) et "Autonomie : 2 h 30 min". L'autonomie est "inconnue" tant qu'un câble est branché.
 
-La puce de mesure de la batterie est livrée avec une mauvaise taille de batterie. À chaque démarrage, l'appareil la compare à `[battery] capacity_mah` (par défaut **1500** mAh) et n'écrit dans la puce que si elles diffèrent. Un pourcentage que la tension de la cellule contredit n'est pas montré : la page dit "Batterie : inconnue" au lieu d'un faux chiffre. Que l'écriture prenne vraiment sur la puce n'est pas confirmé sur l'appareil ([device-power.md](../device-power.md), en anglais).
+La puce de mesure de la batterie est livrée avec une mauvaise taille de batterie. À chaque démarrage, l'appareil la compare à `[battery] capacity_mah` (par défaut **1500** mAh) et n'écrit dans la puce que si elles diffèrent. Un pourcentage que la tension de la cellule contredit n'est pas montré : la page dit "Batterie : inconnue" au lieu d'un faux chiffre. Que l'écriture prenne vraiment sur la puce n'est pas confirmé sur l'appareil ([device-power.md](../hardware/device-power.md), en anglais).
 
 ## Pas de réseau, pas de SIM
 
@@ -111,4 +111,4 @@ L'écran garde sa dernière image sans courant : une image qui ne change pas ne 
 2. La batterie peut être **vide** : brancher le câble USB et attendre quelques minutes.
 3. L'appareil peut avoir été **éteint** dans les **Options** ou sur la page **État** : brancher le câble ou le redémarrer.
 4. Sans carte, ou avec une carte que l'appareil ne peut pas lire, l'appareil démarre quand même, avec les valeurs par défaut : pas de contacts, pas de boutons d'appel, donc pas de tuiles **Appels**, **Écrire** et **SOS**. Remettre la carte, ou lire le journal comme à l'étape suivante.
-5. Si rien n'aide, brancher le câble USB à un ordinateur : la console de l'appareil montre le journal et les fichiers de la carte (`scripts/deviceconfig.py`, [device-console.md](../device-console.md), en anglais). Ouvrir le port redémarre l'appareil. La console ne demande pas de mot de passe : ne laissez pas l'appareil branché à un ordinateur en qui vous n'avez pas confiance.
+5. Si rien n'aide, brancher le câble USB à un ordinateur : la console de l'appareil montre le journal et les fichiers de la carte (`scripts/deviceconfig.py`, [device-console.md](../hardware/device-console.md), en anglais). Ouvrir le port redémarre l'appareil. La console ne demande pas de mot de passe : ne laissez pas l'appareil branché à un ordinateur en qui vous n'avez pas confiance.

@@ -8,7 +8,7 @@
 // connection; a connection that goes silent is dropped after kIdleSeconds so
 // that a stalled browser does not lock everyone out.
 //
-// What a browser does to a server like this (docs/web-interface.md, "seen on the device 2026-10-07"):
+// What a browser does to a server like this (docs/web/web-interface.md, "seen on the device 2026-10-07"):
 // it opens several connections at once and keeps spare ones that never send a byte, so a connection that
 // has said nothing is let go after kFirstByteSeconds, not after the full idle time; a connection is never
 // closed with input unread (the stack would answer that with a reset that can throw the response away),

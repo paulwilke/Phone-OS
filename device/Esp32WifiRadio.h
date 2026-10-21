@@ -5,7 +5,7 @@
 // is not hidden and takes at most two stations: whoever sets the device up is alone, and every further station
 // costs current and gives an attacker more to try.
 //
-// Built, not measured: the first run on the device is on the owner's list (docs/bring-up.md).
+// Built, not measured: the first run on the device is on the owner's list (docs/hardware/bring-up.md).
 
 #include <WiFi.h>
 

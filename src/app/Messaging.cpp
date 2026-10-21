@@ -90,7 +90,7 @@ void Messaging::handleSms(const SmsMessage& sms) {
 // from any other name is dropped like a stranger's text (logged, counted for the summary, never stored
 // and never unread), and with no peer configured no radio message is accepted. The name is compared as
 // the radio reports it, exactly: the radio's name for a sender can be spoofed within range, and that is
-// what this rule trusts (docs/messaging.md).
+// what this rule trusts (docs/core/messaging.md).
 void Messaging::handleRadio() {
   if (radio_ == nullptr || !profile_.radioAllowed) return;
   RadioMessage msg;

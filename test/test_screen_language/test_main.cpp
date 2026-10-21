@@ -189,7 +189,7 @@ void test_the_page_is_drawn_inside_the_screen_in_every_language() {
     page.draw();
     page.screen.render(fb);
     // The pseudo-language is 40 % longer than any real one; the one action word beside the arrows may run
-    // into the soft-key bar there (see docs/screen-language.md), the page itself may not.
+    // into the soft-key bar there (see docs/ui/screen-language.md), the page itself may not.
     bool outside = false;
     for (const auto& e : fb.clipEvents())
       if (language != "qps-ploc" || e.firstY < ScreenLayout::standard().softKeys.y) outside = true;

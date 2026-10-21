@@ -2,7 +2,7 @@
 
 // Pins, bus addresses and expander legs of the LilyGO T-Deck Pro MAX (board HD-V3-250911). One place, so a
 // number is never written twice. The values come from the code of the manufacturer's and of Meck's
-// reference firmware, never from their prose (docs/hardware-lessons.md), and the first four groups
+// reference firmware, never from their prose (docs/hardware/hardware-lessons.md), and the first four groups
 // were confirmed on the device.
 
 #include <cstdint>

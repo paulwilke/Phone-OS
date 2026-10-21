@@ -295,7 +295,7 @@ void test_the_threshold_log_lines_say_what_happened() {
   TEST_ASSERT_TRUE(describeEndOfDischargeCheck(ensureEndOfDischarge(f.gauge, f.writer)).find("could not be read") != std::string::npos);
 }
 
-// The bytes of one block against the facts taken from the manual (docs/fuel-gauge-data-memory.md): the address
+// The bytes of one block against the facts taken from the manual (docs/hardware/fuel-gauge-data-memory.md): the address
 // low byte first to 0x3E, the value high byte first from 0x40 (p.65, 1200 mAh as 0x04, 0xB0), the checksum
 // 0xFF minus the low byte of the sum of address and value, the length four plus two (p.52: address 0x9221 with
 // one data byte 0x00 gives 0x4C and 5).

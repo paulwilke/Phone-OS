@@ -776,7 +776,7 @@ void A7682EDriver::step(const char* line, at::LineType type) {
 
     // -----------------------------------------------------------------------
     // Dialling. The IMS is asked once more right before ATD: the state of up to 30 seconds ago may be
-    // gone, and ATD without the IMS hangs the modem (docs/hardware-lessons.md). Only a fresh "registered"
+    // gone, and ATD without the IMS hangs the modem (docs/hardware/hardware-lessons.md). Only a fresh "registered"
     // lets the call go out.
     case Job::Dial:
       if (!line) {

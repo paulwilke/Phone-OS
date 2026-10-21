@@ -9,7 +9,7 @@ Phone OS is an emergency phone for children, so a mistake costs more here than i
 3. **Comments explain why**, never what the next line does. A comment records a decision, a constraint or a bug that was found once.
 4. **No leftovers.** No placeholder markers (the words that promise work for later; `scripts/check_docs.py` has the list), no documentation of things that do not exist, no code that nothing uses. Open work is listed in [docs/open-points.md](docs/open-points.md), the one place for it, with the person who has to act.
 5. **Every module has tests.** Logic that can run on a laptop is written so that it does, and `pio test -e native` covers it. A bug that was found once gets a test, and you prove the test by putting the bug back and watching it fail.
-6. **Users read text from catalogs.** Anything shown to the user lives in `lang/en.toml`, `lang/de.toml` and `lang/fr.toml` (the device) or `lang/web/*.toml` (the parents' page); see [docs/i18n.md](docs/i18n.md). Pure logic modules contain no user text: they return codes and data, and the interface turns those into words.
+6. **Users read text from catalogs.** Anything shown to the user lives in `lang/en.toml`, `lang/de.toml` and `lang/fr.toml` (the device) or `lang/web/*.toml` (the parents' page); see [docs/core/i18n.md](docs/core/i18n.md). Pure logic modules contain no user text: they return codes and data, and the interface turns those into words.
 7. **Security limits are the owner's decision.** Do not weaken a password rule, a path check, a rate limit or a validation on your own initiative. Propose the change and explain why.
 8. **Decisions are written down.** A choice between options, a refusal or a reversal gets an entry in [docs/decisions.md](docs/decisions.md) in the same commit as the change; [CLAUDE.md](CLAUDE.md) has the rules.
 
@@ -37,7 +37,7 @@ python3 scripts/check_behaviour.py --complete # every row of docs/app-behaviour.
 python3 scripts/make_font.py --check # generated fonts match assets/fonts/ (regenerate with --all)
 python3 scripts/gen_config.py --check # generated configuration files match config/schema.toml
 python3 test/test_schema_gen/test_gen.py # the generator of the configuration files and the page description
-python3 scripts/gen_apn_table.py --check # the stored list of operators and APNs is well formed (regenerate with --source, see docs/apn-table.md)
+python3 scripts/gen_apn_table.py --check # the stored list of operators and APNs is well formed (regenerate with --source, see docs/modem/apn-table.md)
 python3 test/test_gen_apn/test_gen.py # the generator of that list
 python3 scripts/gen_device_assets.py --check # device/ShippedAssets.h matches the catalogs and VERSION
 python3 scripts/gen_web.py --check # web/index.html is current

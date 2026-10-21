@@ -71,7 +71,7 @@ void forEach(Body&& body, const std::string& dir = "lang") {
 }
 
 // The pictures of a layout are kept in English and in the pseudo-language only; the other
-// languages are asserted not to clip (see docs/ui-layout-testing.md). Empty for those.
+// languages are asserted not to clip (see docs/ui/ui-layout-testing.md). Empty for those.
 inline std::string pictureTag(const std::string& code) {
   if (code == "en") return "en";
   if (code == i18n::kPseudoCode) return "pseudo";

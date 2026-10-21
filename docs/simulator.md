@@ -1,10 +1,10 @@
 # The simulator
 
-Code: `sim/` (`Simulator.h`, `main.cpp`, `SimPanel.h`, `Png.h`, `DirectoryStore.h`, `SocketTcp.h`, `Crawler.h`, `SdlWindow.h`), the composition it runs in `src/boot/` ([runtime.md](runtime.md)); tests in `test/test_simulator/`, `test/test_sim_panel/`, `test/test_sim_platform/` and `test/test_sim_web/`.
+Code: `sim/` (`Simulator.h`, `main.cpp`, `SimPanel.h`, `Png.h`, `DirectoryStore.h`, `SocketTcp.h`, `Crawler.h`, `SdlWindow.h`), the composition it runs in `src/boot/` ([runtime.md](core/runtime.md)); tests in `test/test_simulator/`, `test/test_sim_panel/`, `test/test_sim_platform/` and `test/test_sim_web/`.
 
-The simulator runs the **same** application core, screen stack, configuration loader and web service as the firmware will, on the fakes of [test-doubles.md](test-doubles.md) made interactive: it is a platform below the capability interfaces, not a second implementation of the application. `sim/` may include `src/` and `testing/`; `src/` never includes `sim/` (`scripts/check_layers.py` checks it, and that no file includes MeshCore).
+The simulator runs the **same** application core, screen stack, configuration loader and web service as the firmware will, on the fakes of [test-doubles.md](process/test-doubles.md) made interactive: it is a platform below the capability interfaces, not a second implementation of the application. `sim/` may include `src/` and `testing/`; `src/` never includes `sim/` (`scripts/check_layers.py` checks it, and that no file includes MeshCore).
 
-It serves four purposes: looking at the device in three languages before there is any hardware, generating pictures and the demo instead of making them by hand ([demo.md](demo.md)), trying a translation on a simulated screen ([translating.md](translating.md)), and a second level of tests in which scripted scenarios run through the real wiring.
+It serves four purposes: looking at the device in three languages before there is any hardware, generating pictures and the demo instead of making them by hand ([demo.md](process/demo.md)), trying a translation on a simulated screen ([translating.md](translating.md)), and a second level of tests in which scripted scenarios run through the real wiring.
 
 ## Build and run
 
@@ -15,7 +15,7 @@ pio run -e sim                                            # the console, headles
 .pio/build/sim/program --data sim/data-parent             # another card
 ```
 
-Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`, the page's are in its `web/` folder and are read when the page asks for them), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](demo.md)). `--help` lists them.
+Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`, the page's are in its `web/` folder and are read when the page asks for them), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](process/demo.md)). `--help` lists them.
 
 A script without `--interactive` runs and exits. A line `# data: <dir>` among its first lines names the card the script needs, when `--data` is not given.
 

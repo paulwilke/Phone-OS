@@ -1,12 +1,12 @@
 #pragma once
 
 // The e-ink panel as a ui::Display: the picture is drawn into memory, and at the end of the frame the real
-// RefreshController (docs/ui-refresh.md) decides whether the panel is refreshed at all, partially or in full;
+// RefreshController (docs/ui/ui-refresh.md) decides whether the panel is refreshed at all, partially or in full;
 // this class carries the decision out through the controller's documented commands (board/Uc8253.h) with the
 // panel's own data (board/PanelProfile.h).
 //
 // **Without a profile the panel is not driven**: begin() says "the display is not configured" and every frame
-// is dropped (docs/device-display.md).
+// is dropped (docs/hardware/device-display.md).
 //
 //   * every refresh starts with a hardware reset and the profile's start commands, and ends with its sleep
 //     commands (power off, deep sleep): the panel is only powered while it is being refreshed;

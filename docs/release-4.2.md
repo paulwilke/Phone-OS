@@ -4,15 +4,15 @@ Version 4.2.9 of Phone OS (4.2.9: the fuel gauge's end-of-discharge thresholds s
 
 ## What changes for the parents
 
-- **Nobody has to know the APN.** Leave `[modem] apn` empty and the device picks it by the SIM card from a list of operators ([apn-table.md](apn-table.md)). A value you have set still wins. Use it if the list is wrong for your SIM.
-- **Texts with umlauts are as long as other texts.** An SOS in German that says the child "wants to be picked up" (the word has an o-umlaut) is one message with the umlaut, not three and not spelled with "oe" ([sms-pdu.md](sms-pdu.md)). A long text arrives as one message.
+- **Nobody has to know the APN.** Leave `[modem] apn` empty and the device picks it by the SIM card from a list of operators ([apn-table.md](modem/apn-table.md)). A value you have set still wins. Use it if the list is wrong for your SIM.
+- **Texts with umlauts are as long as other texts.** An SOS in German that says the child "wants to be picked up" (the word has an o-umlaut) is one message with the umlaut, not three and not spelled with "oe" ([sms-pdu.md](modem/sms-pdu.md)). A long text arrives as one message.
 - **Saving on the parents' page from a browser works.** It answered "Request Header Fields Too Large" before.
-- **The battery is protected.** The charger is limited to 0.65 C, and the device switches itself off at 3300 mV with the picture "Battery empty" ([battery.md](battery.md), [device-power.md](device-power.md)). The bar of the battery is empty at 3300 mV now.
-- **`modem_sleep`.** The setting that lets the device sleep is `true` by default. A device with `false` never sleeps and runs for about eleven hours ([power-policy.md](power-policy.md)); the status of the open question of Power save is open point 25.
+- **The battery is protected.** The charger is limited to 0.65 C, and the device switches itself off at 3300 mV with the picture "Battery empty" ([battery.md](hardware/battery.md), [device-power.md](hardware/device-power.md)). The bar of the battery is empty at 3300 mV now.
+- **`modem_sleep`.** The setting that lets the device sleep is `true` by default. A device with `false` never sleeps and runs for about eleven hours ([power-policy.md](core/power-policy.md)); the status of the open question of Power save is open point 25.
 
 ## What changes for the child
 
-- **A Power tile** on the first page, behind the light. It asks "Switch off?" and switches the device off; Cancel is the key that is in focus ([screen-power.md](screen-power.md)). The switch on the side of the case turns the device on again.
+- **A Power tile** on the first page, behind the light. It asks "Switch off?" and switches the device off; Cancel is the key that is in focus ([screen-power.md](ui/screen-power.md)). The switch on the side of the case turns the device on again.
 
 ## What was checked, and where
 

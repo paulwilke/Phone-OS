@@ -15,9 +15,9 @@ Parents start with the user's guide: [English](docs/user-guide.md),
 **What is verified.** The logic is tested on a laptop (more than 2,500 host tests) and runs in a
 simulator; the firmware compiles and has run on the device since the first days of October 2026.
 Three words are kept apart everywhere: *compiled*, *tested on the host* and *verified on the device*.
-What was measured on the device is in [docs/hardware-lessons.md](docs/hardware-lessons.md), each entry of the
+What was measured on the device is in [docs/hardware/hardware-lessons.md](docs/hardware/hardware-lessons.md), each entry of the
 [CHANGELOG](CHANGELOG.md) says whether its change is verified on the device or only tested on the host (several are
-not yet), the systematic pass is the checklist [docs/bring-up.md](docs/bring-up.md), whose date and result columns the owner
+not yet), the systematic pass is the checklist [docs/hardware/bring-up.md](docs/hardware/bring-up.md), whose date and result columns the owner
 has not filled in, and everything still to be done is in [docs/open-points.md](docs/open-points.md).
 
 ## Build, test, run
@@ -28,13 +28,13 @@ Requires [PlatformIO Core](https://docs.platformio.org/page/core/installation.ht
 pio test -e native                  # the host tests of the C++ code
 pio run -e sim                      # the simulator: the application on fakes, with a console
 .pio/build/sim/program --script sim/scripts/smoke.txt   # a scenario; without --script it is interactive (docs/simulator.md)
-python3 scripts/make_demo.py        # pictures of every page in three languages and a click-through demo in out/demo/ (docs/demo.md)
+python3 scripts/make_demo.py        # pictures of every page in three languages and a click-through demo in out/demo/ (docs/process/demo.md)
 pio run -e device                   # the firmware for the T-Deck Pro MAX; compile-only
 pio run -e device -t upload         # flashes the connected device: the owner does this, nobody else
 ```
 
 The checks that run before every commit are listed in [CONTRIBUTING.md](CONTRIBUTING.md); the first start of the
-device is the checklist [docs/bring-up.md](docs/bring-up.md).
+device is the checklist [docs/hardware/bring-up.md](docs/hardware/bring-up.md).
 
 ## How the code is layered
 
@@ -48,7 +48,7 @@ device is the checklist [docs/bring-up.md](docs/bring-up.md).
 | `sim/`, `testing/` | the simulator and the fakes of every capability | `src/` |
 | `lang/` | the catalogs: the device's words and the parents' page's words, in every language | |
 
-The rules are enforced by `scripts/check_layers.py` ([docs/device.md](docs/device.md)). Every document is listed in
+The rules are enforced by `scripts/check_layers.py` ([docs/hardware/device.md](docs/hardware/device.md)). Every document is listed in
 [docs/README.md](docs/README.md), written from the code it covers.
 
 ## Rules this repository keeps

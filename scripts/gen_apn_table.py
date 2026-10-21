@@ -16,7 +16,7 @@ read as data only. For every operator (MCC and MNC) the first entry of the file 
   * is not a test network (MCC 001).
 
 The result is sorted by MCC, MNC and the number of MNC digits, so that the driver can search it in halves. Decision
-D-9 in docs/decisions.md; the module is described in docs/apn-table.md.
+D-9 in docs/decisions.md; the module is described in docs/modem/apn-table.md.
 """
 import argparse
 import hashlib

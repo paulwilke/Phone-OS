@@ -1,6 +1,6 @@
 // Host tests for the simulated panel and its PNG writer: the PNG is checked by decoding it again
 // with the rules of the format (chunk CRCs, zlib header, stored blocks, Adler-32), and the panel
-// by what the refresh policy of docs/ui-refresh.md says it must do.
+// by what the refresh policy of docs/ui/ui-refresh.md says it must do.
 
 #include <unity.h>
 

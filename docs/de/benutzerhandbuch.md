@@ -1,6 +1,6 @@
 # Benutzerhandbuch
 
-Für die Eltern. Dieses Handbuch ist aus dem Code und den übrigen Dokumenten dieses Repositorys geschrieben; Tasten und Seiten heißen so, wie der deutsche Katalog (`lang/de.toml`) sie nennt. Es sagt, was die Software tut. Welche Teile am echten Gerät bestätigt sind, steht hier nicht: das steht in [bring-up.md](../bring-up.md) und [hardware-lessons.md](../hardware-lessons.md) (englisch). Das Handbuch gibt es auch auf Englisch ([user-guide.md](../user-guide.md)) und auf Französisch ([fr/guide-utilisateur.md](../fr/guide-utilisateur.md)), mit demselben Aufbau.
+Für die Eltern. Dieses Handbuch ist aus dem Code und den übrigen Dokumenten dieses Repositorys geschrieben; Tasten und Seiten heißen so, wie der deutsche Katalog (`lang/de.toml`) sie nennt. Es sagt, was die Software tut. Welche Teile am echten Gerät bestätigt sind, steht hier nicht: das steht in [bring-up.md](../hardware/bring-up.md) und [hardware-lessons.md](../hardware/hardware-lessons.md) (englisch). Das Handbuch gibt es auch auf Englisch ([user-guide.md](../user-guide.md)) und auf Französisch ([fr/guide-utilisateur.md](../fr/guide-utilisateur.md)), mit demselben Aufbau.
 
 ## Was das Gerät ist
 
@@ -95,7 +95,7 @@ Englisch, Deutsch und Französisch sind im Gerät. Die Sprache des Kindes wählt
 
 Das Gerät wird über sein USB-Kabel geladen. Die Seite **Status** zeigt "Akku: 80%" (und ", lädt" oder ", voll am Kabel", solange ein Kabel steckt) und "Restzeit: 2 h 30 min". Die Restzeit ist "unbekannt", solange ein Kabel steckt.
 
-Der Messchip des Akkus wird mit einer falschen Akkugröße geliefert. Bei jedem Start vergleicht das Gerät ihn mit `[battery] capacity_mah` (Voreinstellung **1500** mAh) und beschreibt den Chip nur, wenn beide sich unterscheiden. Eine Prozentzahl, der die Zellenspannung widerspricht, wird nicht gezeigt: Die Seite sagt "Akku: unbekannt" statt einer falschen Zahl. Ob das Schreiben am Chip wirklich greift, ist am Gerät nicht bestätigt ([device-power.md](../device-power.md), englisch).
+Der Messchip des Akkus wird mit einer falschen Akkugröße geliefert. Bei jedem Start vergleicht das Gerät ihn mit `[battery] capacity_mah` (Voreinstellung **1500** mAh) und beschreibt den Chip nur, wenn beide sich unterscheiden. Eine Prozentzahl, der die Zellenspannung widerspricht, wird nicht gezeigt: Die Seite sagt "Akku: unbekannt" statt einer falschen Zahl. Ob das Schreiben am Chip wirklich greift, ist am Gerät nicht bestätigt ([device-power.md](../hardware/device-power.md), englisch).
 
 ## Kein Netz, keine SIM
 
@@ -111,4 +111,4 @@ Der Bildschirm behält sein letztes Bild ohne Strom, ein Bild, das sich nicht ä
 2. Der Akku kann **leer** sein: das USB-Kabel einstecken und einige Minuten warten.
 3. Das Gerät kann in den **Optionen** oder auf der Seite **Status** **ausgeschaltet** worden sein: das Kabel einstecken oder es wieder starten.
 4. Ohne Karte oder mit einer Karte, die das Gerät nicht lesen kann, startet das Gerät trotzdem, mit den Voreinstellungen: keine Kontakte, keine Anrufknöpfe, also keine Kacheln **Telefon**, **Text** und **SOS**. Die Karte wieder einsetzen, oder das Protokoll lesen wie im nächsten Schritt.
-5. Hilft nichts, das USB-Kabel an einen Computer anschließen: Die Konsole des Geräts zeigt das Protokoll und die Dateien der Karte (`scripts/deviceconfig.py`, [device-console.md](../device-console.md), englisch). Das Öffnen des Anschlusses startet das Gerät neu. Die Konsole verlangt kein Passwort: Lassen Sie das Gerät nicht an einem Computer stecken, dem Sie nicht trauen.
+5. Hilft nichts, das USB-Kabel an einen Computer anschließen: Die Konsole des Geräts zeigt das Protokoll und die Dateien der Karte (`scripts/deviceconfig.py`, [device-console.md](../hardware/device-console.md), englisch). Das Öffnen des Anschlusses startet das Gerät neu. Die Konsole verlangt kein Passwort: Lassen Sie das Gerät nicht an einem Computer stecken, dem Sie nicht trauen.

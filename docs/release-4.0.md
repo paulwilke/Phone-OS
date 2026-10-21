@@ -19,11 +19,11 @@ The firmware of `pio run -e device`, built from this repository at the commit th
 | Tested on the host | the application, the drivers against scripted fakes, the configuration, the parents' page, the USB tools, the scripts that check this repository | `pio test -e native`, the Python and Node tests of [../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | Run in the simulator | every scenario of `sim/scripts/`, and each one fails when the behaviour it pins is put back | `pio run -e sim`, `scripts/counter_check_scenarios.py` |
 | Compiled | the firmware for the board | `pio run -e device` |
-| Verified on the device | nothing | [bring-up.md](bring-up.md) |
+| Verified on the device | nothing | [bring-up.md](hardware/bring-up.md) |
 
 ## The owner's checklist
 
-The steps are those of [bring-up.md](bring-up.md), where the date and the result of each are written, by the owner. The state at the time of this release:
+The steps are those of [bring-up.md](hardware/bring-up.md), where the date and the result of each are written, by the owner. The state at the time of this release:
 
 | Steps | Subject | Done |
 |---|---|---|

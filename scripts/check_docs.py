@@ -11,7 +11,7 @@ Checks every Markdown file and every source file:
     "temporary", "decision to confirm") — open work belongs in docs/open-points.md, not scattered over the files;
   * VERSION holds one `major.minor.patch` line, the newest heading of CHANGELOG.md names that version, and
     docs/release-<major>.<minor>.md exists and names it, so that a version is never raised without its notes;
-  * every screen name of src/ui/ScreenIds.h has a docs/screen-<name>.md and every such document names a
+  * every screen name of src/ui/ScreenIds.h has a docs/ui/screen-<name>.md and every such document names a
     screen, and Runtime.cpp registers every screen name (the documents describe pages the product has);
   * every Markdown file under docs/ is linked from docs/README.md, so that no document is a stranger, and
     docs/open-points.md exists: open work is listed in that one place and nowhere else;
@@ -155,14 +155,14 @@ def screen_problems():
         return [f"{error.filename}: cannot be read"]
     names = [n for n in re.findall(r"^\s*k([A-Z][A-Za-z]*),", ids, re.M) if n != "Count"]
     problems = []
-    documented = {f[len("screen-"):-3] for f in os.listdir(os.path.join(ROOT, "docs")) if re.fullmatch(r"screen-[a-z]+\.md", f)}
+    documented = {f[len("screen-"):-3] for f in os.listdir(os.path.join(ROOT, "docs", "ui")) if re.fullmatch(r"screen-[a-z]+\.md", f)}
     for name in names:
         if name.lower() not in documented:
-            problems.append(f"src/ui/ScreenIds.h: screen k{name} has no docs/screen-{name.lower()}.md")
+            problems.append(f"src/ui/ScreenIds.h: screen k{name} has no docs/ui/screen-{name.lower()}.md")
         if f"stack_.add(ui::screen::k{name}," not in runtime:
             problems.append(f"src/boot/Runtime.cpp: screen k{name} is not registered")
     for doc in sorted(documented - {n.lower() for n in names}):
-        problems.append(f"docs/screen-{doc}.md: no screen of that name in src/ui/ScreenIds.h")
+        problems.append(f"docs/ui/screen-{doc}.md: no screen of that name in src/ui/ScreenIds.h")
     return problems
 
 

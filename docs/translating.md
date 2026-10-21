@@ -1,6 +1,6 @@
 # Translating
 
-The product's words are in **two files per language**, with English as the reference of each ([i18n.md](i18n.md) has the format: `[meta]`, then `[strings]` with the keys, `{placeholders}` and plural forms):
+The product's words are in **two files per language**, with English as the reference of each ([i18n.md](core/i18n.md) has the format: `[meta]`, then `[strings]` with the keys, `{placeholders}` and plural forms):
 
 | File | What it says | Who reads it |
 |---|---|---|
@@ -17,7 +17,7 @@ A language does not have to be shipped to be used: a catalog with a new code on 
 
 `scripts/check_i18n.py` prints the size of every shipped catalog and fails when one is over the limit. The shipped files are between a quarter and a half of it: `lang/en.toml` and `lang/web/en.toml` are the starting points of a new language (**copy the device file whole**: change `[meta]`, translate, keep the `{placeholders}`), and the German and French files are a little longer than the English ones.
 
-A translation as complete as the shipped ones fits as two files. A message you leave out of a file falls back to English, and `[meta]` is required. A test keeps both English files under the limit, so the starting points always fit; the words of the demo page are not in these files (they are in `tools/lang/`, which the device never gets, [i18n.md](i18n.md)).
+A translation as complete as the shipped ones fits as two files. A message you leave out of a file falls back to English, and `[meta]` is required. A test keeps both English files under the limit, so the starting points always fit; the words of the demo page are not in these files (they are in `tools/lang/`, which the device never gets, [i18n.md](core/i18n.md)).
 
 ## Try your catalog in the simulator
 

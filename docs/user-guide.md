@@ -1,6 +1,6 @@
 # User's guide
 
-For the parents. This guide is written from the code and the other documents of this repository; every key and page is named as the English catalog (`lang/en.toml`) names it. It tells what the software does. Which parts have been confirmed on the real device is not told here: that is in [bring-up.md](bring-up.md) and [hardware-lessons.md](hardware-lessons.md). The guide exists in German ([de/benutzerhandbuch.md](de/benutzerhandbuch.md)) and in French ([fr/guide-utilisateur.md](fr/guide-utilisateur.md)) with the same structure.
+For the parents. This guide is written from the code and the other documents of this repository; every key and page is named as the English catalog (`lang/en.toml`) names it. It tells what the software does. Which parts have been confirmed on the real device is not told here: that is in [bring-up.md](hardware/bring-up.md) and [hardware-lessons.md](hardware/hardware-lessons.md). The guide exists in German ([de/benutzerhandbuch.md](de/benutzerhandbuch.md)) and in French ([fr/guide-utilisateur.md](fr/guide-utilisateur.md)) with the same structure.
 
 ## What the device is
 
@@ -95,7 +95,7 @@ English, German and French are in the device. The child's language is chosen on 
 
 The device is charged through its USB cable. The **Status** page shows "Battery: 80%" (and ", charging" or ", full on cable" while a cable is plugged in) and "Remaining: 2 h 30 min". The time remaining is "unknown" while a cable is plugged in.
 
-The battery's gauge chip is delivered with a wrong battery size. At every start the device compares it with `[battery] capacity_mah` (the default is **1500** mAh) and writes the chip only when they differ. A percentage that the cell voltage contradicts is not shown: the page says "Battery: unknown" instead of a wrong number. Whether the write really takes on the chip is not confirmed on the device ([device-power.md](device-power.md)).
+The battery's gauge chip is delivered with a wrong battery size. At every start the device compares it with `[battery] capacity_mah` (the default is **1500** mAh) and writes the chip only when they differ. A percentage that the cell voltage contradicts is not shown: the page says "Battery: unknown" instead of a wrong number. Whether the write really takes on the chip is not confirmed on the device ([device-power.md](hardware/device-power.md)).
 
 ## No network, no SIM
 
@@ -111,4 +111,4 @@ The screen keeps its last picture without power, so a picture that does not chan
 2. The battery may be **empty**: plug in the USB cable and wait a few minutes.
 3. The device may have been **switched off** in the **Options** or on the **Status** page: plug in the cable or start it again.
 4. With no card or a card the device cannot read, the device still starts, with defaults: no contacts, no call buttons, so no **Phone**, **Text** and **SOS** tiles. Put the card in again, or read the log as in the next step.
-5. If nothing helps, connect the USB cable to a computer: the device's console shows the log and the card's files (`scripts/deviceconfig.py`, [device-console.md](device-console.md)). Opening the port restarts the device. The console asks for no password: do not leave the device plugged into a computer you do not trust.
+5. If nothing helps, connect the USB cable to a computer: the device's console shows the log and the card's files (`scripts/deviceconfig.py`, [device-console.md](hardware/device-console.md)). Opening the port restarts the device. The console asks for no password: do not leave the device plugged into a computer you do not trust.
