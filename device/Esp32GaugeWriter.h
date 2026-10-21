@@ -6,7 +6,7 @@
 //
 // The library writes nothing but the two capacities and keeps its procedure private, so the other data-memory
 // items (the end-of-discharge thresholds, D-42) go through its public raw register calls and repeat the
-// manual's sequence (BQ27220 reference manual SLUUBD4A p.65-66, docs/fuel-gauge-data-memory.md). The bytes
+// manual's sequence (BQ27220 reference manual SLUUBD4A p.65-66, docs/hardware/fuel-gauge-data-memory.md). The bytes
 // of a block come from board::dataMemoryBlock(), which is host-tested; which items to write is
 // board::ensureEndOfDischarge()'s.
 

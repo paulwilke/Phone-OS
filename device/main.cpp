@@ -1,5 +1,5 @@
 // The firmware: the capabilities of the board wired into boot::Runtime exactly as sim/main.cpp wires the
-// fakes into it for the simulator (docs/device.md). The loop is the host's duties that only hardware can do:
+// fakes into it for the simulator (docs/hardware/device.md). The loop is the host's duties that only hardware can do:
 // read the keys and the touch, run the modem and the receiver, feed the clock, carry out the power logic's
 // decision on sleeping, restart and switch off when asked, and answer a request to start the radio with
 // "not available": this firmware has no radio.
@@ -100,7 +100,7 @@ Esp32UartPort gnssUart(Serial2, 38400, board::pin::kGnssUartRx, board::pin::kGns
 board::ModemTransport modemTransport(modemUart, expander, gpio, delays, millisSource, eventLog);
 board::TimeSync timeSync(deviceClock, eventLog);
 
-// The panel, driven with the GDEQ031T10 profile (docs/device-display.md). A build without a profile says so at
+// The panel, driven with the GDEQ031T10 profile (docs/hardware/device-display.md). A build without a profile says so at
 // start and does not drive the panel.
 Esp32SpiPort displaySpi;
 board::EpdWire displayWire(displaySpi, gpio, delays);
@@ -326,7 +326,7 @@ void loop() {
 
   {
     SectionTimer timer(Section::Housekeeping);
-    // One reading of the battery every ten minutes (docs/energy-log.md). The cable is asked only when a line is due.
+    // One reading of the battery every ten minutes (docs/hardware/energy-log.md). The cable is asked only when a line is due.
     if (energyLog.due(now))
       energyLog.record(now, power->externalPower() ? board::EnergyState::Cable
                             : decision.modemShouldSleep ? board::EnergyState::ModemSleep
@@ -338,7 +338,7 @@ void loop() {
     if (runtime->restartRequested()) consoleHost.restart();
   }
 
-  // The pass is timed without the sleep or the pause that ends it (decisions D-20, D-25; docs/device-console.md).
+  // The pass is timed without the sleep or the pause that ends it (decisions D-20, D-25; docs/hardware/device-console.md).
   const uint32_t workUs = micros() - passStartUs;
   uint32_t sleptMs = 0;
   if (decision.cpuMaySleep && !haptic.busy() && decision.cpuSleepMs > 0) {

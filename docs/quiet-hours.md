@@ -19,13 +19,13 @@ Every window has an `enabled` flag (`enabled = true` or `false` in `[[quiet_hour
 
 A window without the key is **enabled**, so every card written before the key existed behaves as before.
 
-**A card without any window** (no `[[quiet_hours]]`, or `quiet_hours = []` as the parents' page writes an empty list) gets one built-in window, **Monday to Friday, 08:00 to 12:30, disabled**. The parents see a window to adjust and tick; until they do, no school time runs. A card that lists windows gets exactly those, and a card whose listed windows are all refused (a bad day name, say) gets no default either: it has said what it wants and the loader reports it. The default lives in `config/schema.toml` (`default_entry` of the section), so the loader, the generated example file and the page's form description read the same values ([config-loader.md](config-loader.md)).
+**A card without any window** (no `[[quiet_hours]]`, or `quiet_hours = []` as the parents' page writes an empty list) gets one built-in window, **Monday to Friday, 08:00 to 12:30, disabled**. The parents see a window to adjust and tick; until they do, no school time runs. A card that lists windows gets exactly those, and a card whose listed windows are all refused (a bad day name, say) gets no default either: it has said what it wants and the loader reports it. The default lives in `config/schema.toml` (`default_entry` of the section), so the loader, the generated example file and the page's form description read the same values ([config-loader.md](core/config-loader.md)).
 
 **At most two windows per day** (`kMaxPerDay`, so 14 in all): morning and afternoon lessons. A window counts for each day it begins on; one that crosses midnight counts for the day it begins. A window naming several days is refused as a whole when any one of those days is full.
 
 ## Is a quiet period running?
 
-`active(epochUtc, tzOffsetMinutes, &endMinute)` takes a Unix time and the zone's offset at that instant (from `tz::offsetMinutes`, see [time-zones.md](time-zones.md)).
+`active(epochUtc, tzOffsetMinutes, &endMinute)` takes a Unix time and the zone's offset at that instant (from `tz::offsetMinutes`, see [time-zones.md](core/time-zones.md)).
 
 - A window is active from its start minute up to, but not including, its end minute: at `13:30` of a `08:00`–`13:30` window the phone is free again.
 - A window may **cross midnight** (`22:00`–`06:00`): the evening belongs to the day the window began, the morning to the next. The morning of Saturday belongs to a Friday window even though Saturday is not in its days. An end of `00:00` means the end of that day.

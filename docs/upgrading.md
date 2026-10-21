@@ -1,6 +1,6 @@
 # Upgrading from 3.2 to 4.0
 
-For the owner of a device that runs the 3.2 firmware, which was called PhonePlus; since 4.1.2 the project is Phone OS. The card of a 3.2 device is read by 4.0 without changes: `test/test_upgrade_3_2/` runs the loader, the runtime and the card classes over files in the layout 3.2 wrote (`test/data/card-3.2/`, invented values), and this page is written from what those tests pin. **Nothing of 4.0 has been verified on a device**, so the upgrade ends in the checklist [bring-up.md](bring-up.md), not in this page.
+For the owner of a device that runs the 3.2 firmware, which was called PhonePlus; since 4.1.2 the project is Phone OS. The card of a 3.2 device is read by 4.0 without changes: `test/test_upgrade_3_2/` runs the loader, the runtime and the card classes over files in the layout 3.2 wrote (`test/data/card-3.2/`, invented values), and this page is written from what those tests pin. **Nothing of 4.0 has been verified on a device**, so the upgrade ends in the checklist [bring-up.md](hardware/bring-up.md), not in this page.
 
 ## 1. Before you flash: save the card
 
@@ -57,12 +57,12 @@ The card stays as it is. If you replace it, it is FAT32 with an MBR partition ta
   The location query `#WoBistDu` still works; `#WhereAreYou` and `#OuEsTu` work too.
 - **The battery gauge.** The chip ships with a wrong battery size. At every start 4.0 compares it with `[battery] capacity_mah` (1500 unless you set it) and writes it only when it differs. The log says which: "the fuel gauge capacity is 1500 mAh, nothing to write", or, the first time on a gauge that holds another size, "the fuel gauge held design ... written 1500 mAh to both and read back". A gauge that was set to 1500 earlier says "nothing to write". It is written once, not at every start. Whether the write takes on the chip is checklist step 8.
 - **School time and the contact book** are the ones of the card. The windows are in the log's report if any was refused (section 2). Only people in `contacts.toml` or on a call button may call and write; there is no switch.
-- **The history and the log continue.** `messages.log` has the same format and is read as it is: a deleted message stays deleted, the read mark stays, a number that was used is not used again, and an entry that 3.2 wrote as a sentence is shown as that sentence. New entries are appended; entries 4.0 writes for events (a text that begins with `@`) are codes that only 4.0 words. `system.log` is continued; the first new line is `Boot: the runtime runs, firmware 4.0.0`. 4.0 writes no `FIRMWARE-UPDATE` line and does not use `/firmware.txt`; it leaves it alone, and you may delete it to free room. 4.0 to 4.1.2 did not use `/energy.log` either; since 4.1.3 the energy log is written again, in a new format ([energy-log.md](energy-log.md)), so delete the file of 3.2 first or read its lines as 3.2 wrote them (no time column, six fields).
+- **The history and the log continue.** `messages.log` has the same format and is read as it is: a deleted message stays deleted, the read mark stays, a number that was used is not used again, and an entry that 3.2 wrote as a sentence is shown as that sentence. New entries are appended; entries 4.0 writes for events (a text that begins with `@`) are codes that only 4.0 words. `system.log` is continued; the first new line is `Boot: the runtime runs, firmware 4.0.0`. 4.0 writes no `FIRMWARE-UPDATE` line and does not use `/firmware.txt`; it leaves it alone, and you may delete it to free room. 4.0 to 4.1.2 did not use `/energy.log` either; since 4.1.3 the energy log is written again, in a new format ([energy-log.md](hardware/energy-log.md)), so delete the file of 3.2 first or read its lines as 3.2 wrote them (no time column, six fields).
 - **The radio is off.** Whatever `[mesh]` says, a request to start the radio is answered with "not available".
-- **The tool changed.** `scripts/deviceconfig.py` of 4.0 has `list`, `read`, `write`, `battery`, `sms` and `restart`; `dial`, `hangup`, `query` and `motion` of 3.2's tool are gone ([device-console.md](device-console.md)).
+- **The tool changed.** `scripts/deviceconfig.py` of 4.0 has `list`, `read`, `write`, `battery`, `sms` and `restart`; `dial`, `hangup`, `query` and `motion` of 3.2's tool are gone ([device-console.md](hardware/device-console.md)).
 - **The first picture.** The display profile of 4.0 has never been seen on this panel. A picture that is inverted, striped or cut off at 120 rows is checklist steps 2 and 24, not a fault of the card.
 
-Then go through [bring-up.md](bring-up.md) and write the dates yourself.
+Then go through [bring-up.md](hardware/bring-up.md) and write the dates yourself.
 
 ## 5. Going back to 3.2
 

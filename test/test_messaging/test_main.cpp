@@ -224,7 +224,7 @@ void test_a_stranger_in_another_spelling_is_logged_in_the_canonical_form() {
 }
 
 // A sender that is no number is one sender by its text, and the text of what it sent is in the log: a
-// balance, a tariff, a PIN notice (the owner's decision of 2026-10-06, docs/log-level.md).
+// balance, a tariff, a PIN notice (the owner's decision of 2026-10-06, docs/core/log-level.md).
 void test_a_sender_that_is_no_number_is_dropped_and_logged_by_its_name() {
   Rig r;
   r.receive("Provider", "Your balance is 3.00");
@@ -574,7 +574,7 @@ void test_a_flood_from_another_radio_name_is_one_line_and_one_summary_and_the_pe
 }
 
 // The name is compared as the radio reports it, character for character: the configured name in another
-// case, or with a space, is another sender. (A name can be spoofed within range: docs/messaging.md.)
+// case, or with a space, is another sender. (A name can be spoofed within range: docs/core/messaging.md.)
 void test_the_peer_name_is_compared_exactly_and_the_case_is_the_radios() {
   Rig r(withRadio());
   r.radioUp("Node One");

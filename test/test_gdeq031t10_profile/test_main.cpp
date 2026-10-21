@@ -1,11 +1,11 @@
 // The GDEQ031T10 profile against the sequences the panel's documentation and the vendor's demo give.
 //
 // **The expected sequences below are written down here, in this file's own notation, as what the panel is
-// documented to receive** (docs/device-display.md names the documents): "C:xx" is a command byte, "D:xx .." the
+// documented to receive** (docs/hardware/device-display.md names the documents): "C:xx" is a command byte, "D:xx .." the
 // data bytes after it, "D[n]" a picture of n bytes (its content is checked on its own). A change of a single
 // value of the profile changes the traffic and fails the test of the sequence it belongs to; each of those
 // tests has a counter-check that makes such a change and requires the comparison to fail. What this does not
-// prove is that the panel shows a picture: that is the owner's check with the device (docs/bring-up.md).
+// prove is that the panel shows a picture: that is the owner's check with the device (docs/hardware/bring-up.md).
 
 #include <unity.h>
 

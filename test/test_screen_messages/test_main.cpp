@@ -471,7 +471,7 @@ void test_a_message_in_each_language_is_shown_with_every_character_it_has() {
 }
 
 void test_what_the_font_cannot_show_is_a_box_and_the_rest_of_the_text_is_there() {
-  // An emoji and a letter of another alphabet: the font's box, one for each, as docs/i18n.md says;
+  // An emoji and a letter of another alphabet: the font's box, one for each, as docs/core/i18n.md says;
   // the characters around them are as they were.
   Page page;
   page.receive(kParentOne, "A\xF0\x9F\x98\x80" "B\xD0\x96" "C");

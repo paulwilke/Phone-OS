@@ -9,7 +9,7 @@
 // called from the main loop, so there is one user of the line. One job runs at a time; what
 // else is wanted waits as a flag.
 //
-// The VoLTE rule that this driver exists for (docs/hardware-lessons.md): outgoing calls hung the
+// The VoLTE rule that this driver exists for (docs/hardware/hardware-lessons.md): outgoing calls hung the
 // modem two seconds after ATD whenever the IMS was not registered. The IMS bearer is created
 // from PDP context 1, so the driver defines that context itself, as IPV4V6 with the configured
 // APN, and cycles the radio once; it asks AT+CIREG? and reports the answer as voiceStatus().

@@ -26,7 +26,7 @@ Rules for the layers:
     include src/board/, src/hal/ and src/drivers/ (a board class implements a capability or a transport
     of a driver) and, from src/ui/, only ui/Input.h (the plain data of an input event that the keyboard and the
     touch decoders produce) ui/Display.h (the size of the panel), ui/RefreshController.h (what the panel driver is
-    built on, docs/ui-refresh.md), and, from src/app/, only app/SafePath.h
+    built on, docs/ui/ui-refresh.md), and, from src/app/, only app/SafePath.h
     (the one check of every path from outside, which the card's store applies like every other store) and app/Crc32.h
     (the checksum the panel driver compares), and nothing else;
   * src/boot/ is the composition of the device (the runtime both the firmware and the simulator run): it

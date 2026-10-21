@@ -2,7 +2,7 @@
 
 This is the inventory of what the application does, taken from the previous code base: the one class that did everything (`EmergencyApp`), its test suite, the application behaviour exercised by the screen tests, and the Wi-Fi controller with its tests. Every row is one observable behaviour, the component that owns it, and the test that pins it. **Every previous test case appears** in the column *Previous* (`EA:` is the application test, `SC:` the screen tests, `WF:` the Wi-Fi tests), or in the list of what is not ported at the end, with the reason.
 
-**One rule stands above the tables:** only the contact book may write to the device and call it (`Profile::mayReceiveFrom`, [contacts.md](contacts.md)); the rows PRO-09, PRO-10, MSG-46 to 57 and CAL-39 to 49 pin it, and every other row about incoming texts and calls is about an allowed number.
+**One rule stands above the tables:** only the contact book may write to the device and call it (`Profile::mayReceiveFrom`, [contacts.md](core/contacts.md)); the rows PRO-09, PRO-10, MSG-46 to 57 and CAL-39 to 49 pin it, and every other row about incoming texts and calls is about an allowed number.
 
 The application core is split into small components with one owner each, composed by a thin facade (`AppCore`). The core contains **no sentence**: it produces notices and system entries as codes with arguments (`src/app/Notice.h`, `src/app/SystemEntry.h`), and the interface words them from the catalogs when it draws. The only text the core produces is the body of an SMS that leaves the device, and that wording also comes from the catalogs.
 
@@ -239,7 +239,7 @@ Tests in `test/test_messaging/`.
 
 ## Dropped lines
 
-Tests in `test/test_drop_log/`. What the device turns away is logged once per sender per ten minutes ([log-level.md](log-level.md)).
+Tests in `test/test_drop_log/`. What the device turns away is logged once per sender per ten minutes ([log-level.md](core/log-level.md)).
 
 | Id | Behaviour | Test | Previous | Status |
 |---|---|---|---|---|
@@ -431,7 +431,7 @@ Tests in `test/test_wifi_controller/`.
 | WIF-10 | A lost connection is retried | `test_a_lost_connection_is_retried` | WF:test_lost_connection_is_retried | done |
 | WIF-11 | An access point that fails to start is reported | `test_an_access_point_failure_is_reported` | WF:test_ap_start_failure_is_reported | done |
 | WIF-12 | Requesting off stops | `test_requesting_off_stops` | WF:test_request_off_stops | done |
-| WIF-13 | Wi-Fi settings: networks, access point, idle minutes with their limits (the file format is read by the configuration loader, [config-loader.md](config-loader.md)) | `test_the_settings_are_validated` | WF:test_config_reads_networks_and_ap, WF:test_config_rejects_short_passwords_and_reports_them, WF:test_config_caps_networks_and_clamps_timeout | done |
+| WIF-13 | Wi-Fi settings: networks, access point, idle minutes with their limits (the file format is read by the configuration loader, [config-loader.md](core/config-loader.md)) | `test_the_settings_are_validated` | WF:test_config_reads_networks_and_ap, WF:test_config_rejects_short_passwords_and_reports_them, WF:test_config_caps_networks_and_clamps_timeout | done |
 | WIF-14 | An access point that stops while it runs is reported as lost | `test_a_lost_access_point_is_reported` | — | done |
 | WIF-15 | A lost connection starts again from the first network | `test_a_lost_connection_starts_again_from_the_first_network` | — | done |
 | WIF-16 | The idle time starts when the station has connected | `test_the_idle_time_starts_when_the_station_has_connected` | — | done |
@@ -505,8 +505,8 @@ Tests in `test/test_app_core/`.
 |---|---|
 | EA:test_save_mode_switches_cellular_off_with_a_timed_probe | Save mode (radio only, cellular and Wi-Fi off), the cell probe that belongs to it and its rules (Wi-Fi refused in save mode) are removed from version 4.0: they need the LoRa radio, which 4.0 does not have. They come back with the radio project, where an emergency radio mode switches battery saving on implicitly. |
 | EA:test_persona_and_warnings_reach_the_log | Parsing persona.json and whitelist.txt and logging their warnings belongs to the configuration package. The core receives a finished profile. |
-| SC (all UI screen tests) | Screens, soft keys, status bar, tile layout, lock screen, compose, number pad, wifi tiles, clock and test pages are user-interface work. The behaviours they exercised in the application are listed above; the stack rules are in docs/ui-framework.md. |
+| SC (all UI screen tests) | Screens, soft keys, status bar, tile layout, lock screen, compose, number pad, wifi tiles, clock and test pages are user-interface work. The behaviours they exercised in the application are listed above; the stack rules are in docs/ui/ui-framework.md. |
 | SC:test_motion_* | The motion sensor is a capability the screen uses directly; the application core does not wrap it. |
 | WF:test_broken_json_is_survivable | WLAN configuration file parsing is the configuration package. |
 | WF:test_cpu_does_not_sleep_while_wifi_runs | Already covered by the power-policy tests; the core only passes the Wi-Fi state in (see Power coordination). |
-| test_web_server | The web server is not part of the application core; it has its own tests in `test/test_web_server/` ([web-interface.md](web-interface.md)). |
+| test_web_server | The web server is not part of the application core; it has its own tests in `test/test_web_server/` ([web-interface.md](web/web-interface.md)). |

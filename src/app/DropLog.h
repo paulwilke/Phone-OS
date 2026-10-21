@@ -2,7 +2,7 @@
 
 // The log lines for what the device turns away: a text or a call from somebody who is not in the contact
 // book, and a radio message from somebody who is not the configured peer. Each is logged, on every log
-// level, because the parents must be able to see that something knocked (docs/log-level.md); but a flood
+// level, because the parents must be able to see that something knocked (docs/core/log-level.md); but a flood
 // must not fill the card, so:
 //
 //   * **at most one line per sender per ten minutes** (`kWindowSeconds`). What is dropped meanwhile is

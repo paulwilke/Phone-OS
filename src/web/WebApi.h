@@ -36,7 +36,7 @@ public:
   static constexpr uint32_t kMaxFailures = 5;
   static constexpr uint32_t kLockSeconds = 60;
   // Minimum web password length (four characters, owner's decision 2026-10-01;
-  // see docs/web-interface.md for the security trade-off).
+  // see docs/web/web-interface.md for the security trade-off).
   static constexpr size_t kMinWebPassword = 4;
   // Longest web password the API compares. It is a buffer size, not a rule of the file: a stored password
   // longer than this locks the API with a message instead of being compared by its first bytes.

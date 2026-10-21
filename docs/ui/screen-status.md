@@ -1,0 +1,23 @@
+# The status page
+
+Code: `src/ui/screens/StatusScreen.{h,cpp}`; tests in `test/test_screen_status/`. What the parents come here for and no more: the battery and how long it lasts, the child's name and the number of contacts, how visible a remote query is, the firmware and the hardware, and the ways to switch the device off and to restart it. The firmware and hardware names are the application's to say (build constants), so it hands them to the page as a `DeviceInfo`; an empty hardware gives no line.
+
+**Configuration problems.** The loader's report ([config-loader.md](../core/config-loader.md)) reaches the page as data: the application (`boot::Runtime`) turns each diagnostic into a `ConfigProblem` (a kind and the names to put in a sentence; the page does not know the loader's types) and hands the list over in the `DeviceInfo`. With at least one problem the page says how many ("Configuration: 2 problems") and the first one in words from the catalog: a file that could not be read ("settings.toml could not be read"), a key that was not understood or out of range ("settings.toml: check child.name") or an entry of a list that was not used ("An entry in the lists was not used"). Without problems there is no line. A `[mesh]` section read as `[radio]` is not counted: it works. The problems are those of the start; the page does not read the card again, and the full list is in the log.
+
+**Remote queries.** Enter steps through silent, in the history, with a notice. The runtime writes the change to `settings.toml` on the card, like the other settings the child changes ([runtime.md](../core/runtime.md)).
+
+**Switching off** is written on the page and takes two presses of x (capital too); any other key takes the first back. The page only asks: the application clears the display and switches off, and with the cable plugged in it cannot, because USB keeps the board alive; it then tells the core (`notePowerOffFailed`), whose notice says so. The page says "unplug USB first" beforehand while the cable is in.
+
+**Restarting** is written under it and works the same way: two presses of r (capital too), the first one arms ("Restart? Press r again"), any other input, including x, takes it back, and so does opening the page afresh (neither has a timeout). Unlike switching off it works with the cable plugged in: the reason switch-off refuses there, that USB keeps the board alive, does not apply to a restart. The page writes one log line ("Restart requested on the device", so the log shows who restarted) and asks the core (`requestRestart`); the host restarts, as it does for the parents' page and the USB console ([runtime.md](../core/runtime.md)). That path only flushes the console and calls the processor's restart: it does nothing of its own for pending writes (the log and the card's files are written when they are asked for, not held back).
+
+**The battery lines.** The percentage, then, on the battery at 10 % or less, "Battery almost empty: charge it now", then the voltage in millivolts with the empty and the full mark of the cell (`kBatteryEmptyMv`, `kBatteryFullMv`), then the time remaining. The voltage is the one value that does not depend on the gauge having learned the battery; without a reading there is no voltage line. Where the percentage comes from is in [battery.md](../hardware/battery.md).
+
+The page is a text and scrolls with the arrows when it is longer than the page (a long hardware name, or a language); the position is kept while the words stay the same and the page opens at the top.
+
+## Not ported
+
+"Persona" of the previous page is replaced by the child's name, since the profile has no persona.
+
+## Tests
+
+`test_screen_status`: the lines, unknown and empty values, the cable with the battery, the number of contacts, the configuration problems (count, first one, each kind, none), the step through the queries, the two presses of x and what takes the first back, the cable refusing, the two presses of r with its log line, what takes the first back (another key, x, leaving the page), the restart on the cable, scrolling and its soft keys, the position being kept, layout in four languages for each state (with problems too), pictures in English and German, with and without problems and with the restart asked; and in `test_runtime` a card with an unknown key reaching the page.

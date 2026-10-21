@@ -2,7 +2,7 @@
 
 // Never show a percentage the voltage contradicts. Every value comes from one chip and looks plausible,
 // so a gauge that holds the wrong battery size shows no error: on 2026-10-06 it said 56 % at 4118 mV
-// with the charger reporting "charge done" (docs/hardware-lessons.md). The rule compares the three
+// with the charger reporting "charge done" (docs/hardware/hardware-lessons.md). The rule compares the three
 // witnesses and, when the number is contradicted, withholds it and lets the charger's word stand.
 //
 // The rule: the percentage is contradicted when the gauge says less than 70 % while the cell is above

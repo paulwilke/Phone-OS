@@ -1,6 +1,6 @@
 # The simulator
 
-The device's application on the fakes, with a console, scripted scenarios, a simulated e-ink panel and the real web page. The documentation is in [docs/simulator.md](../docs/simulator.md); the generated demo is in [docs/demo.md](../docs/demo.md); trying a translation is in [docs/translating.md](../docs/translating.md).
+The device's application on the fakes, with a console, scripted scenarios, a simulated e-ink panel and the real web page. The documentation is in [docs/simulator.md](../docs/simulator.md); the generated demo is in [docs/process/demo.md](../docs/process/demo.md); trying a translation is in [docs/translating.md](../docs/translating.md).
 
 ```sh
 pio run -e sim                                            # console only, needs a compiler and nothing else

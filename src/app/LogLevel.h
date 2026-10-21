@@ -11,7 +11,7 @@
 //   Errors  only errors, and what is always kept
 //
 // A line carries no explicit category at the call site; its importance follows
-// from the words in it (the vocabulary is in docs/log-level.md). Matching is
+// from the words in it (the vocabulary is in docs/core/log-level.md). Matching is
 // case-insensitive and a keyword must start a word, so "reasons" is not "sos".
 
 #include <cstdint>

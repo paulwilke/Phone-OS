@@ -2,7 +2,7 @@
 
 // The fuel gauge, a BQ27220 at 0x55. It counts charge instead of guessing from the voltage, but it ships
 // with a battery size that is not ours: the device's gauge held the factory 3000 mAh while the battery is
-// 1500 mAh, so it reported about half the real charge (docs/hardware-lessons.md). At start the capacity is
+// 1500 mAh, so it reported about half the real charge (docs/hardware/hardware-lessons.md). At start the capacity is
 // therefore read and, only when it differs from the configured one, written.
 //
 // Reading is plain I2C through the seam. Writing the capacity is a procedure of its own on this chip
@@ -32,7 +32,7 @@ struct GaugeReading {
 };
 
 // One 16-bit item of the chip's data memory, by its absolute address (BQ27220 reference manual SLUUBD4A,
-// table 3-2; docs/fuel-gauge-data-memory.md).
+// table 3-2; docs/hardware/fuel-gauge-data-memory.md).
 struct DataMemoryWord {
   uint16_t address = 0;
   uint16_t value = 0;

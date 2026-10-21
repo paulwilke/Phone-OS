@@ -120,7 +120,7 @@ void test_the_values_the_motion_page_was_checked_with_arrive_at_the_page_unchang
   BoardMotionRig r;
   boot::SensorMotionSource source(&r.impl);
   TEST_ASSERT_TRUE(source.start());
-  r.hub.tilt(0.30f, 0.0f, -0.95f);  // the lower edge low, from the table in docs/screen-motion.md
+  r.hub.tilt(0.30f, 0.0f, -0.95f);  // the lower edge low, from the table in docs/ui/screen-motion.md
   ui::Acceleration a;
   TEST_ASSERT_TRUE(source.read(a));
   TEST_ASSERT_EQUAL_FLOAT(0.30f, a.x);

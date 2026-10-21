@@ -2,7 +2,7 @@
 
 #include "Uc8253.h"
 
-// Sources, by short name (document names and versions: docs/device-display.md):
+// Sources, by short name (document names and versions: docs/hardware/device-display.md):
 //   DS   the panel specification GDEQ031T10, revision 1.0, section 3.6 (operation flow, power sequence)
 //   UC   the UC8253 datasheet (command descriptions)
 //   DEMO what the vendor's published demo for this panel sends to it (read for the values, not copied)

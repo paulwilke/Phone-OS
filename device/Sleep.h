@@ -3,7 +3,7 @@
 // Light sleep for the time the power logic allows. The processor wakes on the timer, on a key or touch
 // (their interrupt lines change), and on the modem's ring line (an incoming call or text). **Nothing sleeps
 // while a cable is attached**: the USB bridge of the ESP32-S3 is switched off in light sleep and the console
-// disappears; that rule is the power policy's (docs/power-policy.md), this function only carries a decision out.
+// disappears; that rule is the power policy's (docs/core/power-policy.md), this function only carries a decision out.
 //
 // A line wakes on a level, not an edge (that is what light sleep offers), and a line that already has the level
 // ends the sleep at once: in the night of 2026-10-14 the keyboard's interrupt and the ring line read low before

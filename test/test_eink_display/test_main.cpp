@@ -4,7 +4,7 @@
 // **The profile used here is invented test data, not the panel's.** It has the shape of one (a start list, the
 // commands before each kind of refresh, a window encoding, a sleep list) with values that mean nothing, so
 // that the sequences of the driver can be compared byte for byte. That the panel's own values make it show a
-// picture is not provable without the panel (docs/device-display.md).
+// picture is not provable without the panel (docs/hardware/device-display.md).
 
 #include <unity.h>
 

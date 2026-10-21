@@ -6,7 +6,7 @@
 // class that owns one implementation of the interface and offers the hooks the suite
 // needs from outside (advancing time, scripting what the world does). The suite never
 // names the implementation. Running it against a new implementation means writing a
-// rig for it (see docs/hardware-capabilities.md) and one line in the test's main().
+// rig for it (see docs/hardware/hardware-capabilities.md) and one line in the test's main().
 //
 // A hook that sets up a situation returns bool. A rig that cannot create the
 // situation (a real network cannot be told to refuse a call) returns false, and the
