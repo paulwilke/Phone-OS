@@ -364,13 +364,28 @@ void test_start_sets_the_end_of_discharge_thresholds_once_and_logs_one_line_abou
   BoardPowerRig r(false);
   r.impl.begin(1500, r.writer, r.log);
   TEST_ASSERT_TRUE(r.log.contains(
-      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3420/3470 mV, compensation off "
+      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3390/3440 mV, compensation off "
       "(they were 3031/3385/3501 mV, compensation on)"));
   TEST_ASSERT_EQUAL(4, (int)r.writer.dataMemoryWrites().size());
   FakeEventLog second;
   r.impl.begin(1500, r.writer, second);
-  TEST_ASSERT_TRUE(second.contains("end-of-discharge thresholds are 3300/3420/3470 mV, compensation off already, nothing to write"));
+  TEST_ASSERT_TRUE(second.contains("end-of-discharge thresholds are 3300/3390/3440 mV, compensation off already, nothing to write"));
   TEST_ASSERT_EQUAL(4, (int)r.writer.dataMemoryWrites().size());  // the second start writes nothing
+}
+
+// D-47: a device that ran 4.2.9 holds 3300/3420/3470 mV with the compensation off; its next start writes the two
+// upper ones and says what they were, which is how the log shows that the new numbers took.
+void test_a_start_after_4_2_9_replaces_the_numbers_of_d45_and_says_so() {
+  BoardPowerRig r(false);
+  r.writer.setDataMemory(0x929B, 0x1022);
+  r.writer.setDataMemory(0x92B4, 3300);
+  r.writer.setDataMemory(0x92B7, 3420);
+  r.writer.setDataMemory(0x92BA, 3470);
+  r.impl.begin(1500, r.writer, r.log);
+  TEST_ASSERT_TRUE(r.log.contains(
+      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3390/3440 mV, compensation off "
+      "(they were 3300/3420/3470 mV, compensation off)"));
+  TEST_ASSERT_EQUAL(2, (int)r.writer.dataMemoryWrites().size());
 }
 
 void test_thresholds_the_gauge_refuses_are_logged_and_do_not_stop_the_start() {
@@ -485,6 +500,7 @@ int main(int, char**) {
   RUN_TEST(test_start_writes_the_capacity_once_and_logs_one_line_about_it);
   RUN_TEST(test_a_refused_capacity_write_is_logged_and_does_not_stop_the_start);
   RUN_TEST(test_start_sets_the_end_of_discharge_thresholds_once_and_logs_one_line_about_it);
+  RUN_TEST(test_a_start_after_4_2_9_replaces_the_numbers_of_d45_and_says_so);
   RUN_TEST(test_thresholds_the_gauge_refuses_are_logged_and_do_not_stop_the_start);
   RUN_TEST(test_start_puts_the_receiver_and_the_radio_into_their_idle_state);
   RUN_TEST(test_the_domains_switch_their_own_legs);
