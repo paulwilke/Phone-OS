@@ -112,17 +112,25 @@ std::string describeCapacityCheck(const CapacityResult& result);
 // hours before the switch-off, and learned a smaller full charge each time (1372, 1107, 988 mAh). With the
 // compensation off the three are the fixed values below (manual p.12 and p.14).
 //
-// Placed on the discharge curve of 2026-10-21 at 61 mA: 3621 mV at the gauge's 0 %, 3488 mV one to two hours
-// before the switch-off, 3406 mV shortly before it, the switch-off at 3291 mV; about 470 mAh, 7.7 hours, below
-// 3621 mV and about 1300 mAh usable in all. 7 % of that is 91 mAh, 1.5 hours; 3 % is 39 mAh, 0.6 hours.
+// Placed on the discharge curve of 2026-10-21 at 61 mA (D-45) and moved by the two discharges of 2026-10-22 and
+// 2026-10-24 at 63 mA (D-47): with EDV1 3420 and EDV2 3470 mV the gauge said 0 % at 3432 and 3438 mV, 1 h 26 min
+// and 1 h 36 min before the switch-off at 3295 mV, with about 95 mAh (7 % of the 1350 mAh the cell delivered)
+// still in the cell. So both sat about 40 mV too high for this cell. The energy log gives the voltage under the
+// load of the device at each point before the switch-off (19:04:24 on 2026-10-22, 05:04:04 on 2026-10-24):
 //   EDV0  3300 mV  the firmware's own switch-off (D-5): the gauge's 0 % is where the device goes off.
-//   EDV1  3420 mV  0.6 hours before the switch-off lies between 3406 and 3488 mV, at 3420 to 3450 by the curve.
-//   EDV2  3470 mV  1.5 hours before lies at 3470 to 3500 mV, depending on where in "one to two hours" 3488 sits.
-// Each is the lower end of its range: a threshold reached too early is the failure measured (it cuts the count
-// and teaches a smaller full charge), and with the modem awake (220 mA) the voltage is about 60 mV lower still.
+//   EDV1  3390 mV  3 % of 1350 mAh is 40 mAh, 38 minutes at 63 mA. The rows 36 minutes before the
+//                  switch-off read 3396 mV (2026-10-22 18:28) and 3398 mV (2026-10-24 04:28); the lower, rounded
+//                  down to 10 mV. The cell reaches 3390 mV 31 to 32 minutes before (33 mAh, 2.5 %), a little late
+//                  rather than early, because the cell's knee below 3400 mV is steep (3396 to 3356 mV in 20 minutes).
+//   EDV2  3440 mV  7 % of 1350 mAh is 95 mAh, 1.5 hours at 63 mA. The rows read 3432 mV (1 h 26 min before) and
+//                  3438 mV (1 h 36 min before); the cell reaches 3440 mV about 1 h 40 min
+//                  before in both (105 mAh, 7.8 %: 3440 mV is the nearest 10 mV to the 7 % point, 3432 to 3438 mV).
+// A threshold reached too early is the failure measured (it cuts the count and teaches a smaller full charge),
+// and with the modem awake (220 mA) the voltage is about 60 mV lower still. A threshold set lower than this
+// would be reached late or never: the count would run past 0 % while the voltage is already on the knee.
 constexpr uint16_t kEdv0Mv = 3300;
-constexpr uint16_t kEdv1Mv = 3420;
-constexpr uint16_t kEdv2Mv = 3470;
+constexpr uint16_t kEdv1Mv = 3390;
+constexpr uint16_t kEdv2Mv = 3440;
 
 // Addresses in the chip's RAM copy of CEDV profile 1 (manual p.30), and the compensation bit of the
 // Gauging Configuration (p.56-57: 0 uses the fixed values for all three).

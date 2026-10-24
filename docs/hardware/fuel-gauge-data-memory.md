@@ -12,8 +12,8 @@ Four 16-bit items, all in the chip's RAM copy of CEDV profile 1 (table 3-2, p.30
 |---|---|---|---|---|
 | Gauging Configuration | 0x929B | H2, 0x0 to 0x1FFF | 0x102A | the value read, with bit EDV_CMP (0x0008) cleared |
 | Fixed EDV 0 | 0x92B4 | I2, mV | 3031 | 3300 |
-| Fixed EDV 1 | 0x92B7 | I2, mV | 3385 | 3420 |
-| Fixed EDV 2 | 0x92BA | I2, mV | 3501 | 3470 |
+| Fixed EDV 1 | 0x92B7 | I2, mV | 3385 | 3390 |
+| Fixed EDV 2 | 0x92BA | I2, mV | 3501 | 3440 |
 
 What the items mean (p.12, table 1-1; p.14, table 1-2; p.56-57, table 4-11):
 
@@ -22,7 +22,7 @@ What the items mean (p.12, table 1-1; p.14, table 1-2; p.56-57, table 4-11):
 - The full charge is learned at EDV2: the new value is the charge counted from nearly full down to EDV2 plus Battery Low % of the old one (p.11). An EDV2 that the cell reaches early teaches a full charge that is too small, which is what the device showed: 1372, 1107 and 988 mAh after four discharges that reached the compensated EDV2 at about 3630 mV.
 - The other bits of the Gauging Configuration (FIXED_EDV0, CSYNC, SME0 in the default) are kept as read; FIXED_EDV0 only matters while EDV_CMP is set.
 
-The three numbers, and the reason for each, are in `src/board/FuelGauge.h` next to `kEdv0Mv`: EDV0 at the firmware's switch-off (D-5), EDV1 and EDV2 where 3 % and 7 % of about 1300 mAh remain on the discharge curve measured at 61 mA, each at the lower end of what the curve allows.
+The three numbers, and the reason for each, are in `src/board/FuelGauge.h` next to `kEdv0Mv`: EDV0 at the firmware's switch-off (D-5), EDV1 and EDV2 where 3 % and 7 % of about 1350 mAh remain on the two discharges measured at 62 to 64 mA (D-47: 3390 and 3440 mV, 38 minutes and 1.5 hours before the switch-off; D-45 had 3420 and 3470 mV from a first curve, and the gauge said 0 % an hour and a half early with them).
 
 ## The sequence
 
@@ -49,4 +49,4 @@ The write goes to RAM: "The written data is not persistent, so a POR does resolv
 - Whether the three must be in order (EDV0 below EDV1 below EDV2): implied by the figures, not stated. The firmware's are in order.
 - The manual names two unseal keys: 0x8000 twice in section 3.3 (p.27-28) and 0x0414, 0x3672 in the example (p.65). The firmware uses the example's, which the library uses and which has worked on the device for the capacity.
 - With the compensation off, the thresholds do not move with the load: with the modem awake (220 mA) the cell's voltage is about 60 mV lower, so the gauge reaches each threshold earlier than at 61 mA.
-- Seen on the device on 2026-10-21 (4.2.9, decision D-45): the chip accepted the write ("set to 3300/3420/3470 mV, compensation off (they were 3031/3385/3501 mV, compensation on)") and held it to the next start ("already, nothing to write"); the exit with the restart (0x0091) set the cycle count from 5 to 0 and kept the learned 988 mAh. Not verified on the device: that a discharge past 3.63 V no longer falls to 7 % (open point 3).
+- Seen on the device on 2026-10-21 (4.2.9, decision D-45): the chip accepted the write ("set to 3300/3420/3470 mV, compensation off (they were 3031/3385/3501 mV, compensation on)") and held it to the next start ("already, nothing to write"); the exit with the restart (0x0091) set the cycle count from 5 to 0 and kept the learned 988 mAh. Seen on 2026-10-22 and 2026-10-24: no fall at 3.63 V, the learned full charge grew (988, 1244, 1310 mAh), the gauge held 7 % until EDV2 fired and said 0 % 1.5 hours before the switch-off, hence D-47. A chip that holds the numbers of D-45 gets the two upper ones written at the next start ("they were 3300/3420/3470 mV, compensation off"). Not verified on the device: a discharge with 3390 and 3440 mV (open point 3).

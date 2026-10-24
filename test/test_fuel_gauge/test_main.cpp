@@ -180,8 +180,8 @@ void test_the_thresholds_are_set_with_the_compensation_off_and_the_other_bits_ke
   TEST_ASSERT_TRUE(res.outcome == EndOfDischargeOutcome::Written);
   TEST_ASSERT_EQUAL_HEX16(0x1022, r.writer.dataMemory(0x929B));  // 0x102A without EDV_CMP (0x0008)
   TEST_ASSERT_EQUAL(3300, r.writer.dataMemory(0x92B4));
-  TEST_ASSERT_EQUAL(3420, r.writer.dataMemory(0x92B7));
-  TEST_ASSERT_EQUAL(3470, r.writer.dataMemory(0x92BA));
+  TEST_ASSERT_EQUAL(3390, r.writer.dataMemory(0x92B7));
+  TEST_ASSERT_EQUAL(3440, r.writer.dataMemory(0x92BA));
   TEST_ASSERT_EQUAL(4, res.written);
   TEST_ASSERT_EQUAL(3031, res.before.edv0Mv);
   TEST_ASSERT_TRUE(res.before.compensated());
@@ -228,14 +228,39 @@ void test_thresholds_lost_by_the_chip_are_written_again_at_the_next_start() {
   r.writer.setDataMemory(0x92B7, 3385);
   r.writer.setDataMemory(0x92BA, 3501);
   TEST_ASSERT_TRUE(ensureEndOfDischarge(r.gauge, r.writer).outcome == EndOfDischargeOutcome::Written);
-  TEST_ASSERT_EQUAL(3470, r.writer.dataMemory(0x92BA));
+  TEST_ASSERT_EQUAL(3440, r.writer.dataMemory(0x92BA));
+}
+
+// D-47: the numbers of D-45 (3300/3420/3470 mV, compensation off) were on the device from 2026-10-21 and made the
+// gauge say 0 % an hour and a half before the switch-off. A chip that holds them is not "already right": the next
+// start writes the two upper ones (and nothing else) and says so in the one line.
+void test_the_numbers_of_d45_on_the_chip_are_replaced_by_3390_and_3440_with_one_line() {
+  TEST_ASSERT_EQUAL(3300, kEdv0Mv);
+  TEST_ASSERT_EQUAL(3390, kEdv1Mv);
+  TEST_ASSERT_EQUAL(3440, kEdv2Mv);
+  Rig r;
+  r.writer.setDataMemory(0x929B, 0x1022);
+  r.writer.setDataMemory(0x92B4, 3300);
+  r.writer.setDataMemory(0x92B7, 3420);
+  r.writer.setDataMemory(0x92BA, 3470);
+  const EndOfDischargeResult res = ensureEndOfDischarge(r.gauge, r.writer);
+  TEST_ASSERT_TRUE(res.outcome == EndOfDischargeOutcome::Written);
+  TEST_ASSERT_EQUAL(2, (int)r.writer.dataMemoryWrites().size());
+  TEST_ASSERT_EQUAL_HEX16(0x92B7, r.writer.dataMemoryWrites()[0]);
+  TEST_ASSERT_EQUAL_HEX16(0x92BA, r.writer.dataMemoryWrites()[1]);
+  TEST_ASSERT_EQUAL_HEX16(0x1022, r.writer.dataMemory(0x929B));
+  TEST_ASSERT_EQUAL_STRING(
+      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3390/3440 mV, compensation off "
+      "(they were 3300/3420/3470 mV, compensation off)",
+      describeEndOfDischargeCheck(res).c_str());
+  TEST_ASSERT_TRUE(ensureEndOfDischarge(r.gauge, r.writer).outcome == EndOfDischargeOutcome::AlreadyRight);
 }
 
 void test_a_compensated_chip_with_our_numbers_gets_only_the_compensation_bit() {
   Rig r;
   r.writer.setDataMemory(0x92B4, 3300);
-  r.writer.setDataMemory(0x92B7, 3420);
-  r.writer.setDataMemory(0x92BA, 3470);
+  r.writer.setDataMemory(0x92B7, 3390);
+  r.writer.setDataMemory(0x92BA, 3440);
   r.writer.setDataMemory(0x929B, 0x0008);
   TEST_ASSERT_TRUE(ensureEndOfDischarge(r.gauge, r.writer).outcome == EndOfDischargeOutcome::Written);
   TEST_ASSERT_EQUAL(1, (int)r.writer.dataMemoryWrites().size());
@@ -280,11 +305,11 @@ void test_the_threshold_log_lines_say_what_happened() {
   Rig r;
   const std::string written = describeEndOfDischargeCheck(ensureEndOfDischarge(r.gauge, r.writer));
   TEST_ASSERT_EQUAL_STRING(
-      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3420/3470 mV, compensation off "
+      "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3390/3440 mV, compensation off "
       "(they were 3031/3385/3501 mV, compensation on)",
       written.c_str());
   TEST_ASSERT_EQUAL_STRING(
-      "Battery: the fuel gauge's end-of-discharge thresholds are 3300/3420/3470 mV, compensation off already, nothing to write",
+      "Battery: the fuel gauge's end-of-discharge thresholds are 3300/3390/3440 mV, compensation off already, nothing to write",
       describeEndOfDischargeCheck(ensureEndOfDischarge(r.gauge, r.writer)).c_str());
   Rig q;
   q.writer.keepDataMemory();
@@ -340,6 +365,7 @@ int main(int, char**) {
   RUN_TEST(test_only_the_items_that_differ_are_written);
   RUN_TEST(test_thresholds_that_are_right_are_not_written_and_the_second_start_writes_nothing);
   RUN_TEST(test_thresholds_lost_by_the_chip_are_written_again_at_the_next_start);
+  RUN_TEST(test_the_numbers_of_d45_on_the_chip_are_replaced_by_3390_and_3440_with_one_line);
   RUN_TEST(test_a_compensated_chip_with_our_numbers_gets_only_the_compensation_bit);
   RUN_TEST(test_an_unreadable_or_implausible_configuration_writes_nothing);
   RUN_TEST(test_a_refused_or_lost_threshold_write_is_reported);
