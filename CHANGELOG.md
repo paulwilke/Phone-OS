@@ -2,6 +2,13 @@
 
 Each release names what changed for the people who use the device, what was removed and what is not verified. "Host-tested" means a test under `pio test -e native` or a Python or Node test; "compiled" means only built; "verified on the device" means seen on the real hardware, as the "Verified" line of the decision in [docs/decisions.md](docs/decisions.md) records it with a date. An entry says what was known at its release; what was seen on the device later is in those lines. The notes of a release are in `docs/release-<major>.<minor>.md`.
 
+## 4.2.10
+
+What the two discharges of 2026-10-22 and 2026-10-24 with 4.2.9 showed, acted on. Host-tested and compiled; the change is not verified on the device yet (open point 3).
+
+- **The gauge's end-of-discharge thresholds are lowered to 3300/3390/3440 mV** (D-47). With 3470 and 3420 mV the gauge said 0 % about an hour and a half before the switch-off on both discharges (1 h 26 min and 1 h 36 min). The first start after flashing logs "Battery: the fuel gauge's end-of-discharge thresholds set to 3300/3390/3440 mV, compensation off (they were 3300/3420/3470 mV, compensation off)". A hold at 7 % may last longer, by about 45 minutes, until the gauge has learned the full charge. Host-tested and compiled; not verified on the device.
+- **Seen on the device with 4.2.9** (2026-10-22 to 24): no fall from 45 % to 7 % at 3.63 V any more, and a learned full charge that grows (988, 1244, 1310 mAh; D-45); a day of real use by the child, 21 h 32 min from full to the switch-off at 64 mA, the modem awake 0.8 % of the time, no network lost; wakes by a key or the ring line seen for the first time (D-34); starts after 1 h 41 min and 2 h 56 min switched off registered automatically within 29 s (D-36); the charge at the adapter at 849 falling to 746 mA, 1 to 100 % in 1 h 40 min (D-38).
+
 ## 4.2.9
 
 Two changes worked out in the cloud on 2026-10-21 from the owner's decisions of that day. Host-tested and compiled; neither is verified on the device yet (open points 3 and 42).
