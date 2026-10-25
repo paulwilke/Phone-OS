@@ -301,6 +301,17 @@ void SelfTestScreen::run(Test test) {
   }
 }
 
+std::vector<Rect> SelfTestScreen::targets(const Rect& area) {
+  switch (mode_) {
+    case Mode::Pattern:
+    case Mode::Touch: return {area};
+    case Mode::Keys: return {};
+    case Mode::Menu: break;
+  }
+  refreshTiles();
+  return grid_.targets(gridArea(area));
+}
+
 bool SelfTestScreen::onInput(const Input& input, const Rect& area) {
   switch (mode_) {
     case Mode::Keys:

@@ -187,6 +187,16 @@ bool ComposeScreen::send(const std::string& body) {
   return true;
 }
 
+std::vector<Rect> ComposeScreen::targets(const Rect& area) {
+  std::vector<Rect> out;
+  if (!session().viaRadio) out.push_back(recipientLine(area));
+  if (canned()) {
+    fillCanned();
+    for (const Rect& row : list_.targets(cannedArea(area))) out.push_back(row);
+  }
+  return out;
+}
+
 bool ComposeScreen::onInput(const Input& input, const Rect& area) {
   if (input.kind == Input::Kind::Touch && recipientLine(area).contains(input.x, input.y) && !session().viaRadio) {
     nav().open(screen::kRecipient);

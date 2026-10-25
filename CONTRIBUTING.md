@@ -26,6 +26,8 @@ python3 test/test_translating/test_doc.py # docs/translating.md followed step by
 python3 scripts/counter_check_scenarios.py # every scenario fails when the behaviour it pins is put back (not part of CI: it rebuilds the simulator)
 python3 scripts/make_demo.py    # the pictures and the click-through demo; fails when a picture is missing
 node test/test_demo_page/test.mjs # the demo page
+python3 test/test_make_site/test_site.py # the assembly of the web page (site/ + its words + the demo)
+node test/test_site_page/test.mjs # the web page: no words of its own, the language selector
 python3 scripts/check_i18n.py   # language catalogs against the English reference
 python3 scripts/check_i18n.py --usage # every catalog key is used by code or a test of its own set; no unknown key in the code; no sentence as a literal in src/ui/
 python3 test/test_check_i18n/test_check.py # the catalog check itself (wrong set, both sets, a missing file, the limit, a sentence in a screen)

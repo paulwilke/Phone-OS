@@ -37,6 +37,13 @@ void ListView::scrollToSelection(const Rect& area) {
   if (items_.size() > rows && first_ > items_.size() - rows) first_ = items_.size() - rows;
 }
 
+std::vector<Rect> ListView::targets(const Rect& area) const {
+  std::vector<Rect> out;
+  const size_t rows = items_.size() > first_ ? std::min(visibleRows(area), items_.size() - first_) : 0;
+  for (size_t i = 0; i < rows; ++i) out.push_back(rowRect(area, i));
+  return out;
+}
+
 bool ListView::handle(const Input& input, const Rect& area, bool* chosen) {
   *chosen = false;
   if (items_.empty()) return false;

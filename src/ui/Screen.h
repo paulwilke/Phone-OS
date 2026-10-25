@@ -12,6 +12,9 @@
 // has to guess from the outside whether it is still on show, and nothing is left running
 // because one of those ways was forgotten. They always alternate: onEnter, onLeave, onEnter...
 
+#include <optional>
+#include <vector>
+
 #include "ui/Display.h"
 #include "ui/Input.h"
 
@@ -19,6 +22,15 @@ namespace ui {
 
 // A screen's name in the stack: chosen by the application, opaque to the framework.
 using ScreenId = uint8_t;
+
+// A place on the screen that answers a tap: a soft key, a tile, a row of a list, a button. `key` is set when
+// the tap stands for a key (the soft keys), empty when the widget under it decides what the tap does (a tile
+// selects and opens). The screens report them so that the simulator's walk can tap what a finger can tap
+// and take the pictures it reaches, and so that a test can tap the middle of each and expect it to be used.
+struct TouchTarget {
+  Rect rect;
+  std::optional<Key> key;
+};
 
 class Screen {
 public:
@@ -46,6 +58,11 @@ public:
 
   // A screen that must not be locked away while it is shown (a call in progress).
   virtual bool preventsAutoLock() const { return false; }
+
+  // The places that answer a tap, as the screen was drawn last; none by default. Only what does something
+  // now is listed (the rows a list shows, the tiles of the page on show), so that a tap in the middle of each
+  // is used by handle().
+  virtual std::vector<TouchTarget> touchTargets() { return {}; }
 };
 
 }  // namespace ui

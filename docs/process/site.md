@@ -1,0 +1,37 @@
+# The web page
+
+Code: `site/index.html` (the page), `tools/lang/site.<code>.toml` (its words), `scripts/make_site.py` (the assembly), `.github/workflows/pages.yml` (the build and the publication on GitHub Pages); tests in `test/test_make_site/` (the assembly) and `test/test_site_page/` (the page). Decision [D-48](../decisions.md).
+
+The page presents the project to somebody who has not seen the device: what it does and refuses, the three words the project keeps apart, how the code is layered, and where to read on. Its first screen is the device itself, as the click-through demo of [demo.md](demo.md) shows it: the pictures the simulator drew from the firmware's own code, the three keys under the screen and the four keys of the keyboard that lead from one picture to the next, the touch targets of each picture laid over it as invisible buttons where the screen says a finger hits something (a tile, a row, a soft key), and the language selector that swaps every picture and every word of the page. The arrow keys, Enter and Backspace work when the device has the focus. The scenes the keys do not lead to (a call coming in, school time, a flat battery) are linked, not repeated: the full demo page is published beside it under `demo/`.
+
+**What the page shows is not the simulator running.** The simulator ran on the build machine and took a picture of every state the keys reach; the page walks through those pictures along the graph of the walk. Nothing on the page is drawn by hand, and nothing generated is committed: the workflow builds the simulator, runs `scripts/make_demo.py`, assembles `out/site/` and publishes it, so the page always shows the pictures of the commit it was built from. A simulator that runs in the browser itself (the C++ compiled to WebAssembly) would show the real behaviour, timing aside; it is not built, and it is not promised here.
+
+## Building it
+
+```sh
+pio run -e sim
+python3 scripts/make_demo.py        # out/demo/
+python3 scripts/make_site.py        # site/ + out/demo/ + VERSION -> out/site/
+python3 -m http.server -d out/site 8000   # then open http://localhost:8000/
+```
+
+`make_site.py` copies `site/` to `out/site/`, the demo to `out/site/demo/` and `VERSION` to `out/site/version.txt`, which the page reads for its version number. Into the page it writes the English words, so that a reader without a script and a link preview see the page in English, and it embeds the words of every language for the selector. It exits with 1 when the demo is missing, when a language lacks a word the page uses (the key is named), or when a file the page fetches at run time is not in the result, so a run that "built" a page without its pictures or its words fails; `test/test_make_site/test_site.py` checks these cases on small trees.
+
+## Its words and its language
+
+The page has no words of its own, as the demo page has none ([demo.md](demo.md)): they are the `site.*` keys of the host-only catalogs `tools/lang/site.en.toml`, `site.de.toml` and `site.fr.toml`, which the device never gets. An element that says something is empty in `site/index.html` and names its key: `data-i18n="site.hero.title"` for its text, `data-i18n-alt`, `data-i18n-aria-label` or `data-i18n-content` for an attribute. The script names the rest by key (the labels of the keys, the names of the screens in the status line, the touch targets' labels). `scripts/check_i18n.py` checks the set like the others, and `--usage` reads `site/` for the keys the page uses. The German and French words use the terms of the user's guides ([benutzerhandbuch.md](../de/benutzerhandbuch.md), [guide-utilisateur.md](../fr/guide-utilisateur.md)) and address the reader the same way; numbers are written by the script the way of the language in use (2,500 / 2.500 / 2 500).
+
+**The language is the address's, never the browser's.** The page is English unless the address asks for another language with `?lang=de` or `?lang=fr`; a code the page does not have is English. The selector changes every word, every picture, the language of the document and its title at once, and writes the choice into the address (`?lang=de`; English, the default, removes it), so that a reload, the browser's back button and a shared link keep it. The page once took the browser's language at every load and kept the choice nowhere: in a browser set to German, English could be chosen, but every reload brought German back, and only the device's picture had followed the selector anyway. The user's guide button leads to the guide in the language in use; the other documents are English. The link to the full demo under `demo/` carries the language in use the same way (`demo/index.html?lang=de`, nothing for English) and follows the selector ([demo.md](demo.md)).
+
+`test/test_site_page/test.mjs` (Node, no dependencies) fails when the markup holds text (only a repository path in `<code>` is allowed), when an attribute or the description holds words, when the script holds a sentence or asks the browser for its language, and runs the script against a small fake of the DOM: English by default whatever the browser says, `?lang=` honoured, every word and picture changed by the selector in both directions, the address and the link to the full demo following it, the keys and touch targets named in the language in use.
+
+## Rules the page keeps
+
+- **English by default, German and French on request**; the words are in `tools/lang/site.<code>.toml`, none in the page. The demo page under `demo/` keeps its rule of having no words of its own ([demo.md](demo.md)).
+- **No personal data**: the pictures show the invented card of the simulator (the child Alex, Parent One and Parent Two).
+- **No pictures of its own**: a picture on the page is a picture of the demo, by its path, so a screen that changes in the code changes on the page at the next build.
+- **Three words kept apart**: the page says that its pictures are the simulator's, and claims nothing about the device that the decision log does not.
+
+## Publishing
+
+The workflow runs on every push to `main` and on request (`workflow_dispatch`). GitHub Pages must be set to build from GitHub Actions once, in the repository's settings; that setting is the owner's. The address is `https://paulwilke.github.io/Phone-OS/`.

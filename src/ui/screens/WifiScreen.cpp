@@ -80,6 +80,11 @@ SoftKeys WifiScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> WifiScreen::targets(const Rect& area) {
+  rebuild();
+  return rows_.targets(rowsArea(area));
+}
+
 bool WifiScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     nav().back();

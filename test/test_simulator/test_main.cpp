@@ -736,6 +736,77 @@ void test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_thro
   TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", "select"));
   TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("compose", "down"));
   TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("home", "select"));
+  // Taps: a soft key is its key; a tap on the content of the compose page would send a ready-made message.
+  const ui::TouchTarget content{{10, 60, 100, 30}, std::nullopt};
+  const ui::TouchTarget sendKey{{146, 288, 94, 32}, ui::Key::Select};
+  const ui::TouchTarget backKey{{0, 288, 94, 32}, ui::Key::Back};
+  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("home", content));
+  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", content));
+  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", sendKey));
+  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("compose", backKey));
+  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("call", backKey));
+}
+
+// The walk taps what the screens report: from the home screen the SOS tile leads to the SOS page and the Lock soft
+// key to the lock screen, each as an edge with the rectangle a finger hits, and the graph says so.
+void test_the_walk_taps_the_targets_of_the_screens_and_the_graph_carries_their_rectangles() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl crawl = crawler.run(1, 30);
+  bool sos = false, lock = false, keys = false;
+  for (const sim::CrawlEdge& edge : crawl.edges) {
+    if (edge.from != 0) continue;
+    const std::string& to = crawl.nodes[static_cast<size_t>(edge.to)].screen;
+    if (!edge.isTap()) { keys = true; continue; }
+    TEST_ASSERT_TRUE(edge.tap.w > 0 && edge.tap.h > 0 && edge.tap.right() <= 240 && edge.tap.bottom() <= 320);
+    if (to == "sos" && edge.tap.y < 120) sos = true;
+    if (to == "lock" && edge.tap.y >= 288) lock = true;
+  }
+  TEST_ASSERT_TRUE_MESSAGE(sos, "no tap on the SOS tile");
+  TEST_ASSERT_TRUE_MESSAGE(lock, "no tap on the Lock soft key");
+  TEST_ASSERT_TRUE(keys);
+  const std::string json = sim::Crawler::json(crawl);
+  TEST_ASSERT_TRUE(contains(json, "\"tap\":{\"x\":0,\"y\":288,\"w\":94,\"h\":32}"));
+  TEST_ASSERT_TRUE(contains(json, "\"key\":\"select\""));
+  // The path to a state reached by a tap replays the tap.
+  for (const sim::CrawlNode& node : crawl.nodes)
+    if (node.screen == "sos") {
+      TEST_ASSERT_EQUAL(1, node.path.size());
+      TEST_ASSERT_TRUE(node.path[0] == "key select" || node.path[0].rfind("tap ", 0) == 0);
+    }
+}
+
+// Every target a screen reports is a place where a tap does something: on every state of a short walk, a tap in
+// the middle of each target is used by the screen, lies on the panel and overlaps no other target. A screen that
+// reports a rectangle its handle() ignores, or two that overlap, fails here.
+void test_every_touch_target_a_screen_reports_is_used_when_its_middle_is_tapped() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl crawl = crawler.run(2, 3);
+  size_t checked = 0;
+  std::set<std::string> screens;
+  for (const sim::CrawlNode& node : crawl.nodes) {
+    std::unique_ptr<sim::Simulator> at = crawler.reach(node.path, "");
+    TEST_ASSERT_NOT_NULL(at.get());
+    const std::vector<ui::TouchTarget> targets = sim::Crawler::targets(*at);
+    for (size_t i = 0; i < targets.size(); ++i) {
+      const ui::Rect& r = targets[i].rect;
+      TEST_ASSERT_TRUE_MESSAGE(r.x >= 0 && r.y >= 0 && r.right() <= 240 && r.bottom() <= 320, node.screen.c_str());
+      for (size_t j = 0; j < i; ++j) {
+        const ui::Rect& o = targets[j].rect;
+        const bool apart = r.right() <= o.x || o.right() <= r.x || r.bottom() <= o.y || o.bottom() <= r.y;
+        TEST_ASSERT_TRUE_MESSAGE(apart, (node.screen + ": two targets overlap").c_str());
+      }
+      std::unique_ptr<sim::Simulator> fresh = crawler.reach(node.path, "");
+      TEST_ASSERT_NOT_NULL(fresh.get());
+      ui::Screen* screen = fresh->runtime().stack().visible();
+      TEST_ASSERT_NOT_NULL(screen);
+      TEST_ASSERT_TRUE_MESSAGE(screen->handle(ui::Input::touch(r.x + r.w / 2, r.y + r.h / 2)),
+                               (node.screen + ": a target that a tap does not use").c_str());
+      ++checked;
+      screens.insert(node.screen);
+    }
+  }
+  TEST_ASSERT_TRUE(checked > 20);
+  for (const char* screen : {"home", "phone", "messages", "sos"}) TEST_ASSERT_TRUE_MESSAGE(screens.count(screen) == 1, screen);
 }
 
 // The pages write what the child changes back to the card. A walk that replays paths must start every one on
@@ -759,9 +830,9 @@ void test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data
   sim::Crawler crawler(options, "sim/demo/world.txt");
   // Home, the options tile (behind the seven tiles of the first page and three of the second), the language row
   // (third, above switching off), German: the choice is written to the card of that replay.
-  std::vector<std::string> path(10, "down");
-  path.push_back("select");
-  for (const char* key : {"down", "down", "select", "up", "select"}) path.push_back(key);
+  std::vector<std::string> path(10, "key down");
+  path.push_back("key select");
+  for (const char* key : {"down", "down", "select", "up", "select"}) path.push_back(std::string("key ") + key);
   std::unique_ptr<sim::Simulator> chosen = crawler.reach(path, "");
   TEST_ASSERT_NOT_NULL_MESSAGE(chosen.get(), crawler.error().c_str());
   TEST_ASSERT_EQUAL_STRING("de", chosen->translator().language().c_str());
@@ -879,6 +950,8 @@ int main() {
   RUN_TEST(test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time);
   RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);
   RUN_TEST(test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through);
+  RUN_TEST(test_the_walk_taps_the_targets_of_the_screens_and_the_graph_carries_their_rectangles);
+  RUN_TEST(test_every_touch_target_a_screen_reports_is_used_when_its_middle_is_tapped);
   RUN_TEST(test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data_directory);
   RUN_TEST(test_a_simulator_that_cannot_start_stops_the_crawl_with_the_reason_instead_of_a_crash);
   RUN_TEST(test_the_same_path_leads_to_the_same_screen_in_every_language);

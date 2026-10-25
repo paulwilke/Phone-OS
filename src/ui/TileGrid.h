@@ -55,6 +55,9 @@ public:
   // Used when the input moved the selection or chose a tile; `chosen` is set to the index of
   // a tile that was chosen (Select, or a tap, which also selects it).
   bool handle(const Input& input, const Rect& area, bool* chosen);
+  // What a tap hits, as handle() sees it: the dots' parts of the strip (with more than one page) and the tiles
+  // of the page on show.
+  std::vector<Rect> targets(const Rect& area) const;
 
   void draw(Display& display, const Rect& area) const;
 

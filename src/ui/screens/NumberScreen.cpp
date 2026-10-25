@@ -121,6 +121,8 @@ SoftKeys NumberScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> NumberScreen::targets(const Rect& area) { return keyRects(area); }
+
 bool NumberScreen::onInput(const Input& input, const Rect& area) {
   if (input.kind == Input::Kind::Text) {
     const uint32_t c = input.character;

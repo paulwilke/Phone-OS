@@ -102,6 +102,11 @@ SoftKeys RecipientScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> RecipientScreen::targets(const Rect& area) {
+  rebuild();
+  return list_.targets(listArea(area));
+}
+
 bool RecipientScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     if (other_) {

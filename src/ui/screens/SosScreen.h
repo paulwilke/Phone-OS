@@ -49,6 +49,7 @@ protected:
   void draw(Display& display, const Rect& area) override;
   SoftKeys keys() override;
   bool onInput(const Input& input, const Rect& area) override;
+  std::vector<Rect> targets(const Rect& area) override;
 
 private:
   enum class View { Choice, Quiet, Progress, Idle };

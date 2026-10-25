@@ -181,6 +181,16 @@ bool SosScreen::choose(size_t index) {
   return true;
 }
 
+std::vector<Rect> SosScreen::targets(const Rect& area) {
+  switch (view()) {
+    case View::Choice: return {choiceRect(area, 0), choiceRect(area, 1), choiceRect(area, 2)};
+    case View::Quiet: return {quietButton(area)};
+    case View::Progress:
+    case View::Idle: break;
+  }
+  return {};
+}
+
 bool SosScreen::onInput(const Input& input, const Rect& area) {
   switch (view()) {
     case View::Choice:

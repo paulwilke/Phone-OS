@@ -49,6 +49,8 @@ public:
 
   // A tap on a soft key is turned into its key; everything else goes to onInput().
   bool handle(const Input& input) final;
+  // The soft keys that are shown, each with its key, and then the screen's own targets().
+  std::vector<TouchTarget> touchTargets() final;
 
   // The soft keys as they were drawn last, for tests and for the touch translation.
   const SoftKeys& softKeys() const { return keys_; }
@@ -62,6 +64,12 @@ protected:
   virtual SoftKeys keys() = 0;
   // A key, or a touch on the content (`area` is where the content was drawn last).
   virtual bool onInput(const Input& input, const Rect& area) = 0;
+  // The places in the content that answer a tap, as it was drawn last in `area`: the rectangles onInput()
+  // tests a touch against. A screen whose content ignores touches reports none.
+  virtual std::vector<Rect> targets(const Rect& area) {
+    (void)area;
+    return {};
+  }
 
   const ScreenContext& context() const { return context_; }
   AppCore& app() { return context_.app; }

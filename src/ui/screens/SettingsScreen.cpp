@@ -66,6 +66,11 @@ SoftKeys SettingsScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> SettingsScreen::targets(const Rect& area) {
+  rebuild();
+  return rows_.targets(rowsArea(area));
+}
+
 bool SettingsScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     nav().back();

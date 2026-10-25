@@ -31,4 +31,17 @@ bool AppScreen::handle(const Input& input) {
   return onInput(input, layout_.content);
 }
 
+std::vector<TouchTarget> AppScreen::touchTargets() {
+  std::vector<TouchTarget> out;
+  const SoftKeySlots slots = softKeySlots(keys_, layout_.softKeys);
+  if (!keys_.back.empty()) out.push_back({slots.back, Key::Back});
+  if (keys_.scroll) {
+    out.push_back({slots.up, Key::Up});
+    out.push_back({slots.down, Key::Down});
+  }
+  if (!keys_.action.empty()) out.push_back({slots.action, Key::Select});
+  for (const Rect& rect : targets(layout_.content)) out.push_back({rect, std::nullopt});
+  return out;
+}
+
 }  // namespace ui

@@ -147,6 +147,7 @@ A document marked "top" lives at the top of `docs/`, not in the folder, because 
 | [process/simulated-panel.md](process/simulated-panel.md) | the e-ink panel without a window: the real refresh policy, the visible delay, a PNG of what is shown |
 | [process/test-doubles.md](process/test-doubles.md) | the scriptable fake of every capability and what each can be made to do |
 | [process/demo.md](process/demo.md) | the generated pictures and the click-through demo: the walk, the scenes, the page, what the generator checks |
+| [process/site.md](process/site.md) | the project's web page on GitHub Pages: the click-through demo as its first screen, how it is assembled and published, the rules it keeps |
 | [translating.md](translating.md) | writing a catalog, the size limit, trying it in the simulator (top) |
 
 What is not verified on the device is stated where the code is described, and what has to be done about it, with the person who has to do it, is only in [open-points.md](open-points.md).

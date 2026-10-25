@@ -110,6 +110,11 @@ SoftKeys PhoneScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> PhoneScreen::targets(const Rect& area) {
+  rebuild();
+  return list_.targets(listArea(area));
+}
+
 bool PhoneScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     if (other_) {
