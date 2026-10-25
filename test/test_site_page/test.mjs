@@ -42,7 +42,9 @@ assert(wordy.length === 0, 'no attribute of the markup holds words: they are key
 const metas = [...markup.matchAll(/<meta\s[^>]*(?:name="description"|property="og:(?:title|description)")[^>]*>/g)].map((m) => m[0]);
 assert(metas.length === 3 && metas.every((m) => /data-i18n-content="site\./.test(m) && !/\scontent="/.test(m)),
   'the description and the link preview name their keys and hold no words');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+// The page's one script: what follows the first plain <script> up to its end tag (the data script before it is typed).
+const scriptStart = html.indexOf('<script>') + '<script>'.length;
+const script = html.slice(scriptStart, html.indexOf('</script>', scriptStart));
 // A sentence has spaces in it; the script's strings are keys, file names, addresses and DOM names.
 const strings = [...script.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]).filter((t) => /\s/.test(t) && t !== 'use strict');
 assert(strings.length === 0, 'the script has no sentence in it' + (strings.length ? ': ' + strings.join(' | ') : ''));
