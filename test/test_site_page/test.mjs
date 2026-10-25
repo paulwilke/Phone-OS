@@ -1,7 +1,9 @@
 /**
- * Tests for the project's web page (site/index.html): it has no words of its own, and its script, run against a small
- * fake of the parts of the DOM it uses, fills every word and swaps every picture for the language of the address
- * (?lang=de), which is English unless the address says otherwise, and the selector changes it in both directions.
+ * Tests for the project's web page (site/index.html): it has no words of its own (scripts/make_site.py prerenders one
+ * page per language with its words), and its script, run against a small fake of the parts of the DOM it uses, builds
+ * the parts that depend on the language (the keys, the status line, the pictures, the links) in the language of the
+ * page, which is the page's folder: the root is English, /de/ is German. A root page opened with ?lang=de goes to /de/,
+ * and the selector goes to the other language's page.
  *
  *   node test/test_site_page/test.mjs
  */
@@ -42,6 +44,8 @@ assert(wordy.length === 0, 'no attribute of the markup holds words: they are key
 const metas = [...markup.matchAll(/<meta\s[^>]*(?:name="description"|property="og:(?:title|description)")[^>]*>/g)].map((m) => m[0]);
 assert(metas.length === 3 && metas.every((m) => /data-i18n-content="site\./.test(m) && !/\scontent="/.test(m)),
   'the description and the link preview name their keys and hold no words');
+assert(/<html lang="en" data-root="">/.test(html) && html.split('<meta name="site-alternates">').length === 2,
+  'the page declares its language and root once, and has one placeholder for its links (make_site.py writes them)');
 // The page's one script: what follows the first plain <script> up to its end tag (the data script before it is typed).
 const scriptStart = html.indexOf('<script>') + '<script>'.length;
 const script = html.slice(scriptStart, html.indexOf('</script>', scriptStart));
@@ -54,6 +58,7 @@ assert(/<section id="legal">/.test(markup) && /data-i18n="site\.legal\.name"/.te
   'the legal notice names its lines and its e-mail link by keys');
 assert(!/mailto:|@/.test(markup), 'no e-mail address is written into the markup');
 assert(/<a href="#legal" data-i18n="site\.footer\.legal">/.test(markup), 'the footer links the legal notice');
+assert(!/replaceState/.test(script), 'the script does not rewrite the address: a language is a page, not a query');
 
 // ---- a fake DOM for what the page uses --------------------------------------------------------------------------
 class Element {
@@ -104,99 +109,109 @@ const graph = {
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
-async function load(search = '', { withGraph = true } = {}) {
+// A page of the site: `lang` and `root` are what make_site.py writes into <html> (the root page is English, a language's
+// folder is one level down); the data script holds the words of that language only, as the built page does.
+async function load({ lang = 'en', root = '', search = '', hash = '#try', withGraph = true, browser = 'de-DE' } = {}) {
   const elements = parse();
   const all = () => { const out = []; const walk = (e) => { out.push(e); e.children.forEach(walk); }; elements.forEach(walk); return out; };
   const byId = (id) => all().find((e) => e.getAttribute('id') === id);
-  byId('data')._text = JSON.stringify({ languages: LANGUAGES, words });
-  const location = { search, pathname: '/Phone-OS/', hash: '#try' };
-  const urls = [];
+  byId('data')._text = JSON.stringify({ languages: LANGUAGES, words: { [lang]: words[lang] } });
+  const replaced = [];
+  const location = { search, pathname: '/Phone-OS/', hash, href: 'https://example.test/Phone-OS/', replace: (url) => { replaced.push(url); } };
   const document = {
-    documentElement: { lang: 'en' }, title: '',
+    documentElement: { lang, getAttribute: (name) => (name === 'data-root' ? root : null) },
     getElementById: byId,
     createElement: (tag) => new Element(tag),
     querySelectorAll: (selector) => { const name = selector.match(/^\[([a-z0-9-]+)\]$/)[1]; return all().filter((e) => e.hasAttribute(name)); },
   };
-  const history = { replaceState: (state, title, url) => { urls.push(url); location.search = url.includes('?') ? url.slice(url.indexOf('?'), url.indexOf('#') < 0 ? undefined : url.indexOf('#')) : ''; } };
-  const fetch = (url) => (url === 'demo/graph.json' && !withGraph ? Promise.reject(new Error('404'))
+  const fetch = (url) => (url === root + 'demo/graph.json' && !withGraph ? Promise.reject(new Error('404'))
     : Promise.resolve({ ok: true, json: async () => graph, text: async () => '4.2.10\n' }));
-  vm.runInNewContext(script, { document, location, history, fetch, URLSearchParams, Image: class { }, setTimeout,
-    navigator: { language: 'de-DE' }, JSON, console });
+  vm.runInNewContext(script, { document, location, fetch, URLSearchParams, Image: class { }, setTimeout,
+    navigator: { language: browser }, JSON, console });
   await settle();
-  return { document, byId, all, urls, location,
+  return { document, byId, all, replaced, location, lang, root,
     select: async (code) => { const s = byId('language'); s.value = code; s.listeners.change(); await settle(); } };
 }
 
-const textsIn = (page, code) => page.all().filter((e) => e.hasAttribute('data-i18n')).every((e) => e.textContent === code + ':' + e.getAttribute('data-i18n'));
-const altsIn = (page, code) => page.all().filter((e) => e.hasAttribute('data-i18n-alt')).every((e) => e.getAttribute('alt') === code + ':' + e.getAttribute('data-i18n-alt'));
-const picturesIn = (page, code) => page.all().filter((e) => e.hasAttribute('data-picture')).every((e) => e.getAttribute('src').startsWith('demo/' + code + '/'));
+const picturesIn = (page) => page.all().filter((e) => e.hasAttribute('data-picture')).every((e) => e.getAttribute('src').startsWith(page.root + 'demo/' + page.lang + '/'));
 const guide = (page) => page.all().find((e) => e.hasAttribute('data-guide') && e.getAttribute('data-guide') === '').getAttribute('href');
 const demoLink = (page) => page.all().find((e) => e.hasAttribute('data-demo')).getAttribute('href');
-const nativeLinks = (page) => page.all().filter((e) => e.hasAttribute('data-native')).filter((e) => !e.hidden).map((e) => e.textContent);
+// The guides of the other languages that are listed: the link of the page's own language is hidden.
+const listedLanguages = (page) => page.all().filter((e) => e.hasAttribute('data-native') && !e.hidden).map((e) => e.getAttribute('data-native')).join();
+const key = (page, name) => page.all().find((e) => e.getAttribute('aria-label') === page.lang + ':site.key.' + name);
+const numberText = (page, value) => page.all().find((e) => e.getAttribute('data-number') === value).textContent;
 
-// ---- the default is English, whatever the browser says -------------------------------------------------------------
-let page = await load();
-assert(page.document.documentElement.lang === 'en' && page.document.title === 'en:site.meta.title', 'a browser set to German gets the page in English: the default');
-assert(textsIn(page, 'en') && altsIn(page, 'en'), 'every word of the markup is filled in English');
-assert(page.all().filter((e) => e.hasAttribute('data-i18n-content')).every((e) => e.getAttribute('content').startsWith('en:')), 'the description too');
+// ---- the root page is English, and the browser's language does not change it -----------------------------------
+let page = await load({ browser: 'de-DE' });
+assert(page.document.documentElement.lang === 'en' && page.byId('status').textContent === 'en:en:site.screen.home 1/3',
+  'the root page is English, and a browser set to German does not change it');
+assert(page.replaced.length === 0 && page.location.href === 'https://example.test/Phone-OS/', 'opening the root page does not move it or touch the address');
 assert(page.byId('language').value === 'en' && page.byId('language').children.map((o) => o.textContent).join() === 'English,Deutsch,Français',
   'the selector offers the three languages by their own names and shows English');
-assert(picturesIn(page, 'en') && page.byId('picture').getAttribute('src') === 'demo/en/n0.png', 'the pictures are the English ones');
+assert(picturesIn(page) && page.byId('picture').getAttribute('src') === 'demo/en/n0.png', 'the pictures are the English ones');
 assert(page.byId('pic-compose').getAttribute('src') === 'demo/en/n1.png' && page.byId('pic-sos').getAttribute('src') === 'demo/en/n2.png',
   'the cards show the first picture of their screen');
-assert(page.byId('status').textContent === 'en:en:site.screen.home 1/3', 'the status names the screen and counts the pictures');
-assert(page.all().find((e) => e.getAttribute('data-number') === '2500+').textContent === '2,500+' && page.byId('stat-pictures').textContent === '9',
+assert(numberText(page, '2500+') === '2,500+' && page.byId('stat-pictures').textContent === '9',
   'numbers are written the English way, and the pictures are counted in all languages');
-assert(guide(page).endsWith('/docs/user-guide.md') && nativeLinks(page).join() === 'Deutsch,Français', 'the guide in English, and links to it in the other languages');
+assert(guide(page).endsWith('/docs/user-guide.md') && listedLanguages(page) === 'de,fr', 'the guide in English, and links to the guides of the other languages');
 assert(demoLink(page) === 'demo/index.html', 'the link to the full demo carries no language in English, the default');
-assert(page.urls.length === 0, 'opening the page does not touch the address');
 
-page = await load('?lang=fr');
-assert(page.document.documentElement.lang === 'fr' && textsIn(page, 'fr') && picturesIn(page, 'fr'), '?lang=fr opens the page in French');
-assert(demoLink(page) === 'demo/index.html?lang=fr', 'and the link to the full demo asks it for French');
-page = await load('?lang=xx');
-assert(page.document.documentElement.lang === 'en' && textsIn(page, 'en'), 'a language the page does not have falls back to English');
+// ---- ?lang= on the root page goes to that language's page; an unknown code and English stay here -------------------
+page = await load({ search: '?lang=de' });
+assert(page.replaced.length === 1 && page.replaced[0] === './de/#try', 'a root page opened with ?lang=de goes to de/, keeping the hash');
+page = await load({ search: '?lang=fr' });
+assert(page.replaced.length === 1 && page.replaced[0] === './fr/#try', 'a root page opened with ?lang=fr goes to fr/');
+page = await load({ search: '?lang=xx' });
+assert(page.replaced.length === 0 && page.byId('status').textContent === 'en:en:site.screen.home 1/3', 'a code the page does not have is ignored: the page stays English');
+page = await load({ search: '?lang=en' });
+assert(page.replaced.length === 0, 'English is the root itself: ?lang=en does not move the page');
+page = await load({ lang: 'de', root: '../', search: '?lang=fr' });
+assert(page.replaced.length === 0, 'a language folder does not redirect again: the address of its own page is its language');
 
-// ---- the selector, both ways --------------------------------------------------------------------------------------
+// ---- a language's page: its folder is one level down, and everything it builds is in its language ----------------
+page = await load({ lang: 'de', root: '../' });
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n0.png' && picturesIn(page), 'the pictures of the German page are the German ones, one folder down');
+assert(page.byId('pic-compose').getAttribute('src') === '../demo/de/n1.png', 'the cards too');
+assert(page.byId('status').textContent === 'de:de:site.screen.home 1/3', 'the status line is in German');
+assert(key(page, 'select') && key(page, 'select').getAttribute('aria-label') === 'de:site.key.select' && key(page, 'select').children[1].textContent === 'de:site.key.select',
+  'the labels of the keys are in German, the name of a key and its label for a reader of the screen');
+assert(numberText(page, '2500+') === '2.500+', 'numbers are written the German way');
+assert(guide(page).endsWith('/docs/de/benutzerhandbuch.md') && listedLanguages(page) === 'en,fr', 'the guide button leads to the German guide');
+assert(demoLink(page) === '../demo/index.html?lang=de', 'the link to the full demo asks for German from the German page');
+assert(page.replaced.length === 0, 'the German page does not move');
+
+// ---- the selector goes to the other language's page ----------------------------------------------------------------
 page = await load();
 await page.select('de');
-assert(page.document.documentElement.lang === 'de' && page.document.title === 'de:site.meta.title', 'choosing German sets the language and the title');
-assert(textsIn(page, 'de') && altsIn(page, 'de'), 'every word changes to German');
-assert(page.all().filter((e) => e.hasAttribute('data-i18n-aria-label')).every((e) => e.getAttribute('aria-label').startsWith('de:')), 'the labels of the keys and of the device too');
-assert(picturesIn(page, 'de') && page.byId('picture').getAttribute('src') === 'demo/de/n0.png', 'every picture changes to German');
-assert(page.urls.at(-1) === '/Phone-OS/?lang=de#try', 'the address carries the language, so that a reload and a link keep it');
-assert(demoLink(page) === 'demo/index.html?lang=de', 'the link to the full demo follows the selector');
-assert(page.all().find((e) => e.getAttribute('data-number') === '2500+').textContent === '2.500+', 'numbers are written the German way');
-assert(guide(page).endsWith('/docs/de/benutzerhandbuch.md') && nativeLinks(page).join() === 'English,Français', 'the guide button leads to the German guide');
+assert(page.location.href === './de/#try', 'choosing German on the root page goes to de/, with the hash kept');
+assert(page.replaced.length === 0, 'and the selector navigates instead of rewriting the address');
+page = await load();
 await page.select('en');
-assert(page.byId('language').value === 'en' && page.document.documentElement.lang === 'en' && textsIn(page, 'en') && picturesIn(page, 'en'),
-  'choosing English again brings back every word and picture in English');
-assert(page.urls.at(-1) === '/Phone-OS/#try', 'and the address loses the language: English is the default');
-assert(demoLink(page) === 'demo/index.html', 'and so does the link to the full demo');
-page = await load('?lang=de');
+assert(page.location.href === 'https://example.test/Phone-OS/', 'choosing the page\'s own language does nothing');
+page = await load({ lang: 'de', root: '../' });
 await page.select('en');
-assert(page.document.documentElement.lang === 'en' && page.byId('picture').getAttribute('src') === 'demo/en/n0.png' && page.location.search === '',
-  'a page opened in German can be set to English');
-
-// ---- the keys and the taps ------------------------------------------------------------------------------------------
-page = await load('?lang=de');
-const key = (name) => page.all().find((e) => e.getAttribute('data-i18n-aria-label') === 'site.key.' + name);
-assert(key('select').disabled === false && key('back').disabled === true, 'only the keys that lead somewhere are enabled');
-key('select').click();
-assert(page.byId('picture').getAttribute('src') === 'demo/de/n1.png' && page.byId('status').textContent === 'de:de:site.screen.compose 2/3', 'a key follows its edge');
+assert(page.location.href === '../#try', 'choosing English on the German page goes back to the root, one level up');
+page = await load({ lang: 'de', root: '../' });
 await page.select('fr');
-assert(page.byId('picture').getAttribute('src') === 'demo/fr/n1.png', 'the language changes in the middle of the walk and the picture stays');
+assert(page.location.href === '../fr/#try', 'choosing French on the German page goes to the French folder, beside it');
+
+// ---- the keys and the taps of the device, in the language of the page -----------------------------------------------
+page = await load({ lang: 'de', root: '../' });
+assert(key(page, 'select').disabled === false && key(page, 'back').disabled === true, 'only the keys that lead somewhere are enabled');
+key(page, 'select').click();
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n1.png' && page.byId('status').textContent === 'de:de:site.screen.compose 2/3',
+  'a key follows its edge');
 page.byId('start').click();
 const tap = page.byId('taps').children[0];
-assert(tap && tap.getAttribute('aria-label') === 'fr:tap fr:site.screen.sos', 'a touch target is named in the language in use');
+assert(tap && tap.getAttribute('aria-label') === 'de:tap de:site.screen.sos', 'a touch target is named in the language of the page');
 tap.click();
-assert(page.byId('picture').getAttribute('src') === 'demo/fr/n2.png', 'a tap follows its edge');
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n2.png', 'a tap follows its edge');
 
 // ---- without the pictures ------------------------------------------------------------------------------------------
-page = await load('', { withGraph: false });
+page = await load({ withGraph: false });
 assert(page.byId('status').textContent === 'en:site.device.missing', 'a page without the demo says so');
-await page.select('de');
-assert(page.byId('status').textContent === 'de:site.device.missing', 'in the language in use');
+page = await load({ lang: 'de', root: '../', withGraph: false });
+assert(page.byId('status').textContent === 'de:site.device.missing', 'in the language of the page');
 
 console.log(`\n${pass} checks: ${pass} passed, ${fail} failed.`);
 process.exit(fail ? 1 : 0);
