@@ -1,16 +1,43 @@
 # Phone OS
 
-Phone OS, an open firmware for the LilyGO T-Deck Pro MAX (ESP32-S3, e-ink display, 4G modem,
-GPS). It makes the device a distraction-free emergency phone, for a child for example: call
-the parents, read and write SMS, send the position at the press of a button, and nothing
-else. Only the people in the contact book can call or write to the child. The interface is
-multilingual: English, German and French ship with it, and anyone can add a language by
-writing one text file.
+A phone operating system that is 100 % open source: the firmware, the parents' page, the simulator
+and every document are in this repository under the MIT licence. It runs on an ESP32-S3 with an e-ink
+display, a 4G modem and GPS. What a device does is its configuration; the first device built with it is
+a distraction-free emergency phone for a child: call the family, read and write SMS, send the position
+at the press of a button, and nothing else. Only the people in the contact book can call or write to
+the child. The interface is multilingual: English, German and French ship with it, and anyone can add
+a language by writing one text file.
 
-This is version 4.2.7 ([CHANGELOG.md](CHANGELOG.md), [docs/release-4.2.md](docs/release-4.2.md)); the LoRa radio is not part of it.
+**Try it in the browser:** [paulwilke.github.io/Phone-OS](https://paulwilke.github.io/Phone-OS/) shows every
+screen of the device with its keys and its touch screen, in the three languages. The pictures are drawn
+by the simulator from this code on every push to `main`, so the page never drifts from the firmware
+([docs/process/site.md](docs/process/site.md)).
+
+The current version is in [VERSION](VERSION); what each release changed is in [CHANGELOG.md](CHANGELOG.md)
+and `docs/release-<major>.<minor>.md`. The LoRa radio is not part of the current release.
 
 Parents start with the user's guide: [English](docs/user-guide.md),
 [Deutsch](docs/de/benutzerhandbuch.md), [Français](docs/fr/guide-utilisateur.md).
+
+## How it gets onto a device
+
+Phone OS is not sold with a phone: you buy the board, download the code and flash it yourself over a
+USB cable. No soldering.
+
+1. **The board.** A LilyGO T-Deck Pro MAX (ESP32-S3, e-ink display, 4G modem, GPS), sold ready-made by
+   its maker and by electronics shops. It is the one board the firmware has been built and tested on so
+   far; Phone OS has no connection with LilyGO or with any shop. You also need a SIM card and a microSD
+   card. Another board needs its own platform code below the capabilities (`device/`); nothing above
+   them changes.
+2. **The code.** Clone this repository and install [PlatformIO Core](https://docs.platformio.org/page/core/installation.html)
+   (Python 3.11 or newer). That is the whole toolchain.
+3. **The card.** Format the microSD card FAT32 with an MBR partition table, copy the three files of
+   [config/examples/](config/examples/) into a folder `/config/` on it, and write your contacts and
+   settings into them: plain text files, one line per entry ([docs/configuration-reference.md](docs/configuration-reference.md)).
+4. **Flash.** Connect the device by USB and run `pio run -e device -t upload`. It takes about a minute;
+   then the device starts with your card. The first start has a step-by-step checklist,
+   [docs/hardware/bring-up.md](docs/hardware/bring-up.md), which also says what to do when the upload
+   stops after `Chip is ESP32-S3`.
 
 **What is verified.** The logic is tested on a laptop (more than 2,500 host tests) and runs in a
 simulator; the firmware compiles and has run on the device since the first days of October 2026.
@@ -29,6 +56,7 @@ pio test -e native                  # the host tests of the C++ code
 pio run -e sim                      # the simulator: the application on fakes, with a console
 .pio/build/sim/program --script sim/scripts/smoke.txt   # a scenario; without --script it is interactive (docs/simulator.md)
 python3 scripts/make_demo.py        # pictures of every page in three languages and a click-through demo in out/demo/ (docs/process/demo.md)
+python3 scripts/make_site.py        # the web page around that demo, out/site/ (docs/process/site.md)
 pio run -e device                   # the firmware for the T-Deck Pro MAX; compile-only
 pio run -e device -t upload         # flashes the connected device: the owner does this, nobody else
 ```
