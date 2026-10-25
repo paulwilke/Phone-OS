@@ -33,18 +33,21 @@ class Element {
   addEventListener(type, fn) { this.listeners[type] = fn; }
   click() { if (!this.disabled && this.listeners.click) this.listeners.click(); }
   set src(v) { this.attrs.src = v; } get src() { return this.attrs.src; }
+  set className(v) { this.attrs.className = v; } get className() { return this.attrs.className; }
+  get clientWidth() { return 480; } get clientHeight() { return 640; }   // the picture at twice its size
   set alt(v) { this.attrs.alt = v; } get alt() { return this.attrs.alt; }
 }
 
-function load(navigatorLanguage = 'en') {
+function load(navigatorLanguage = 'en', search = '', languages = null) {
   const data = {
     graph: {
       start: 0, trimmed: 7,
       nodes: [{ id: 0, screen: 'home', depth: 0 }, { id: 1, screen: 'phone', depth: 1 }, { id: 2, screen: 'call', depth: 2 }],
-      edges: [{ from: 0, key: 'select', to: 1 }, { from: 1, key: 'back', to: 0 }, { from: 1, key: 'select', to: 2 }],
+      edges: [{ from: 0, key: 'select', to: 1 }, { from: 1, key: 'back', to: 0 }, { from: 1, key: 'select', to: 2 },
+              { from: 0, tap: { x: 160, y: 48, w: 74, h: 69 }, to: 1 }],
     },
     scenes: ['lock'],
-    languages: [{ code: 'en', native: 'English' }, { code: 'de', native: 'Deutsch' }],
+    languages: languages || [{ code: 'en', native: 'English' }, { code: 'de', native: 'Deutsch' }],
     words: {
       en: { 'demo.title': 'T-en', 'demo.state': 'Picture {n} of {total}', 'demo.key-select': 'Enter', 'demo.scene-lock': 'Locked', 'demo.trimmed': '{n} more', 'demo.call-note': 'call' },
       de: { 'demo.title': 'T-de', 'demo.state': 'Bild {n} von {total}', 'demo.key-select': 'Eingabe', 'demo.scene-lock': 'Gesperrt', 'demo.trimmed': '{n} weitere', 'demo.call-note': 'ruf' },
@@ -56,7 +59,7 @@ function load(navigatorLanguage = 'en') {
     getElementById: (id) => (elements[id] ||= Object.assign(new Element('x'), id === 'data' ? { _text: JSON.stringify(data) } : {})),
     createElement: (tag) => new Element(tag),
   };
-  vm.runInNewContext(script, { document, navigator: { language: navigatorLanguage }, JSON, console });
+  vm.runInNewContext(script, { document, navigator: { language: navigatorLanguage }, location: { search }, URLSearchParams, JSON, console });
   return { document, el: (id) => document.getElementById(id), data };
 }
 
@@ -69,7 +72,15 @@ assert(page.el('picture').src === 'en/n0.png', 'the first picture is the start s
 assert(page.el('status').textContent === 'Picture 1 of 3', 'the status counts the states');
 assert(page.el('trimmed').textContent === '7 more', 'it says how many variants are left out');
 page = load('fr');
-assert(page.el('title').textContent === 'T-en', 'a language it does not have falls back to the first');
+assert(page.el('title').textContent === 'T-en', 'a language it does not have falls back to English');
+page = load('fr', '', [{ code: 'de', native: 'Deutsch' }, { code: 'en', native: 'English' }]);
+assert(page.el('title').textContent === 'T-en', 'English is the fallback whatever the order of the catalogs');
+page = load('fr', '', [{ code: 'de', native: 'Deutsch' }]);
+assert(page.el('title').textContent === 'T-de', 'without English the first catalog is the fallback');
+page = load('en', '?lang=de');
+assert(page.el('title').textContent === 'T-de' && page.el('language').value === 'de', 'the address chooses the language before the browser');
+page = load('en', '?lang=xx');
+assert(page.el('title').textContent === 'T-en', 'an unknown language in the address is ignored');
 page = load('de');
 assert(page.el('language').value === 'de' && page.el('title').textContent === 'T-de', 'the selector shows the language in use');
 page.el('language').value = 'en';
@@ -97,6 +108,17 @@ assert(page.el('picture').src === 'de/scene-lock.png' && page.el('status').textC
 assert(page.el('walk').hidden === false && enabled().length === 0, 'during a scene there is a way back and no keys');
 page.el('walk').click();
 assert(page.el('picture').src === 'de/n0.png' && page.el('walk').hidden === true, 'back to the walk');
+
+// ---- the taps ------------------------------------------------------------------------------------------------------
+page = load('en');
+const picture = page.el('picture');
+assert(picture.className === 'touch', 'a state with a tap target says so on the picture');
+picture.listeners.click({ offsetX: 10, offsetY: 10 });
+assert(picture.src === 'en/n0.png', 'a click beside every target does nothing');
+picture.listeners.click({ offsetX: 2 * 190, offsetY: 2 * 80 });   // inside the target, at twice the size
+assert(picture.src === 'en/n1.png', 'a click on a target follows its edge');
+assert(picture.className === '', 'a state without tap targets does not invite a tap');
+page.el('start').click();
 
 console.log(`\n${pass} checks: ${pass} passed, ${fail} failed.`);
 process.exit(fail ? 1 : 0);

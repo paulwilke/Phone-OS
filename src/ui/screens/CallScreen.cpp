@@ -132,6 +132,11 @@ SoftKeys CallScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> CallScreen::targets(const Rect&) {
+  if (phase() != Phase::Connected || quieter_.empty()) return {};
+  return {quieter_, louder_};
+}
+
 bool CallScreen::onInput(const Input& input, const Rect&) {
   if (input.kind == Input::Kind::Touch && phase() == Phase::Connected) {
     if (quieter_.contains(input.x, input.y)) return app().changeVolume(-1);

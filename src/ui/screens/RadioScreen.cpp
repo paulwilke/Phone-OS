@@ -165,6 +165,21 @@ bool RadioScreen::activate(const Row& row) {
   return true;
 }
 
+std::vector<Rect> RadioScreen::targets(const Rect& area) {
+  measure(area);
+  rebuild();
+  std::vector<Rect> out;
+  const Rect rect = rowsArea(area);
+  int y = rect.y;
+  const size_t shown = fitting(first_, rect.h);
+  for (size_t i = first_; i < first_ + shown && i < rows_.size(); ++i) {
+    const int h = rowHeight(rows_[i]);
+    out.push_back({rect.x, y, rect.w - kBarWidth, h});
+    y += h + kGap;
+  }
+  return out;
+}
+
 bool RadioScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     nav().back();

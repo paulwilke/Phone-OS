@@ -42,6 +42,8 @@ public:
 
   // `chosen` is set to true when a row was chosen (Select, or a tap, which also moves the focus there).
   bool handle(const Input& input, const Rect& area, bool* chosen);
+  // What a tap hits: the rows on show, from the first one the last draw or input put in the window.
+  std::vector<Rect> targets(const Rect& area) const;
 
   void draw(Display& display, const Rect& area);
 

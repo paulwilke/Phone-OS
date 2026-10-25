@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="site.meta.title"></title>
+<meta name="description" data-i18n-content="site.meta.description">
+<meta property="og:title" data-i18n-content="site.meta.title">
+<meta property="og:description" data-i18n-content="site.meta.og-description">
+<meta property="og:image" content="demo/en/n0.png">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f2ec;
+    --bg-2: #ebe8df;
+    --fg: #1b1a17;
+    --muted: #5e5a52;
+    --line: #d6d2c6;
+    --accent: #1b1a17;
+    --accent-fg: #f4f2ec;
+    --paper: #e9e8e0;
+    --bezel: #22211e;
+    --bezel-2: #2f2e2a;
+    --key: #3a3934;
+    --key-fg: #e9e8e0;
+    --card: #fbfaf6;
+    --shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.45);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161614;
+      --bg-2: #1e1e1b;
+      --fg: #ebe8df;
+      --muted: #a39f94;
+      --line: #33322d;
+      --accent: #ebe8df;
+      --accent-fg: #161614;
+      --paper: #e9e8e0;
+      --bezel: #0c0c0b;
+      --bezel-2: #1a1a18;
+      --key: #2a2a26;
+      --key-fg: #e9e8e0;
+      --card: #1e1e1b;
+      --shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: inherit; }
+  h1, h2, h3 { line-height: 1.15; letter-spacing: -0.01em; margin: 0; }
+  h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); font-weight: 700; }
+  h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); margin-bottom: 0.6rem; }
+  h3 { font-size: 1.1rem; margin-bottom: 0.3rem; }
+  p { margin: 0.5rem 0; }
+  .wrap { max-width: 72rem; margin: 0 auto; padding: 0 16px; }
+  .muted { color: var(--muted); }
+  code { font: 0.92em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg-2); padding: 0.05em 0.35em; border-radius: 4px; }
+
+  /* Top bar */
+  nav.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  nav.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.4rem; }
+  nav.top .brand { font-weight: 700; text-decoration: none; letter-spacing: 0.01em; }
+  nav.top ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: flex-end; }
+  nav.top a:not(.brand) { text-decoration: none; color: var(--muted); font-size: 0.95rem; }
+  nav.top a:hover { color: var(--fg); }
+  @media (max-width: 40rem) { nav.top ul li.hide-s { display: none; } }
+
+  /* Hero */
+  .hero { padding: clamp(2rem, 6vw, 5rem) 0 clamp(2rem, 5vw, 4rem); }
+  .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(1.5rem, 5vw, 5rem); align-items: center; }
+  @media (max-width: 56rem) { .hero .wrap { grid-template-columns: 1fr; } }
+  .eyebrow { text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem; }
+  .lead { font-size: 1.15rem; margin: 1.2rem 0 1.6rem; max-width: 36rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; }
+  .btn { display: inline-block; padding: 0.7rem 1.1rem; border-radius: 8px; text-decoration: none; border: 1px solid var(--line); font-weight: 600; }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .btn:hover { filter: brightness(1.08); }
+  .langs { font-size: 0.92rem; color: var(--muted); }
+  .langs a { margin-right: 0.6rem; }
+
+  /* The device */
+  .device-col { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
+  .device { background: linear-gradient(160deg, var(--bezel-2), var(--bezel)); border-radius: 22px; padding: 22px 18px 18px; box-shadow: var(--shadow); width: min(100%, 396px); }
+  .screen { position: relative; background: var(--paper); border-radius: 4px; overflow: hidden; aspect-ratio: 3 / 4; }
+  .screen img { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .screen .flash { position: absolute; inset: 0; background: #111; opacity: 0; pointer-events: none; transition: opacity 120ms; }
+  /* The places a finger can tap, laid over the picture where the screen says they are. */
+  .screen .tap { position: absolute; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; border-radius: 3px; }
+  .screen .tap:hover, .screen .tap:focus-visible { outline: 2px solid rgba(27, 26, 23, 0.55); outline-offset: -2px; }
+  .screen.refresh .flash { opacity: 1; }
+  .softkeys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .device button { font: inherit; color: var(--key-fg); background: var(--key); border: 1px solid rgba(255, 255, 255, 0.08); border-bottom-width: 3px; border-radius: 9px; padding: 0.55rem 0.3rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 2.9rem; line-height: 1.1; }
+  .device button .sym { font-size: 1.15rem; }
+  .device button .lbl { font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
+  .device button:hover:not(:disabled) { filter: brightness(1.2); }
+  .device button:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+  .device button:disabled { opacity: 0.3; cursor: default; }
+  .device button:focus-visible { outline: 3px solid #e9e8e0; outline-offset: 1px; }
+  .device-meta { width: min(100%, 396px); display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; font-size: 0.9rem; color: var(--muted); flex-wrap: wrap; }
+  .device-meta select, .device-meta button { font: inherit; font-size: 0.9rem; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; }
+  .device-note { width: min(100%, 396px); font-size: 0.9rem; color: var(--muted); text-align: center; }
+  .device-note a { color: var(--fg); }
+
+  /* Sections */
+  section { padding: clamp(2.5rem, 6vw, 5rem) 0; border-top: 1px solid var(--line); }
+  section.alt { background: var(--bg-2); }
+  .intro { max-width: 44rem; margin-bottom: 2rem; }
+  /* Three cards a row on a wide screen, two at medium width, one on a phone; the picture on top, large enough to read. */
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem; }
+  @media (max-width: 60rem) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 36rem) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.9rem; }
+  .card img { display: block; align-self: center; width: 192px; max-width: 100%; height: auto; aspect-ratio: 3 / 4; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); }
+  .card p { margin: 0; font-size: 0.97rem; color: var(--muted); }
+  .words { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.2rem; margin-top: 1.5rem; }
+  .word { border-left: 3px solid var(--fg); padding-left: 1rem; }
+  .word strong { display: block; font-size: 1.15rem; margin-bottom: 0.2rem; }
+  .word p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.2rem; margin-top: 1.5rem; }
+  .step { border-left: 3px solid var(--fg); padding-left: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .step strong { display: block; font-size: 1.15rem; }
+  .step p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+  .step code.cmd { display: block; font-size: 0.88rem; padding: 0.45rem 0.6rem; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; white-space: nowrap; }
+  .note { margin-top: 1.5rem; max-width: 44rem; }
+  .stats { display: flex; gap: 2.5rem; flex-wrap: wrap; margin-top: 2rem; }
+  .stat b { display: block; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; }
+  .stat span { color: var(--muted); font-size: 0.92rem; }
+  .layers { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.97rem; }
+  .layers th, .layers td { text-align: left; padding: 0.6rem 0.8rem 0.6rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .layers th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .links { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.8rem 1.5rem; margin-top: 1rem; }
+  .links a { display: block; text-decoration: none; padding: 0.8rem 0; border-bottom: 1px solid var(--line); }
+  .links a strong { display: block; }
+  .links a span { color: var(--muted); font-size: 0.92rem; }
+  .links a:hover strong { text-decoration: underline; }
+  footer { padding: 2.5rem 0 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.92rem; }
+  footer p { margin: 0.3rem 0; }
+</style>
+</head>
+<body>
+
+<!-- The page has no words of its own: an element that says something names its key in tools/lang/site.*.toml;
+     scripts/make_site.py writes the English words in and embeds every language for the selector (docs/process/site.md). -->
+<nav class="top" data-i18n-aria-label="site.nav.label">
+  <div class="wrap">
+    <a class="brand" href="#" data-i18n="site.nav.brand"></a>
+    <ul>
+      <li><a href="#try" data-i18n="site.nav.try"></a></li>
+      <li><a href="#get" data-i18n="site.nav.get"></a></li>
+      <li class="hide-s"><a href="#verified" data-i18n="site.nav.verified"></a></li>
+      <li class="hide-s"><a href="#docs" data-i18n="site.nav.docs"></a></li>
+      <li><a href="https://github.com/paulwilke/Phone-OS" data-i18n="site.nav.github"></a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero" id="try">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow" data-i18n="site.hero.eyebrow"></p>
+      <h1 data-i18n="site.hero.title"></h1>
+      <p class="lead" data-i18n="site.hero.lead"></p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/paulwilke/Phone-OS/blob/main/docs/user-guide.md" data-guide="" data-i18n="site.hero.guide"></a>
+        <a class="btn" href="https://github.com/paulwilke/Phone-OS" data-i18n="site.hero.source"></a>
+      </div>
+      <p class="langs"><span data-i18n="site.hero.guide-in"></span>
+        <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/user-guide.md" lang="en" data-guide="en" data-native="en" hidden></a>
+        <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/de/benutzerhandbuch.md" lang="de" data-guide="de" data-native="de"></a>
+        <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/fr/guide-utilisateur.md" lang="fr" data-guide="fr" data-native="fr"></a></p>
+    </div>
+
+    <div class="device-col">
+      <div class="device" id="device" tabindex="0" data-i18n-aria-label="site.device.label">
+        <div class="screen" id="screen">
+          <img id="picture" data-i18n-alt="site.device.picture-alt" width="240" height="320">
+          <div class="flash"></div>
+          <div id="taps"></div>
+        </div>
+        <div class="softkeys" id="softkeys"></div>
+        <div class="pad" id="pad"></div>
+      </div>
+      <div class="device-meta">
+        <span id="status" data-i18n="site.device.loading"></span>
+        <span>
+          <select id="language" data-i18n-aria-label="site.device.language"></select>
+          <button id="start" type="button" data-i18n="site.device.start-over"></button>
+        </span>
+      </div>
+      <p class="device-note"><span data-i18n="site.device.note"></span> <a href="demo/index.html" data-demo data-i18n="site.device.full-demo"></a> <span data-i18n="site.device.full-demo-adds"></span></p>
+    </div>
+  </div>
+</header>
+
+
+<section class="alt" id="get">
+  <div class="wrap">
+    <h2 data-i18n="site.get.title"></h2>
+    <p class="intro muted" data-i18n="site.get.intro"></p>
+    <div class="steps">
+      <div class="step"><strong data-i18n="site.get.device.title"></strong><p data-i18n="site.get.device.text"></p></div>
+      <div class="step"><strong data-i18n="site.get.code.title"></strong><p data-i18n="site.get.code.text"></p><code class="cmd">git clone https://github.com/paulwilke/Phone-OS.git</code></div>
+      <div class="step"><strong data-i18n="site.get.card.title"></strong><p data-i18n="site.get.card.text"></p></div>
+      <div class="step"><strong data-i18n="site.get.flash.title"></strong><p data-i18n="site.get.flash.text"></p><code class="cmd">pio run -e device -t upload</code></div>
+    </div>
+    <p class="muted note"><span data-i18n="site.get.note"></span> <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/hardware/bring-up.md" data-i18n="site.get.checklist"></a></p>
+  </div>
+</section>
+
+<section id="verified">
+  <div class="wrap">
+    <h2 data-i18n="site.verified.title"></h2>
+    <p class="intro muted" data-i18n="site.verified.intro"></p>
+    <div class="words">
+      <div class="word"><strong data-i18n="site.verified.compiled.title"></strong><p data-i18n="site.verified.compiled.text"></p></div>
+      <div class="word"><strong data-i18n="site.verified.host.title"></strong><p data-i18n="site.verified.host.text"></p></div>
+      <div class="word"><strong data-i18n="site.verified.device.title"></strong><p data-i18n="site.verified.device.text"></p></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stat-version"></b><span data-i18n="site.stats.version"></span></div>
+      <div class="stat"><b data-number="2500+"></b><span data-i18n="site.stats.tests"></span></div>
+      <div class="stat"><b id="stat-pictures"></b><span data-i18n="site.stats.pictures"></span></div>
+      <div class="stat"><b data-number="0"></b><span data-i18n="site.stats.invented"></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="built">
+  <div class="wrap">
+    <h2 data-i18n="site.built.title"></h2>
+    <p class="intro muted" data-i18n="site.built.intro"></p>
+    <table class="layers">
+      <thead><tr><th data-i18n="site.built.layer"></th><th data-i18n="site.built.holds"></th><th data-i18n="site.built.may-know"></th></tr></thead>
+      <tbody>
+        <tr><td><code>src/hal/</code></td><td data-i18n="site.built.hal.holds"></td><td data-i18n="site.built.hal.knows"></td></tr>
+        <tr><td><code>src/app/</code> <code>src/ui/</code></td><td data-i18n="site.built.app.holds"></td><td data-i18n="site.built.app.knows"></td></tr>
+        <tr><td><code>src/drivers/</code> <code>src/board/</code></td><td data-i18n="site.built.drivers.holds"></td><td data-i18n="site.built.drivers.knows"></td></tr>
+        <tr><td><code>device/</code></td><td data-i18n="site.built.device.holds"></td><td><code>src/</code></td></tr>
+        <tr><td><code>sim/</code> <code>testing/</code></td><td data-i18n="site.built.sim.holds"></td><td><code>src/</code></td></tr>
+      </tbody>
+    </table>
+    <p class="muted" data-i18n="site.built.rules"></p>
+  </div>
+</section>
+
+<section id="does">
+  <div class="wrap">
+    <h2 data-i18n="site.does.title"></h2>
+    <p class="intro muted" data-i18n="site.does.intro"></p>
+    <div class="cards">
+      <article class="card">
+        <img src="demo/en/scene-incoming-call.png" data-picture="scene-incoming-call" data-i18n-alt="site.does.phone.alt" width="240" height="320">
+        <div><h3 data-i18n="site.does.phone.title"></h3><p data-i18n="site.does.phone.text"></p></div>
+      </article>
+      <article class="card">
+        <img id="pic-compose" src="demo/en/n0.png" data-picture="n0" data-i18n-alt="site.does.text.alt" width="240" height="320">
+        <div><h3 data-i18n="site.does.text.title"></h3><p data-i18n="site.does.text.text"></p></div>
+      </article>
+      <article class="card">
+        <img id="pic-sos" src="demo/en/n0.png" data-picture="n0" data-i18n-alt="site.does.sos.alt" width="240" height="320">
+        <div><h3 data-i18n="site.does.sos.title"></h3><p data-i18n="site.does.sos.text"></p></div>
+      </article>
+      <article class="card">
+        <img src="demo/en/scene-school-time.png" data-picture="scene-school-time" data-i18n-alt="site.does.school.alt" width="240" height="320">
+        <div><h3 data-i18n="site.does.school.title"></h3><p data-i18n="site.does.school.text"></p></div>
+      </article>
+      <article class="card">
+        <img src="demo/en/scene-parent-wifi-on.png" data-picture="scene-parent-wifi-on" data-i18n-alt="site.does.parents.alt" width="240" height="320">
+        <div><h3 data-i18n="site.does.parents.title"></h3><p data-i18n="site.does.parents.text"></p></div>
+      </article>
+      <article class="card">
+        <img src="demo/en/scene-battery-low.png" data-picture="scene-battery-low" data-i18n-alt="site.does.battery.alt" width="240" height="320">
+        <div><h3 data-i18n="site.does.battery.title"></h3><p data-i18n="site.does.battery.text"></p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="docs">
+  <div class="wrap">
+    <h2 data-i18n="site.docs.title"></h2>
+    <p class="intro muted" data-i18n="site.docs.intro"></p>
+    <div class="links">
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/user-guide.md" data-guide=""><strong data-i18n="site.docs.guide.title"></strong><span data-i18n="site.docs.guide.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/decisions.md"><strong data-i18n="site.docs.decisions.title"></strong><span data-i18n="site.docs.decisions.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/open-points.md"><strong data-i18n="site.docs.open-points.title"></strong><span data-i18n="site.docs.open-points.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/CHANGELOG.md"><strong data-i18n="site.docs.changelog.title"></strong><span data-i18n="site.docs.changelog.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/hardware/hardware-lessons.md"><strong data-i18n="site.docs.lessons.title"></strong><span data-i18n="site.docs.lessons.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/simulator.md"><strong data-i18n="site.docs.simulator.title"></strong><span data-i18n="site.docs.simulator.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/translating.md"><strong data-i18n="site.docs.translating.title"></strong><span data-i18n="site.docs.translating.text"></span></a>
+      <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/README.md"><strong data-i18n="site.docs.index.title"></strong><span data-i18n="site.docs.index.text"></span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p data-i18n="site.footer.licence"></p>
+    <p data-i18n="site.footer.generated"></p>
+  </div>
+</footer>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+"use strict";
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const data = JSON.parse($("data").textContent);
+  // The seven keys of the device: three touch keys under the screen, and four keys of the keyboard.
+  const SOFT = [["home", "⌂", "site.key.home"], ["inbox", "✉", "site.key.inbox"], ["compose", "✎", "site.key.compose"]];
+  const PAD = [["up", "▲", "site.key.up"], ["down", "▼", "site.key.down"], ["back", "⌫", "site.key.back"], ["select", "↵", "site.key.select"]];
+  const KEYBOARD = { ArrowUp: "up", ArrowDown: "down", Enter: "select", Backspace: "back", Escape: "back", h: "home", i: "inbox", w: "compose" };
+  // Written out key by key, so that scripts/check_i18n.py --usage sees every key the page asks for.
+  const SCREEN_NAMES = { home: "site.screen.home", lock: "site.screen.lock", clock: "site.screen.clock", phone: "site.screen.phone",
+    call: "site.screen.call", messages: "site.screen.messages", compose: "site.screen.compose", recipient: "site.screen.recipient",
+    sos: "site.screen.sos", settings: "site.screen.settings", net: "site.screen.net", language: "site.screen.language",
+    gnss: "site.screen.gnss", radio: "site.screen.radio", motion: "site.screen.motion", selftest: "site.screen.selftest",
+    power: "site.screen.power" };
+  // The user's guide exists in every language of the page; the other documents are English only.
+  const GUIDES = { en: "https://github.com/paulwilke/Phone-OS/blob/main/docs/user-guide.md",
+    de: "https://github.com/paulwilke/Phone-OS/blob/main/docs/de/benutzerhandbuch.md",
+    fr: "https://github.com/paulwilke/Phone-OS/blob/main/docs/fr/guide-utilisateur.md" };
+  const ATTRIBUTES = ["alt", "aria-label", "content"];
+  const DEFAULT = "en";
+
+  // The language is the address's (?lang=de), never the browser's: the page reads the same for everybody until a link
+  // or the selector asks for another, and the selector writes its choice back into the address so that a reload or a
+  // shared link keeps it. (Taken from the browser, it came back after every reload, whatever the selector had said.)
+  const asked = new URLSearchParams(location.search).get("lang");
+  let lang = (data.languages.find((l) => l.code === asked) || { code: DEFAULT }).code;
+  let graph = null;
+  let missing = false;
+  let node = 0;
+  const buttons = {};
+
+  function word(key, values) {
+    let text = data.words[lang][key] || data.words[DEFAULT][key] || key;
+    for (const name of Object.keys(values || {})) text = text.replace("{" + name + "}", values[name]);
+    return text;
+  }
+  const screenName = (screen) => (SCREEN_NAMES[screen] ? word(SCREEN_NAMES[screen]) : screen);
+  const outgoing = (key) => graph.edges.find((e) => e.from === node && e.key === key);
+  // The parts of a path are encoded: the language comes from the address or the selector, the name from an attribute.
+  const picture = (name) => "demo/" + encodeURIComponent(lang) + "/" + encodeURIComponent(name) + ".png";
+  // "2500+" is shown as 2,500+ in English, 2.500+ in German: the same number in every language.
+  function number(value) {
+    const m = /^(\d+)(.*)$/.exec(value);
+    return m ? Number(m[1]).toLocaleString(lang) + m[2] : value;
+  }
+
+  function makeKey(parent, [key, sym, label]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("data-i18n-aria-label", label);
+    const symbol = document.createElement("span");
+    symbol.className = "sym";
+    symbol.textContent = sym;
+    const name = document.createElement("span");
+    name.className = "lbl";
+    name.setAttribute("data-i18n", label);
+    button.appendChild(symbol);
+    button.appendChild(name);
+    button.addEventListener("click", () => press(key));
+    parent.appendChild(button);
+    buttons[key] = button;
+  }
+
+  // Every word and every picture of the page, in the language in use.
+  function translate() {
+    document.documentElement.lang = lang;
+    document.title = word("site.meta.title");
+    for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = word(el.getAttribute("data-i18n"));
+    for (const attr of ATTRIBUTES) {
+      for (const el of document.querySelectorAll("[data-i18n-" + attr + "]")) el.setAttribute(attr, word(el.getAttribute("data-i18n-" + attr)));
+    }
+    for (const el of document.querySelectorAll("[data-guide]")) el.setAttribute("href", GUIDES[el.getAttribute("data-guide") || lang]);
+    // The guide in the other languages, each by its own name; the one of the page's language is the button above.
+    for (const el of document.querySelectorAll("[data-native]")) {
+      const code = el.getAttribute("data-native");
+      const known = data.languages.find((l) => l.code === code);
+      el.textContent = known ? known.native : code;
+      el.hidden = code === lang;
+    }
+    // The full demo opens in the language of the page; it reads ?lang= as this page does, and English is its default too.
+    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", "demo/index.html" + (lang === DEFAULT ? "" : "?lang=" + encodeURIComponent(lang)));
+    for (const el of document.querySelectorAll("[data-number]")) el.textContent = number(el.getAttribute("data-number"));
+    for (const el of document.querySelectorAll("[data-picture]")) el.setAttribute("src", picture(el.getAttribute("data-picture")));
+    if (graph) show(false);
+    else if (missing) $("status").textContent = word("site.device.missing");
+  }
+
+  function choose(code) {
+    lang = (data.languages.find((l) => l.code === code) || { code: DEFAULT }).code;
+    $("language").value = lang;
+    const params = new URLSearchParams(location.search);
+    if (lang === DEFAULT) params.delete("lang"); else params.set("lang", lang);
+    const query = params.toString();
+    history.replaceState(null, "", location.pathname + (query ? "?" + query : "") + location.hash);
+    translate();
+  }
+
+  function press(key) {
+    if (!graph) return;
+    const edge = outgoing(key);
+    if (!edge) return;
+    node = edge.to;
+    show(true);
+  }
+
+  function show(moved) {
+    const current = graph.nodes[node];
+    const img = $("picture");
+    const screen = $("screen");
+    // A partial refresh of e-ink shows the old picture a moment longer; a flash stands in for the full refresh.
+    if (moved) { screen.classList.add("refresh"); setTimeout(() => screen.classList.remove("refresh"), 90); }
+    const values = { screen: screenName(current.screen), n: node + 1, total: graph.nodes.length };
+    img.setAttribute("src", picture("n" + node));
+    img.setAttribute("alt", word("site.device.picture", values));
+    $("status").textContent = word("site.device.status", values);
+    for (const key of Object.keys(buttons)) buttons[key].disabled = !outgoing(key);
+    // The touch targets of this picture, in percent of the panel's 240 x 320, so they scale with it.
+    const taps = $("taps");
+    taps.textContent = "";
+    for (const e of graph.edges) {
+      if (e.from !== node || !e.tap) continue;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tap";
+      b.setAttribute("aria-label", word("site.device.tap", { screen: screenName(graph.nodes[e.to].screen) }));
+      b.style.left = (e.tap.x / 240 * 100) + "%";
+      b.style.top = (e.tap.y / 320 * 100) + "%";
+      b.style.width = (e.tap.w / 240 * 100) + "%";
+      b.style.height = (e.tap.h / 320 * 100) + "%";
+      b.addEventListener("click", () => { node = e.to; show(true); });
+      taps.appendChild(b);
+    }
+    // Preload the neighbours so that a key press shows at once.
+    for (const e of graph.edges) if (e.from === node) new Image().src = picture("n" + e.to);
+  }
+
+  function firstOf(screen) {
+    const n = graph.nodes.find((x) => x.screen === screen);
+    return n ? n.id : graph.start;
+  }
+
+  for (const k of SOFT) makeKey($("softkeys"), k);
+  for (const k of PAD) makeKey($("pad"), k);
+  for (const l of data.languages) {
+    const option = document.createElement("option");
+    option.value = l.code;
+    option.textContent = l.native;
+    $("language").appendChild(option);
+  }
+  $("language").value = lang;
+  $("language").addEventListener("change", () => choose($("language").value));
+  $("start").addEventListener("click", () => { if (graph) { node = graph.start; show(true); } });
+  $("device").addEventListener("keydown", (ev) => {
+    const key = KEYBOARD[ev.key];
+    if (!key) return;
+    ev.preventDefault();
+    press(key);
+  });
+  translate();
+
+  fetch("demo/graph.json").then((r) => r.json()).then((g) => {
+    graph = g;
+    node = g.start;
+    $("stat-pictures").setAttribute("data-number", String(g.nodes.length * data.languages.length));
+    $("pic-compose").setAttribute("data-picture", "n" + firstOf("compose"));
+    $("pic-sos").setAttribute("data-picture", "n" + firstOf("sos"));
+    translate();
+  }).catch(() => {
+    missing = true;
+    translate();
+  });
+
+  fetch("version.txt").then((r) => r.ok ? r.text() : "").then((v) => {
+    if (v.trim()) $("stat-version").textContent = v.trim();
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

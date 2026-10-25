@@ -9,7 +9,7 @@ system entries say; lang/web/<code>.toml is what the parents' page and the confi
 (web.*, config.*). The device loads the first at start and the second only when the page needs it. A key
 lives in one of the two, never in both. Each set is checked on its own against its English file: the
 same keys in every language, the same {placeholders}, the plural forms. Words that only host tools show
-(the demo page) are a third kind, tools/lang/<set>.<code>.toml; they never go to the device, so they
+(the demo page, the project's web page in site/) are a third kind, tools/lang/<set>.<code>.toml; they never go to the device, so they
 do not weigh on its limit for a catalog (ConfigLoader::kMaxCatalogBytes), and are checked like the
 others (their text goes to a browser and not to the device font). The size of every shipped file is
 printed against the limit, which applies to each file; lang/en.toml and lang/web/en.toml, the files a
@@ -123,8 +123,12 @@ def shown(path):
 
 KEY_LITERAL = re.compile(r'"([a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+)"')
 # scripts/ is also searched so that gen_web.py's WEB_KEYS list covers the web.* catalog keys.
-CODE_DIRS = ("src", "testing", "test", "scripts", "sim")
+CODE_DIRS = ("src", "testing", "test", "scripts", "sim", "site")
 CODE_SUFFIXES = (".h", ".cpp", ".py")
+# The project's web page names its keys in its own markup (data-i18n="site.hero.title") and script, and nothing else
+# lists them: its HTML is the code of the host set `site`. Only site/ is read this way: the demo page's keys are listed
+# by its generator (scripts/make_demo.py), and web/index.html is generated from lang/web/.
+PAGE_DIR, PAGE_SUFFIX = "site", ".html"
 
 
 def _schema_catalog_keys():
@@ -221,7 +225,7 @@ def usage():
     for top in CODE_DIRS:
         for folder, _, names in os.walk(os.path.join(ROOT, top)):
             for name in names:
-                if not name.endswith(CODE_SUFFIXES):
+                if not (name.endswith(CODE_SUFFIXES) or (top == PAGE_DIR and name.endswith(PAGE_SUFFIX))):
                     continue
                 path = os.path.join(folder, name)
                 with open(path, encoding="utf-8") as f:

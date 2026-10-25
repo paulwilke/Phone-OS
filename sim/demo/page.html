@@ -13,6 +13,7 @@
   .stage { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; }
   figure { margin: 0; }
   img { display: block; width: 240px; height: 320px; image-rendering: pixelated; border: 1px solid var(--line); background: var(--paper); }
+  img.touch { cursor: pointer; }
   @media (min-width: 40rem) { img { width: 360px; height: 480px; } }
   .keys { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; max-width: 360px; }
   button, select { font: inherit; padding: 0.4rem 0.7rem; min-height: 2.5rem; border: 1px solid var(--line); border-radius: 6px;
@@ -50,7 +51,13 @@
 const data = JSON.parse(document.getElementById("data").textContent);
 const KEYS = ["up", "down", "select", "back", "home", "inbox", "compose"];
 const $ = (id) => document.getElementById(id);
-let lang = data.languages.some((l) => l.code === (navigator.language || "").slice(0, 2)) ? (navigator.language || "").slice(0, 2) : data.languages[0].code;
+// The language: the address first (?lang=de, so that a link from the web page keeps its language), then the
+// browser's, then English, which every build has; the first catalog is a fallback for a build without English.
+// What is used is the code of the catalog that was found, never the string of the address itself.
+const known = (code) => data.languages.find((l) => l.code === code);
+const asked = new URLSearchParams(location.search).get("lang") || "";
+const browser = (navigator.language || "").slice(0, 2);
+let lang = (known(asked) || known(browser) || known("en") || data.languages[0]).code;
 let node = data.graph.start;
 let scene = null;
 
@@ -60,6 +67,8 @@ const words = (key, values) => {
   return text;
 };
 const outgoing = (key) => data.graph.edges.find((e) => e.from === node && e.key === key);
+const taps = () => (scene ? [] : data.graph.edges.filter((e) => e.from === node && e.tap));
+const tapAt = (x, y) => taps().find((e) => x >= e.tap.x && x < e.tap.x + e.tap.w && y >= e.tap.y && y < e.tap.y + e.tap.h);
 const sceneTitle = (id) => words("demo.scene-" + id);
 
 function show() {
@@ -74,15 +83,16 @@ function show() {
   $("trimmed").textContent = data.graph.trimmed ? words("demo.trimmed", { n: data.graph.trimmed }) : "";
   const picture = $("picture");
   if (scene) {
-    picture.src = lang + "/scene-" + scene + ".png";
+    picture.src = encodeURIComponent(lang) + "/scene-" + encodeURIComponent(scene) + ".png";
     picture.alt = sceneTitle(scene);
     $("status").textContent = sceneTitle(scene);
   } else {
     const current = data.graph.nodes[node];
-    picture.src = lang + "/n" + node + ".png";
+    picture.src = encodeURIComponent(lang) + "/n" + encodeURIComponent(node) + ".png";
     picture.alt = words("demo.state", { n: node + 1, total: data.graph.nodes.length });
     $("status").textContent = picture.alt;
   }
+  picture.className = taps().length ? "touch" : "";
   $("walk").hidden = !scene;
   $("callNote").hidden = !!scene || data.graph.nodes[node].screen !== "call";
   $("callNote").textContent = words("demo.call-note");
@@ -118,6 +128,11 @@ for (const l of data.languages) {
 select.value = lang;
 select.addEventListener("change", () => { lang = select.value; show(); });
 $("start").addEventListener("click", () => { node = data.graph.start; scene = null; show(); });
+$("picture").addEventListener("click", (ev) => {
+  const picture = $("picture");
+  const edge = tapAt(Math.floor(ev.offsetX * 240 / picture.clientWidth), Math.floor(ev.offsetY * 320 / picture.clientHeight));
+  if (edge) { node = edge.to; show(); }
+});
 $("walk").addEventListener("click", () => { scene = null; show(); });
 show();
 </script>

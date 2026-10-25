@@ -109,3 +109,9 @@ jobs:
 
       - name: Privacy check tests
         run: python3 test/test_privacy_check/test_history.py
+
+      - name: The web page's assembly
+        run: python3 test/test_make_site/test_site.py
+
+      - name: The web page's words and language selector
+        run: node test/test_site_page/test.mjs

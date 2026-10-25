@@ -123,6 +123,17 @@ bool TileGrid::handle(const Input& input, const Rect& area, bool* chosen) {
   return false;
 }
 
+std::vector<Rect> TileGrid::targets(const Rect& area) const {
+  std::vector<Rect> out;
+  if (pages_.empty()) return out;
+  if (pages_.size() > 1)
+    for (size_t p = 0; p < pages_.size(); ++p) out.push_back(dotTarget(area, p));
+  const size_t shown = page();
+  const size_t first = firstOfPage(shown);
+  for (size_t i = 0; i < pages_[shown].size(); ++i) out.push_back(tileRect(area, first + i));
+  return out;
+}
+
 void TileGrid::drawTile(Display& display, const Rect& cell, const Tile& tile, bool selected) {
   const Font& small = font(FontSize::Small);
   const Font& symbolFont = font(FontSize::Tile);

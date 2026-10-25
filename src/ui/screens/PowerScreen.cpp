@@ -38,6 +38,11 @@ SoftKeys PowerScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> PowerScreen::targets(const Rect& area) {
+  rebuild();
+  return rows_.targets(rowsArea(area));
+}
+
 bool PowerScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     if (asking_) {

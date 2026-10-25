@@ -104,6 +104,11 @@ SoftKeys HomeScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> HomeScreen::targets(const Rect& area) {
+  rebuild();
+  return grid_.targets(area);
+}
+
 bool HomeScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     nav().lock();

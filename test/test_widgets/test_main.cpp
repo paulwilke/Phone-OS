@@ -794,6 +794,34 @@ void test_a_tap_on_a_tile_selects_and_chooses_it() {
   TEST_ASSERT_EQUAL(2, grid.selected());
 }
 
+// What the grid reports as targets is what handle() lets a tap hit: the dots' parts and the tiles of the page on
+// show, each used when tapped in the middle, and a tap just outside all of them hits nothing.
+void test_the_grid_reports_the_dots_and_the_tiles_on_show_as_touch_targets() {
+  Translator t = languages::loaded();
+  TileGrid grid(2, 3);
+  grid.setPages(homeTiles(t));
+  const std::vector<Rect> targets = grid.targets(kGridArea);
+  TEST_ASSERT_EQUAL(2 + 4, targets.size());   // two dots, the four tiles of the first page
+  TEST_ASSERT_TRUE(targets[0] == grid.dotTarget(kGridArea, 0) && targets[1] == grid.dotTarget(kGridArea, 1));
+  for (size_t i = 0; i < 4; ++i) TEST_ASSERT_TRUE(targets[2 + i] == grid.tileRect(kGridArea, i));
+  for (const Rect& r : targets) {
+    TileGrid fresh(2, 3);
+    fresh.setPages(homeTiles(t));
+    bool chosen = false;
+    TEST_ASSERT_TRUE(fresh.handle(Input::touch(r.x + r.w / 2, r.y + r.h / 2), kGridArea, &chosen));
+  }
+  bool chosen = false;
+  TEST_ASSERT_FALSE(grid.handle(Input::touch(targets[2].right() + 1, targets[2].y + 5), kGridArea, &chosen));
+  // On the second page the tiles of that page are the targets, and nothing of the first.
+  press(grid, Key::Down, 4);
+  const std::vector<Rect> second = grid.targets(kGridArea);
+  TEST_ASSERT_EQUAL(2 + 2, second.size());
+  TEST_ASSERT_TRUE(second[2] == grid.tileRect(kGridArea, 4));
+  TileGrid one(2, 3);
+  one.setPages({homeTiles(t)[0]});
+  TEST_ASSERT_EQUAL(4, one.targets(kGridArea).size());   // one page: no dots
+}
+
 void test_only_the_tiles_of_the_page_on_show_can_be_tapped() {
   Translator t = languages::loaded();
   TileGrid grid(2, 3);
@@ -1026,6 +1054,31 @@ void test_select_and_taps_choose_a_row() {
   TEST_ASSERT_FALSE(chosen);
   TEST_ASSERT_FALSE(list.handle(Input::touch(238, kListArea.y + 3), kListArea, &chosen));  // on the scroll bar
   TEST_ASSERT_EQUAL(4, list.selected());
+}
+
+// The rows on show are the targets: a short list has as many as rows, a long one as many as fit, and after
+// scrolling the same rectangles stand for the rows in the window.
+void test_the_list_reports_the_rows_on_show_as_touch_targets() {
+  ListView two;
+  two.setItems(numbered(2));
+  std::vector<Rect> targets = two.targets(kListArea);
+  TEST_ASSERT_EQUAL(2, targets.size());
+  TEST_ASSERT_TRUE(targets[1] == two.rowRect(kListArea, 1));
+  bool chosen = false;
+  TEST_ASSERT_TRUE(two.handle(Input::touch(targets[1].x + targets[1].w / 2, targets[1].y + targets[1].h / 2), kListArea, &chosen));
+  TEST_ASSERT_TRUE(chosen && two.selected() == 1);
+
+  ListView many;
+  many.setItems(numbered(30));
+  TEST_ASSERT_EQUAL(many.visibleRows(kListArea), many.targets(kListArea).size());
+  press(many, Key::Down, 29);
+  targets = many.targets(kListArea);
+  TEST_ASSERT_EQUAL(many.visibleRows(kListArea), targets.size());
+  many.handle(Input::touch(targets[0].x + 5, targets[0].y + 3), kListArea, &chosen);
+  TEST_ASSERT_EQUAL(many.firstVisible(), many.selected());
+
+  ListView none;
+  TEST_ASSERT_EQUAL(0, none.targets(kListArea).size());
 }
 
 void test_a_tap_below_the_last_row_of_a_short_list_hits_nothing() {
@@ -1283,6 +1336,21 @@ void test_a_tap_on_an_option_row_moves_the_focus_and_chooses_it() {
   TEST_ASSERT_EQUAL(1, rows.selected());
 }
 
+void test_the_option_rows_report_the_rows_on_show_as_touch_targets() {
+  OptionRows rows;
+  rows.setRows(options(4));
+  const std::vector<Rect> targets = rows.targets(kListArea);
+  TEST_ASSERT_EQUAL(std::min<size_t>(4, rows.visibleRows(kListArea)), targets.size());
+  for (size_t i = 0; i < targets.size(); ++i) {
+    TEST_ASSERT_TRUE(targets[i] == rows.rowRect(kListArea, i));
+    bool chosen = false;
+    TEST_ASSERT_TRUE(rows.handle(Input::touch(targets[i].x + 3, targets[i].y + targets[i].h / 2), kListArea, &chosen));
+    TEST_ASSERT_TRUE(chosen && rows.selected() == i);
+  }
+  OptionRows none;
+  TEST_ASSERT_EQUAL(0, none.targets(kListArea).size());
+}
+
 void test_option_rows_scroll_with_the_focus() {
   OptionRows rows;
   rows.setRows(options(12));
@@ -1400,6 +1468,7 @@ int main() {
   RUN_TEST(test_the_page_follows_the_selection);
   RUN_TEST(test_select_chooses_the_selected_tile_and_other_input_is_not_used);
   RUN_TEST(test_a_tap_on_a_tile_selects_and_chooses_it);
+  RUN_TEST(test_the_grid_reports_the_dots_and_the_tiles_on_show_as_touch_targets);
   RUN_TEST(test_only_the_tiles_of_the_page_on_show_can_be_tapped);
   RUN_TEST(test_tiles_fill_the_grid_row_by_row_without_overlap);
   RUN_TEST(test_a_page_holds_at_most_one_grid_and_empty_pages_are_dropped);
@@ -1413,6 +1482,7 @@ int main() {
   RUN_TEST(test_the_list_selection_stops_at_both_ends);
   RUN_TEST(test_the_window_follows_the_selection_in_a_long_list);
   RUN_TEST(test_select_and_taps_choose_a_row);
+  RUN_TEST(test_the_list_reports_the_rows_on_show_as_touch_targets);
   RUN_TEST(test_a_tap_below_the_last_row_of_a_short_list_hits_nothing);
   RUN_TEST(test_a_tap_in_a_scrolled_list_hits_the_row_on_show);
   RUN_TEST(test_replacing_the_items_keeps_the_selection_inside_the_list);
@@ -1420,6 +1490,7 @@ int main() {
   RUN_TEST(test_a_list_that_shrinks_fills_its_window_again);
   RUN_TEST(test_option_rows_stop_at_both_ends_and_choose_with_select);
   RUN_TEST(test_a_tap_on_an_option_row_moves_the_focus_and_chooses_it);
+  RUN_TEST(test_the_option_rows_report_the_rows_on_show_as_touch_targets);
   RUN_TEST(test_option_rows_scroll_with_the_focus);
   RUN_TEST(test_a_row_without_a_value_is_a_lower_button);
   RUN_TEST(test_the_focused_option_row_is_drawn_inverted);

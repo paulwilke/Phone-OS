@@ -76,6 +76,8 @@ public:
   void endInterrupt(ScreenId id);
 
   ScreenId visibleId() const { return locked_ ? lock_ : path_[depth_ - 1]; }
+  // The visible screen itself, or null before begin() or when its id is not registered.
+  Screen* visible() const { return screen(visibleId()); }
   bool locked() const { return locked_; }
   size_t depth() const { return depth_; }
   ScreenId pathAt(size_t index) const { return path_[index]; }

@@ -19,6 +19,8 @@ Everything lives in `src/ui/`, depends only on the display ([ui-display.md](ui-d
 
 A tap is turned into a key or a selection by the widget under it, so a screen has one input logic for keys and touches alike.
 
+**Touch targets.** A screen says where a tap does something: `Screen::touchTargets()` returns the places as `TouchTarget` (a rectangle, and the key it stands for when it is a soft key). `AppScreen` answers it for every screen: the soft keys that are shown, from `softKeySlots`, and then the screen's own `targets(area)`, the rectangles its `onInput` tests a touch against, as the content was drawn last. The widgets give theirs (`TileGrid::targets`: the dots' parts and the tiles of the page on show; `ListView::targets` and `OptionRows::targets`: the rows on show), and a screen with buttons of its own lists them (the three choices of the SOS page, the keypad, the volume buttons in a call); a screen whose content ignores touches, the lock screen among them, reports none. Only what does something *now* is listed, so a tap in the middle of each target is used: `test_simulator` taps every target of every state of a short walk and expects that, and that no two overlap. The simulator's walk ([demo.md](../process/demo.md)) taps them to find the pictures a finger reaches, and the demo page and the web page lay them over the picture. `ScreenStack::visible()` gives the visible screen to whoever asks it.
+
 ## Screens and the screen stack
 
 A `ui::Screen` (`Screen.h`) has `handle(Input)`, `render(Display&)` and two calls that bracket the time it is visible:

@@ -1,5 +1,6 @@
 #include "ui/screens/MessageListScreen.h"
 
+#include <algorithm>
 #include <string_view>
 
 #include "ui/Fonts.h"
@@ -245,6 +246,16 @@ void MessageListScreen::remove() {
   if (const Message* m = selected()) app().deleteMessage(m->seq);
   mode_ = Mode::List;
   clampSelection();
+}
+
+std::vector<Rect> MessageListScreen::targets(const Rect& area) {
+  if (mode_ != Mode::List) return {};
+  const std::vector<const Message*> list = visible();
+  std::vector<Rect> out{{area.x, area.y, area.w, headerHeight(area)}};
+  const size_t rows = list.size() > first_ ? std::min(rowsOnShow(area), list.size() - first_) : 0;
+  for (size_t i = 0; i < rows; ++i)
+    out.push_back({area.x, area.y + headerHeight(area) + static_cast<int>(i) * rowHeight(), area.w, rowHeight()});
+  return out;
 }
 
 bool MessageListScreen::onInput(const Input& input, const Rect& area) {

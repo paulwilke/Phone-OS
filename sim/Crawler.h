@@ -1,17 +1,19 @@
 #pragma once
 
-// Finds every picture of the device that the keys can reach, and how: a breadth-first walk over what
-// the three keys under the screen, the arrows, Enter and Back do. The device has no way to save and
-// restore its state, so each step starts a new Simulator on the same card, plays the prelude (the
-// world the pictures are taken in: some messages, a missed call), presses the keys of the path and
-// looks at the panel. Two pictures are the same state when they are the same picture on the same
-// screen.
+// Finds every picture of the device that the keys and a finger can reach, and how: a breadth-first walk
+// over what the three keys under the screen, the arrows, Enter and Back do, and over the places each
+// screen says a tap hits (Screen::touchTargets: the soft keys, the tiles, the rows, the buttons). The
+// device has no way to save and restore its state, so each step starts a new Simulator on the same
+// card, plays the prelude (the world the pictures are taken in: some messages, a missed call), replays
+// the path and looks at the panel. Two pictures are the same state when they are the same picture on
+// the same screen.
 //
 // The graph is the structure of the interface and does not depend on the language: it is found in
 // English, and the same path is replayed in the other languages to take their pictures. That a path
 // leads to the same screen in every language is what the replay checks (the screen's name is
 // compared), so a layout that navigates differently in one language is reported.
 
+#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <fstream>
@@ -30,13 +32,17 @@ struct CrawlNode {
   int id = 0;
   std::string screen;            // the name of the screen on top, "lock" while locked
   int depth = 0;
-  std::vector<std::string> path;  // the keys from the start
+  std::vector<std::string> path;  // the steps from the start, as console lines: "key up", "tap 120 160"
 };
 
+// A tap is a target the screen reported: the edge carries its rectangle, so that the page can let a finger
+// hit it, and the step of the path taps its middle.
 struct CrawlEdge {
   int from = 0;
-  std::string key;
+  std::string key;               // empty for a tap
+  ui::Rect tap;                  // empty for a key
   int to = 0;
+  bool isTap() const { return key.empty(); }
 };
 
 struct Crawl {
@@ -85,18 +91,19 @@ public:
       queue.pop_front();
       if (crawl.nodes[static_cast<size_t>(from)].depth >= maxDepth) continue;
       const std::string here = crawl.nodes[static_cast<size_t>(from)].screen;  // a copy: push_back below may move the nodes
-      for (const std::string& key : keys()) {
-        if (!worldStaysAsItIs(here, key)) continue;
+      // One step from `from`: the state it leads to is kept, or trimmed, or known; an edge is recorded when it
+      // leads somewhere else. Null when the device did not start.
+      const auto step = [&](const std::string& line, const std::string& key, const ui::Rect& tap) {
         std::vector<std::string> path = crawl.nodes[static_cast<size_t>(from)].path;
-        path.push_back(key);
+        path.push_back(line);
         std::unique_ptr<Simulator> sim = reach(path, "");
-        if (!sim) return crawl;
+        if (!sim) return false;
         const std::pair<uint32_t, std::string> identity{sim->panel().shown().crc(), screenOf(*sim)};
         auto known = seen.find(identity);
         if (known == seen.end()) {
           if (perScreenCount[identity.second] >= perScreen) {
             ++crawl.trimmed;
-            continue;
+            return true;
           }
           ++perScreenCount[identity.second];
           const int id = static_cast<int>(crawl.nodes.size());
@@ -104,10 +111,33 @@ public:
           known = seen.emplace(identity, id).first;
           queue.push_back(id);
         }
-        if (known->second != from) crawl.edges.push_back({from, key, known->second});
+        if (known->second != from) crawl.edges.push_back({from, key, tap, known->second});
+        return true;
+      };
+      for (const std::string& key : keys()) {
+        if (!worldStaysAsItIs(here, key)) continue;
+        if (!step("key " + key, key, {})) return crawl;
+      }
+      // The taps: what the screen in the state `from` says a finger hits. The device is started once more to
+      // ask it; the targets are those of the picture as drawn, so the page can lay them over the picture.
+      std::unique_ptr<Simulator> at = reach(crawl.nodes[static_cast<size_t>(from)].path, "");
+      if (!at) return crawl;
+      for (const ui::TouchTarget& target : targets(*at)) {
+        if (!worldStaysAsItIs(here, target)) continue;
+        const ui::Rect r = target.rect;
+        if (!step("tap " + std::to_string(r.x + r.w / 2) + " " + std::to_string(r.y + r.h / 2), "", r)) return crawl;
       }
     }
     return crawl;
+  }
+
+  // The places a tap hits on the screen the device shows now, as the visible screen reports them after a frame
+  // was drawn (the soft keys as drawn last, the rows on show). Empty when nothing on it answers a tap.
+  static std::vector<ui::TouchTarget> targets(Simulator& sim) {
+    ui::Screen* screen = sim.runtime().stack().visible();
+    std::vector<ui::TouchTarget> out = screen ? screen->touchTargets() : std::vector<ui::TouchTarget>{};
+    out.erase(std::remove_if(out.begin(), out.end(), [](const ui::TouchTarget& t) { return t.rect.empty(); }), out.end());
+    return out;
   }
 
   // Keys that change the world and not only the picture are not pressed, or every state would multiply
@@ -118,6 +148,24 @@ public:
     if (screen == "call") return false;
     if (screen == "compose" && key == "select") return false;
     return true;
+  }
+  // The same for a tap: a soft key is its key; a tap on the content of the compose page is a ready-made
+  // message, which would be sent (the recipient line is harmless, but the walk cannot tell them apart).
+  static bool worldStaysAsItIs(const std::string& screen, const ui::TouchTarget& target) {
+    if (target.key) return worldStaysAsItIs(screen, keyName(*target.key));
+    return screen != "call" && screen != "compose";
+  }
+  static std::string keyName(ui::Key key) {
+    switch (key) {
+      case ui::Key::Up: return "up";
+      case ui::Key::Down: return "down";
+      case ui::Key::Select: return "select";
+      case ui::Key::Back: return "back";
+      case ui::Key::Home: return "home";
+      case ui::Key::Inbox: return "inbox";
+      case ui::Key::Compose: return "compose";
+    }
+    return "";
   }
 
   // A new device in the state the path leads to, in `language` (empty: the card's own), or null when the
@@ -134,7 +182,7 @@ public:
     }
     if (!language.empty()) sim->execute("language " + language);
     if (!prelude_.empty()) sim->runScript(prelude_);
-    for (const std::string& key : path) sim->execute("key " + key);
+    for (const std::string& line : path) sim->execute(line);
     sim->settle();
     sim->runtime().render();
     return sim;
@@ -155,9 +203,15 @@ public:
       out << (i ? "," : "") << "{\"id\":" << crawl.nodes[i].id << ",\"screen\":\"" << crawl.nodes[i].screen
           << "\",\"depth\":" << crawl.nodes[i].depth << "}";
     out << "],\"edges\":[";
-    for (size_t i = 0; i < crawl.edges.size(); ++i)
-      out << (i ? "," : "") << "{\"from\":" << crawl.edges[i].from << ",\"key\":\"" << crawl.edges[i].key
-          << "\",\"to\":" << crawl.edges[i].to << "}";
+    for (size_t i = 0; i < crawl.edges.size(); ++i) {
+      const CrawlEdge& e = crawl.edges[i];
+      out << (i ? "," : "") << "{\"from\":" << e.from;
+      if (e.isTap())
+        out << ",\"tap\":{\"x\":" << e.tap.x << ",\"y\":" << e.tap.y << ",\"w\":" << e.tap.w << ",\"h\":" << e.tap.h << "}";
+      else
+        out << ",\"key\":\"" << e.key << "\"";
+      out << ",\"to\":" << e.to << "}";
+    }
     out << "]}\n";
     return out.str();
   }

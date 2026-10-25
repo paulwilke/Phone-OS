@@ -44,6 +44,13 @@ void OptionRows::scrollToSelection(const Rect& area) {
   if (rows_.size() > rows && first_ > rows_.size() - rows) first_ = rows_.size() - rows;
 }
 
+std::vector<Rect> OptionRows::targets(const Rect& area) const {
+  std::vector<Rect> out;
+  const size_t rows = rows_.size() > first_ ? std::min(visibleRows(area), rows_.size() - first_) : 0;
+  for (size_t i = 0; i < rows; ++i) out.push_back(rowRect(area, i));
+  return out;
+}
+
 bool OptionRows::handle(const Input& input, const Rect& area, bool* chosen) {
   *chosen = false;
   if (rows_.empty()) return false;

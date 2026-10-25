@@ -71,6 +71,11 @@ SoftKeys LanguageScreen::keys() {
   return keys;
 }
 
+std::vector<Rect> LanguageScreen::targets(const Rect& area) {
+  rebuild();
+  return list_.targets(listArea(area));
+}
+
 bool LanguageScreen::onInput(const Input& input, const Rect& area) {
   if (input.isKey(Key::Back)) {
     nav().back();
