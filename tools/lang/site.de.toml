@@ -103,6 +103,7 @@ site.stats.invented = "echte Namen oder Nummern: jedes Beispiel ist erfunden"
 
 site.built.title         = "Eine Anwendung, zwei Plattformen"
 site.built.intro         = "Die Firmware und der Simulator führen dieselbe Zusammenstellung desselben Codes aus. Was sich unterscheidet, liegt unter den Schnittstellen der Fähigkeiten: echte Chips auf dem Gerät, geskriptete Nachbildungen auf dem Laptop. Darum sind die Bilder auf dieser Seite die Bilder des Geräts."
+site.built.hardware      = "Die Firmware läuft auf einem ESP32-S3 mit E-Ink-Display, 4G-Modem, Positionsempfänger und Batteriemessung. Bisher ist sie auf einer Platine in Betrieb genommen, dem LilyGO T-Deck Pro MAX, das fertig zu kaufen ist; eine andere Platine braucht eigenen Plattformcode unterhalb der Fähigkeiten, und darüber ändert sich nichts."
 site.built.layer         = "Schicht"
 site.built.holds         = "Enthält"
 site.built.may-know      = "Darf kennen"

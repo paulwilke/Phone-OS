@@ -243,6 +243,7 @@
   <div class="wrap">
     <h2 data-i18n="site.built.title"></h2>
     <p class="intro muted" data-i18n="site.built.intro"></p>
+    <p class="intro muted" data-i18n="site.built.hardware"></p>
     <table class="layers">
       <thead><tr><th data-i18n="site.built.layer"></th><th data-i18n="site.built.holds"></th><th data-i18n="site.built.may-know"></th></tr></thead>
       <tbody>
@@ -308,7 +309,7 @@
   // or the selector asks for another, and the selector writes its choice back into the address so that a reload or a
   // shared link keeps it. (Taken from the browser, it came back after every reload, whatever the selector had said.)
   const asked = new URLSearchParams(location.search).get("lang");
-  let lang = asked && data.words[asked] ? asked : DEFAULT;
+  let lang = (data.languages.find((l) => l.code === asked) || { code: DEFAULT }).code;
   let graph = null;
   let missing = false;
   let node = 0;
@@ -321,7 +322,8 @@
   }
   const screenName = (screen) => (SCREEN_NAMES[screen] ? word(SCREEN_NAMES[screen]) : screen);
   const outgoing = (key) => graph.edges.find((e) => e.from === node && e.key === key);
-  const picture = (name) => "demo/" + lang + "/" + name + ".png";
+  // The parts of a path are encoded: the language comes from the address or the selector, the name from an attribute.
+  const picture = (name) => "demo/" + encodeURIComponent(lang) + "/" + encodeURIComponent(name) + ".png";
   // "2500+" is shown as 2,500+ in English, 2.500+ in German: the same number in every language.
   function number(value) {
     const m = /^(\d+)(.*)$/.exec(value);
@@ -362,7 +364,7 @@
       el.hidden = code === lang;
     }
     // The full demo opens in the language of the page; it reads ?lang= as this page does, and English is its default too.
-    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", "demo/index.html" + (lang === DEFAULT ? "" : "?lang=" + lang));
+    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", "demo/index.html" + (lang === DEFAULT ? "" : "?lang=" + encodeURIComponent(lang)));
     for (const el of document.querySelectorAll("[data-number]")) el.textContent = number(el.getAttribute("data-number"));
     for (const el of document.querySelectorAll("[data-picture]")) el.setAttribute("src", picture(el.getAttribute("data-picture")));
     if (graph) show(false);
@@ -370,7 +372,7 @@
   }
 
   function choose(code) {
-    lang = data.words[code] ? code : DEFAULT;
+    lang = (data.languages.find((l) => l.code === code) || { code: DEFAULT }).code;
     $("language").value = lang;
     const params = new URLSearchParams(location.search);
     if (lang === DEFAULT) params.delete("lang"); else params.set("lang", lang);

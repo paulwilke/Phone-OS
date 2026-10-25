@@ -542,8 +542,8 @@ Consequences: `kEdv1Mv` and `kEdv2Mv` in `src/board/FuelGauge.h` with their comm
 Verified: host-tested; compiled; not verified on the device
 
 ## D-48: The project has a web page on GitHub Pages, with the click-through demo as its first screen
-Date: 2026-10-25   Status: open
-Decided by: owner (2026-10-25: a page that presents the project, with the simulator on its first screen); agent (the shape, waiting for the owner's confirmation)
+Date: 2026-10-25   Status: decided
+Decided by: owner (2026-10-25: a page that presents the project, with the simulator on its first screen); agent (confirmed by owner on 2026-10-25)
 
 Context: The owner asked for a GitHub page that presents the project with the running simulator on its first screen. The simulator is a C++ program on the laptop (threads, sockets for the parents' page, a card on disk); a browser cannot run it as it is. What exists for a browser is the click-through demo ([demo.md](process/demo.md)): the simulator takes a picture of every state the keys reach, and a static page walks through them along the graph of the walk, in three languages.
 Options: Compile the simulator to WebAssembly and run it in the page (the real behaviour in the browser, but a toolchain the project does not have, a stub for the sockets and the card, a port of the loop without threads: a project of its own, and the timing would still not be the device's). Embed the click-through demo as the page's first screen (what the keys reach, drawn by the simulator on every build; no scenes, no time, no incoming call unless a picture of it is linked). A page with pictures made by hand (against the rule that nothing of the demo is drawn by hand). Where it is published: a `gh-pages` branch with generated files committed (against "nothing generated is committed"), the `docs/` folder (which is the documentation and is checked as such), or GitHub Pages built by a workflow from `site/` and a fresh run of the demo.
@@ -553,8 +553,8 @@ Consequences: `site/index.html`, `tools/lang/site.{en,de,fr}.toml`, `scripts/mak
 Verified: host-tested (`test_site.py`, the page assembled and opened in a browser from `out/site/`); not published yet
 
 ## D-49: The screens report their touch targets, and the walk taps them
-Date: 2026-10-25   Status: open
-Decided by: owner (2026-10-25: the touch screen must work on the web page); agent (the way, waiting for the owner's confirmation)
+Date: 2026-10-25   Status: decided
+Decided by: owner (2026-10-25: the touch screen must work on the web page); agent (confirmed by owner on 2026-10-25)
 
 Context: The web page (D-48) showed the device with its seven keys, and the owner asked why the touch screen did not work: on the device the tiles, the rows and the soft keys are tapped, and a page that shows the device without that shows it wrong. The walk of the simulator pressed keys only, so no picture reached by a tap existed, and no state knew where a finger would hit something. A simulator start costs about 40 ms, and the walk has about 250 states.
 Options: Tap a grid of points on every state blindly (300 points at 16 pixels: 75,000 starts, about an hour, and the regions found would be as coarse as the grid). Read the pressable rectangles off the picture (frames, inverted rows: a heuristic that breaks with the first new widget). Let every screen say where a tap does something, through the rectangles its `onInput` already tests a touch against, and tap the middle of each (one more start per state to ask, one per target to tap; exact rectangles; a change in the interface).

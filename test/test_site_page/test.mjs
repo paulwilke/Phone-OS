@@ -16,10 +16,25 @@ const html = readFileSync(resolve(ROOT, 'site', 'index.html'), 'utf8');
 let pass = 0, fail = 0;
 const assert = (cond, msg) => { if (cond) { pass++; console.log('  PASS:', msg); } else { fail++; console.error('  FAIL:', msg); } };
 
+// Cuts every span from `open` to `close` out of the text (the page's own source from the repository, not anyone's input);
+// with `keepOpen` the opening tag stays and only what is between the tags goes.
+function without(text, open, close, keepOpen = false) {
+  let out = text;
+  let i = out.indexOf(open);
+  while (i >= 0) {
+    const j = out.indexOf(close, i + open.length);
+    const k = keepOpen ? out.indexOf('>', i) + 1 : i;
+    out = out.slice(0, k) + (j < 0 ? '' : out.slice(keepOpen ? j : j + close.length));
+    i = out.indexOf(open, k);
+  }
+  return out;
+}
+const tags = (text) => without(text, '<', '>');
+
 // ---- no words of its own ---------------------------------------------------------------------------------
-const markup = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+const markup = without(without(without(html, '<script', '</script>'), '<style', '</style>'), '<!--', '-->');
 // The one text the markup may hold: a path of the repository in <code>, the same in every language.
-const visible = markup.replace(/<code>[a-z]+(?:\/[a-z]+)*\/<\/code>/g, '').replace(/<[^>]*>/g, '').trim();
+const visible = tags(markup.replace(/<code>[a-z]+(?:\/[a-z]+)*\/<\/code>/g, '')).trim();
 assert(visible === '', 'the markup holds no text: every word comes from the catalogs' + (visible ? ': ' + visible.slice(0, 80) : ''));
 const wordy = [...markup.matchAll(/\s(alt|aria-label|title|placeholder)="/g)].map((m) => m[1]);
 assert(wordy.length === 0, 'no attribute of the markup holds words: they are keys (data-i18n-alt, data-i18n-aria-label)' + (wordy.length ? ': ' + wordy.join(', ') : ''));
@@ -54,8 +69,8 @@ class Element {
 // Every element of the markup with its attributes; what the script creates hangs below them.
 function parse() {
   const out = [];
-  const tags = html.replace(/(<script[^>]*>)[\s\S]*?<\/script>/g, '$1</script>').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<!--[\s\S]*?-->/g, '');
-  for (const m of tags.matchAll(/<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g)) {
+  const source = without(without(without(html, '<script', '</script>', true), '<style', '</style>'), '<!--', '-->');
+  for (const m of source.matchAll(/<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g)) {
     const attrs = {};
     for (const a of m[2].matchAll(/([a-zA-Z:-]+)(?:="([^"]*)")?/g)) attrs[a[1]] = a[2] === undefined ? '' : a[2];
     out.push(new Element(m[1].toLowerCase(), attrs));

@@ -102,6 +102,7 @@ site.stats.invented = "real names or numbers: every example is invented"
 
 site.built.title         = "One application, two platforms"
 site.built.intro         = "The firmware and the simulator run the same composition of the same code. What differs is below the capability interfaces: real chips on the device, scripted fakes on the laptop. That is why the pictures on this page are the device's pictures."
+site.built.hardware      = "The firmware runs on an ESP32-S3 with an e-ink display, a 4G modem, a positioning receiver and a battery gauge. So far it has been brought up on one board, the LilyGO T-Deck Pro MAX, which is sold off the shelf; another board needs its own platform code below the capabilities, and nothing above them changes."
 site.built.layer         = "Layer"
 site.built.holds         = "Holds"
 site.built.may-know      = "May know"

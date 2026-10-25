@@ -103,6 +103,7 @@ site.stats.invented = "nom ou numéro réel : chaque exemple est inventé"
 
 site.built.title         = "Une application, deux plateformes"
 site.built.intro         = "Le firmware et le simulateur exécutent le même assemblage du même code. Ce qui diffère se trouve sous les interfaces des capacités : de vraies puces sur l'appareil, des imitations scriptées sur le portable. C'est pourquoi les images de cette page sont celles de l'appareil."
+site.built.hardware      = "Le firmware tourne sur un ESP32-S3 avec un écran e-ink, un modem 4G, un récepteur de position et une jauge de batterie. Jusqu'ici il a été mis en service sur une seule carte, la LilyGO T-Deck Pro MAX, vendue toute faite ; une autre carte demande son propre code de plateforme sous les capacités, et rien ne change au-dessus."
 site.built.layer         = "Couche"
 site.built.holds         = "Contient"
 site.built.may-know      = "Peut connaître"

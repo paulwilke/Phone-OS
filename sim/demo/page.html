@@ -53,10 +53,11 @@ const KEYS = ["up", "down", "select", "back", "home", "inbox", "compose"];
 const $ = (id) => document.getElementById(id);
 // The language: the address first (?lang=de, so that a link from the web page keeps its language), then the
 // browser's, then English, which every build has; the first catalog is a fallback for a build without English.
-const has = (code) => data.languages.some((l) => l.code === code);
+// What is used is the code of the catalog that was found, never the string of the address itself.
+const known = (code) => data.languages.find((l) => l.code === code);
 const asked = new URLSearchParams(location.search).get("lang") || "";
 const browser = (navigator.language || "").slice(0, 2);
-let lang = has(asked) ? asked : has(browser) ? browser : has("en") ? "en" : data.languages[0].code;
+let lang = (known(asked) || known(browser) || known("en") || data.languages[0]).code;
 let node = data.graph.start;
 let scene = null;
 
@@ -82,12 +83,12 @@ function show() {
   $("trimmed").textContent = data.graph.trimmed ? words("demo.trimmed", { n: data.graph.trimmed }) : "";
   const picture = $("picture");
   if (scene) {
-    picture.src = lang + "/scene-" + scene + ".png";
+    picture.src = encodeURIComponent(lang) + "/scene-" + encodeURIComponent(scene) + ".png";
     picture.alt = sceneTitle(scene);
     $("status").textContent = sceneTitle(scene);
   } else {
     const current = data.graph.nodes[node];
-    picture.src = lang + "/n" + node + ".png";
+    picture.src = encodeURIComponent(lang) + "/n" + node + ".png";
     picture.alt = words("demo.state", { n: node + 1, total: data.graph.nodes.length });
     $("status").textContent = picture.alt;
   }
