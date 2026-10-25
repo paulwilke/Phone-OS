@@ -25,6 +25,7 @@ demo.trimmed          = "{n} weitere Varianten dieser Bildschirme sind nicht im 
 demo.call-note        = "Ein Anruf läuft. Die Tasten gehören zum Anruf: siehe die Szenen unten."
 demo.scenes           = "Bilder, zu denen die Tasten nicht führen"
 demo.back-to-walk     = "Zurück zum Rundgang"
+demo.legal-notice     = "Impressum"
 demo.scene-unread           = "Nachrichten und ein verpasster Anruf warten"
 demo.scene-incoming-call    = "Ein Anruf kommt"
 demo.scene-call-connected   = "Im Gespräch"

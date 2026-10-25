@@ -42,7 +42,7 @@ MIN_STATES = 60
 PAGE_WORDS = [
     "demo.title", "demo.intro", "demo.language", "demo.key-up", "demo.key-down", "demo.key-select", "demo.key-back",
     "demo.key-home", "demo.key-inbox", "demo.key-compose", "demo.start-over", "demo.state", "demo.trimmed",
-    "demo.call-note", "demo.scenes", "demo.back-to-walk",
+    "demo.call-note", "demo.scenes", "demo.back-to-walk", "demo.legal-notice",
 ]
 # The name of every scene the scripts take a picture of. Written out so that a scene without a name,
 # and a name without a scene, are both found.

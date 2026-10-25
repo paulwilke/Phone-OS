@@ -44,6 +44,8 @@
       <ul id="scenes"></ul>
     </section>
   </div>
+  <!-- The legal notice of the web page this demo is published under (docs/process/site.md); a demo built alone has no page above it. -->
+  <p class="note"><a id="legal" href="../index.html#legal"></a></p>
 </main>
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -80,6 +82,7 @@ function show() {
   $("start").textContent = words("demo.start-over");
   $("walk").textContent = words("demo.back-to-walk");
   $("scenesTitle").textContent = words("demo.scenes");
+  $("legal").textContent = words("demo.legal-notice");
   $("trimmed").textContent = data.graph.trimmed ? words("demo.trimmed", { n: data.graph.trimmed }) : "";
   const picture = $("picture");
   if (scene) {

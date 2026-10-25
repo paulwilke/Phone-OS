@@ -49,6 +49,11 @@ const script = html.slice(scriptStart, html.indexOf('</script>', scriptStart));
 const strings = [...script.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]).filter((t) => /\s/.test(t) && t !== 'use strict');
 assert(strings.length === 0, 'the script has no sentence in it' + (strings.length ? ': ' + strings.join(' | ') : ''));
 assert(!/navigator\.language/.test(script), 'the script does not ask the browser for its language');
+// The legal notice: its address is a key like every other word, its e-mail link too, and no address is written into the markup.
+assert(/<section id="legal">/.test(markup) && /data-i18n="site\.legal\.name"/.test(markup) && /data-i18n-href="site\.legal\.mailto"/.test(markup),
+  'the legal notice names its lines and its e-mail link by keys');
+assert(!/mailto:|@/.test(markup), 'no e-mail address is written into the markup');
+assert(/<a href="#legal" data-i18n="site\.footer\.legal">/.test(markup), 'the footer links the legal notice');
 
 // ---- a fake DOM for what the page uses --------------------------------------------------------------------------
 class Element {

@@ -11,7 +11,8 @@
 Two sources of findings:
 
 1. **General rules**, kept in the repository and run by CI: phone numbers that are not
-   one of the invented examples, IMSI/ICCID-like numbers, e-mail addresses, private
+   one of the invented examples, IMSI/ICCID-like numbers, e-mail addresses (except the
+   owner's in the web page's legal notice, D-50), private
    keys, absolute home directories, and coordinates that are not the example places.
 2. **A denylist** of your own: a file with one entry per line (a literal, or `re:` plus
    a regular expression) naming real numbers, names, places and passwords that must
@@ -37,8 +38,12 @@ FICTIONAL_NUMBER = re.compile(r"^\+?(49170(0+|1+|2+|9+|12345\d*)|493012345678|34
 NUMBER = re.compile(r"(?<![\w.])(\+|00)[1-9][0-9]{9,14}(?![\w])")
 IMSI = re.compile(r"(?<![0-9])(2[0-9]{2}[0-9]{2,3}[0-9]{9,10}|89[0-9]{17,19})(?![0-9])")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# The owner's contact in the legal notice of the web page (tools/lang/site.*.toml, `site.legal.email`) is the one
+# address that is public on purpose: the law asks for it (D-50). Every other address is a finding.
+LEGAL_NOTICE_EMAIL = "paul@wilke.dev"
 EMAIL_OK = re.compile(
-    r"(noreply|no-reply|example\.(com|org|invalid)|users\.noreply\.github\.com|^git@(github\.com|bitbucket\.org|gitlab\.com)$)")
+    r"(noreply|no-reply|example\.(com|org|invalid)|users\.noreply\.github\.com|^git@(github\.com|bitbucket\.org|gitlab\.com)$"
+    r"|^" + re.escape(LEGAL_NOTICE_EMAIL) + r"$)")
 HOME = re.compile(r"/(Users|home)/[a-z][a-z0-9_-]+/")
 KEY = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")
 COORD = re.compile(r"(?<![0-9.])-?[0-9]{1,2}\.[0-9]{4,6}\s*,\s*-?[0-9]{1,3}\.[0-9]{4,6}")
