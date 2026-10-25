@@ -135,6 +135,9 @@
   .links a strong { display: block; }
   .links a span { color: var(--muted); font-size: 0.92rem; }
   .links a:hover strong { text-decoration: underline; }
+  .legal address { font-style: normal; line-height: 1.55; margin: 1rem 0; }
+  .legal h3 { font-size: 1.05rem; margin: 1.6rem 0 0.3rem; }
+  .legal p { max-width: 44rem; }
   footer { padding: 2.5rem 0 3rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.92rem; }
   footer p { margin: 0.3rem 0; }
 </style>
@@ -295,10 +298,27 @@
   </div>
 </section>
 
+<section id="legal">
+  <div class="wrap legal">
+    <h2 data-i18n="site.legal.title"></h2>
+    <p class="muted" data-i18n="site.legal.law"></p>
+    <address>
+      <strong data-i18n="site.legal.name"></strong><br>
+      <span data-i18n="site.legal.street"></span><br>
+      <span data-i18n="site.legal.city"></span><br>
+      <span data-i18n="site.legal.country"></span>
+    </address>
+    <p><span data-i18n="site.legal.contact"></span> <a href="" data-i18n-href="site.legal.mailto" data-i18n="site.legal.email"></a></p>
+    <h3 data-i18n="site.legal.privacy-title"></h3>
+    <p class="muted"><span data-i18n="site.legal.privacy"></span> <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" data-i18n="site.legal.github-privacy"></a></p>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <p data-i18n="site.footer.licence"></p>
     <p data-i18n="site.footer.generated"></p>
+    <p><a href="#legal" data-i18n="site.footer.legal"></a></p>
   </div>
 </footer>
 

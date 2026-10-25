@@ -25,6 +25,7 @@ demo.trimmed          = "{n} autres variantes de ces écrans ne sont pas dans le
 demo.call-note        = "Un appel est en cours. Les touches sont à l'appel : voir les scènes ci-dessous."
 demo.scenes           = "Images auxquelles les touches ne mènent pas"
 demo.back-to-walk     = "Retour au parcours"
+demo.legal-notice     = "Mentions légales"
 demo.scene-unread           = "Des messages et un appel manqué attendent"
 demo.scene-incoming-call    = "Un appel arrive"
 demo.scene-call-connected   = "En communication"
