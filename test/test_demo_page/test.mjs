@@ -83,12 +83,14 @@ page = load('en', '?lang=xx');
 assert(page.el('title').textContent === 'T-en', 'an unknown language in the address is ignored');
 page = load('de');
 assert(page.el('language').value === 'de' && page.el('title').textContent === 'T-de', 'the selector shows the language in use');
+assert(page.el('legal').href === '../de/index.html#legal', 'the legal notice linked is the one of the page in the demo\'s language');
 page.el('language').value = 'en';
 page.el('language').listeners.change();
 assert(page.el('picture').src === 'en/n0.png' && page.el('title').textContent === 'T-en', 'changing the language swaps the picture and the words');
 
 // ---- the keys ------------------------------------------------------------------------------------------------------
 page = load('en');
+assert(page.el('legal').href === '../index.html#legal', 'in English it is the root page\'s');
 const enabled = () => page.el('keys').children.filter((b) => !b.disabled).map((b) => b.textContent);
 assert(JSON.stringify(enabled()) === JSON.stringify(['Enter']), 'only the keys that lead somewhere are enabled');
 keyButton(page, 'Enter').click();

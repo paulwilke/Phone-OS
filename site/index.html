@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-root="">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,7 @@
 <meta name="description" data-i18n-content="site.meta.description">
 <meta property="og:title" data-i18n-content="site.meta.title">
 <meta property="og:description" data-i18n-content="site.meta.og-description">
-<meta property="og:image" content="demo/en/n0.png">
+<meta name="site-alternates">
 <style>
   :root {
     color-scheme: light dark;
@@ -145,7 +145,7 @@
 <body>
 
 <!-- The page has no words of its own: an element that says something names its key in tools/lang/site.*.toml;
-     scripts/make_site.py writes the English words in and embeds every language for the selector (docs/process/site.md). -->
+     scripts/make_site.py writes each language's words into that language's own page (docs/process/site.md). -->
 <nav class="top" data-i18n-aria-label="site.nav.label">
   <div class="wrap">
     <a class="brand" href="#" data-i18n="site.nav.brand"></a>
@@ -342,28 +342,39 @@
   const GUIDES = { en: "https://github.com/paulwilke/Phone-OS/blob/main/docs/user-guide.md",
     de: "https://github.com/paulwilke/Phone-OS/blob/main/docs/de/benutzerhandbuch.md",
     fr: "https://github.com/paulwilke/Phone-OS/blob/main/docs/fr/guide-utilisateur.md" };
-  const ATTRIBUTES = ["alt", "aria-label", "content"];
   const DEFAULT = "en";
 
-  // The language is the address's (?lang=de), never the browser's: the page reads the same for everybody until a link
-  // or the selector asks for another, and the selector writes its choice back into the address so that a reload or a
-  // shared link keeps it. (Taken from the browser, it came back after every reload, whatever the selector had said.)
-  const asked = new URLSearchParams(location.search).get("lang");
-  let lang = (data.languages.find((l) => l.code === asked) || { code: DEFAULT }).code;
+  // Each language has its own pages, prerendered with its words (scripts/make_site.py): the language is the page's
+  // folder (/, /de/, /fr/), set in <html lang>, and the folder's depth in data-root ("" at the root, "../" below).
+  // Every path the script builds starts with that root.
+  // What is used is the code of a catalog the page carries and one of two fixed roots, never a string read off the
+  // document or the address as it is (a path built from such a string is what a scanner flags, rightly).
+  const known = (code) => data.languages.find((l) => l.code === code);
+  const lang = (known(document.documentElement.lang) || { code: DEFAULT }).code;
+  const ROOT = document.documentElement.getAttribute("data-root") === "../" ? "../" : "";
+  const folder = (code) => (code === DEFAULT ? "" : encodeURIComponent(code) + "/");
+  // Links shared before the pages were split name the language in the address: ?lang=de on the root page goes to /de/.
+  // A code the page does not have is ignored, and so is the address of a language's own page.
+  const asked = known(new URLSearchParams(location.search).get("lang"));
+  if (!ROOT && asked && asked.code !== DEFAULT) {
+    location.replace("./" + folder(asked.code) + location.hash);
+    return;
+  }
+
   let graph = null;
-  let missing = false;
   let node = 0;
   const buttons = {};
 
+  // A word of the page's own language, for what the script builds itself (the keys, the status line, the screens).
   function word(key, values) {
-    let text = data.words[lang][key] || data.words[DEFAULT][key] || key;
+    let text = (data.words[lang] || {})[key] || key;
     for (const name of Object.keys(values || {})) text = text.replace("{" + name + "}", values[name]);
     return text;
   }
   const screenName = (screen) => (SCREEN_NAMES[screen] ? word(SCREEN_NAMES[screen]) : screen);
   const outgoing = (key) => graph.edges.find((e) => e.from === node && e.key === key);
-  // The parts of a path are encoded: the language comes from the address or the selector, the name from an attribute.
-  const picture = (name) => "demo/" + encodeURIComponent(lang) + "/" + encodeURIComponent(name) + ".png";
+  // The parts of a path are encoded: the language comes from the page, the name from an attribute.
+  const picture = (name) => ROOT + "demo/" + encodeURIComponent(lang) + "/" + encodeURIComponent(name) + ".png";
   // "2500+" is shown as 2,500+ in English, 2.500+ in German: the same number in every language.
   function number(value) {
     const m = /^(\d+)(.*)$/.exec(value);
@@ -373,13 +384,13 @@
   function makeKey(parent, [key, sym, label]) {
     const button = document.createElement("button");
     button.type = "button";
-    button.setAttribute("data-i18n-aria-label", label);
+    button.setAttribute("aria-label", word(label));
     const symbol = document.createElement("span");
     symbol.className = "sym";
     symbol.textContent = sym;
     const name = document.createElement("span");
     name.className = "lbl";
-    name.setAttribute("data-i18n", label);
+    name.textContent = word(label);
     button.appendChild(symbol);
     button.appendChild(name);
     button.addEventListener("click", () => press(key));
@@ -387,38 +398,15 @@
     buttons[key] = button;
   }
 
-  // Every word and every picture of the page, in the language in use.
-  function translate() {
-    document.documentElement.lang = lang;
-    document.title = word("site.meta.title");
-    for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = word(el.getAttribute("data-i18n"));
-    for (const attr of ATTRIBUTES) {
-      for (const el of document.querySelectorAll("[data-i18n-" + attr + "]")) el.setAttribute(attr, word(el.getAttribute("data-i18n-" + attr)));
-    }
+  // What depends on the language but is not a word of the markup, which is prerendered: the links to the guide, the
+  // links to the other languages' guides (not to the one of this page), the full demo, the numbers and the pictures.
+  function wire() {
     for (const el of document.querySelectorAll("[data-guide]")) el.setAttribute("href", GUIDES[el.getAttribute("data-guide") || lang]);
-    // The guide in the other languages, each by its own name; the one of the page's language is the button above.
-    for (const el of document.querySelectorAll("[data-native]")) {
-      const code = el.getAttribute("data-native");
-      const known = data.languages.find((l) => l.code === code);
-      el.textContent = known ? known.native : code;
-      el.hidden = code === lang;
-    }
-    // The full demo opens in the language of the page; it reads ?lang= as this page does, and English is its default too.
-    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", "demo/index.html" + (lang === DEFAULT ? "" : "?lang=" + encodeURIComponent(lang)));
+    for (const el of document.querySelectorAll("[data-native]")) el.hidden = el.getAttribute("data-native") === lang;
+    // The full demo opens in the language of the page; English is its default too.
+    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", ROOT + "demo/index.html" + (lang === DEFAULT ? "" : "?lang=" + encodeURIComponent(lang)));
     for (const el of document.querySelectorAll("[data-number]")) el.textContent = number(el.getAttribute("data-number"));
     for (const el of document.querySelectorAll("[data-picture]")) el.setAttribute("src", picture(el.getAttribute("data-picture")));
-    if (graph) show(false);
-    else if (missing) $("status").textContent = word("site.device.missing");
-  }
-
-  function choose(code) {
-    lang = (data.languages.find((l) => l.code === code) || { code: DEFAULT }).code;
-    $("language").value = lang;
-    const params = new URLSearchParams(location.search);
-    if (lang === DEFAULT) params.delete("lang"); else params.set("lang", lang);
-    const query = params.toString();
-    history.replaceState(null, "", location.pathname + (query ? "?" + query : "") + location.hash);
-    translate();
   }
 
   function press(key) {
@@ -465,6 +453,14 @@
     return n ? n.id : graph.start;
   }
 
+  // The selector goes to the page of the chosen language, the same place in the page (its hash kept); the address
+  // of the page is the language's, so nothing is rewritten in place.
+  function go(code) {
+    const target = (known(code) || { code: DEFAULT }).code;
+    if (target === lang) return;
+    location.href = (ROOT || "./") + folder(target) + location.hash;
+  }
+
   for (const k of SOFT) makeKey($("softkeys"), k);
   for (const k of PAD) makeKey($("pad"), k);
   for (const l of data.languages) {
@@ -474,7 +470,7 @@
     $("language").appendChild(option);
   }
   $("language").value = lang;
-  $("language").addEventListener("change", () => choose($("language").value));
+  $("language").addEventListener("change", () => go($("language").value));
   $("start").addEventListener("click", () => { if (graph) { node = graph.start; show(true); } });
   $("device").addEventListener("keydown", (ev) => {
     const key = KEYBOARD[ev.key];
@@ -482,21 +478,21 @@
     ev.preventDefault();
     press(key);
   });
-  translate();
+  wire();
 
-  fetch("demo/graph.json").then((r) => r.json()).then((g) => {
+  fetch(ROOT + "demo/graph.json").then((r) => r.json()).then((g) => {
     graph = g;
     node = g.start;
     $("stat-pictures").setAttribute("data-number", String(g.nodes.length * data.languages.length));
     $("pic-compose").setAttribute("data-picture", "n" + firstOf("compose"));
     $("pic-sos").setAttribute("data-picture", "n" + firstOf("sos"));
-    translate();
+    wire();
+    show(false);
   }).catch(() => {
-    missing = true;
-    translate();
+    $("status").textContent = word("site.device.missing");
   });
 
-  fetch("version.txt").then((r) => r.ok ? r.text() : "").then((v) => {
+  fetch(ROOT + "version.txt").then((r) => r.ok ? r.text() : "").then((v) => {
     if (v.trim()) $("stat-version").textContent = v.trim();
   }).catch(() => {});
 })();

@@ -83,6 +83,7 @@ function show() {
   $("walk").textContent = words("demo.back-to-walk");
   $("scenesTitle").textContent = words("demo.scenes");
   $("legal").textContent = words("demo.legal-notice");
+  $("legal").href = "../" + (lang === "en" ? "" : encodeURIComponent(lang) + "/") + "index.html#legal";
   $("trimmed").textContent = data.graph.trimmed ? words("demo.trimmed", { n: data.graph.trimmed }) : "";
   const picture = $("picture");
   if (scene) {
