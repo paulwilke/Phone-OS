@@ -118,6 +118,12 @@
   .word { border-left: 3px solid var(--fg); padding-left: 1rem; }
   .word strong { display: block; font-size: 1.15rem; margin-bottom: 0.2rem; }
   .word p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.2rem; margin-top: 1.5rem; }
+  .step { border-left: 3px solid var(--fg); padding-left: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .step strong { display: block; font-size: 1.15rem; }
+  .step p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+  .step code.cmd { display: block; font-size: 0.88rem; padding: 0.45rem 0.6rem; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; white-space: nowrap; }
+  .note { margin-top: 1.5rem; max-width: 44rem; }
   .stats { display: flex; gap: 2.5rem; flex-wrap: wrap; margin-top: 2rem; }
   .stat b { display: block; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; }
   .stat span { color: var(--muted); font-size: 0.92rem; }
@@ -142,7 +148,7 @@
     <a class="brand" href="#" data-i18n="site.nav.brand"></a>
     <ul>
       <li><a href="#try" data-i18n="site.nav.try"></a></li>
-      <li><a href="#does" data-i18n="site.nav.does"></a></li>
+      <li><a href="#get" data-i18n="site.nav.get"></a></li>
       <li class="hide-s"><a href="#verified" data-i18n="site.nav.verified"></a></li>
       <li class="hide-s"><a href="#docs" data-i18n="site.nav.docs"></a></li>
       <li><a href="https://github.com/paulwilke/Phone-OS" data-i18n="site.nav.github"></a></li>
@@ -188,6 +194,57 @@
   </div>
 </header>
 
+
+<section class="alt" id="get">
+  <div class="wrap">
+    <h2 data-i18n="site.get.title"></h2>
+    <p class="intro muted" data-i18n="site.get.intro"></p>
+    <div class="steps">
+      <div class="step"><strong data-i18n="site.get.device.title"></strong><p data-i18n="site.get.device.text"></p></div>
+      <div class="step"><strong data-i18n="site.get.code.title"></strong><p data-i18n="site.get.code.text"></p><code class="cmd">git clone https://github.com/paulwilke/Phone-OS.git</code></div>
+      <div class="step"><strong data-i18n="site.get.card.title"></strong><p data-i18n="site.get.card.text"></p></div>
+      <div class="step"><strong data-i18n="site.get.flash.title"></strong><p data-i18n="site.get.flash.text"></p><code class="cmd">pio run -e device -t upload</code></div>
+    </div>
+    <p class="muted note"><span data-i18n="site.get.note"></span> <a href="https://github.com/paulwilke/Phone-OS/blob/main/docs/hardware/bring-up.md" data-i18n="site.get.checklist"></a></p>
+  </div>
+</section>
+
+<section id="verified">
+  <div class="wrap">
+    <h2 data-i18n="site.verified.title"></h2>
+    <p class="intro muted" data-i18n="site.verified.intro"></p>
+    <div class="words">
+      <div class="word"><strong data-i18n="site.verified.compiled.title"></strong><p data-i18n="site.verified.compiled.text"></p></div>
+      <div class="word"><strong data-i18n="site.verified.host.title"></strong><p data-i18n="site.verified.host.text"></p></div>
+      <div class="word"><strong data-i18n="site.verified.device.title"></strong><p data-i18n="site.verified.device.text"></p></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stat-version"></b><span data-i18n="site.stats.version"></span></div>
+      <div class="stat"><b data-number="2500+"></b><span data-i18n="site.stats.tests"></span></div>
+      <div class="stat"><b id="stat-pictures"></b><span data-i18n="site.stats.pictures"></span></div>
+      <div class="stat"><b data-number="0"></b><span data-i18n="site.stats.invented"></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="built">
+  <div class="wrap">
+    <h2 data-i18n="site.built.title"></h2>
+    <p class="intro muted" data-i18n="site.built.intro"></p>
+    <table class="layers">
+      <thead><tr><th data-i18n="site.built.layer"></th><th data-i18n="site.built.holds"></th><th data-i18n="site.built.may-know"></th></tr></thead>
+      <tbody>
+        <tr><td><code>src/hal/</code></td><td data-i18n="site.built.hal.holds"></td><td data-i18n="site.built.hal.knows"></td></tr>
+        <tr><td><code>src/app/</code> <code>src/ui/</code></td><td data-i18n="site.built.app.holds"></td><td data-i18n="site.built.app.knows"></td></tr>
+        <tr><td><code>src/drivers/</code> <code>src/board/</code></td><td data-i18n="site.built.drivers.holds"></td><td data-i18n="site.built.drivers.knows"></td></tr>
+        <tr><td><code>device/</code></td><td data-i18n="site.built.device.holds"></td><td><code>src/</code></td></tr>
+        <tr><td><code>sim/</code> <code>testing/</code></td><td data-i18n="site.built.sim.holds"></td><td><code>src/</code></td></tr>
+      </tbody>
+    </table>
+    <p class="muted" data-i18n="site.built.rules"></p>
+  </div>
+</section>
+
 <section id="does">
   <div class="wrap">
     <h2 data-i18n="site.does.title"></h2>
@@ -218,43 +275,6 @@
         <div><h3 data-i18n="site.does.battery.title"></h3><p data-i18n="site.does.battery.text"></p></div>
       </article>
     </div>
-  </div>
-</section>
-
-<section class="alt" id="verified">
-  <div class="wrap">
-    <h2 data-i18n="site.verified.title"></h2>
-    <p class="intro muted" data-i18n="site.verified.intro"></p>
-    <div class="words">
-      <div class="word"><strong data-i18n="site.verified.compiled.title"></strong><p data-i18n="site.verified.compiled.text"></p></div>
-      <div class="word"><strong data-i18n="site.verified.host.title"></strong><p data-i18n="site.verified.host.text"></p></div>
-      <div class="word"><strong data-i18n="site.verified.device.title"></strong><p data-i18n="site.verified.device.text"></p></div>
-    </div>
-    <div class="stats">
-      <div class="stat"><b id="stat-version"></b><span data-i18n="site.stats.version"></span></div>
-      <div class="stat"><b data-number="2500+"></b><span data-i18n="site.stats.tests"></span></div>
-      <div class="stat"><b id="stat-pictures"></b><span data-i18n="site.stats.pictures"></span></div>
-      <div class="stat"><b data-number="0"></b><span data-i18n="site.stats.invented"></span></div>
-    </div>
-  </div>
-</section>
-
-<section id="built">
-  <div class="wrap">
-    <h2 data-i18n="site.built.title"></h2>
-    <p class="intro muted" data-i18n="site.built.intro"></p>
-    <p class="intro muted" data-i18n="site.built.hardware"></p>
-    <table class="layers">
-      <thead><tr><th data-i18n="site.built.layer"></th><th data-i18n="site.built.holds"></th><th data-i18n="site.built.may-know"></th></tr></thead>
-      <tbody>
-        <tr><td><code>src/hal/</code></td><td data-i18n="site.built.hal.holds"></td><td data-i18n="site.built.hal.knows"></td></tr>
-        <tr><td><code>src/app/</code> <code>src/ui/</code></td><td data-i18n="site.built.app.holds"></td><td data-i18n="site.built.app.knows"></td></tr>
-        <tr><td><code>src/drivers/</code> <code>src/board/</code></td><td data-i18n="site.built.drivers.holds"></td><td data-i18n="site.built.drivers.knows"></td></tr>
-        <tr><td><code>device/</code></td><td data-i18n="site.built.device.holds"></td><td><code>src/</code></td></tr>
-        <tr><td><code>sim/</code> <code>testing/</code></td><td data-i18n="site.built.sim.holds"></td><td><code>src/</code></td></tr>
-      </tbody>
-    </table>
-    <p class="muted" data-i18n="site.built.rules"></p>
   </div>
 </section>
 

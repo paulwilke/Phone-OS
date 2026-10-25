@@ -33,8 +33,9 @@ const tags = (text) => without(text, '<', '>');
 
 // ---- no words of its own ---------------------------------------------------------------------------------
 const markup = without(without(without(html, '<script', '</script>'), '<style', '</style>'), '<!--', '-->');
-// The one text the markup may hold: a path of the repository in <code>, the same in every language.
-const visible = tags(markup.replace(/<code>[a-z]+(?:\/[a-z]+)*\/<\/code>/g, '')).trim();
+// The texts the markup may hold: a path of the repository in <code>, and a command to type in <code class="cmd">; both are
+// the same in every language.
+const visible = tags(markup.replace(/<code>[a-z]+(?:\/[a-z]+)*\/<\/code>/g, '').replace(/<code class="cmd">[^<]*<\/code>/g, '')).trim();
 assert(visible === '', 'the markup holds no text: every word comes from the catalogs' + (visible ? ': ' + visible.slice(0, 80) : ''));
 const wordy = [...markup.matchAll(/\s(alt|aria-label|title|placeholder)="/g)].map((m) => m[1]);
 assert(wordy.length === 0, 'no attribute of the markup holds words: they are keys (data-i18n-alt, data-i18n-aria-label)' + (wordy.length ? ': ' + wordy.join(', ') : ''));
