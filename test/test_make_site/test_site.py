@@ -3,7 +3,9 @@
 result; one page per language, each with its own words written in and only its own words embedded, the language in
 its address (the English page at the root, the others in a folder) and the links to all of them; a run without the
 demo fails and says so; a language that lacks a word of the page fails and the key is named; a page without its
-markers fails and the marker is named; a result in which a file the page needs is missing fails.
+markers fails and the marker is named; a result in which a file the page needs is missing fails. The demo's graph is one
+over every language, so each language starts on a state of its own (a picture `demo/<code>/n<start>.png`): the page
+shows its language's, the preview too, and a graph without a start for a language fails.
 
     python3 test/test_make_site/test_site.py
 """
@@ -31,7 +33,7 @@ PAGE = """<!doctype html>
 <html lang="en" data-root="">
 <head><title data-i18n="site.meta.title"></title>
 <meta name="site-alternates"></head>
-<body><img src="demo/en/n0.png" data-i18n-alt="site.does.phone.alt"><h1 data-i18n="site.hero.title"></h1><b data-number="2500+"></b>
+<body><img src="demo/en/n0.png" data-picture="n0" data-i18n-alt="site.does.phone.alt"><h1 data-i18n="site.hero.title"></h1><b data-number="2500+"></b>
 <a data-native="de"></a> <a href="demo/index.html" data-demo></a>
 <script id="data" type="application/json">__DATA__</script><script>const status = "site.device.loading";</script></body></html>
 """
@@ -48,7 +50,11 @@ def catalog(code, native, words):
     return "\n".join(lines) + "\n"
 
 
-def make_tree(root, with_demo=True, with_fr=True, words=WORDS, page=PAGE):
+# The state each language's device starts in: one graph over every language, so the numbers are not all 0.
+STARTS = {"en": 0, "de": 1, "fr": 2}
+
+
+def make_tree(root, with_demo=True, with_fr=True, words=WORDS, page=PAGE, graph=None):
     write(os.path.join(root, "site", "index.html"), page)
     for code, (native, table) in words.items():
         write(os.path.join(root, "lang", f"site.{code}.toml"), catalog(code, native, table))
@@ -56,9 +62,9 @@ def make_tree(root, with_demo=True, with_fr=True, words=WORDS, page=PAGE):
     write(os.path.join(root, "VERSION"), "9.9.9\n")
     if with_demo:
         write(os.path.join(root, "demo", "index.html"), "<!doctype html>")
-        write(os.path.join(root, "demo", "graph.json"), "{}")
+        write(os.path.join(root, "demo", "graph.json"), json.dumps({"starts": STARTS} if graph is None else graph))
         for code in ("en", "de") + (("fr",) if with_fr else ()):
-            write(os.path.join(root, "demo", code, "n0.png"), "png")
+            write(os.path.join(root, "demo", code, f"n{STARTS[code]}.png"), "png")
 
 
 def run(root, url=URL):
@@ -88,7 +94,7 @@ with tempfile.TemporaryDirectory() as root:
     make_tree(root)
     p = run(root)
     check(p.returncode == 0, "a complete tree assembles: " + p.stderr.strip())
-    for name in ("index.html", "de/index.html", "fr/index.html", "version.txt", "demo/index.html", "demo/fr/n0.png"):
+    for name in ("index.html", "de/index.html", "fr/index.html", "version.txt", "demo/index.html", "demo/fr/n2.png"):
         check(os.path.isfile(os.path.join(root, "out", name)), f"{name} is in the result")
     with open(os.path.join(root, "out", "version.txt"), encoding="utf-8") as f:
         check(f.read() == "9.9.9\n", "version.txt carries VERSION")
@@ -102,7 +108,8 @@ with tempfile.TemporaryDirectory() as root:
 
     # The English page: the default, in place, its words only.
     check('<html lang="en" data-root="">' in en, "the English page is at the root, with data-root empty")
-    check('<img src="demo/en/n0.png"' in en and "../demo/" not in en, "the English page's paths are unchanged")
+    check('<img src="demo/en/n0.png" data-picture="n0"' in en and "../demo/" not in en, "the English page's paths are unchanged")
+    check('href="demo/index.html?lang=en"' in en, "the English page's link to the full demo names English too: the demo would follow the browser without it")
     check('<title data-i18n="site.meta.title">Page</title>' in en and '<h1 data-i18n="site.hero.title">Phone &amp; more</h1>' in en,
           "the English words are written in, escaped")
     check('<b data-number="2500+">2,500+</b>' in en and '<a data-native="de">Deutsch</a>' in en,
@@ -114,8 +121,8 @@ with tempfile.TemporaryDirectory() as root:
     check('<html lang="de" data-root="../">' in de, "the German page is in de/, with lang de and data-root ../")
     check('<title data-i18n="site.meta.title">Seite</title>' in de and '<h1 data-i18n="site.hero.title">Telefon und mehr</h1>' in de,
           "the German words are written into the German page")
-    check('<img src="../demo/de/n0.png"' in de and "demo/en/" not in de.split("<script")[0],
-          "the German page reaches its own pictures one folder down, with src=\"../demo/de/\"")
+    check('<img src="../demo/de/n1.png" data-picture="n1"' in de and "demo/en/" not in de.split("<script")[0],
+          "the German page reaches its own pictures one folder down, the state its language starts in: src=\"../demo/de/n1.png\"")
     check('<b data-number="2500+">2.500+</b>' in de, "a number is written the German way into the German page")
     check('href="../demo/index.html?lang=de"' in de, "the German page's link to the full demo carries its language")
     check('<a data-native="de">Deutsch</a>' in de, "the language names are the same on every page")
@@ -136,8 +143,8 @@ with tempfile.TemporaryDirectory() as root:
               f"the {name} page links to the English, German and French pages")
         check('<link rel="alternate" hreflang="x-default" href="https://example.test/site/">' in page,
               f"the {name} page's x-default is the English page")
-    check('<meta property="og:image" content="https://example.test/site/demo/de/n0.png">' in de,
-          "the German page's preview picture is absolute and in German")
+    check('<meta property="og:image" content="https://example.test/site/demo/de/n1.png">' in de,
+          "the German page's preview picture is absolute, in German and the one its device starts on")
 
     write(os.path.join(root, "out", "stale.txt"), "old")
     run(root)
@@ -169,7 +176,18 @@ with tempfile.TemporaryDirectory() as root:
 with tempfile.TemporaryDirectory() as root:
     make_tree(root, with_fr=False)
     p = run(root)
-    check(p.returncode == 1 and "demo/fr/n0.png" in p.stderr, "a language without pictures fails and is named")
+    check(p.returncode == 1 and "demo/fr/n2.png" in p.stderr, "a language without the picture it starts on fails and is named")
+
+with tempfile.TemporaryDirectory() as root:
+    make_tree(root, graph={"nodes": []})
+    p = run(root)
+    check(p.returncode == 1 and "starts" in p.stderr and not os.path.exists(os.path.join(root, "out")),
+          "a graph without starts (the walk of an older version) fails and says to build it again: " + p.stderr.strip())
+
+with tempfile.TemporaryDirectory() as root:
+    make_tree(root, graph={"starts": {"en": 0, "de": 1}})
+    p = run(root)
+    check(p.returncode == 1 and "no start state in fr" in p.stderr, "a language the graph does not start in fails and is named: " + p.stderr.strip())
 
 with tempfile.TemporaryDirectory() as root:
     make_tree(root, page=PAGE.replace('<meta name="site-alternates">', ""))

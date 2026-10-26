@@ -110,6 +110,9 @@ jobs:
       - name: Privacy check tests
         run: python3 test/test_privacy_check/test_history.py
 
+      - name: The rules the demo's graph is held to
+        run: python3 test/test_make_demo/test_graph.py
+
       - name: The web page's assembly
         run: python3 test/test_make_site/test_site.py
 

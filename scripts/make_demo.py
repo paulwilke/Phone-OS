@@ -5,17 +5,22 @@ language, and a static page that walks through them.
     pio run -e sim
     python3 scripts/make_demo.py            # from the repository root; writes out/demo/ (not committed)
 
-1. The simulator walks the interface by its keys from a world with a few messages in it
-   (`program --crawl`): the graph of states, and each state's picture in each language.
+1. The simulator walks the interface by its keys and by taps from a world with a few messages in it
+   (`program --crawl`), started once in each language: one graph of states, the language being part of a state (the
+   Language screen leads from one into another), and the picture of every state in the language it is in. Nothing is
+   cut off: every key and every tap of every state is followed, and the check below fails on a key that is drawn and
+   leads nowhere.
 2. The scene scripts under sim/demo/ take the pictures the keys do not lead to (a call coming in,
    school time), once for each language.
 3. sim/demo/page.html is filled with the graph, the scene names and the words of the page, which come
    from the catalogs (`demo.*`, in the host-only files `tools/lang/demo.<code>.toml`): the page has no words of its own, and a language selector swaps every
    picture and every word.
 
-Then the result is checked: every language has a picture for every state and every scene, every
-screen of the device that the keys can reach is in the walk, and the page and the graph exist. The
-exit status is 1 when anything is missing, so a CI run that "built" nothing fails.
+Then the result is checked (`check_graph`, and the files): every state has its picture and every language its scenes,
+every screen of the device that the keys can reach is in the walk in every language, the walk has no pseudo-language,
+every key of every state was pressed and every soft key that is drawn leads somewhere, every state can get back to the
+home screen, and each language can be chosen from each other on the Language screen by key and by tap. The exit status
+is 1 when anything is missing, so a CI run that "built" nothing fails.
 """
 import argparse
 import json
@@ -41,8 +46,8 @@ MIN_STATES = 60
 # Every word the page uses, so that a missing translation is found here and not by a visitor.
 PAGE_WORDS = [
     "demo.title", "demo.intro", "demo.language", "demo.key-up", "demo.key-down", "demo.key-select", "demo.key-back",
-    "demo.key-home", "demo.key-inbox", "demo.key-compose", "demo.start-over", "demo.state", "demo.trimmed",
-    "demo.call-note", "demo.scenes", "demo.back-to-walk",
+    "demo.key-home", "demo.key-inbox", "demo.key-compose", "demo.start-over", "demo.state",
+    "demo.scenes", "demo.back-to-walk",
 ]
 # The name of every scene the scripts take a picture of. Written out so that a scene without a name,
 # and a name without a scene, are both found.
@@ -95,12 +100,88 @@ def scene_scripts():
     return found
 
 
-def run(args, what):
-    result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
+def run(args, what, progress=False):
+    """Runs a program from the repository root; with `progress` its standard error is the terminal's (the walk says how far it is)."""
+    result = subprocess.run(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=None if progress else subprocess.PIPE, text=True)
     if result.returncode != 0:
-        print(f"make_demo: {what} failed:\n{result.stdout[-1500:]}{result.stderr[-1500:]}")
+        print(f"make_demo: {what} failed:\n{result.stdout[-1500:]}{result.stderr[-1500:] if result.stderr else ''}")
         sys.exit(1)
     return result.stdout
+
+
+# The seven keys of the device, in the order the walk presses them.
+KEYS = ["up", "down", "select", "back", "home", "inbox", "compose"]
+# Where the device answers a soft key that is drawn with the picture it has already, and the page is right to show the
+# key without a way on. Every other drawn soft key must lead somewhere: one that does not is a walk that stopped short
+# or a key that does nothing on the device.
+# The arrows of a list are drawn on the soft key bar whatever the cursor does: at the end of a list the key does nothing.
+SCROLL_KEYS = ("up", "down")
+SOFT_KEY_IDLE_OK = {
+    ("language", "select"),   # choosing the language that is already in use
+    ("motion", "select"),     # Reset on the motion page, with the sensor at rest: there is nothing to reset
+}
+
+
+def check_graph(graph, codes):
+    """What must be true of the graph of the walk, as a list of problems (empty when it holds): it is complete, each
+    language starts in its own picture and no state is in a language the device does not have (the pseudo-language is a
+    layout tool of the simulator), every key of every state was pressed (it has an edge or is noted as unchanged), a soft
+    key that is drawn is not dead, every state can get back to the home screen, and on the Language screen every
+    language can be chosen from every other with a key and with a tap."""
+    problems = []
+    nodes = graph.get("nodes", [])
+    if not graph.get("complete"):
+        problems.append("the walk is not complete: a state was left unfollowed")
+    starts = graph.get("starts", {})
+    for code in codes:
+        start = starts.get(code)
+        if not isinstance(start, int) or not 0 <= start < len(nodes):
+            problems.append(f"the walk has no start state in {code}")
+        elif nodes[start]["lang"] != code:
+            problems.append(f"the start state of {code} is in {nodes[start]['lang']}")
+    for language in sorted({n["lang"] for n in nodes} - set(codes)):
+        problems.append(f"the walk has states in {language}, which is not a language of the device")
+    outgoing = {n["id"]: [] for n in nodes}
+    for edge in graph.get("edges", []):
+        outgoing[edge["from"]].append(edge)
+    for n in nodes:
+        where = f"state {n['id']} ({n['screen']}, {n['lang']})"
+        pressed = {e["key"] for e in outgoing[n["id"]] if "key" in e} | set(n.get("idle", []))
+        problems += [f"{where}: the key {k} was never pressed" for k in KEYS if k not in pressed]
+        for k in n.get("soft", []):
+            if k in n.get("idle", []) and k not in SCROLL_KEYS and (n["screen"], k) not in SOFT_KEY_IDLE_OK:
+                problems.append(f"{where}: the soft key {k} is drawn and leads nowhere")
+    # Every state can get back to the home screen: walk the edges backwards from every home.
+    back = {n["id"]: [] for n in nodes}
+    for edge in graph.get("edges", []):
+        back[edge["to"]].append(edge["from"])
+    home = [n["id"] for n in nodes if n["screen"] == "home"]
+    reached = set(home)
+    queue = list(home)
+    while queue:
+        for previous in back[queue.pop()]:
+            if previous not in reached:
+                reached.add(previous)
+                queue.append(previous)
+    for n in nodes:
+        if n["id"] not in reached:
+            problems.append(f"state {n['id']} ({n['screen']}, {n['lang']}) cannot get back to the home screen")
+    # The Language screen: each language can be chosen from each other by key and by tap.
+    chosen = set()
+    for n in nodes:
+        if n["screen"] == "language":
+            for e in outgoing[n["id"]]:
+                chosen.add((n["lang"], nodes[e["to"]]["lang"], "key" if "key" in e else "tap"))
+    for here in codes:
+        for there in codes:
+            if here != there:
+                problems += [f"in {here} the Language screen cannot choose {there} with a {how}" for how in ("key", "tap")
+                             if (here, there, how) not in chosen]
+    # Every screen the keys lead to is in the walk, in every language.
+    for code in codes:
+        shown = {n["screen"] for n in nodes if n["lang"] == code}
+        problems += [f"the walk never reaches the screen {screen} in {code}" for screen in SCREENS if screen not in shown]
+    return problems
 
 
 def main():
@@ -115,13 +196,15 @@ def main():
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out)
 
-    languages = catalogs()
+    # English first: it is the first start of the walk (state 0 is English, as the web page's markup assumes before its
+    # script has run) and the first choice of the demo's selector.
+    languages = sorted(catalogs(), key=lambda entry: (entry[0] != "en", entry[0]))
     codes = [code for code, _, _ in languages]
     problems = []
     for code, _, words in languages:
         problems += [f"{code} lacks {key}" for key in PAGE_WORDS if key not in words]
 
-    summary = run([args.program, "--crawl", out, "--prelude", "sim/demo/world.txt", "--languages", ",".join(codes)], "the walk")
+    summary = run([args.program, "--crawl", out, "--prelude", "sim/demo/world.txt", "--languages", ",".join(codes)], "the walk", progress=True)
     graph = json.load(open(os.path.join(out, "graph.json")))
 
     scenes = []
@@ -161,28 +244,27 @@ def main():
         f.write(page.replace("__DATA__", text))
 
     # What there must be.
+    problems += check_graph(graph, codes)
+    for node in graph["nodes"]:
+        if not os.path.exists(os.path.join(out, node["lang"], f"n{node['id']}.png")):
+            problems.append(f"no picture of state {node['id']} in {node['lang']}")
     for code in codes:
-        for node in graph["nodes"]:
-            if not os.path.exists(os.path.join(out, code, f"n{node['id']}.png")):
-                problems.append(f"no picture of state {node['id']} in {code}")
         for scene in scenes:
             if not os.path.exists(os.path.join(out, code, f"scene-{scene}.png")):
                 problems.append(f"no picture of the scene {scene} in {code}")
-    reached = {node["screen"] for node in graph["nodes"]}
-    problems += [f"the walk never reaches the screen {screen}" for screen in SCREENS if screen not in reached]
     if len(graph["nodes"]) < MIN_STATES:
         problems.append(f"only {len(graph['nodes'])} states in the walk, expected at least {MIN_STATES}")
-    expected = len(codes) * (len(graph["nodes"]) + len(scenes))
+    expected = len(graph["nodes"]) + len(codes) * len(scenes)
     found = sum(1 for _, _, names in os.walk(out) for n in names if n.endswith(".png"))
     if found != expected:
-        problems.append(f"{found} pictures, expected {expected} ({len(codes)} languages x {len(graph['nodes'])} states + {len(scenes)} scenes)")
+        problems.append(f"{found} pictures, expected {expected} ({len(graph['nodes'])} states, each in the language it is in, + {len(scenes)} scenes x {len(codes)} languages)")
 
     for problem in problems:
         print("make_demo:", problem)
     if problems:
         return 1
     print(summary.strip())
-    print(f"make_demo: {found} pictures, {len(graph['nodes'])} states, {len(scenes)} scenes, {len(codes)} languages -> {os.path.relpath(out, ROOT)}/index.html")
+    print(f"make_demo: {found} pictures, {len(graph['nodes'])} states in {len(codes)} languages, {len(graph['edges'])} edges, {len(scenes)} scenes -> {os.path.relpath(out, ROOT)}/index.html")
     return 0
 
 

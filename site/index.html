@@ -345,7 +345,9 @@
 
   let graph = null;
   let node = 0;
+  let timer = null;
   const buttons = {};
+  const device = $("device");
 
   // A word of the page's own language, for what the script builds itself (the keys, the status line, the screens).
   function word(key, values) {
@@ -355,8 +357,13 @@
   }
   const screenName = (screen) => (SCREEN_NAMES[screen] ? word(SCREEN_NAMES[screen]) : screen);
   const outgoing = (key) => graph.edges.find((e) => e.from === node && e.key === key);
-  // The parts of a path are encoded: the language comes from the page, the name from an attribute.
-  const picture = (name) => ROOT + "demo/" + encodeURIComponent(lang) + "/" + encodeURIComponent(name) + ".png";
+  const waiting = () => graph.edges.find((e) => e.from === node && e.wait);
+  // The parts of a path are encoded: the language comes from the page or from the state, the name from an attribute.
+  const picture = (name, code) => ROOT + "demo/" + encodeURIComponent(code || lang) + "/" + encodeURIComponent(name) + ".png";
+  // The graph is one over the states of every language (the Language screen leads from one into another): a state's
+  // picture is in the language the device is in there, which is the page's only until the child chooses another.
+  const pictureOf = (id) => picture("n" + id, graph.nodes[id].lang);
+  const startOf = () => graph.starts[lang];
   // "2500+" is shown as 2,500+ in English, 2.500+ in German: the same number in every language.
   function number(value) {
     const m = /^(\d+)(.*)$/.exec(value);
@@ -385,18 +392,33 @@
   function wire() {
     for (const el of document.querySelectorAll("[data-guide]")) el.setAttribute("href", GUIDES[el.getAttribute("data-guide") || lang]);
     for (const el of document.querySelectorAll("[data-native]")) el.hidden = el.getAttribute("data-native") === lang;
-    // The full demo opens in the language of the page; English is its default too.
-    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", ROOT + "demo/index.html" + (lang === DEFAULT ? "" : "?lang=" + encodeURIComponent(lang)));
+    // The full demo opens in the language of the page, English too: without it the demo would follow the browser's.
+    for (const el of document.querySelectorAll("[data-demo]")) el.setAttribute("href", ROOT + "demo/index.html?lang=" + encodeURIComponent(lang));
     for (const el of document.querySelectorAll("[data-number]")) el.textContent = number(el.getAttribute("data-number"));
     for (const el of document.querySelectorAll("[data-picture]")) el.setAttribute("src", picture(el.getAttribute("data-picture")));
+  }
+
+  // A key pressed with the mouse, or a target tapped, may be gone or disabled afterwards: the focus would fall to the
+  // page, and the arrows and Enter would scroll it instead of driving the device. The device keeps it, unless an enabled
+  // key of the device has it, which is where somebody who tabs to a key wants to stay.
+  function keepFocus() {
+    const held = document.activeElement;
+    if (held && held !== document.body && !held.disabled && device.contains(held)) return;
+    device.focus({ preventScroll: true });
+  }
+
+  // Goes to a state, as the device does when a key or a tap leads there.
+  function follow(to) {
+    node = to;
+    show(true);
+    keepFocus();
   }
 
   function press(key) {
     if (!graph) return;
     const edge = outgoing(key);
     if (!edge) return;
-    node = edge.to;
-    show(true);
+    follow(edge.to);
   }
 
   function show(moved) {
@@ -406,7 +428,7 @@
     // A partial refresh of e-ink shows the old picture a moment longer; a flash stands in for the full refresh.
     if (moved) { screen.classList.add("refresh"); setTimeout(() => screen.classList.remove("refresh"), 90); }
     const values = { screen: screenName(current.screen), n: node + 1, total: graph.nodes.length };
-    img.setAttribute("src", picture("n" + node));
+    img.setAttribute("src", pictureOf(node));
     img.setAttribute("alt", word("site.device.picture", values));
     $("status").textContent = word("site.device.status", values);
     for (const key of Object.keys(buttons)) buttons[key].disabled = !outgoing(key);
@@ -423,21 +445,26 @@
       b.style.top = (e.tap.y / 320 * 100) + "%";
       b.style.width = (e.tap.w / 240 * 100) + "%";
       b.style.height = (e.tap.h / 320 * 100) + "%";
-      b.addEventListener("click", () => { node = e.to; show(true); });
+      b.addEventListener("click", () => follow(e.to));
       taps.appendChild(b);
     }
     // Preload the neighbours so that a key press shows at once.
-    for (const e of graph.edges) if (e.from === node) new Image().src = picture("n" + e.to);
+    for (const e of graph.edges) if (e.from === node) new Image().src = pictureOf(e.to);
+    // A screen that ends by itself (the self-test's key test) goes on when its time has passed, as the device does.
+    clearTimeout(timer);
+    const edge = waiting();
+    timer = edge ? setTimeout(() => { node = edge.to; show(true); }, edge.wait * 1000) : null;
   }
 
+  // The first state of a screen in the language of the page, for the pictures that show it.
   function firstOf(screen) {
-    const n = graph.nodes.find((x) => x.screen === screen);
-    return n ? n.id : graph.start;
+    const n = graph.nodes.find((x) => x.screen === screen && x.lang === lang);
+    return n ? n.id : startOf();
   }
 
   // The selector goes to the page of the chosen language, the same place in the page (its hash kept); the address
   // of the page is the language's, so nothing is rewritten in place.
-  function go(code) {
+  function goTo(code) {
     const target = (known(code) || { code: DEFAULT }).code;
     if (target === lang) return;
     location.href = (ROOT || "./") + folder(target) + location.hash;
@@ -452,9 +479,9 @@
     $("language").appendChild(option);
   }
   $("language").value = lang;
-  $("language").addEventListener("change", () => go($("language").value));
-  $("start").addEventListener("click", () => { if (graph) { node = graph.start; show(true); } });
-  $("device").addEventListener("keydown", (ev) => {
+  $("language").addEventListener("change", () => goTo($("language").value));
+  $("start").addEventListener("click", () => { if (graph) follow(startOf()); });
+  device.addEventListener("keydown", (ev) => {
     const key = KEYBOARD[ev.key];
     if (!key) return;
     ev.preventDefault();
@@ -464,8 +491,8 @@
 
   fetch(ROOT + "demo/graph.json").then((r) => r.json()).then((g) => {
     graph = g;
-    node = g.start;
-    $("stat-pictures").setAttribute("data-number", String(g.nodes.length * data.languages.length));
+    node = startOf();
+    $("stat-pictures").setAttribute("data-number", String(g.nodes.length));
     $("pic-compose").setAttribute("data-picture", "n" + firstOf("compose"));
     $("pic-sos").setAttribute("data-picture", "n" + firstOf("sos"));
     wire();

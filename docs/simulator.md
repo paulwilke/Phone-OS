@@ -15,9 +15,13 @@ pio run -e sim                                            # the console, headles
 .pio/build/sim/program --data sim/data-parent             # another card
 ```
 
-Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`, the page's are in its `web/` folder and are read when the page asks for them), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, and the options of the crawl ([demo.md](process/demo.md)). `--help` lists them.
+Options: `--data <dir>` (the card; default `sim/data`), `--lang <dir>` (the shipped catalogs; `lang`, the page's are in its `web/` folder and are read when the page asks for them), `--host-lang <dir>` (the words that only host tools show; `tools/lang`, merged into the languages of the same code), `--web <file>` (the page; `web/index.html`), `--golden <dir>` (`sim/golden`), `--work <dir>` and `--in-place` (the card, below), `--port <n>` (the web page, 8080), `--script <file>`, `--interactive`, `--headless`, `--scale <n>`, `--lapse <n>`, `--no-pseudo` (below), and the options of the crawl ([demo.md](process/demo.md)). `--help` lists them.
 
 A script without `--interactive` runs and exits. A line `# data: <dir>` among its first lines names the card the script needs, when `--data` is not given.
+
+### The pseudo-language
+
+The simulator offers a fourth language, `qps-ploc`, made from the English catalog with accents, brackets and two fifths more letters in every word ([ui-layout-testing.md](ui/ui-layout-testing.md)): a layout that fits it fits the longest words a translation will have. It is there to look at layouts, so it is a row on the Language page of the simulator and the console's `language qps-ploc` takes it; the device does not have it. `--no-pseudo` leaves it out, so that the simulator has the languages of the device and the Language page lists three rows; the walk that makes the demo always runs that way, so the demo's Language page lists English, Deutsch and Français and nothing else ([demo.md](process/demo.md)).
 
 ### The window
 
@@ -51,7 +55,7 @@ The console's own words (`help`, prompts, errors) are **English and are not tran
 | `lapse <factor>` | the speed-up of the real-time loop (window and terminal) |
 | `key <name>...` | keys in order: `up`, `down`, `select` (or `enter`), `back`, `home`, `inbox`, `compose` |
 | `type <text>`, `tap <x> <y>` | typed characters (UTF-8); a touch at a pixel of the 240 × 320 panel |
-| `language <code>` | the interface language: `en`, `de`, `fr`, the pseudo-language `qps-ploc`, or a user catalog |
+| `language <code>` | the interface language: `en`, `de`, `fr`, the pseudo-language `qps-ploc` (see below), or a user catalog |
 | `sos begin [number]`, `sos choose emergency`, `sos choose pickup`, `sos tap`, `sos leave` | the entry points of the SOS button on the core; the SOS page itself is driven with keys (`sos-page` scenarios) |
 | `cellular on\|off` | what the network page does |
 | `state`, `log [n]` | a summary of the device; the last lines of its log |
