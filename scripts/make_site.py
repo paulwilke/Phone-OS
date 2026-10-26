@@ -81,11 +81,12 @@ def used_keys(page):
     return sorted(set(re.findall(r'\sdata-i18n(?:-[a-z-]+)?="([^"]+)"', page)) | set(SCRIPT_KEY.findall(page)))
 
 
-def needed(languages):
-    """What the result must hold: the page and its version, the demo the page fetches, and a page per language."""
+def needed(languages, starts):
+    """What the result must hold: the page and its version, the demo the page fetches, the picture each language starts
+    on, and a page per language."""
     codes = [code for code, _, _ in languages]
     files = ["index.html", "version.txt", "demo/index.html", "demo/graph.json"]
-    files += [f"demo/{code}/n0.png" for code in codes]
+    files += [f"demo/{code}/n{starts[code]}.png" for code in codes]
     files += [f"{code}/index.html" for code in codes if code != DEFAULT]
     return files
 
@@ -95,29 +96,35 @@ def address(base, code):
     return base if code == DEFAULT else base + code + "/"
 
 
-def head(base, languages, code):
-    """The links of a page's head: its canonical address, every language's page, x-default, and the picture a preview shows."""
+def head(base, languages, code, start):
+    """The links of a page's head: its canonical address, every language's page, x-default, and the picture a preview shows
+    (the state the device starts in, in the page's language)."""
     lines = [f'<link rel="canonical" href="{html.escape(address(base, code))}">']
     lines += [f'<link rel="alternate" hreflang="{other}" href="{html.escape(address(base, other))}">' for other, _, _ in languages]
     lines.append(f'<link rel="alternate" hreflang="x-default" href="{html.escape(address(base, DEFAULT))}">')
-    lines.append(f'<meta property="og:image" content="{html.escape(base)}demo/{code}/n0.png">')
+    lines.append(f'<meta property="og:image" content="{html.escape(base)}demo/{code}/n{start}.png">')
     return "\n".join(lines)
 
 
-def render(page, languages, code, base):
-    """The page of one language: its words written in, its language and root, its links, and its words embedded."""
+def render(page, languages, code, base, starts):
+    """The page of one language: its words written in, its language and root, its links, and its words embedded.
+    `starts` is the state of the demo's graph each language begins in."""
     words = next(table for other, _, table in languages if other == code)
     natives = {other: native for other, native, _ in languages}
     root = "" if code == DEFAULT else "../"
-    # The pictures written into the markup are the English ones; a language's page shows its own before any script runs.
+    # The pictures written into the markup are the English start state's; a language's page shows its own before any
+    # script runs (the demo's graph is one over every language, so its states have numbers of their own).
+    page = page.replace(f'src="demo/{DEFAULT}/n0.png"', f'src="demo/{DEFAULT}/n{starts[code]}.png"')
+    page = page.replace('data-picture="n0"', f'data-picture="n{starts[code]}"')
     page = page.replace(f'src="demo/{DEFAULT}/', f'src="demo/{code}/')
+    # The full demo opens in the page's language, English too (the script does the same): without it the demo would
+    # follow the browser's language, and a German reader of the English page would land in a German demo.
+    page = page.replace('href="demo/index.html"', f'href="demo/index.html?lang={code}"')
     if code != DEFAULT:
-        # The full demo opens in the page's language (the script does the same), and the pictures and the demo sit in the
-        # root's folder: a page one folder down reaches them with ../.
-        page = page.replace('href="demo/index.html"', f'href="demo/index.html?lang={code}"')
+        # The pictures and the demo sit in the root's folder: a page one folder down reaches them with ../.
         page = page.replace('src="demo/', 'src="../demo/').replace('href="demo/', 'href="../demo/')
     page = page.replace(HTML_TAG, f'<html lang="{code}" data-root="{root}">')
-    page = page.replace(ALTERNATES, head(base, languages, code))
+    page = page.replace(ALTERNATES, head(base, languages, code, starts[code]))
     page = TEXT_KEY.sub(lambda m: m.group(1) + html.escape(words[m.group(3)], quote=False) + m.group(4), page)
     page = ATTRIBUTE_KEY.sub(lambda m: f'{m.group(0)} {m.group(1)}="{html.escape(words[m.group(2)])}"', page)
     page = NATIVE.sub(lambda m: m.group(1) + html.escape(natives.get(m.group(2), m.group(2))) + m.group(3), page)
@@ -133,6 +140,11 @@ def render(page, languages, code, base):
 def assemble(site, demo, version, out, lang, url):
     if not os.path.isfile(os.path.join(demo, "graph.json")):
         return f"make_site: no demo at {demo}; build it with `python3 scripts/make_demo.py`"
+    try:
+        with open(os.path.join(demo, "graph.json"), encoding="utf-8") as f:
+            starts = json.load(f)["starts"]
+    except (ValueError, KeyError, TypeError):
+        return f"make_site: {os.path.join(demo, 'graph.json')} is not the graph of the demo (no `starts`): build it again with `python3 scripts/make_demo.py`"
     if not url.startswith(("https://", "http://")):
         return f"make_site: --url must start with https:// (got {url!r}): the links of the pages are absolute"
     base = url if url.endswith("/") else url + "/"
@@ -146,6 +158,9 @@ def assemble(site, demo, version, out, lang, url):
                          (HTML_TAG, f"{HTML_TAG}, so that each language's page sets its own language and root")):
         if page.count(marker) != 1:
             return f"make_site: {os.path.join(site, 'index.html')} must hold {what}"
+    unstarted = [code for code, _, _ in languages if not isinstance(starts.get(code), int)]
+    if unstarted:
+        return "make_site: the demo's graph has no start state in " + ", ".join(unstarted) + ": build it again with `python3 scripts/make_demo.py`"
     missing = [f"site.{code}.toml lacks {key}" for code, _, words in languages for key in used_keys(page) if key not in words]
     if missing:
         return "make_site: " + "; ".join(missing)
@@ -156,13 +171,13 @@ def assemble(site, demo, version, out, lang, url):
         target = os.path.join(out, "index.html") if code == DEFAULT else os.path.join(out, code, "index.html")
         os.makedirs(os.path.dirname(target), exist_ok=True)
         with open(target, "w", encoding="utf-8") as f:
-            f.write(render(page, languages, code, base))
+            f.write(render(page, languages, code, base, starts))
     shutil.copytree(demo, os.path.join(out, "demo"))
     with open(version, encoding="utf-8") as f:
         text = f.read().strip()
     with open(os.path.join(out, "version.txt"), "w", encoding="utf-8") as f:
         f.write(text + "\n")
-    missing = [name for name in needed(languages) if not os.path.isfile(os.path.join(out, name))]
+    missing = [name for name in needed(languages, starts) if not os.path.isfile(os.path.join(out, name))]
     if missing:
         return "make_site: missing in the result: " + ", ".join(missing)
     return None

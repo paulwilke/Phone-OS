@@ -72,6 +72,8 @@ class Element {
   appendChild(c) { this.children.push(c); return c; }
   addEventListener(type, fn) { this.listeners[type] = fn; }
   click() { if (!this.disabled && this.listeners.click) this.listeners.click(); }
+  contains(other) { return other === this || this.children.some((c) => c.contains(other)); }
+  focus() { if (this.doc) this.doc.activeElement = this; }
 }
 
 // Every element of the markup with its attributes; what the script creates hangs below them.
@@ -95,12 +97,18 @@ for (const { code } of LANGUAGES) {
   words[code]['site.device.status'] = code + ':{screen} {n}/{total}';
   words[code]['site.device.tap'] = code + ':tap {screen}';
 }
-const graph = {
-  start: 0,
-  nodes: [{ id: 0, screen: 'home' }, { id: 1, screen: 'compose' }, { id: 2, screen: 'sos' }],
-  edges: [{ from: 0, key: 'select', to: 1 }, { from: 1, key: 'back', to: 0 }, { from: 1, key: 'down', to: 2 },
-          { from: 0, tap: { x: 160, y: 48, w: 74, h: 69 }, to: 2 }],
-};
+// One graph over every language, as the walk makes it: each language has its start (3 states each: home, compose, sos),
+// and a state is in the language of its picture. The SOS page of German (5) leads with Up to the English compose page
+// (1), as the Language screen leads from one language into another; the key test of the self-test (9, 10) ends by itself.
+const graph = { starts: { en: 0, de: 3, fr: 6 }, complete: true, nodes: [], edges: [] };
+LANGUAGES.forEach(({ code }, i) => {
+  const base = 3 * i;
+  graph.nodes.push({ id: base, screen: 'home', lang: code }, { id: base + 1, screen: 'compose', lang: code }, { id: base + 2, screen: 'sos', lang: code });
+  graph.edges.push({ from: base, key: 'select', to: base + 1 }, { from: base + 1, key: 'back', to: base }, { from: base + 1, key: 'down', to: base + 2 },
+                   { from: base, tap: { x: 160, y: 48, w: 74, h: 69 }, to: base + 2 });
+});
+graph.nodes.push({ id: 9, screen: 'selftest', lang: 'en' }, { id: 10, screen: 'selftest', lang: 'en' });
+graph.edges.push({ from: 5, key: 'up', to: 1 }, { from: 1, key: 'up', to: 9 }, { from: 9, key: 'down', to: 10 }, { from: 10, wait: 7, to: 9 }, { from: 10, key: 'down', to: 9 });
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
@@ -112,19 +120,31 @@ async function load({ lang = 'en', root = '', search = '', hash = '#try', withGr
   const byId = (id) => all().find((e) => e.getAttribute('id') === id);
   byId('data')._text = JSON.stringify({ languages: LANGUAGES, words: { [lang]: words[lang] } });
   const replaced = [];
+  const timers = [];
   const location = { search, pathname: '/Phone-OS/', hash, href: 'https://example.test/Phone-OS/', replace: (url) => { replaced.push(url); } };
   const document = {
+    activeElement: null,
     documentElement: { lang, getAttribute: (name) => (name === 'data-root' ? root : null) },
     getElementById: byId,
     createElement: (tag) => new Element(tag),
     querySelectorAll: (selector) => { const name = selector.match(/^\[([a-z0-9-]+)\]$/)[1]; return all().filter((e) => e.hasAttribute(name)); },
   };
+  document.body = new Element('body');
+  document.activeElement = document.body;
+  for (const e of elements) e.doc = document;
+  // The markup's elements are a flat list here: what lies inside the device is what the real markup nests in it.
+  const parts = ['softkeys', 'pad', 'taps', 'picture'].map(byId);
+  byId('device').contains = (other) => other === byId('device') || parts.some((part) => part === other || part.children.includes(other));
+  // A clock the test turns by hand: the page asks for a time to pass, and the test lets it pass or not.
+  const fakeSetTimeout = (fn, ms) => { timers.push({ fn, ms, live: true }); return timers.length; };
+  const fakeClearTimeout = (id) => { if (timers[id - 1]) timers[id - 1].live = false; };
   const fetch = (url) => (url === root + 'demo/graph.json' && !withGraph ? Promise.reject(new Error('404'))
     : Promise.resolve({ ok: true, json: async () => graph, text: async () => '4.2.10\n' }));
-  vm.runInNewContext(script, { document, location, fetch, URLSearchParams, Image: class { }, setTimeout,
+  vm.runInNewContext(script, { document, location, fetch, URLSearchParams, Image: class { }, setTimeout: fakeSetTimeout, clearTimeout: fakeClearTimeout,
     navigator: { language: browser }, JSON, console });
   await settle();
-  return { document, byId, all, replaced, location, lang, root,
+  const live = () => timers.filter((t) => t.live && t.ms > 100);   // the flash of the screen lasts 90 ms and is not a clock of the device
+  return { document, byId, all, replaced, location, lang, root, live,
     select: async (code) => { const s = byId('language'); s.value = code; s.listeners.change(); await settle(); } };
 }
 
@@ -138,7 +158,7 @@ const numberText = (page, value) => page.all().find((e) => e.getAttribute('data-
 
 // ---- the root page is English, and the browser's language does not change it -----------------------------------
 let page = await load({ browser: 'de-DE' });
-assert(page.document.documentElement.lang === 'en' && page.byId('status').textContent === 'en:en:site.screen.home 1/3',
+assert(page.document.documentElement.lang === 'en' && page.byId('status').textContent === 'en:en:site.screen.home 1/11',
   'the root page is English, and a browser set to German does not change it');
 assert(page.replaced.length === 0 && page.location.href === 'https://example.test/Phone-OS/', 'opening the root page does not move it or touch the address');
 assert(page.byId('language').value === 'en' && page.byId('language').children.map((o) => o.textContent).join() === 'English,Deutsch,Français',
@@ -146,10 +166,10 @@ assert(page.byId('language').value === 'en' && page.byId('language').children.ma
 assert(picturesIn(page) && page.byId('picture').getAttribute('src') === 'demo/en/n0.png', 'the pictures are the English ones');
 assert(page.byId('pic-compose').getAttribute('src') === 'demo/en/n1.png' && page.byId('pic-sos').getAttribute('src') === 'demo/en/n2.png',
   'the cards show the first picture of their screen');
-assert(numberText(page, '2500+') === '2,500+' && page.byId('stat-pictures').textContent === '9',
+assert(numberText(page, '2500+') === '2,500+' && page.byId('stat-pictures').textContent === '11',
   'numbers are written the English way, and the pictures are counted in all languages');
 assert(guide(page).endsWith('/docs/user-guide.md') && listedLanguages(page) === 'de,fr', 'the guide in English, and links to the guides of the other languages');
-assert(demoLink(page) === 'demo/index.html', 'the link to the full demo carries no language in English, the default');
+assert(demoLink(page) === 'demo/index.html?lang=en', 'the link to the full demo names English too: without it the demo would follow the browser');
 
 // ---- ?lang= on the root page goes to that language's page; an unknown code and English stay here -------------------
 page = await load({ search: '?lang=de' });
@@ -157,7 +177,7 @@ assert(page.replaced.length === 1 && page.replaced[0] === './de/#try', 'a root p
 page = await load({ search: '?lang=fr' });
 assert(page.replaced.length === 1 && page.replaced[0] === './fr/#try', 'a root page opened with ?lang=fr goes to fr/');
 page = await load({ search: '?lang=xx' });
-assert(page.replaced.length === 0 && page.byId('status').textContent === 'en:en:site.screen.home 1/3', 'a code the page does not have is ignored: the page stays English');
+assert(page.replaced.length === 0 && page.byId('status').textContent === 'en:en:site.screen.home 1/11', 'a code the page does not have is ignored: the page stays English');
 page = await load({ search: '?lang=en' });
 assert(page.replaced.length === 0, 'English is the root itself: ?lang=en does not move the page');
 page = await load({ lang: 'de', root: '../', search: '?lang=fr' });
@@ -165,9 +185,9 @@ assert(page.replaced.length === 0, 'a language folder does not redirect again: t
 
 // ---- a language's page: its folder is one level down, and everything it builds is in its language ----------------
 page = await load({ lang: 'de', root: '../' });
-assert(page.byId('picture').getAttribute('src') === '../demo/de/n0.png' && picturesIn(page), 'the pictures of the German page are the German ones, one folder down');
-assert(page.byId('pic-compose').getAttribute('src') === '../demo/de/n1.png', 'the cards too');
-assert(page.byId('status').textContent === 'de:de:site.screen.home 1/3', 'the status line is in German');
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n3.png' && picturesIn(page), 'the pictures of the German page are the German ones, one folder down, from the state the device starts in');
+assert(page.byId('pic-compose').getAttribute('src') === '../demo/de/n4.png' && page.byId('pic-sos').getAttribute('src') === '../demo/de/n5.png', 'the cards too: the German states of their screens');
+assert(page.byId('status').textContent === 'de:de:site.screen.home 4/11', 'the status line is in German');
 assert(key(page, 'select') && key(page, 'select').getAttribute('aria-label') === 'de:site.key.select' && key(page, 'select').children[1].textContent === 'de:site.key.select',
   'the labels of the keys are in German, the name of a key and its label for a reader of the screen');
 assert(numberText(page, '2500+') === '2.500+', 'numbers are written the German way');
@@ -194,13 +214,56 @@ assert(page.location.href === '../fr/#try', 'choosing French on the German page 
 page = await load({ lang: 'de', root: '../' });
 assert(key(page, 'select').disabled === false && key(page, 'back').disabled === true, 'only the keys that lead somewhere are enabled');
 key(page, 'select').click();
-assert(page.byId('picture').getAttribute('src') === '../demo/de/n1.png' && page.byId('status').textContent === 'de:de:site.screen.compose 2/3',
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n4.png' && page.byId('status').textContent === 'de:de:site.screen.compose 5/11',
   'a key follows its edge');
 page.byId('start').click();
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n3.png', 'start over goes to the state the device starts in, in the language of the page');
 const tap = page.byId('taps').children[0];
 assert(tap && tap.getAttribute('aria-label') === 'de:tap de:site.screen.sos', 'a touch target is named in the language of the page');
 tap.click();
-assert(page.byId('picture').getAttribute('src') === '../demo/de/n2.png', 'a tap follows its edge');
+assert(page.byId('picture').getAttribute('src') === '../demo/de/n5.png', 'a tap follows its edge');
+key(page, 'up').click();
+assert(page.byId('picture').getAttribute('src') === '../demo/en/n1.png' && page.byId('status').textContent === 'de:de:site.screen.compose 2/11',
+  'choosing English on the device\'s own Language screen shows the English pictures, and the page keeps its words');
+
+// ---- the device keeps the keyboard ------------------------------------------------------------------------------------------
+// After a click with the mouse the target is gone, or the key is disabled, and the browser would give the focus to the page:
+// the arrows and Enter would scroll it instead of driving the device.
+page = await load();
+const device = page.byId('device');
+const held = (el) => { page.document.activeElement = el; };
+held(page.byId('taps').children[0]);
+page.byId('taps').children[0].click();
+assert(page.document.activeElement === device, 'after a click on a touch target (which is replaced by the next picture\'s) the device has the focus');
+page.byId('start').click();
+held(key(page, 'select'));
+key(page, 'select').click();
+assert(key(page, 'select').disabled === true && page.document.activeElement === device, 'after a click on a key that the move disables, the device has the focus');
+held(page.document.body);
+key(page, 'up').click();
+assert(page.document.activeElement === device, 'a click that left the focus on the page gives it to the device');
+held(key(page, 'down'));
+key(page, 'down').click();
+assert(key(page, 'down').disabled === false && page.document.activeElement === key(page, 'down'), 'an enabled key of the device that has the focus keeps it (somebody who tabs to a key stays there)');
+held(page.byId('start'));
+page.byId('start').click();
+assert(page.document.activeElement === device, 'start over gives the device the focus');
+
+// ---- a screen that ends by itself ------------------------------------------------------------------------------------------
+page = await load();
+assert(page.live().length === 0, 'a state that does not end by itself starts no clock');
+key(page, 'select').click();
+key(page, 'up').click();
+key(page, 'down').click();
+assert(page.byId('picture').getAttribute('src') === 'demo/en/n10.png' && page.live().length === 1 && page.live()[0].ms === 7000,
+  'the key test of the self-test page asks for seven seconds');
+page.document.activeElement = page.byId('language');
+page.live()[0].fn();
+assert(page.byId('picture').getAttribute('src') === 'demo/en/n9.png' && page.live().length === 0, 'and ends when they have passed, as on the device');
+assert(page.document.activeElement === page.byId('language'), 'the end of the time does not take the focus from where somebody has put it');
+key(page, 'down').click();
+page.byId('start').click();
+assert(page.live().length === 0, 'leaving the screen stops the clock');
 
 // ---- without the pictures ------------------------------------------------------------------------------------------
 page = await load({ withGraph: false });
