@@ -127,7 +127,8 @@ def check_graph(graph, codes):
     language starts in its own picture and no state is in a language the device does not have (the pseudo-language is a
     layout tool of the simulator), every key of every state was pressed (it has an edge or is noted as unchanged), a soft
     key that is drawn is not dead, every state can get back to the home screen, and on the Language screen every
-    language can be chosen from every other with a key and with a tap."""
+    language can be chosen from every other with a key and with a tap, and no step but a choice on the Language screen
+    changes the language (a restart keeps it)."""
     problems = []
     nodes = graph.get("nodes", [])
     if not graph.get("complete"):
@@ -177,6 +178,14 @@ def check_graph(graph, codes):
             if here != there:
                 problems += [f"in {here} the Language screen cannot choose {there} with a {how}" for how in ("key", "tap")
                              if (here, there, how) not in chosen]
+    # Only the Language screen changes the language: a restart (the Radio page's) and every other step keeps it, as on
+    # the device, where the language is kept on the card.
+    for edge in graph.get("edges", []):
+        before, after = nodes[edge["from"]], nodes[edge["to"]]
+        if before["lang"] != after["lang"] and before["screen"] != "language":
+            how = next(k for k in ("key", "tap", "wait") if k in edge)
+            problems.append(f"state {before['id']} ({before['screen']}, {before['lang']}): the {how} leads to state "
+                            f"{after['id']} in {after['lang']}, and only the Language screen changes the language")
     # Every screen the keys lead to is in the walk, in every language.
     for code in codes:
         shown = {n["screen"] for n in nodes if n["lang"] == code}

@@ -131,6 +131,18 @@ g["edges"] = [e for e in g["edges"] if not (g["nodes"][e["from"]]["screen"] == "
 found = problems(g)
 check(has(found, "in de the Language screen cannot choose fr with a key"), "and by key")
 
+# Only the Language screen changes the language: a restart from the Radio page that came back in English was the bug.
+g = copy.deepcopy(graph)
+radio = next(n for n in g["nodes"] if n["screen"] == "radio" and n["lang"] == "de")
+english_home = next(n for n in g["nodes"] if n["screen"] == "home" and n["lang"] == "en")
+g["edges"].append({"from": radio["id"], "key": "select", "to": english_home["id"]})
+found = problems(g)
+check(has(found, f"state {radio['id']} (radio, de): the key leads to state {english_home['id']} in en, and only the Language screen changes the language"),
+      "an edge that changes the language outside the Language screen fails and names it: " + "; ".join(found[:2]))
+g = copy.deepcopy(graph)
+g["edges"].append({"from": radio["id"], "wait": 5, "to": english_home["id"]})
+check(has(problems(g), "the wait leads to state"), "so does a wait")
+
 # Every screen must be in the walk in every language.
 g = copy.deepcopy(graph)
 g["nodes"] = [n for n in g["nodes"]]

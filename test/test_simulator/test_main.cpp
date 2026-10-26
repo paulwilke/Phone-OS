@@ -1021,6 +1021,28 @@ void test_the_same_path_leads_to_the_same_screen_in_every_language() {
     }
 }
 
+// A restart keeps the language, as on the device: the walk starts a language the way the Language page chooses it, so the
+// card has it. Started with the simulator's own `language` command (the translator only) the device came back in English
+// from "Funk aus (Neustart)", and the demo's graph had 36 edges from German and French states to English ones.
+void test_a_restart_from_the_radio_page_in_german_leads_to_a_german_state() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl crawl = crawler.run(1, {"de"});
+  const sim::CrawlNode* radio = nullptr;
+  for (const sim::CrawlNode& node : crawl.nodes)
+    if (node.screen == "radio" && node.language == "de" && node.depth == 1) radio = &node;
+  TEST_ASSERT_NOT_NULL(radio);
+  std::unique_ptr<sim::Simulator> there = crawler.reach(radio->path, "de");
+  TEST_ASSERT_NOT_NULL_MESSAGE(there.get(), crawler.error().c_str());
+  TEST_ASSERT_TRUE(there->execute("key select"));               // "Funk an" ...
+  there->advance(1000);
+  TEST_ASSERT_TRUE(there->execute("see radio.stop"));          // ... and the row under the cursor is "Funk aus (Neustart)"
+  const int boots = there->boots();
+  TEST_ASSERT_TRUE(there->execute("key select"));
+  there->advance(2000);
+  TEST_ASSERT_EQUAL(boots + 1, there->boots());
+  TEST_ASSERT_EQUAL_STRING("de", there->translator().language().c_str());
+}
+
 void test_shot_writes_a_picture_into_the_directory_it_was_given() {
   Sim s;
   const std::filesystem::path dir = scratch("shots");
@@ -1109,6 +1131,7 @@ int main() {
   RUN_TEST(test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data_directory);
   RUN_TEST(test_a_simulator_that_cannot_start_stops_the_crawl_with_the_reason_instead_of_a_crash);
   RUN_TEST(test_the_same_path_leads_to_the_same_screen_in_every_language);
+  RUN_TEST(test_a_restart_from_the_radio_page_in_german_leads_to_a_german_state);
   RUN_TEST(test_shot_writes_a_picture_into_the_directory_it_was_given);
   RUN_TEST(test_every_scenario_runs_to_its_end_on_its_own_card);
   RUN_TEST(test_see_finds_a_word_by_its_catalog_key_in_every_language_and_says_what_is_missing);
