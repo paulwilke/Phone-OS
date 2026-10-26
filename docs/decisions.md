@@ -564,7 +564,7 @@ Consequences: `src/ui/Screen.h` (`TouchTarget`, `touchTargets()`), `src/ui/Scree
 Verified: host-tested; the firmware compiles; not applicable on the device
 
 ## D-50: The web page carries the owner's legal notice, the one personal datum the repository holds on purpose
-Date: 2026-10-25   Status: decided
+Date: 2026-10-25   Status: superseded by D-52
 Decided by: owner (2026-10-25: the notice goes onto the page itself, with name, address and e-mail, no telephone number)
 
 Context: German law (§ 5 DDG) asks a public page that is not purely private for a legal notice with the provider's name, a postal address and an e-mail address; whether a non-commercial project page needs one is a grey area, and the owner wants the page safe rather than argued about. The repository's rule is that no personal data enters it, ever ([CONTRIBUTING.md](../CONTRIBUTING.md)), and `scripts/privacy_check.py` fails on every e-mail address. The owner's own site, which could hold the notice, is not ready.
@@ -583,4 +583,15 @@ Options: Keep the one page and the script (no change; the previews and the searc
 Decision: The second. `scripts/make_site.py` renders the page once per catalog it finds, English at the root as the default, each with its own words written in, `<html lang>` set, `data-root` for the paths, only its own words embedded, and `canonical`/`hreflang` links built from `--url` (default `https://paulwilke.github.io/Phone-OS/`, for the custom domain to come). The selector navigates to the other language's page; `?lang=<code>` on the root page redirects to that page so that shared links keep working. The demo page keeps its own `?lang=` and links the legal notice of its language's page. This supersedes the language part of D-48; everything else of D-48 stands.
 Reason: The words exist; writing them in at build time costs one loop, and it is what gives German and French readers a page that is theirs before any script runs, in previews and in search.
 Consequences: `scripts/make_site.py` (`--url`, one page per language, `NEEDED` per language), `site/index.html` (`data-root`, the alternates placeholder, the script's `ROOT` and redirect), `sim/demo/page.html` (the legal link follows the language), `test/test_make_site/test_site.py`, `test/test_site_page/test.mjs`, [site.md](process/site.md). The address of a German reader is `https://paulwilke.github.io/Phone-OS/de/`; `?lang=de` still arrives there.
+Verified: host-tested; not published yet
+
+## D-52: The legal notice leaves the web page again
+Date: 2026-10-26   Status: decided
+Decided by: owner (2026-10-26)
+
+Context: D-50 put the owner's legal notice (name, address, e-mail) onto the web page, as the one personal datum the repository holds on purpose, and `scripts/privacy_check.py` was given an exception for that one address. On 2026-10-26 the owner asked for the notice to be removed again, in all three languages, and the page republished.
+Options: Keep the notice on the page (D-50). Remove it and keep the exception in the privacy check for later. Remove it and the exception, so that the repository's rule against personal data holds again without exception.
+Decision: The third. The section, its words in the three catalogs, the footer link, the demo page's link, the exception in `privacy_check.py` and the sentences about the exception in CONTRIBUTING.md and the README are removed; the page carries no personal data. D-50 is superseded. Whether and where a notice is published later is the owner's, and a new decision when it comes.
+Reason: The owner's decision. The repository's rule is simpler without an exception, and the check fails again on every e-mail address.
+Consequences: `site/index.html`, `tools/lang/site.*.toml`, `sim/demo/page.html`, `tools/lang/demo.*.toml`, `scripts/make_demo.py`, `scripts/privacy_check.py`, CONTRIBUTING.md, README.md, [site.md](process/site.md), `test_site_page`, `test_demo_page`. The address stays in the history of the repository, as every commit does.
 Verified: host-tested; not published yet
