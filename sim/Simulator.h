@@ -830,7 +830,9 @@ inline bool Simulator::command(const std::vector<std::string>& w, const std::str
   }
   if (name == "language") {
     if (!need(2)) return fail("language needs a code");
-    if (!r.runtime->setLanguage(w[1])) {
+    // The way the Language page chooses it: the card keeps the language, so a restart (the Radio page's, the
+    // parents' page's) brings the device back in it. Runtime::setLanguage then only asks for the next frame.
+    if (!r.runtime->core().setInterfaceLanguage(w[1]) || !r.runtime->setLanguage(w[1])) {
       out_ << "error: no catalog has the code " << w[1] << "\n";
       return false;
     }

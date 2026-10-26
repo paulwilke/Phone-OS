@@ -55,7 +55,7 @@ The console's own words (`help`, prompts, errors) are **English and are not tran
 | `lapse <factor>` | the speed-up of the real-time loop (window and terminal) |
 | `key <name>...` | keys in order: `up`, `down`, `select` (or `enter`), `back`, `home`, `inbox`, `compose` |
 | `type <text>`, `tap <x> <y>` | typed characters (UTF-8); a touch at a pixel of the 240 × 320 panel |
-| `language <code>` | the interface language: `en`, `de`, `fr`, the pseudo-language `qps-ploc` (see below), or a user catalog |
+| `language <code>` | the interface language, chosen as the Language page chooses it, so the card keeps it and a restart brings the device back in it: `en`, `de`, `fr`, the pseudo-language `qps-ploc` (see below), or a user catalog |
 | `sos begin [number]`, `sos choose emergency`, `sos choose pickup`, `sos tap`, `sos leave` | the entry points of the SOS button on the core; the SOS page itself is driven with keys (`sos-page` scenarios) |
 | `cellular on\|off` | what the network page does |
 | `state`, `log [n]` | a summary of the device; the last lines of its log |
