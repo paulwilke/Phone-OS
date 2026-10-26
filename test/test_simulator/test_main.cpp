@@ -707,51 +707,200 @@ sim::Options crawlOptions() {
 
 void test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time() {
   sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
-  const sim::Crawl first = crawler.run(3, 8);
-  const sim::Crawl second = crawler.run(3, 8);
+  const sim::Crawl first = crawler.run(1);
+  const sim::Crawl second = crawler.run(1);
   TEST_ASSERT_EQUAL_STRING(sim::Crawler::json(first).c_str(), sim::Crawler::json(second).c_str());
   TEST_ASSERT_EQUAL_STRING("home", first.nodes[0].screen.c_str());
+  TEST_ASSERT_EQUAL(0, first.starts.at("en"));
   std::set<std::string> screens;
   for (const sim::CrawlNode& node : first.nodes) screens.insert(node.screen);
-  for (const char* screen : {"home", "lock", "phone", "messages", "recipient", "compose", "call"})
+  for (const char* screen : {"home", "lock", "phone", "messages", "sos", "radio"})
     TEST_ASSERT_TRUE_MESSAGE(screens.count(screen) == 1, screen);
   for (const sim::CrawlEdge& edge : first.edges) {
     TEST_ASSERT_TRUE(edge.from >= 0 && edge.to >= 0 && edge.from != edge.to);
     TEST_ASSERT_TRUE(static_cast<size_t>(edge.from) < first.nodes.size() && static_cast<size_t>(edge.to) < first.nodes.size());
   }
-  for (const sim::CrawlNode& node : first.nodes) TEST_ASSERT_TRUE(node.depth <= 3 && static_cast<int>(node.path.size()) == node.depth);
+  for (const sim::CrawlNode& node : first.nodes) TEST_ASSERT_TRUE(node.depth <= 1 && static_cast<int>(node.path.size()) == node.depth);
 }
 
-void test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest() {
+// Nothing is cut off to keep a walk short: a walk that reaches its limits says so, and a caller must not use it. The old
+// cap on the states of a screen left keys that are drawn and lead nowhere (a state past it had no edge).
+void test_a_walk_that_reaches_a_limit_says_it_is_not_complete_and_nothing_else_cuts_a_state() {
   sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
-  const sim::Crawl crawl = crawler.run(5, 4);
+  const sim::Crawl shallow = crawler.run(1);
+  TEST_ASSERT_FALSE(shallow.complete);                      // the states one step from the home screen lead further
+  TEST_ASSERT_TRUE(shallow.nodes.size() > 10);
+  TEST_ASSERT_TRUE(crawler.error().empty());
+  const sim::Crawl few = crawler.run(30, {}, 5);
+  TEST_ASSERT_EQUAL(5u, few.nodes.size());
+  TEST_ASSERT_FALSE(few.complete);
+  TEST_ASSERT_TRUE_MESSAGE(crawler.error().find("more than 5 states") != std::string::npos, crawler.error().c_str());
+  // A state of one screen is kept however many the screen has: the old cap kept 30, and the home screen alone has more
+  // pictures than that (a cursor on each tile, in each language) once the walk is not cut.
   std::map<std::string, size_t> per;
-  for (const sim::CrawlNode& node : crawl.nodes) ++per[node.screen];
-  for (const auto& entry : per) TEST_ASSERT_TRUE_MESSAGE(entry.second <= 4, entry.first.c_str());
-  TEST_ASSERT_TRUE(crawl.trimmed > 0);
+  for (const sim::CrawlNode& node : shallow.nodes) ++per[node.screen];
+  TEST_ASSERT_TRUE(per["home"] >= 3);
 }
 
-void test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through() {
-  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("call", "back"));
-  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", "select"));
-  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("compose", "down"));
-  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("home", "select"));
-  // Taps: a soft key is its key; a tap on the content of the compose page would send a ready-made message.
-  const ui::TouchTarget content{{10, 60, 100, 30}, std::nullopt};
-  const ui::TouchTarget sendKey{{146, 288, 94, 32}, ui::Key::Select};
-  const ui::TouchTarget backKey{{0, 288, 94, 32}, ui::Key::Back};
-  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("home", content));
-  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", content));
-  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("compose", sendKey));
-  TEST_ASSERT_TRUE(sim::Crawler::worldStaysAsItIs("compose", backKey));
-  TEST_ASSERT_FALSE(sim::Crawler::worldStaysAsItIs("call", backKey));
+// A walk follows every key and every tap of every state it has fully followed: each of the seven keys has an edge or is
+// noted as pressed without effect, a soft key that is drawn leads somewhere, and the three languages each have a start of
+// their own. (The full graph is checked by scripts/make_demo.py on every build, at every depth.)
+void test_every_key_of_every_followed_state_has_an_edge_or_a_note_and_every_language_its_start() {
+  sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
+  const sim::Crawl crawl = crawler.run(1, {"en", "de", "fr"});
+  TEST_ASSERT_EQUAL(3u, crawl.starts.size());
+  for (const char* code : {"en", "de", "fr"}) {
+    TEST_ASSERT_TRUE_MESSAGE(crawl.starts.count(code) == 1, code);
+    TEST_ASSERT_EQUAL_STRING(code, crawl.nodes[static_cast<size_t>(crawl.starts.at(code))].language.c_str());
+  }
+  size_t followed = 0;
+  for (const sim::CrawlNode& node : crawl.nodes) {
+    if (node.depth >= 1) continue;   // the states one step further were followed too, but what they lead to is beyond the limit
+    ++followed;
+    for (const std::string& key : sim::Crawler::keys()) {
+      bool edge = false;
+      for (const sim::CrawlEdge& e : crawl.edges) edge = edge || (e.from == node.id && e.key == key);
+      const bool noted = std::find(node.idle.begin(), node.idle.end(), key) != node.idle.end();
+      TEST_ASSERT_TRUE_MESSAGE(edge != noted, (node.screen + ": " + key + " has an edge or a note, not both and not neither").c_str());
+      // The arrows of a list that is at its end are drawn and do nothing, as on the device; every other soft key leads on.
+      const bool drawn = std::find(node.soft.begin(), node.soft.end(), key) != node.soft.end();
+      TEST_ASSERT_FALSE_MESSAGE(drawn && noted && key != "up" && key != "down", (node.screen + ": the soft key " + key + " is drawn and does nothing").c_str());
+    }
+  }
+  TEST_ASSERT_EQUAL(3u, followed);
+}
+
+namespace {
+// A walk that starts where a script leaves the device: the script is the prelude, so a state far from the home screen
+// can be walked from without walking to it.
+std::string preludeWith(const std::string& name, const std::string& steps) {
+  const std::filesystem::path file = scratch(name) / "prelude.txt";
+  std::ofstream(file) << "run sim/demo/world.txt\n" << steps;
+  return file.string();
+}
+}  // namespace
+
+// The call page: Hang up is the soft key and the Back key, and it ends the call as it does on the device. (The walk used to
+// press no key during a call, so the only exit of the page was "start over".)
+void test_hang_up_works_in_the_walk() {
+  sim::Crawler crawler(crawlOptions(), preludeWith("walk-call", "key select\nkey select\n"));   // the phone page, and the first contact
+  const sim::Crawl crawl = crawler.run(1);
+  TEST_ASSERT_EQUAL_STRING("call", crawl.nodes[0].screen.c_str());
+  TEST_ASSERT_TRUE(std::find(crawl.nodes[0].soft.begin(), crawl.nodes[0].soft.end(), "back") != crawl.nodes[0].soft.end());
+  const sim::CrawlEdge* hangUp = nullptr;
+  for (const sim::CrawlEdge& e : crawl.edges)
+    if (e.from == 0 && e.key == "back") hangUp = &e;
+  TEST_ASSERT_NOT_NULL_MESSAGE(hangUp, "Hang up has no edge");
+  TEST_ASSERT_TRUE(crawl.nodes[static_cast<size_t>(hangUp->to)].crc != crawl.nodes[0].crc);   // the picture says that the call is over
+  bool tapped = false;
+  for (const sim::CrawlEdge& e : crawl.edges) tapped = tapped || (e.from == 0 && e.isTap() && e.tap.y >= 288);
+  TEST_ASSERT_TRUE_MESSAGE(tapped, "a tap on the Hang up bar has no edge");
+}
+
+// A ready-made message is sent by Enter and by a tap on its row; the device shows the home screen after it, and so does
+// the walk (the sent message itself is not carried into the lists of the states that follow: the walk does not keep a
+// history, so the home screen it returns to is the one it knows).
+void test_a_ready_made_message_is_sent_in_the_walk_and_leads_to_the_home_screen() {
+  sim::Crawler crawler(crawlOptions(), preludeWith("walk-compose", "key compose\nkey select\n"));   // the page of the ready-made messages
+  const sim::Crawl crawl = crawler.run(1);
+  TEST_ASSERT_EQUAL_STRING("compose", crawl.nodes[0].screen.c_str());
+  bool key = false, rowTap = false;
+  for (const sim::CrawlEdge& e : crawl.edges) {
+    if (e.from != 0 || crawl.nodes[static_cast<size_t>(e.to)].screen != "home") continue;
+    if (e.key == "select") key = true;
+    if (e.isTap() && e.tap.y > 100 && e.tap.y < 288) rowTap = true;
+  }
+  TEST_ASSERT_TRUE_MESSAGE(key, "Enter on a ready-made message has no edge");
+  TEST_ASSERT_TRUE_MESSAGE(rowTap, "a tap on a ready-made message has no edge");
+}
+
+// The key test of the self-test page says "Ends in 6 s without input" and ends by itself; the walk has no time of its own, so
+// it lets the time pass once on every state of the page, and the graph has an edge of seconds for it.
+void test_the_key_test_of_the_self_test_page_ends_by_itself_in_the_walk() {
+  // Home, down to the self-test tile (after the child's seven, the network, GPS, clock, settings and motion tiles), into it,
+  // down to the key test (the fourth), into it.
+  std::string steps;
+  for (int i = 0; i < 12; ++i) steps += "key down\n";
+  steps += "key select\nkey down\nkey down\nkey down\nkey select\n";
+  sim::Crawler crawler(crawlOptions(), preludeWith("walk-selftest", steps));
+  const sim::Crawl crawl = crawler.run(1);
+  TEST_ASSERT_EQUAL_STRING("selftest", crawl.nodes[0].screen.c_str());
+  const sim::CrawlEdge* ends = nullptr;
+  for (const sim::CrawlEdge& e : crawl.edges)
+    if (e.from == 0 && e.isWait()) ends = &e;
+  TEST_ASSERT_NOT_NULL_MESSAGE(ends, "the key test does not end in the walk");
+  TEST_ASSERT_EQUAL(sim::Crawler::kWaitSeconds, ends->wait);
+  TEST_ASSERT_TRUE(crawl.nodes[static_cast<size_t>(ends->to)].crc != crawl.nodes[0].crc);
+  TEST_ASSERT_TRUE(sim::Crawler::kWaitSeconds > 6);   // SelfTestScreen::kIdleSeconds
+  const std::string json = sim::Crawler::json(crawl);
+  TEST_ASSERT_TRUE(contains(json, "\"wait\":7"));
+  // A key of the test is a key to test: it leads to the picture that names it, and the time starts again from there.
+  bool named = false;
+  for (const sim::CrawlEdge& e : crawl.edges) named = named || (e.from == 0 && e.key == "up");
+  TEST_ASSERT_TRUE(named);
+}
+
+// The Language screen lists the languages the device has, and from each of them each other one can be chosen with the keys
+// and with a finger. The cursor starts on the language in use, so the same keys pick different rows in different
+// languages: a walk found in English and replayed in German chose German where it meant English.
+void test_the_language_page_lists_the_three_languages_and_each_can_be_chosen_from_each_other_by_key_and_tap() {
+  sim::Options options = crawlOptions();
+  options.pseudoLanguage = false;
+  sim::Crawler crawler(options, "sim/demo/world.txt");
+  // Home, the options tile, its language row, as in test_a_path_that_changes_a_setting...
+  std::vector<std::string> toLanguage(10, "key down");
+  for (const char* step : {"key select", "key down", "key down", "key select"}) toLanguage.push_back(step);
+  const std::vector<std::string> codes = {"de", "en", "fr"};   // the order of the page: by code
+  for (size_t here = 0; here < codes.size(); ++here) {
+    std::unique_ptr<sim::Simulator> at = crawler.reach(toLanguage, codes[here]);
+    TEST_ASSERT_NOT_NULL_MESSAGE(at.get(), crawler.error().c_str());
+    TEST_ASSERT_EQUAL_STRING("language", sim::Crawler::screenOf(*at).c_str());
+    std::vector<ui::TouchTarget> rows;
+    for (const ui::TouchTarget& target : sim::Crawler::targets(*at))
+      if (!target.key) rows.push_back(target);
+    TEST_ASSERT_EQUAL_MESSAGE(3u, rows.size(), codes[here].c_str());   // exactly the three, no pseudo-language
+    for (size_t there = 0; there < codes.size(); ++there) {
+      std::vector<std::string> byKey = toLanguage;
+      for (size_t i = here; i < there; ++i) byKey.push_back("key down");
+      for (size_t i = there; i < here; ++i) byKey.push_back("key up");
+      byKey.push_back("key select");
+      std::unique_ptr<sim::Simulator> chosen = crawler.reach(byKey, codes[here]);
+      TEST_ASSERT_NOT_NULL(chosen.get());
+      TEST_ASSERT_EQUAL_STRING_MESSAGE(codes[there].c_str(), chosen->translator().language().c_str(), (codes[here] + " to " + codes[there] + " by key").c_str());
+      std::vector<std::string> byTap = toLanguage;
+      byTap.push_back("tap " + std::to_string(rows[there].rect.x + rows[there].rect.w / 2) + " " + std::to_string(rows[there].rect.y + rows[there].rect.h / 2));
+      std::unique_ptr<sim::Simulator> tapped = crawler.reach(byTap, codes[here]);
+      TEST_ASSERT_NOT_NULL(tapped.get());
+      TEST_ASSERT_EQUAL_STRING_MESSAGE(codes[there].c_str(), tapped->translator().language().c_str(), (codes[here] + " to " + codes[there] + " by tap").c_str());
+    }
+  }
+}
+
+// The pseudo-language is a tool to look at layouts in the simulator; the device does not have it, and a simulator told to
+// have the device's languages does not offer it.
+void test_the_pseudo_language_is_a_choice_of_the_simulator_and_not_of_the_demo() {
+  Sim with;
+  TEST_ASSERT_TRUE(with.run("language qps-ploc"));
+  sim::Options options = Sim::options("sim/data", "sim/golden");
+  options.pseudoLanguage = false;
+  std::ostringstream out;
+  sim::Simulator without(options, out);
+  TEST_ASSERT_TRUE(without.ok());
+  TEST_ASSERT_FALSE(without.execute("language qps-ploc"));
+  TEST_ASSERT_TRUE(without.execute("language fr"));
+  size_t count = 0;
+  for (const i18n::LanguageInfo& info : without.translator().languages()) {
+    ++count;
+    TEST_ASSERT_TRUE_MESSAGE(info.code != "qps-ploc", info.code.c_str());
+  }
+  TEST_ASSERT_EQUAL(3u, count);
 }
 
 // The walk taps what the screens report: from the home screen the SOS tile leads to the SOS page and the Lock soft
 // key to the lock screen, each as an edge with the rectangle a finger hits, and the graph says so.
 void test_the_walk_taps_the_targets_of_the_screens_and_the_graph_carries_their_rectangles() {
   sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
-  const sim::Crawl crawl = crawler.run(1, 30);
+  const sim::Crawl crawl = crawler.run(1);
   bool sos = false, lock = false, keys = false;
   for (const sim::CrawlEdge& edge : crawl.edges) {
     if (edge.from != 0) continue;
@@ -780,7 +929,7 @@ void test_the_walk_taps_the_targets_of_the_screens_and_the_graph_carries_their_r
 // reports a rectangle its handle() ignores, or two that overlap, fails here.
 void test_every_touch_target_a_screen_reports_is_used_when_its_middle_is_tapped() {
   sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
-  const sim::Crawl crawl = crawler.run(2, 3);
+  const sim::Crawl crawl = crawler.run(1);
   size_t checked = 0;
   std::set<std::string> screens;
   for (const sim::CrawlNode& node : crawl.nodes) {
@@ -856,7 +1005,7 @@ void test_a_simulator_that_cannot_start_stops_the_crawl_with_the_reason_instead_
   sim::Crawler crawler(options, "sim/demo/world.txt");
   TEST_ASSERT_NULL(crawler.reach({}, "").get());
   TEST_ASSERT_TRUE_MESSAGE(crawler.error().find("refusing to empty") != std::string::npos, crawler.error().c_str());
-  const sim::Crawl crawl = crawler.run(2, 4);
+  const sim::Crawl crawl = crawler.run(2);
   TEST_ASSERT_EQUAL(0u, crawl.nodes.size());
   TEST_ASSERT_FALSE(crawler.error().empty());
   TEST_ASSERT_TRUE(std::filesystem::exists(taken / "card"));      // nothing of the directory was touched
@@ -864,7 +1013,7 @@ void test_a_simulator_that_cannot_start_stops_the_crawl_with_the_reason_instead_
 
 void test_the_same_path_leads_to_the_same_screen_in_every_language() {
   sim::Crawler crawler(crawlOptions(), "sim/demo/world.txt");
-  const sim::Crawl crawl = crawler.run(3, 8);
+  const sim::Crawl crawl = crawler.run(1);
   for (const sim::CrawlNode& node : crawl.nodes)
     for (const char* language : {"de", "fr", "qps-ploc"}) {
       std::unique_ptr<sim::Simulator> there = crawler.reach(node.path, language);
@@ -948,8 +1097,13 @@ int main() {
   RUN_TEST(test_the_words_of_the_demo_page_are_in_the_simulators_languages_but_not_in_the_shipped_files);
   RUN_TEST(test_every_command_of_the_help_is_in_the_documentation);
   RUN_TEST(test_the_crawl_finds_the_screens_the_keys_lead_to_and_the_same_graph_every_time);
-  RUN_TEST(test_a_screen_keeps_no_more_states_than_its_share_and_counts_the_rest);
-  RUN_TEST(test_a_call_that_is_on_and_a_message_that_would_be_sent_are_not_walked_through);
+  RUN_TEST(test_a_walk_that_reaches_a_limit_says_it_is_not_complete_and_nothing_else_cuts_a_state);
+  RUN_TEST(test_every_key_of_every_followed_state_has_an_edge_or_a_note_and_every_language_its_start);
+  RUN_TEST(test_hang_up_works_in_the_walk);
+  RUN_TEST(test_a_ready_made_message_is_sent_in_the_walk_and_leads_to_the_home_screen);
+  RUN_TEST(test_the_key_test_of_the_self_test_page_ends_by_itself_in_the_walk);
+  RUN_TEST(test_the_language_page_lists_the_three_languages_and_each_can_be_chosen_from_each_other_by_key_and_tap);
+  RUN_TEST(test_the_pseudo_language_is_a_choice_of_the_simulator_and_not_of_the_demo);
   RUN_TEST(test_the_walk_taps_the_targets_of_the_screens_and_the_graph_carries_their_rectangles);
   RUN_TEST(test_every_touch_target_a_screen_reports_is_used_when_its_middle_is_tapped);
   RUN_TEST(test_a_path_that_changes_a_setting_does_not_reach_the_next_path_or_the_data_directory);

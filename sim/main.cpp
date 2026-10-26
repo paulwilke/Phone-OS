@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 
@@ -37,10 +38,14 @@ void usage() {
                "                    --interactive is given. The exit status is 1 when a command failed\n"
                "  --crawl <dir>     walk every picture the keys can reach: <dir>/graph.json and, for each language,\n"
                "                    <dir>/<language>/n<state>.png; exit status 1 when the walk hit its limits\n"
-               "  --languages <a,b> the languages of the pictures of --crawl (default en,de,fr)\n"
+               "  --languages <a,b> the languages the device is started in by --crawl (default en,de,fr); a state is in the language it is in\n"
+               "                    when its picture is taken, which the Language screen can change\n"
+               "  --no-pseudo       the simulator offers no pseudo-language (qps-ploc); --crawl never does\n"
                "  --prelude <file>  the world the crawl starts in: commands played after every start\n"
-               "  --depth <n>       longest path of the crawl in keys (default 12)\n"
-               "  --per-screen <n>  most states kept for one screen (default 30); the rest are counted, not followed\n"
+               "  --depth <n>       longest path of the crawl in steps (default 30); a longer one stops the crawl with an error\n"
+               "  --max-states <n>  stops the crawl with an error when it finds more states (default 20000)\n"
+               "  --jobs <n>        how many replays of the crawl run at the same time (default: the processors, at most 8); the\n"
+               "                    graph and the pictures are the same whatever the number\n"
                "  --interactive     read commands from the terminal (the default without --script)\n"
                "  --headless        no window (the only choice in a build without SDL)\n"
                "  --scale <n>       window size in times 240 x 320 (default 2)\n"
@@ -87,8 +92,9 @@ int main(int argc, char** argv) {
   bool interactive = false, headless = false, dataGiven = false;
   int scale = 2;
   std::string crawlDir, prelude, languages = "en,de,fr";
-  int depth = 12;
-  size_t perScreen = 30;
+  int depth = 30;
+  size_t maxStates = 20000;
+  size_t jobs = std::max(1u, std::min(8u, std::thread::hardware_concurrency()));
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
     auto value = [&](std::string& into) {
@@ -116,48 +122,63 @@ int main(int argc, char** argv) {
     else if (a == "--languages") { if (!value(languages)) return 2; }
     else if (a == "--prelude") { if (!value(prelude)) return 2; }
     else if (a == "--depth") { if (!value(v)) return 2; depth = std::max(1, std::atoi(v.c_str())); }
-    else if (a == "--per-screen") { if (!value(v)) return 2; perScreen = static_cast<size_t>(std::max(1, std::atoi(v.c_str()))); }
+    else if (a == "--max-states") { if (!value(v)) return 2; maxStates = static_cast<size_t>(std::max(1, std::atoi(v.c_str()))); }
+    else if (a == "--jobs") { if (!value(v)) return 2; jobs = static_cast<size_t>(std::max(1, std::atoi(v.c_str()))); }
+    else if (a == "--no-pseudo") options.pseudoLanguage = false;
     else if (a == "--interactive") interactive = true;
     else if (a == "--headless") headless = true;
     else { std::cerr << "error: unknown option " << a << "\n"; usage(); return 2; }
   }
 
   if (!crawlDir.empty()) {
+    options.pseudoLanguage = false;   // the device has the languages it has; the walk makes the demo
     sim::Crawler crawler(options, prelude);
-    const sim::Crawl crawl = crawler.run(depth, perScreen);
-    if (!crawler.error().empty()) {
-      std::cerr << "error: " << crawler.error() << "\n";
-      return 1;
-    }
-    std::filesystem::create_directories(crawlDir);
-    std::ofstream(crawlDir + "/graph.json") << sim::Crawler::json(crawl);
+    crawler.setProgress(&std::cerr);
+    crawler.setJobs(jobs);
     std::vector<std::string> codes;
     for (size_t at = 0; at <= languages.size();) {
       const size_t comma = languages.find(',', at);
       codes.push_back(languages.substr(at, comma == std::string::npos ? std::string::npos : comma - at));
       at = comma == std::string::npos ? languages.size() + 1 : comma + 1;
     }
-    for (const std::string& code : codes) {
-      std::filesystem::create_directories(crawlDir + "/" + code);
-      for (const sim::CrawlNode& node : crawl.nodes) {
-        std::unique_ptr<sim::Simulator> there = crawler.reach(node.path, code);
-        if (!there) {
-          std::cerr << "error: " << crawler.error() << "\n";
-          return 1;
-        }
-        if (sim::Crawler::screenOf(*there) != node.screen) {
-          std::cerr << "error: in " << code << " the path to state " << node.id << " leads to "
-                    << sim::Crawler::screenOf(*there) << ", not " << node.screen << "\n";
-          return 1;
-        }
-        if (!there->panel().writePng(crawlDir + "/" + code + "/n" + std::to_string(node.id) + ".png")) {
-          std::cerr << "error: cannot write the picture of state " << node.id << "\n";
-          return 1;
-        }
-      }
+    const sim::Crawl crawl = crawler.run(depth, codes, maxStates);
+    if (!crawler.error().empty()) {
+      std::cerr << "error: " << crawler.error() << "\n";
+      return 1;
     }
-    std::cout << "crawl: " << crawl.nodes.size() << " states, " << crawl.edges.size() << " edges, " << codes.size()
-              << " languages, " << crawl.trimmed << " more states of the same screens not followed\n";
+    if (!crawl.complete) {
+      std::cerr << "error: the walk is not complete: a state lies deeper than " << depth << " steps (--depth); " << crawl.nodes.size()
+                << " states were found\n";
+      return 1;
+    }
+    std::filesystem::create_directories(crawlDir);
+    std::ofstream(crawlDir + "/graph.json") << sim::Crawler::json(crawl);
+    // The picture of a state is taken in the language the state is in, which is not always the one the device was started in.
+    std::set<std::string> made;
+    for (const sim::CrawlNode& node : crawl.nodes)
+      if (made.insert(node.language).second) std::filesystem::create_directories(crawlDir + "/" + node.language);
+    std::mutex failure;
+    std::string failed;
+    crawler.each(crawl.nodes.size(), [&](size_t i, sim::Crawler& worker) {
+      const sim::CrawlNode& node = crawl.nodes[i];
+      std::string why;
+      std::unique_ptr<sim::Simulator> there = worker.reach(node.path, node.start);
+      if (!there) why = worker.error();
+      else if (there->panel().shown().crc() != node.crc || sim::Crawler::screenOf(*there) != node.screen)
+        why = "the path to state " + std::to_string(node.id) + " does not lead to the same picture twice";
+      else if (!there->panel().writePng(crawlDir + "/" + node.language + "/n" + std::to_string(node.id) + ".png"))
+        why = "cannot write the picture of state " + std::to_string(node.id);
+      if (!why.empty()) {
+        std::lock_guard<std::mutex> lock(failure);
+        if (failed.empty()) failed = why;
+      }
+    });
+    if (!failed.empty()) {
+      std::cerr << "error: " << failed << "\n";
+      return 1;
+    }
+    std::cout << "crawl: " << crawl.nodes.size() << " states, " << crawl.edges.size() << " edges, " << crawl.unchanged.size()
+              << " steps that changed nothing, started in " << codes.size() << " languages\n";
     return 0;
   }
   if (!dataGiven && !script.empty() && !sim::scriptData(script).empty()) options.dataDir = sim::scriptData(script);

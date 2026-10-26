@@ -153,6 +153,9 @@ struct Options {
   // The port of the parents' web page on 127.0.0.1; 0 lets the system choose (for tests).
   uint16_t webPort = 8080;
   uint32_t lapse = 1;
+  // The pseudo-language (qps-ploc) is a language to look at layouts in, not one of the device: it is offered on the
+  // language page of the simulator and not in the demo, whose language page lists the three the device has.
+  bool pseudoLanguage = true;
 };
 
 class Simulator {
@@ -332,7 +335,8 @@ inline std::filesystem::path Simulator::prepareCard(const Options& options, std:
 }
 
 // The shipped catalogs are read from lang/, as the device would have them embedded; the
-// pseudo-language is added so that a layout can be looked at in the longest words there are.
+// pseudo-language is added so that a layout can be looked at in the longest words there are (unless the options
+// say the device is to have the languages it has, as the demo's walk does).
 inline void Simulator::loadShippedCatalogs(const std::string& dir) {
   namespace fs = std::filesystem;
   i18n::Catalog english;
@@ -385,7 +389,7 @@ inline void Simulator::loadShippedCatalogs(const std::string& dir) {
     }
   }
   if (english.size() == 0) out_ << "warning: no English catalog in " << dir << "\n";
-  else translator_.add(i18n::pseudoCatalog(english));
+  else if (options_.pseudoLanguage) translator_.add(i18n::pseudoCatalog(english));
 }
 
 // ---- starting the device ---------------------------------------------------------------------------
