@@ -34,12 +34,10 @@
       <img id="picture" alt="">
       <div class="keys" id="keys"></div>
       <p class="note" id="status"></p>
-      <p class="note" id="callNote" hidden></p>
     </figure>
     <section>
       <button id="start"></button>
       <button id="walk" hidden></button>
-      <p class="note" id="trimmed"></p>
       <h2 id="scenesTitle"></h2>
       <ul id="scenes"></ul>
     </section>
@@ -58,8 +56,12 @@ const known = (code) => data.languages.find((l) => l.code === code);
 const asked = new URLSearchParams(location.search).get("lang") || "";
 const browser = (navigator.language || "").slice(0, 2);
 let lang = (known(asked) || known(browser) || known("en") || data.languages[0]).code;
-let node = data.graph.start;
+// The graph is one over every state of every language: the Language screen leads from one language into another, and
+// each state's picture is in its own language (node.lang), not necessarily the page's. A language starts at its own state.
+const startOf = (code) => data.graph.starts[code];
+let node = startOf(lang);
 let scene = null;
+let timer = null;
 
 const words = (key, values) => {
   let text = data.words[lang][key] || key;
@@ -67,11 +69,22 @@ const words = (key, values) => {
   return text;
 };
 const outgoing = (key) => data.graph.edges.find((e) => e.from === node && e.key === key);
+const waiting = () => data.graph.edges.find((e) => e.from === node && e.wait);
 const taps = () => (scene ? [] : data.graph.edges.filter((e) => e.from === node && e.tap));
 const tapAt = (x, y) => taps().find((e) => x >= e.tap.x && x < e.tap.x + e.tap.w && y >= e.tap.y && y < e.tap.y + e.tap.h);
 const sceneTitle = (id) => words("demo.scene-" + id);
 
+// A screen that ends by itself (the self-test's key test) goes on when its time has passed, as the device does; every
+// move of the page is the child pressing something, which starts the time again.
+function arm() {
+  clearTimeout(timer);
+  timer = null;
+  const edge = scene ? null : waiting();
+  if (edge) timer = setTimeout(() => { node = edge.to; show(); }, edge.wait * 1000);
+}
+
 function show() {
+  arm();
   document.documentElement.lang = lang;
   document.title = words("demo.title");
   $("title").textContent = words("demo.title");
@@ -80,7 +93,6 @@ function show() {
   $("start").textContent = words("demo.start-over");
   $("walk").textContent = words("demo.back-to-walk");
   $("scenesTitle").textContent = words("demo.scenes");
-  $("trimmed").textContent = data.graph.trimmed ? words("demo.trimmed", { n: data.graph.trimmed }) : "";
   const picture = $("picture");
   if (scene) {
     picture.src = encodeURIComponent(lang) + "/scene-" + encodeURIComponent(scene) + ".png";
@@ -88,14 +100,12 @@ function show() {
     $("status").textContent = sceneTitle(scene);
   } else {
     const current = data.graph.nodes[node];
-    picture.src = encodeURIComponent(lang) + "/n" + encodeURIComponent(node) + ".png";
+    picture.src = encodeURIComponent(current.lang) + "/n" + encodeURIComponent(node) + ".png";
     picture.alt = words("demo.state", { n: node + 1, total: data.graph.nodes.length });
     $("status").textContent = picture.alt;
   }
   picture.className = taps().length ? "touch" : "";
   $("walk").hidden = !scene;
-  $("callNote").hidden = !!scene || data.graph.nodes[node].screen !== "call";
-  $("callNote").textContent = words("demo.call-note");
   const keys = $("keys");
   keys.textContent = "";
   for (const key of KEYS) {
@@ -126,8 +136,10 @@ for (const l of data.languages) {
   select.appendChild(option);
 }
 select.value = lang;
-select.addEventListener("change", () => { lang = select.value; show(); });
-$("start").addEventListener("click", () => { node = data.graph.start; scene = null; show(); });
+// Another language is another device, started in it: its words and its own start state (not this state's picture in
+// words that are not on it; the device's own language is the Language screen's to change).
+select.addEventListener("change", () => { lang = select.value; node = startOf(lang); show(); });
+$("start").addEventListener("click", () => { node = startOf(lang); scene = null; show(); });
 $("picture").addEventListener("click", (ev) => {
   const picture = $("picture");
   const edge = tapAt(Math.floor(ev.offsetX * 240 / picture.clientWidth), Math.floor(ev.offsetY * 320 / picture.clientHeight));
