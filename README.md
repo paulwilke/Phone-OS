@@ -87,8 +87,7 @@ The rules are enforced by `scripts/check_layers.py` ([docs/hardware/device.md](d
 - **Every module has tests**, and a bug found gets a test that fails when the bug is put back.
 - **No leftovers**: no placeholder markers, no documentation of things that do not exist, no code that
   nothing uses; open work is in [docs/open-points.md](docs/open-points.md) and nowhere else.
-- **No personal data**: example phone numbers and places are invented. The one exception is the owner's legal
-  notice on the web page, which the law requires.
+- **No personal data**: example phone numbers and places are invented.
 - **Security limits are the owner's decision**, not a contributor's.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to work on a change.
