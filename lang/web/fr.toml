@@ -42,7 +42,7 @@ config.sms.extra_trigger_words.help   = "Mots supplémentaires qui déclenchent 
 
 config.features.label                 = "Fonctions"
 config.features.free_text.label       = "Texte libre"
-config.features.free_text.help        = "Autoriser l'enfant à écrire des messages libres et à choisir n'importe quel destinataire."
+config.features.free_text.help        = "Autoriser l'enfant à écrire des messages libres et à choisir n'importe quel destinataire. Il permet aussi d'écrire à des numéros courts et surtaxés (payants)."
 config.features.radio.label           = "Radio"
 config.features.radio.help            = "Autoriser la radio longue portée (elle ne démarre que sur demande)."
 config.features.parent_tools.label    = "Outils des parents"
@@ -57,6 +57,8 @@ config.features.modem_sleep.label     = "Veille du modem"
 config.features.modem_sleep.help      = "Autoriser le modem à se mettre en veille quand il ne sert pas, pour économiser la batterie."
 
 config.remote_queries.label           = "Demandes de position"
+config.remote_queries.enabled.label   = "Répondre aux demandes de position"
+config.remote_queries.enabled.help    = "Répond-il à la demande de position d'un parent ? Non : demande refusée, sans réponse, journalisée. Une réponse reste toujours dans l'historique."
 config.remote_queries.notice.label    = "Affichage de la demande"
 config.remote_queries.notice.help     = "Visibilité d'une demande de position sur l'appareil : silent (dans le journal seulement), history (aussi dans l'historique) ou notify (historique et notification)."
 config.remote_queries.notice.silent.label = "Silencieux (journal seul)"

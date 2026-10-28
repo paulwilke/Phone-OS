@@ -42,7 +42,7 @@ config.sms.extra_trigger_words.help   = "Zusätzliche Wörter, die eine Ortsabfr
 
 config.features.label                 = "Funktionen"
 config.features.free_text.label       = "Freitext"
-config.features.free_text.help        = "Das Kind darf frei formulierte Nachrichten schreiben und den Empfänger frei wählen."
+config.features.free_text.help        = "Das Kind darf frei formulierte Nachrichten schreiben und den Empfänger frei wählen. Damit sind auch Kurz- und Premiumnummern (kostenpflichtig) erreichbar."
 config.features.radio.label           = "Funk"
 config.features.radio.help            = "Den Langstreckenfunk erlauben (er startet trotzdem nur auf Anfrage)."
 config.features.parent_tools.label    = "Elternwerkzeuge"
@@ -57,6 +57,8 @@ config.features.modem_sleep.label     = "Modem-Schlafmodus"
 config.features.modem_sleep.help      = "Das Modem darf im Leerlauf in den Schlafmodus gehen, um den Akku zu schonen."
 
 config.remote_queries.label           = "Ortsabfragen"
+config.remote_queries.enabled.label   = "Ortsabfragen beantworten"
+config.remote_queries.enabled.help    = "Ob das Gerät die Ortsabfrage eines Elternteils beantwortet. Aus: Jede Abfrage wird abgewiesen, keine Antwort gesendet, die Abweisung protokolliert. Eine Antwort bleibt immer im Verlauf."
 config.remote_queries.notice.label    = "Anzeige der Abfrage"
 config.remote_queries.notice.help     = "Wie sichtbar eine Ortsabfrage auf dem Gerät ist: silent (nur im Protokoll), history (auch im Verlauf) oder notify (Verlauf und ein Hinweis)."
 config.remote_queries.notice.silent.label = "Still (nur Protokoll)"

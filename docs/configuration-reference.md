@@ -141,7 +141,14 @@ Takes effect on next start.
 
 | Key | Type | Default | Required | Apply |
 |-----|------|---------|----------|-------|
+| `enabled` | bool | `true` | no | restart |
 | `notice` | enum: silent|history|notify | `history` | no | immediate |
+
+#### `enabled`
+
+Boolean (`true` or `false`).
+Default: `true`.
+Takes effect on next start.
 
 #### `notice`
 

@@ -76,6 +76,7 @@ struct Profile {
   // Further words that trigger the remote query, besides the trigger word of every language of
   // the catalogs.
   std::vector<std::string> extraTriggers;
+  bool remoteQueries = true;  // false: the device refuses every remote query (D-54)
   CommandNotice commandNotice = CommandNotice::History;  // how visible a remote query is on the device
   loglevel::Level logLevel = loglevel::Level::All;
 

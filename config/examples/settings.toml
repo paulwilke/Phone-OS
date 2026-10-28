@@ -30,6 +30,7 @@ quiet_call_vibration = false  # restart
 modem_sleep = true  # restart
 
 [remote_queries]
+enabled = true  # restart
 notice = "history"  # immediate
 
 [time]
