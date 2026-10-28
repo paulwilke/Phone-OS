@@ -133,10 +133,5 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
-      # Leak detection is off: Unity's TEST_IGNORE leaves a test with longjmp, which skips the destructors
-      # of its locals, so LeakSanitizer (Linux only) reports every skipped test as a leak and the program
-      # exits with 1 after a run in which nothing failed. Memory errors and undefined behaviour still fail.
       - name: Host tests under sanitizers
-        env:
-          ASAN_OPTIONS: detect_leaks=0
         run: pio test -e native-asan
