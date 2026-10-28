@@ -609,7 +609,7 @@ Verified: host-tested; published on 2026-10-26 by `.github/workflows/pages.yml` 
 
 ## D-54: The web page states the band limit of the current device, in all three languages
 Date: 2026-10-28   Status: decided
-Decided by: owner (2026-10-28: the limit is stated on the page, so that a reader on a network outside the modem's bands does not take the cause for a broken device); agent (the wording, for the owner to approve in the pull request)
+Decided by: owner (2026-10-28: the limit is stated on the page, and the wording is approved in chat); agent (the wording)
 
 Context: The modem of the T-Deck Pro MAX (SIMCom A7682E, the EMEA variant) supports only the LTE bands B1, B3, B5, B7, B8 and B20 and GSM. It has none of the US bands (B2, B4, B12, B13, B66), so a US SIM does not work on it, whatever the plan. Nothing on the page said so. LilyGO has said that it plans a global variant with a different modem, but has given no date.
 Options: Say nothing until the global variant exists. Name the limit on the page with the cause and the wait for the "G" variant, without a date. Name the limit with a date or a model name for the variant (no date is known, and the owner has not said he wants the variant named).
