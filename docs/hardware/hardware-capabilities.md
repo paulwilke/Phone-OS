@@ -48,6 +48,8 @@ Four domains: cellular, positioning, front light, radio. `setEnabled()` returns 
 
 The implementation for the device is `A7682EDriver` ([modem-driver.md](../modem/modem-driver.md), [volte.md](../modem/volte.md)); it passes this contract on a scripted modem, **not yet on the real one**.
 
+The modem on the T-Deck Pro MAX (SIMCom A7682E) supports only the LTE bands B1, B3, B5, B7, B8 and B20 and GSM, so a network on another band, such as the US bands B2, B4, B12, B13 and B66, is not reached; the limit is the modem's hardware, not the software's.
+
 <<<<<<< HEAD
 States: `Off`, `PoweringOn`, `Initializing`, `Registering` (searching a network), `Ready` (registered and idle), `Error` (a locked or missing SIM, or a modem that does not answer; a start without a network searches on in `Registering`, D-40), `Dialing`, `RingingIn`, `InCall`. `sendSms()` returning true means *accepted*; a refusal after that arrives through `pollSendFailure()` exactly once, with the modem's own reason (for the log, not the child). Call events are `Incoming`, `Connected`, `Ended`, `Missed`, `Busy`, `NoAnswer`, `DialFailed`:
 =======
