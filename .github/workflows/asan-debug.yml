@@ -1,0 +1,22 @@
+name: asan-debug
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install platformio
+      - name: Run the two suites directly, to see stderr
+        run: |
+          for t in test_sim_platform test_hardware_contracts; do
+            pio test -e native-asan -f $t > /dev/null 2>&1 || true
+            echo "=== $t"
+            .pio/build/native-asan/program > /tmp/out.txt 2> /tmp/err.txt; echo "exit $?"
+            tail -3 /tmp/out.txt; echo "--- stderr"; head -60 /tmp/err.txt
+          done
