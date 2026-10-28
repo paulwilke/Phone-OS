@@ -22,10 +22,6 @@ jobs:
       - name: Host tests
         run: pio test -e native
 
-      # The same tests under AddressSanitizer and UndefinedBehaviorSanitizer.
-      - name: Host tests under sanitizers
-        run: pio test -e native-asan
-
       # A plain Linux runner has no SDL and needs none: the simulator builds and runs headless.
       - name: Simulator build
         run: pio run -e sim
@@ -122,3 +118,25 @@ jobs:
 
       - name: The web page's words and language selector
         run: node test/test_site_page/test.mjs
+
+  # The host tests again under AddressSanitizer and UndefinedBehaviorSanitizer (about 20 minutes),
+  # as a job of its own so that it runs beside the checks above instead of after them.
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      # Leak detection is off: Unity's TEST_IGNORE leaves a test with longjmp, which skips the destructors
+      # of its locals, so LeakSanitizer (Linux only) reports every skipped test as a leak and the program
+      # exits with 1 after a run in which nothing failed. Memory errors and undefined behaviour still fail.
+      - name: Host tests under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: pio test -e native-asan
