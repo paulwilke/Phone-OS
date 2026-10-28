@@ -2,7 +2,7 @@
 
 Code: `src/app/SmsCommand.{h,cpp}`, tests in `test/test_sms_command/`. Pure C++17: the device is reached through `CommandHost`.
 
-There is exactly one remote query: the location. A message that consists of **nothing but a trigger word** (any case, blanks and line breaks around it allowed) from an **admin number** (a parent in the [contact book](contacts.md)) starts a location reply. Anything else, including "#WhereAreYou today?", is an ordinary message for the child. There is no secret word; the protection is the admin whitelist.
+There is exactly one remote query: the location. A message that consists of **nothing but a trigger word** (any case, blanks and line breaks around it allowed) from an **admin number** (a parent in the [contact book](contacts.md)) starts a location reply. Anything else, including "#WhereAreYou today?", is an ordinary message for the child. There is no secret word; the protection is the admin whitelist, which can only check the sender number as the network delivers it ([security.md](../security.md)).
 
 ## Trigger words
 
@@ -26,6 +26,8 @@ An empty number is unauthorized without asking the host, so a faulty contact boo
 
 ## Accountability
 
-Every query is passed to `recordCommand` with the time (UTC and uptime), the number and the outcome, executed or refused. That cannot be switched off. The setting `CommandNotice` (`Silent`, `History` by default, `Notify`) only decides how visible the entry is on the device; `setConfig()` and `setNotice()` change it at run time and never touch the record.
+Every query is passed to `recordCommand` with the time (UTC and uptime), the number and the outcome, executed or refused. That cannot be switched off. The setting `CommandNotice` (`Silent`, `History` by default, `Notify`) only decides how visible the system entry "query received" is on the device; `setConfig()` and `setNotice()` change it at run time and never touch the record. It does not hide the reply: the reply with the position is an ordinary outgoing message and stays in the history and in the card's message log whatever the setting says (D-54).
+
+A device can refuse queries entirely: with `[remote_queries] enabled = false` (default `true`) an admin's query is treated like a refused one: no reply, the outcome is recorded, and the notice setting decides how visible the refusal is. What the device does against strangers and what it cannot know about a forged sender number is in [security.md](../security.md).
 
 The location itself is found by the same flow as the SOS ping with the kind `Query`, not by a separate flow: a second implementation once failed on the device without a known cause, while the SOS flow is proven and reports its failures.
