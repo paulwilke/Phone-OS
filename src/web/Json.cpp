@@ -1,5 +1,6 @@
 #include "Json.h"
 
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
@@ -143,13 +144,19 @@ struct Parser {
           case 'b':  out += '\b'; break;
           case 'f':  out += '\f'; break;
           case 'u': {
-            if (p + 4 >= end) { error = "\\u too short"; return false; }
-            char hex[5] = {p[1], p[2], p[3], p[4], 0};
-            char* ep = nullptr;
-            long cp = strtol(hex, &ep, 16);
-            if (ep != hex + 4) { error = "bad \\uXXXX"; return false; }
+            if (end - p < 5) { error = "\\u too short"; return false; }
+            // Exactly four hex digits: strtol would take a sign or leading spaces too.
+            long cp = 0;
+            for (int i = 1; i <= 4; ++i) {
+              const char h = p[i];
+              const int v = (h >= '0' && h <= '9') ? h - '0' : (h >= 'a' && h <= 'f') ? h - 'a' + 10 : (h >= 'A' && h <= 'F') ? h - 'A' + 10 : -1;
+              if (v < 0) { error = "bad \\uXXXX"; return false; }
+              cp = cp * 16 + v;
+            }
+            if (cp == 0) { error = "\\u0000 is not accepted"; return false; }
+            if (cp >= 0xD800 && cp <= 0xDFFF) { error = "surrogate escapes are not supported"; return false; }
             p += 4;
-            // Encode as UTF-8 (BMP only; surrogate pairs not supported)
+            // Encode as UTF-8 (BMP only; surrogates are refused above)
             if (cp < 0x80) {
               out += (char)cp;
             } else if (cp < 0x800) {
@@ -185,9 +192,10 @@ struct Parser {
     }
     if (*p == '{') return parseObject(out);
     if (*p == '[') return parseArray(out);
-    if (strncmp(p, "true", 4) == 0)  { p += 4; out = toml::Value::boolean(true);  return true; }
-    if (strncmp(p, "false", 5) == 0) { p += 5; out = toml::Value::boolean(false); return true; }
-    if (strncmp(p, "null", 4) == 0)  {
+    const size_t left = (size_t)(end - p);
+    if (left >= 4 && strncmp(p, "true", 4) == 0)  { p += 4; out = toml::Value::boolean(true);  return true; }
+    if (left >= 5 && strncmp(p, "false", 5) == 0) { p += 5; out = toml::Value::boolean(false); return true; }
+    if (left >= 4 && strncmp(p, "null", 4) == 0)  {
       p += 4;
       out = toml::Value::table();
       return true;
@@ -197,7 +205,9 @@ struct Parser {
     if (p >= end || *p < '0' || *p > '9') { error = "expected value"; return false; }
     int64_t n = 0;
     while (p < end && *p >= '0' && *p <= '9') {
-      n = n * 10 + (*p++ - '0');
+      const int d = *p++ - '0';
+      if (n > (INT64_MAX - d) / 10) { error = "number too large"; return false; }
+      n = n * 10 + d;
     }
     if (p < end && (*p == '.' || *p == 'e' || *p == 'E')) {
       error = "float values are not supported";

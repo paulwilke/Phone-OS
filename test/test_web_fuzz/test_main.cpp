@@ -102,6 +102,50 @@ void test_every_prefix_and_every_damaged_byte_of_valid_json_never_crashes() {
   }
 }
 
+bool jsonReads(const std::string& in) {
+  toml::Value root;
+  std::string error;
+  return web::json::toToml(in.data(), in.size(), root, error);
+}
+
+void test_a_number_that_does_not_fit_an_int64_is_refused() {
+  TEST_ASSERT_TRUE(jsonReads("{\"n\":9223372036854775807}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"n\":9223372036854775808}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"n\":99999999999999999999999999}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"n\":-99999999999999999999}"));
+}
+
+void test_a_unicode_escape_is_exactly_four_hex_digits() {
+  TEST_ASSERT_TRUE(jsonReads("{\"s\":\"\\u00e4\\u00C4\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\u-001\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\u+041\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\u 041\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\u0x41\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\u004\"}"));
+}
+
+void test_a_unicode_escape_for_nul_or_a_surrogate_is_refused() {
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\u0000\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\ud83d\\ude00\"}"));
+  TEST_ASSERT_FALSE(jsonReads("{\"s\":\"\\udc00\"}"));
+}
+
+// The reader must stop at the end it is given, not at a terminator: a literal cut short by the length is
+// refused although the bytes behind it would complete it.
+void test_literals_are_not_read_past_the_end() {
+  const char buf[] = "{\"b\":true,\"c\":false}";
+  const size_t at = std::string(buf).find("true");
+  for (size_t len : {at + 1, at + 2, at + 3}) {
+    toml::Value root;
+    std::string error;
+    TEST_ASSERT_FALSE(web::json::toToml(buf, len, root, error));
+  }
+  const size_t atF = std::string(buf).find("false");
+  toml::Value root;
+  std::string error;
+  TEST_ASSERT_FALSE(web::json::toToml(buf, atF + 4, root, error));
+}
+
 void test_valid_json_is_read() {
   for (const char* valid : kValidJson) {
     toml::Value root;
@@ -194,6 +238,10 @@ int main() {
   RUN_TEST(test_random_json_characters_never_crash);
   RUN_TEST(test_every_prefix_and_every_damaged_byte_of_valid_json_never_crashes);
   RUN_TEST(test_valid_json_is_read);
+  RUN_TEST(test_a_number_that_does_not_fit_an_int64_is_refused);
+  RUN_TEST(test_a_unicode_escape_is_exactly_four_hex_digits);
+  RUN_TEST(test_a_unicode_escape_for_nul_or_a_surrogate_is_refused);
+  RUN_TEST(test_literals_are_not_read_past_the_end);
   RUN_TEST(test_nesting_deeper_than_the_limit_is_refused_not_overflowed);
   RUN_TEST(test_nesting_within_the_limit_is_read);
   RUN_TEST(test_random_bytes_through_the_zip_reader_never_crash);
