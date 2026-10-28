@@ -22,6 +22,10 @@ jobs:
       - name: Host tests
         run: pio test -e native
 
+      # The same tests under AddressSanitizer and UndefinedBehaviorSanitizer.
+      - name: Host tests under sanitizers
+        run: pio test -e native-asan
+
       # A plain Linux runner has no SDL and needs none: the simulator builds and runs headless.
       - name: Simulator build
         run: pio run -e sim
