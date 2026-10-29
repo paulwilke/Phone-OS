@@ -717,7 +717,7 @@ void WebApi::langCatalog(const char* code, http::Response& res, CatalogPart part
   // The page's words come in pieces because one buffer (kResponseMax, 12288 bytes) is too tight for all of
   // them: the shipped French set is about 12 KB (words 2.4, labels 3.7, help 6.1), a user catalog with longer
   // sentences would not fit, and the whole language would then be a 500. The words and the labels are what the
-  // page needs to be usable. The help texts come per tab (D-55): the page asks for the ones of a tab when the
+  // page needs to be usable. The help texts come per tab (D-56): the page asks for the ones of a tab when the
   // parent first opens it, so the largest answer is the help of one tab, 1 to 2 KB, and not all of them
   // (test_sim_web: the words and the labels stay under half of the buffer, the help of a tab under a quarter).
   std::set<std::string> helpKeys;  // the help keys of the tab, when the part is Help

@@ -285,7 +285,7 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     const pick = (cat, keep) => Object.fromEntries(Object.entries(cat).filter(([k]) => keep(k)));
     const isLabel = (k) => k.startsWith('config.') && k.endsWith('.label');
     const lb = path.match(/^\/api\/lang\/(.+)\/labels$/);
-    // the help texts come per tab (D-55): /help?tab=<id>; without the tab the device answers 400
+    // the help texts come per tab (D-56): /help?tab=<id>; without the tab the device answers 400
     const h = path.match(/^\/api\/lang\/([^/?]+)\/help(\?tab=.+)?$/);
     const l = !lb && !h && path.match(/^\/api\/lang\/(.+)$/);
     if (lb && labelsFail) return reply(500, { error: 'Response too large' });

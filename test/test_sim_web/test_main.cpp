@@ -232,7 +232,7 @@ void test_the_page_can_be_had_in_every_shipped_language() {
 // The form asks for the label and the help text of every field. A language comes in pieces: the page's words
 // (/api/lang/<code>), the labels of the form (/labels) and the help texts of one tab (/help?tab=<id>), because
 // all of it in one answer is too tight for the response buffer, and three answers were too tight once 4.1 added
-// the settings tabs, the weekday boxes and the tiles of [home] and the help grew (D-55). Each must fit with room
+// the settings tabs, the weekday boxes and the tiles of [home] and the help grew (D-56). Each must fit with room
 // for a longer user catalog, and between them they carry every key the form uses, so that the page never shows a
 // raw key.
 void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare() {
