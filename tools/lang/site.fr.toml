@@ -100,6 +100,7 @@ site.get.card.title   = "3. La carte mémoire"
 site.get.card.text    = "Formatez la carte microSD en FAT32, copiez les trois fichiers d'exemple de config/examples/ dans un dossier /config/ et inscrivez-y vos contacts et vos réglages : du texte simple, une ligne par entrée."
 site.get.flash.title  = "4. Installer"
 site.get.flash.text   = "Branchez l'appareil en USB et lancez une commande. Environ une minute plus tard, l'appareil démarre avec votre carte."
+site.get.bands        = "Le T-Deck Pro MAX ne fonctionne pas sur tous les réseaux mobiles. Son modem 4G, un SIMCom A7682E, ne prend en charge que les bandes LTE B1, B3, B5, B7, B8 et B20, ainsi que le GSM. Si votre réseau utilise une autre bande, l'appareil peut ne trouver aucun réseau. La cause est alors la bande de votre pays, et non un appareil défectueux : les bandes sont celles du modem, et non celles du logiciel, et elles concernent les États-Unis et d'autres régions aux bandes différentes. LilyGO a annoncé qu'il vendra bientôt la variante mondiale « G » du T-Deck Pro, pour ces réseaux. D'ici là, vérifiez les bandes de votre réseau avant d'acheter."
 site.get.note         = "Phone OS n'a aucun lien avec LilyGO ni avec une boutique ; le T-Deck Pro MAX est l'appareil sur lequel le firmware a été construit et testé. Un autre matériel demande son propre code de plateforme sous les capacités, et rien ne change au-dessus."
 site.get.checklist    = "La liste de contrôle du premier démarrage"
 
