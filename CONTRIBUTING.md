@@ -50,7 +50,7 @@ python3 scripts/privacy_check.py --history # also every changed line, message an
 python3 test/test_privacy_check/test_history.py # the history scan finds a leak in a line, a message and a committer's identity
 ```
 
-`privacy_check.py` can also read a private denylist of real names and numbers that must never appear; see its header for how to keep one outside the repository.
+`privacy_check.py` scans the repository for personal data before it is published (it does not describe the device's behaviour). It can also read a private denylist of real names and numbers that must never appear; see its header for how to keep one outside the repository.
 
 ## Working on a change
 

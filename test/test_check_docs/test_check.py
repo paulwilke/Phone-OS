@@ -171,8 +171,37 @@ NAME_CASES = [
 ]
 
 
+def run_conflict(files):
+    with tempfile.TemporaryDirectory() as root:
+        for rel, text in files.items():
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+        p = subprocess.run([sys.executable, SCRIPT, "--root", root], capture_output=True, text=True)
+        return [l for l in p.stdout.split("\n") if "merge conflict marker" in l]
+
+
+MARK = "<" * 7   # spelt apart, so that this file does not hold a marker itself
+
+CONFLICT_CASES = [
+    ("a text without markers passes", {"README.md": "# A\n\ntext <<< not a marker\n"}, []),
+    ("an opening marker in a document is found", {"README.md": MARK + " HEAD\ntext\n"}, ["README.md:1"]),
+    ("a separator and a closing marker are found", {"docs/a.md": "a\n=======\nb\n" + ">" * 7 + " origin/main\n"}, ["docs/a.md:2", "docs/a.md:4"]),
+    ("a marker in code is found", {"src/a.cpp": "int x;\n" + MARK + " HEAD\n"}, ["src/a.cpp:2"]),
+    ("a longer line of equals signs is no marker", {"README.md": "a\n========\n"}, []),
+]
+
+
 def main():
     failed = 0
+    for name, files, needles in CONFLICT_CASES:
+        got = run_conflict(files)
+        ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)
+        print(("ok   " if ok else "FAIL ") + name)
+        if not ok:
+            failed += 1
+            print("\n".join(got))
     for name, files, needles in NAME_CASES:
         got = run_name(files)
         ok = len(got) == len(needles) and all(any(n in g for g in got) for n in needles)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Looks for private data in a directory, or in the files tracked by git.
+"""Scans the repository (its tracked files, a directory or its history) for personal data before publishing. It says nothing about what the device does with data.
 
     scripts/privacy_check.py                       # all files tracked by git
     scripts/privacy_check.py --dir <path>          # a directory (e.g. a clean clone about to be pushed)
