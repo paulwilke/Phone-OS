@@ -68,10 +68,12 @@ private:
   void getConfigJson(const char* path, http::Response& res);
   void putConfigJson(const char* path, const http::Request& req, http::Response& res);
   void languages(http::Response& res);
-  // The page's words come in three answers, each well inside the response buffer: the words of the page
-  // (web.*), the labels of the form (config.*.label) and the help texts under its fields (config.*.help).
+  // The page's words come in pieces, each well inside the response buffer: the words of the page (web.*),
+  // the labels of the form (config.*.label) and the help texts under the fields of one tab (config.*.help;
+  // `tab` is a tab id of config::KeyDef, used for Help only).
   enum class CatalogPart { Words, Labels, Help };
-  void langCatalog(const char* code, http::Response& res, CatalogPart part);
+  static constexpr size_t kTabIdMax = 32;
+  void langCatalog(const char* code, http::Response& res, CatalogPart part, const char* tab);
   void listFiles(const http::Request& req, http::Response& res);
   void getFile(const http::Request& req, http::Response& res);
   void putFile(const http::Request& req, http::Response& res);

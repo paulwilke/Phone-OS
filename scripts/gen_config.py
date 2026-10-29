@@ -237,6 +237,7 @@ def generate_cpp(files, sections, keys):
         "    const char* label;     // i18n catalog key for the field label",
         "    const char* help;      // i18n catalog key for the field help text",
         "    const char* field;     // Profile field path; \"\" = returned separately or sub-struct",
+        "    const char* tab;       // tab of the parents' page that shows the key: its [[group]] id, else its file id",
         "};",
         "",
         "struct SectionDef {",
@@ -279,11 +280,12 @@ def generate_cpp(files, sections, keys):
         label   = _esc(k["label"])
         help_   = _esc(k["help"])
         field   = _esc(k.get("field", ""))
+        tab     = _esc(k.get("group", k["file"]))
         lines.append(
             f'    {{"{_esc(k["file"])}", "{_esc(k["section"])}", "{_esc(k["name"])}", '
             f'{typ}, {req}, {secret}, {apply},\n'
             f'     "{dflt}", {min_v}, {max_v}, "{enums}",\n'
-            f'     "{label}", "{help_}", "{field}"}},')
+            f'     "{label}", "{help_}", "{field}", "{tab}"}},')
     lines.append("};")
     lines.append("")
     lines.append("// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)")
