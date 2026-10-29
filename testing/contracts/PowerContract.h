@@ -45,7 +45,7 @@ struct PowerContract {
     Rig rig;
     bool before[4];
     for (int i = 0; i < 4; ++i) before[i] = rig.power().isEnabled(power_contract::kDomains[i]);
-    if (!rig.power().setEnabled(PowerDomain::Frontlight, !before[2])) TEST_IGNORE_MESSAGE("the front light cannot be switched");
+    if (!rig.power().setEnabled(PowerDomain::Frontlight, !before[2])) CONTRACT_IGNORE_AND_RETURN("the front light cannot be switched");
     TEST_ASSERT_EQUAL(before[0], rig.power().isEnabled(PowerDomain::Cellular));
     TEST_ASSERT_EQUAL(before[1], rig.power().isEnabled(PowerDomain::Positioning));
     TEST_ASSERT_EQUAL(before[3], rig.power().isEnabled(PowerDomain::Radio));

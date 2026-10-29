@@ -19,6 +19,7 @@ You need [PlatformIO Core](https://docs.platformio.org/page/core/installation.ht
 
 ```bash
 pio test -e native              # host tests of the C++ code
+pio test -e native-asan         # the same tests under AddressSanitizer and UndefinedBehaviorSanitizer
 pio run -e sim                  # the simulator builds ...
 for s in sim/scripts/*.txt; do .pio/build/sim/program --script "$s" >/dev/null || echo "FAIL $s"; done   # ... and every scenario passes
 pio run -e device               # the firmware compiles (compile-only; flashing is the owner's decision)

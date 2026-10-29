@@ -14,7 +14,28 @@
 
 #include <unity.h>
 
+// Ignoring a test with TEST_IGNORE leaves it by longjmp, which skips the destructors of its locals:
+// the rig would be leaked. So the test is marked ignored here and then returns the ordinary way.
+inline void contractIgnore(const char* message, UNITY_LINE_TYPE line) {
+  UnityPrint(Unity.TestFile);  // the line Unity itself prints before a result: file:line:test:
+  UNITY_OUTPUT_CHAR(':');
+  UnityPrintNumberUnsigned(line);
+  UNITY_OUTPUT_CHAR(':');
+  UnityPrint(Unity.CurrentTestName);
+  UNITY_OUTPUT_CHAR(':');
+  UnityPrint("IGNORE: ");
+  UnityPrint(message);
+  Unity.CurrentTestIgnored = 1;
+}
+
+// Only for use directly in a test function that returns void.
+#define CONTRACT_IGNORE_AND_RETURN(message) \
+  do {                                      \
+    contractIgnore((message), __LINE__);    \
+    return;                                 \
+  } while (0)
+
 #define CONTRACT_NEEDS(hook) \
   do {                       \
-    if (!(hook)) TEST_IGNORE_MESSAGE("the rig cannot create this situation"); \
+    if (!(hook)) CONTRACT_IGNORE_AND_RETURN("the rig cannot create this situation"); \
   } while (0)
