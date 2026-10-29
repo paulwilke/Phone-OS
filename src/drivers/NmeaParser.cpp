@@ -173,13 +173,29 @@ void NmeaParser::handleRmc(char* fields[], int count) {
   fix_.valid = true;
 }
 
+// A whole number of at most nine digits with an optional sign; anything else (empty, longer, with other
+// characters) reads as 0, which both fields treat as "none".
+static long smallInt(const char* f) {
+  const char* p = f;
+  bool neg = false;
+  if (*p == '-' || *p == '+') { neg = *p == '-'; ++p; }
+  long v = 0;
+  int digits = 0;
+  for (; *p >= '0' && *p <= '9'; ++p, ++digits) {
+    if (digits >= 9) return 0;
+    v = v * 10 + (*p - '0');
+  }
+  if (digits == 0 || *p != '\0') return 0;
+  return neg ? -v : v;
+}
+
 // $xxGGA,hhmmss.ss,llll.ll,a,yyyyy.yy,a,q,ss,h.h,alt,M,...
 void NmeaParser::handleGga(char* fields[], int count) {
   if (count < 9) return;
-  const int quality = atoi(fields[6]);
+  const int quality = (int)smallInt(fields[6]);
 
   // The number of satellites in use: up to three digits, never more than a byte.
-  const long sats = atol(fields[7]);
+  const long sats = smallInt(fields[7]);
   sats_ = (uint8_t)(sats < 0 ? 0 : sats > 255 ? 255 : sats);
 
   // The HDOP must be a number that can be compared. "nan", "inf", an empty field, zero and a negative
