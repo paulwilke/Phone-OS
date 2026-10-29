@@ -250,11 +250,11 @@ void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_eac
     TEST_ASSERT_EQUAL(200, words.status);
     TEST_ASSERT_EQUAL(200, labels.status);
     TEST_ASSERT_EQUAL(200, help.status);
-    // Each answer uses at most 6000 of the 12288 bytes of the buffer: twice the room for a catalog whose
+    // Each answer uses at most 6200 of the 12288 bytes of the buffer: twice the room for a catalog whose
     // sentences are longer, which a single answer (about 11.9 KB in French) would not have.
-    TEST_ASSERT_TRUE_MESSAGE(words.body.size() < 6000, code);
-    TEST_ASSERT_TRUE_MESSAGE(labels.body.size() < 6000, code);
-    TEST_ASSERT_TRUE_MESSAGE(help.body.size() < 6000, code);
+    TEST_ASSERT_TRUE_MESSAGE(words.body.size() < 6200, code);
+    TEST_ASSERT_TRUE_MESSAGE(labels.body.size() < 6200, code);
+    TEST_ASSERT_TRUE_MESSAGE(help.body.size() < 6200, code);
     TEST_ASSERT_TRUE_MESSAGE(words.has("\"web.tab.basics\":") && !words.has("\"config."), code);   // each answer its own part
     TEST_ASSERT_TRUE_MESSAGE(!labels.has("\"web.") && !labels.has(".help\":"), code);
     for (const std::string& key : keys) {

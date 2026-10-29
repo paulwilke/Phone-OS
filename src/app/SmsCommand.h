@@ -33,6 +33,7 @@ enum class CommandOutcome {
   Executed,
   Busy,          // a location reply or SOS ping is running already
   Unauthorized,  // not an admin number: no reply, but recorded
+  Disabled,      // an admin asked but the device refuses queries (Config::enabled): no reply, recorded
 };
 
 struct CommandRecord {
@@ -58,6 +59,8 @@ class SmsCommand {
 public:
   struct Config {
     CommandNotice notice = CommandNotice::History;
+    // False: every query from an admin is refused like one from a stranger, with no reply (D-54).
+    bool enabled = true;
     // The words that trigger the query. Letters A-Z match in either case; other
     // characters (umlauts, accents) must match exactly. Blanks around a word are
     // ignored and empty entries are skipped: an empty word would match every blank message.
@@ -80,5 +83,6 @@ public:
 private:
   CommandHost& host_;
   CommandNotice notice_ = CommandNotice::History;
+  bool enabled_ = true;
   std::vector<std::string> triggers_;  // trimmed, none empty
 };

@@ -292,7 +292,7 @@ def test_groups_of_the_real_schema():
     where = {(k["section"], k["name"]): k.get("group") for k in settings}
     for section, name, tab in [("child", "name", "basics"), ("interface", "language", "basics"),
                                ("sms", "language", "basics"), ("features", "free_text", "basics"),
-                               ("features", "parent_tools", "basics"), ("remote_queries", "notice", "basics"),
+                               ("features", "parent_tools", "basics"), ("remote_queries", "enabled", "basics"), ("remote_queries", "notice", "basics"),
                                ("quiet_hours", "enabled", "school_time"), ("time", "timezone", "advanced"),
                                ("log", "level", "advanced"), ("wifi", "auto_off_minutes", "advanced"),
                                ("battery", "capacity_mah", "advanced"), ("modem", "apn", "advanced"),

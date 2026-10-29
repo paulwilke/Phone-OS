@@ -151,6 +151,23 @@ void test_an_unreadable_sender_is_unauthorized() {
   TEST_ASSERT_TRUE(h.records[0].first.outcome == CommandOutcome::Unauthorized);
 }
 
+void test_a_device_that_refuses_queries_answers_no_admin_and_records_it() {
+  FakeHost h;
+  SmsCommand::Config cfg = english();
+  TEST_ASSERT_TRUE(cfg.enabled);
+  cfg.enabled = false;
+  SmsCommand c(h, cfg);
+  TEST_ASSERT_TRUE(c.handle(kParentOne, "#WhereAreYou") == SmsCommand::Result::Handled);
+  TEST_ASSERT_EQUAL(0, h.located.size());
+  TEST_ASSERT_EQUAL(1, h.records.size());
+  TEST_ASSERT_TRUE(h.records[0].first.outcome == CommandOutcome::Disabled);
+  TEST_ASSERT_TRUE(h.records[0].second == CommandNotice::History);
+  cfg.enabled = true;
+  c.setConfig(cfg);
+  c.handle(kParentOne, "#WhereAreYou");
+  TEST_ASSERT_EQUAL(1, h.located.size());
+}
+
 void test_a_running_location_reply_is_recorded_as_busy() {
   FakeHost h;
   h.busy = true;
@@ -223,6 +240,7 @@ int main(int, char**) {
   RUN_TEST(test_a_stranger_gets_nothing_but_is_recorded);
   RUN_TEST(test_an_unreadable_sender_is_unauthorized);
   RUN_TEST(test_a_running_location_reply_is_recorded_as_busy);
+  RUN_TEST(test_a_device_that_refuses_queries_answers_no_admin_and_records_it);
   RUN_TEST(test_the_notice_setting_is_passed_on_and_defaults_to_history);
   RUN_TEST(test_the_triggers_can_be_changed_at_run_time);
   RUN_TEST(test_the_shipped_languages_provide_their_trigger_words);

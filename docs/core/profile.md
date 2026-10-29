@@ -18,6 +18,7 @@ The defaults are those of a freshly flashed device that has no settings file: me
 | `batteryCapacityMah` | the size of the battery in mAh (default 1500); at start the device writes it into the fuel gauge when the gauge holds another one ([device-power.md](../hardware/device-power.md)) |
 | `modemApn` | the access point name for the modem's data context 1, which the IMS bearer for calls is built from; empty leaves the modem's own contexts alone ([modem-driver.md](../modem/modem-driver.md)) |
 | `childName`, `mapTemplate`, `smsLanguage`, `extraTriggers` | what goes into the SMS the device sends and what triggers a remote query |
+| `remoteQueries` | whether the device answers remote position queries at all (`true` by default) |
 | `commandNotice` | how visible a remote query is on the device: log only, history, or history and a notice |
 | `logLevel` | how much of the log is written (see [log-level.md](log-level.md)) |
 

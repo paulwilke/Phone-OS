@@ -30,6 +30,7 @@ constexpr int kInitCommandCount = (int)(sizeof(kInitCommands) / sizeof(kInitComm
 constexpr int kInitSteps = kInitCommandCount + 2;
 constexpr int kSimQueryAttempts = 12;  // about so many seconds the modem takes after power-on
 constexpr size_t kMaxLogLines = 32;
+constexpr size_t kMaxQueryResultBytes = 1024;  // the answers to a question: a few lines, never a flood
 
 bool isApnCharacter(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '_';
@@ -1093,7 +1094,12 @@ void A7682EDriver::onLine(const char* line) {
   // The lines of a question are written down whatever they are (a +CREG: line too, which is otherwise taken
   // for the driver's own state and goes no further).
   if (job_ == Job::Query && type != at::LineType::Ok && type != at::LineType::Error && type != at::LineType::AtReady) {
-    queryResult_ += std::string(queryResult_.empty() ? "" : "|") + line;
+    if (queryResult_.size() + strlen(line) + 1 <= kMaxQueryResultBytes) {
+      queryResult_ += std::string(queryResult_.empty() ? "" : "|") + line;
+    } else if (!queryResultTruncated_) {
+      queryResultTruncated_ = true;
+      log("Modem: answer to a question too long, the rest is dropped");
+    }
   }
 
   // The answers of the SMS reads belong to their parser, which hands back what is not part of them.
@@ -1679,6 +1685,7 @@ bool A7682EDriver::query(const std::string& command) {
   if (queryPending_ || shuttingDown_ || state_ == ModemState::Off || !isQuery(command)) return false;
   queryCommand_ = command;
   queryResult_.clear();
+  queryResultTruncated_ = false;
   queryPending_ = true;
   queryDone_ = false;
   return true;

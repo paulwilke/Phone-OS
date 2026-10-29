@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -118,3 +121,20 @@ jobs:
 
       - name: The web page's words and language selector
         run: node test/test_site_page/test.mjs
+
+  # The host tests again under AddressSanitizer and UndefinedBehaviorSanitizer (about 20 minutes),
+  # as a job of its own so that it runs beside the checks above instead of after them.
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Host tests under sanitizers
+        run: pio test -e native-asan
