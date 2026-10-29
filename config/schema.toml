@@ -472,6 +472,20 @@ required = false
 file    = "settings"
 section = "remote_queries"
 group   = "basics"
+name    = "enabled"
+type    = "bool"
+default = "true"
+label   = "config.remote_queries.enabled.label"
+help    = "config.remote_queries.enabled.help"
+field   = "remoteQueries"
+apply   = "restart"
+secret  = false
+required = false
+
+[[key]]
+file    = "settings"
+section = "remote_queries"
+group   = "basics"
 name    = "notice"
 type    = "enum"
 enums   = "silent|history|notify"

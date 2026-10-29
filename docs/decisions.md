@@ -616,7 +616,7 @@ Options: Make `silent` hide the reply as well (a covert tracking tool for whoeve
 Decision: The third. The reply always stays visible in the history and in the message log; `notice = silent` hides only the system entry; [security.md](security.md) and [sms-command.md](core/sms-command.md) say so. A new key `remote_queries.enabled` (bool, default `true`) lets a device refuse queries entirely: an admin's query is then handled like a refused one, no reply, the outcome recorded. The map link stays a Google Maps link by default, because that app is installed on most parents' phones.
 Reason: Covert tracking of the person who uses the device is not a feature. An elderly person should be able to see that they were found, or refuse it.
 Consequences: [security.md](security.md), [sms-command.md](core/sms-command.md), the key `remote_queries.enabled` (built in the change that follows this one, with its tests and its words in every catalog). The default is unchanged, so no device behaves differently until its card says `enabled = false`.
-Verified: not verified (the documentation is checked by `scripts/check_docs.py`; the switch is not built yet)
+Verified: host-tested (`test_sms_command`, `test_config_loader`, the generator and catalog checks) and compiled for the device; not verified on the device
 
 ## D-55: The data on the card stays in plain text; there is no encryption
 Date: 2026-10-28   Status: decided

@@ -784,7 +784,7 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
     child: { name: 'Kim' }, display: { map_url: 'https://maps.example/?q={lat},{lon}' }, modem: { apn: 'internet' },
     battery: { capacity_mah: 1500 }, interface: { language: 'de' }, sms: { language: 'en', extra_trigger_words: ['Ping'] },
     features: { free_text: true, radio: false, parent_tools: true, message_vibration: true, call_vibration: true, quiet_call_vibration: false, modem_sleep: true },
-    remote_queries: { notice: 'notify' }, time: { timezone: 'Europe/Berlin' }, log: { level: 'events' }, wifi: { auto_off_minutes: 20 },
+    remote_queries: { enabled: true, notice: 'notify' }, time: { timezone: 'Europe/Berlin' }, log: { level: 'events' }, wifi: { auto_off_minutes: 20 },
     radio: { name: 'pp', peer: '' }, quiet_hours: [{ days: 'mon-fri', from: '08:00', to: '13:00', enabled: true }],
     tiles: [{ label: 'Mum', action: 'call', target: '+491701111111' }],
   });

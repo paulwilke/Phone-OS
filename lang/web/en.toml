@@ -44,7 +44,7 @@ config.sms.extra_trigger_words.help = "Additional words that trigger a remote lo
 
 config.features.label = "Features"
 config.features.free_text.label = "Free text"
-config.features.free_text.help = "Allow the child to write free-text messages and choose any recipient."
+config.features.free_text.help = "Allow the child to write free-text messages and choose any recipient. This also allows short codes and premium-rate numbers (they cost money)."
 config.features.radio.label = "Radio"
 config.features.radio.help = "Allow the long-range radio (it still starts only on request)."
 config.features.parent_tools.label = "Parent tools"
@@ -59,6 +59,8 @@ config.features.modem_sleep.label = "Modem sleep"
 config.features.modem_sleep.help = "Allow the modem to sleep when idle to save battery."
 
 config.remote_queries.label = "Remote queries"
+config.remote_queries.enabled.label = "Answer position queries"
+config.remote_queries.enabled.help = "Whether the device answers a parent's position query. Off: every query is refused, no reply is sent, the refusal is logged. An answer always stays in the history."
 config.remote_queries.notice.label = "Query notice"
 config.remote_queries.notice.help = "How visible a remote location query is on the device: silent (log only), history (also in the message history), or notify (history and a notice)."
 config.remote_queries.notice.silent.label = "Silent (log only)"
