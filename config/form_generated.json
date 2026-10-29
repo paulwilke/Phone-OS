@@ -277,6 +277,20 @@
           "field": "",
           "keys": [
             {
+              "name": "enabled",
+              "type": "bool",
+              "required": false,
+              "secret": false,
+              "apply": "restart",
+              "default": "true",
+              "min_val": 0,
+              "max_val": 0,
+              "enums": "",
+              "label": "config.remote_queries.enabled.label",
+              "help": "config.remote_queries.enabled.help",
+              "field": "remoteQueries"
+            },
+            {
               "name": "notice",
               "type": "enum",
               "required": false,

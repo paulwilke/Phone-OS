@@ -15,6 +15,7 @@
 
 #include <DirectoryStore.h>
 #include <SocketTcp.h>
+#include <contracts/Contract.h>
 #include <contracts/ConfigStoreContract.h>
 #include <contracts/TcpServerContract.h>
 
@@ -210,7 +211,7 @@ void test_the_server_listens_on_the_loopback_address_only() {
     }
     ::freeifaddrs(all);
   }
-  if (other == 0) TEST_IGNORE_MESSAGE("this machine has no address but the loopback");
+  if (other == 0) CONTRACT_IGNORE_AND_RETURN("this machine has no address but the loopback");
   TEST_ASSERT_FALSE(connectTo(other));
 }
 

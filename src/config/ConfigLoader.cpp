@@ -241,6 +241,7 @@ void applyHome(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
 }
 
 void applyRemoteQueries(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
+  if (const toml::Value* v = sec.find("enabled")) checkBool(*v, "settings", "remote_queries.enabled", d, p.remoteQueries);
   if (const toml::Value* v = sec.find("notice")) {
     std::string val;
     if (checkEnum(*v, "settings", "remote_queries.notice", "silent|history|notify", d, val)) {

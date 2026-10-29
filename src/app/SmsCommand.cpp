@@ -24,6 +24,7 @@ bool sameIgnoringCase(std::string_view a, std::string_view b) {
 
 void SmsCommand::setConfig(const Config& cfg) {
   notice_ = cfg.notice;
+  enabled_ = cfg.enabled;
   triggers_.clear();
   for (const std::string& word : cfg.triggers) {
     const std::string_view t = trim(word);
@@ -51,6 +52,8 @@ SmsCommand::Result SmsCommand::handle(const std::string& phone, std::string_view
   if (phone.empty() || !host_.isAdmin(phone)) {
     // No reply: a stranger does not learn that the command exists.
     record.outcome = CommandOutcome::Unauthorized;
+  } else if (!enabled_) {
+    record.outcome = CommandOutcome::Disabled;
   } else {
     record.outcome = host_.startLocationReply(phone) ? CommandOutcome::Executed : CommandOutcome::Busy;
   }

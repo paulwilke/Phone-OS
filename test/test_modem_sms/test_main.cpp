@@ -754,6 +754,20 @@ void test_the_answer_lines_are_joined_and_an_error_says_so() {
   TEST_ASSERT_EQUAL_STRING("ERROR", answer.c_str());
 }
 
+void test_the_answer_to_a_question_is_bounded() {
+  Ready m;
+  std::vector<std::string> lines;
+  for (int i = 0; i < 200; ++i) lines.push_back("+CEDRXS: " + std::to_string(i) + ",(0-15),\"0101\",xxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  m.r.t.replyLines("AT+CEDRXS=?", lines);
+  m.r.driver.query("AT+CEDRXS=?");
+  m.r.run(2000);
+  std::string answer;
+  TEST_ASSERT_TRUE(m.r.driver.pollQueryResult(answer));
+  TEST_ASSERT_TRUE(answer.size() <= 1024);
+  TEST_ASSERT_TRUE(answer.find("+CEDRXS: 0,") == 0);
+  TEST_ASSERT_TRUE(m.r.logged("too long"));
+}
+
 // The lines the driver reads for itself (a +CREG: line) are part of a question about them as well.
 void test_a_question_about_what_the_driver_reads_itself_still_gets_its_answer() {
   Ready m;
@@ -841,6 +855,7 @@ int main(int, char**) {
   RUN_TEST(test_shutdown_twice_or_when_off_changes_nothing);
   RUN_TEST(test_only_pure_questions_are_accepted);
   RUN_TEST(test_a_question_is_asked_and_its_answer_comes_once);
+  RUN_TEST(test_the_answer_to_a_question_is_bounded);
   RUN_TEST(test_the_answer_lines_are_joined_and_an_error_says_so);
   RUN_TEST(test_a_question_about_what_the_driver_reads_itself_still_gets_its_answer);
   RUN_TEST(test_a_question_wakes_a_sleeping_modem);

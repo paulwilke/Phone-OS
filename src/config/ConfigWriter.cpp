@@ -96,6 +96,7 @@ bool ConfigWriter::writeSettings(const Profile& p) const {
   out += "modem_sleep = "; appendBool(out, p.modemSleep); out += "\n\n";
 
   out += "[remote_queries]\n";
+  out += "enabled = "; appendBool(out, p.remoteQueries); out += "\n";
   out += "notice = "; appendStr(out, commandNoticeName(p.commandNotice)); out += "\n\n";
 
   out += "[time]\n";

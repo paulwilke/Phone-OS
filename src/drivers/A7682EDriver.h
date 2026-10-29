@@ -285,6 +285,7 @@ private:
   // Questions, sleep, shutdown
   std::string queryCommand_;
   std::string queryResult_;
+  bool queryResultTruncated_ = false;
   bool queryPending_ = false;
   bool queryDone_ = false;
   bool asleep_ = false;

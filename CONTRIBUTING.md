@@ -19,6 +19,7 @@ You need [PlatformIO Core](https://docs.platformio.org/page/core/installation.ht
 
 ```bash
 pio test -e native              # host tests of the C++ code
+pio test -e native-asan         # the same tests under AddressSanitizer and UndefinedBehaviorSanitizer
 pio run -e sim                  # the simulator builds ...
 for s in sim/scripts/*.txt; do .pio/build/sim/program --script "$s" >/dev/null || echo "FAIL $s"; done   # ... and every scenario passes
 pio run -e device               # the firmware compiles (compile-only; flashing is the owner's decision)
@@ -50,7 +51,7 @@ python3 scripts/privacy_check.py --history # also every changed line, message an
 python3 test/test_privacy_check/test_history.py # the history scan finds a leak in a line, a message and a committer's identity
 ```
 
-`privacy_check.py` can also read a private denylist of real names and numbers that must never appear; see its header for how to keep one outside the repository.
+`privacy_check.py` scans the repository for personal data before it is published (it does not describe the device's behaviour). It can also read a private denylist of real names and numbers that must never appear; see its header for how to keep one outside the repository.
 
 ## Working on a change
 

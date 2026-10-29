@@ -113,6 +113,9 @@ inline constexpr KeyDef kKeys[] = {
      "true", 0, 0, "",
      "config.features.modem_sleep.label", "config.features.modem_sleep.help", "modemSleep", "basics"},
     // settings / [remote_queries]
+    {"settings", "remote_queries", "enabled", KeyType::Bool, false, false, Apply::Restart,
+     "true", 0, 0, "",
+     "config.remote_queries.enabled.label", "config.remote_queries.enabled.help", "remoteQueries", "basics"},
     {"settings", "remote_queries", "notice", KeyType::Enum, false, false, Apply::Immediate,
      "history", 0, 0, "silent|history|notify",
      "config.remote_queries.notice.label", "config.remote_queries.notice.help", "commandNotice", "basics"},

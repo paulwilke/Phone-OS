@@ -5,6 +5,7 @@
     scripts/check_docs.py --root <dir>   # another tree (the tests of this script use it)
 
 Checks every Markdown file and every source file:
+  * no leftover merge conflict markers (a line starting with `<<<<<<< `, `>>>>>>> `, or exactly `=======`);
   * relative links resolve to files that exist;
   * `paths/in/backticks` that look like repository files exist;
   * no placeholder markers (TODO, FIXME, XXX, TBD, "for now", "legacy", "deprecated",
@@ -41,6 +42,7 @@ SKIP_DIRS = {".git", ".pio", "node_modules", "_workbench", "__pycache__", ".publ
 CODE_SUFFIXES = (".h", ".hpp", ".c", ".cpp", ".py", ".sh", ".ini", ".yml", ".yaml", ".js", ".html", ".toml")
 MARKER = re.compile(r"\b(TODO|FIXME|XXX|TBD)\b|\b(for now|legacy|deprecated|temporary|decision to confirm)\b", re.I)
 GERMAN = re.compile(r"[äöüÄÖÜß]|\b(und|nicht|oder|ist|sind|wird|eine?|der|die|das|für|mit|auch|noch)\b")
+CONFLICT = re.compile(r"^(<<<<<<< |>>>>>>> |=======$)")
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 OLD_NAME = re.compile("phone" + "plus", re.I)
 # Where the old name stays, and why. A file listed here may name it anywhere; elsewhere only OLD_NAME_READ may.
@@ -244,6 +246,8 @@ def main():
         for n, line in enumerate(lines, 1):
             if rel != os.path.join("scripts", "check_docs.py") and MARKER.search(line):
                 problems.append(f"{rel}:{n}: placeholder marker: {MARKER.search(line).group(0)}")
+            if CONFLICT.match(line):
+                problems.append(f"{rel}:{n}: merge conflict marker: {line[:7]}")
             if old_name_problem(rel, line):
                 problems.append(f"{rel}:{n}: {old_name_problem(rel, line)}")
             if not allow_foreign and GERMAN.search(line):

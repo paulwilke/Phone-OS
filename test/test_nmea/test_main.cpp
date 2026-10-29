@@ -131,6 +131,20 @@ void test_the_number_of_satellites_cannot_overflow_a_byte() {
   TEST_ASSERT_EQUAL(0, p.fix().sats);
 }
 
+void test_a_numeric_field_of_absurd_length_reads_as_none() {
+  NmeaParser p;
+  feed(p, sentence(kRmc));
+  feed(p, sentence(gga("1.0", "1", "1234567890123456789012345678901234567890")));
+  TEST_ASSERT_EQUAL(0, p.fix().sats);
+  feed(p, sentence(gga("1.0", "1", "12")));
+  TEST_ASSERT_EQUAL(12, p.fix().sats);
+  feed(p, sentence(gga("1.0", "1", "12abc")));
+  TEST_ASSERT_EQUAL(0, p.fix().sats);
+  // A quality field that long is not a quality: the fix is not valid.
+  feed(p, sentence(gga("1.0", "1000000000000000000000000", "09")));
+  TEST_ASSERT_FALSE(p.fix().valid);
+}
+
 // --- positions that cannot exist -------------------------------------------------------------------
 
 void test_a_valid_fix_with_an_impossible_position_is_no_fix() {
@@ -266,6 +280,7 @@ int main(int, char**) {
   RUN_TEST(test_a_nan_hdop_is_unknown_and_never_nan);
   RUN_TEST(test_a_good_hdop_is_kept_and_a_later_bad_one_does_not_poison_it);
   RUN_TEST(test_the_number_of_satellites_cannot_overflow_a_byte);
+  RUN_TEST(test_a_numeric_field_of_absurd_length_reads_as_none);
   RUN_TEST(test_a_valid_fix_with_an_impossible_position_is_no_fix);
   RUN_TEST(test_the_poles_and_the_date_line_are_positions);
   RUN_TEST(test_a_date_that_is_no_date_leaves_no_fix);

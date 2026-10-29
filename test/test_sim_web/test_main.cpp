@@ -259,7 +259,7 @@ void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_eac
     TEST_ASSERT_TRUE_MESSAGE(words.has("\"web.tab.basics\":") && !words.has("\"config."), code);   // each answer its own part
     TEST_ASSERT_TRUE_MESSAGE(!labels.has("\"web.") && !labels.has(".help\":"), code);
     // The help texts come per tab of the page: every tab answers under kHelpTabMax bytes (under a quarter of the
-    // buffer; the largest shipped answer is the French basics tab, 2165 bytes), and the tabs together carry every help key.
+    // buffer; the largest shipped answer is the French basics tab, 2428 bytes), and the tabs together carry every help key.
     std::string helpOfAllTabs;
     for (const char* tab : {"basics", "school_time", "advanced", "contacts", "secrets"}) {
       const Reply help = w.get(std::string("/api/lang/") + code + "/help?tab=" + tab);

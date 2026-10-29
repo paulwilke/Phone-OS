@@ -12,6 +12,7 @@ const char* outcomeText(CommandOutcome o) {
   switch (o) {
     case CommandOutcome::Executed: return "answered";
     case CommandOutcome::Busy: return "busy (a search is running)";
+    case CommandOutcome::Disabled: return "refused (remote queries are switched off)";
     default: return "refused";
   }
 }
@@ -35,6 +36,7 @@ Messaging::Messaging(Clock& clock, Modem& modem, Power& power, MessageStore& sto
 void Messaging::configure(const std::vector<std::string>& triggers) {
   SmsCommand::Config config;
   config.notice = profile_.commandNotice;
+  config.enabled = profile_.remoteQueries;
   config.triggers = triggers;
   command_.setConfig(config);
 }
@@ -122,7 +124,7 @@ void Messaging::recordCommand(const CommandRecord& rec, CommandNotice notice) {
            outcomeText(rec.outcome));
   if (notice == CommandNotice::Silent) return;
 
-  const bool refused = rec.outcome == CommandOutcome::Unauthorized;
+  const bool refused = rec.outcome == CommandOutcome::Unauthorized || rec.outcome == CommandOutcome::Disabled;
   sysentry::record(store_, clock_.epochUtc(), refused ? sysentry::kQueryRefused : sysentry::kLocationQueried, rec.phone);
   if (notice == CommandNotice::Notify) notices_.set(refused ? NoticeKind::QueryRefused : NoticeKind::LocationQueried, rec.phone);
 }
