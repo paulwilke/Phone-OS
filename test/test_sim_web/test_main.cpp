@@ -32,6 +32,9 @@ namespace fs = std::filesystem;
 
 constexpr const char* kPassword = "test-password-1";
 
+// The largest help answer of one tab (bytes), see test_every_text_the_form_asks_for_arrives_in_every_shipped_language.
+constexpr size_t kHelpTabMax = 3000;
+
 struct Reply {
   int status = 0;  // 0: nothing came back
   std::string head, body;
@@ -226,11 +229,12 @@ void test_the_page_can_be_had_in_every_shipped_language() {
   TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz").status);
 }
 
-// The form asks for the label and the help text of every field. A language comes in three answers: the page's
-// words (/api/lang/<code>), the labels of the form (/labels) and the help texts (/help), because all of it in one
-// answer is too tight for the response buffer, and two were too tight once 4.1 added the settings tabs, the
-// weekday boxes and the tiles of [home]. Each must fit with room for a longer user catalog, and between them they
-// carry every key the form uses, so that the page never shows a raw key.
+// The form asks for the label and the help text of every field. A language comes in pieces: the page's words
+// (/api/lang/<code>), the labels of the form (/labels) and the help texts of one tab (/help?tab=<id>), because
+// all of it in one answer is too tight for the response buffer, and three answers were too tight once 4.1 added
+// the settings tabs, the weekday boxes and the tiles of [home] and the help grew (D-56). Each must fit with room
+// for a longer user catalog, and between them they carry every key the form uses, so that the page never shows a
+// raw key.
 void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare() {
   std::ifstream in("config/form_generated.json");
   std::stringstream form;
@@ -246,29 +250,61 @@ void test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_eac
   for (const char* code : {"en", "de", "fr"}) {
     const Reply words = w.get(std::string("/api/lang/") + code);
     const Reply labels = w.get(std::string("/api/lang/") + code + "/labels");
-    const Reply help = w.get(std::string("/api/lang/") + code + "/help");
     TEST_ASSERT_EQUAL(200, words.status);
     TEST_ASSERT_EQUAL(200, labels.status);
-    TEST_ASSERT_EQUAL(200, help.status);
-    // Each answer uses at most 6200 of the 12288 bytes of the buffer: twice the room for a catalog whose
-    // sentences are longer, which a single answer (about 11.9 KB in French) would not have.
-    TEST_ASSERT_TRUE_MESSAGE(words.body.size() < 6200, code);
-    TEST_ASSERT_TRUE_MESSAGE(labels.body.size() < 6200, code);
-    TEST_ASSERT_TRUE_MESSAGE(help.body.size() < 6200, code);
+    // Each answer uses at most 6000 of the 12288 bytes of the buffer: twice the room for a catalog whose
+    // sentences are longer, which a single answer (about 12 KB in French) would not have.
+    TEST_ASSERT_TRUE_MESSAGE(words.body.size() < 6000, code);
+    TEST_ASSERT_TRUE_MESSAGE(labels.body.size() < 6000, code);
     TEST_ASSERT_TRUE_MESSAGE(words.has("\"web.tab.basics\":") && !words.has("\"config."), code);   // each answer its own part
     TEST_ASSERT_TRUE_MESSAGE(!labels.has("\"web.") && !labels.has(".help\":"), code);
+    // The help texts come per tab of the page: every tab answers under kHelpTabMax bytes (under a quarter of the
+    // buffer; the largest shipped answer is the French basics tab, 2428 bytes), and the tabs together carry every help key.
+    std::string helpOfAllTabs;
+    for (const char* tab : {"basics", "school_time", "advanced", "contacts", "secrets"}) {
+      const Reply help = w.get(std::string("/api/lang/") + code + "/help?tab=" + tab);
+      TEST_ASSERT_EQUAL_MESSAGE(200, help.status, (std::string(code) + " " + tab).c_str());
+      TEST_ASSERT_TRUE_MESSAGE(help.body.size() < kHelpTabMax,
+                               (std::string(code) + " " + tab + ": " + std::to_string(help.body.size()) + " bytes").c_str());
+      TEST_ASSERT_TRUE_MESSAGE(!help.has(".label\":") && !help.has("\"web."), (std::string(code) + " " + tab).c_str());
+      helpOfAllTabs += help.body;
+    }
     for (const std::string& key : keys) {
       const bool isHelp = key.size() > 6 && key.compare(key.size() - 6, 6, ".help\"") == 0;
-      TEST_ASSERT_TRUE_MESSAGE((isHelp ? help : labels).has(key + ":"), (std::string(code) + " " + key).c_str());
+      const bool found = (isHelp ? helpOfAllTabs : labels.body).find(key + ":") != std::string::npos;
+      TEST_ASSERT_TRUE_MESSAGE(found, (std::string(code) + " " + key).c_str());
     }
   }
+}
+
+// A tab's help holds the help of that tab and of no other.
+void test_the_help_of_a_tab_holds_only_the_help_of_that_tab() {
+  Web w;
+  const Reply contacts = w.get("/api/lang/en/help?tab=contacts");
+  TEST_ASSERT_EQUAL(200, contacts.status);
+  TEST_ASSERT_TRUE(contacts.has("\"config.contact.number.help\":"));
+  TEST_ASSERT_TRUE(!contacts.has("\"config.sms.language.help\":") && !contacts.has("\"config.sim_pin.help\":"));
+  const Reply secrets = w.get("/api/lang/en/help?tab=secrets");
+  TEST_ASSERT_TRUE(secrets.has("\"config.sim_pin.help\":") && !secrets.has("\"config.contact.number.help\":"));
+  // The help of a section stands with its tab, and a section's tab is the one of its keys.
+  TEST_ASSERT_TRUE(w.get("/api/lang/en/help?tab=school_time").has("\"config.quiet_hours.help\":"));
+}
+
+// The help route needs the tab: no tab or a long one is a 400, a tab the page does not have is a 404.
+void test_the_help_route_refuses_a_missing_or_unknown_tab() {
+  Web w;
+  TEST_ASSERT_EQUAL(400, w.get("/api/lang/en/help").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/lang/en/help?tab=").status);
+  TEST_ASSERT_EQUAL(400, w.get("/api/lang/en/help?tab=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/lang/en/help?tab=status").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/lang/en/help?tab=nothing").status);
 }
 
 // Help texts are behind the password like every other route, and an unknown language has none.
 void test_the_help_texts_need_the_password_and_a_known_language() {
   Web w;
-  TEST_ASSERT_EQUAL(401, w.get("/api/lang/en/help", "").status);
-  TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz/help").status);
+  TEST_ASSERT_EQUAL(401, w.get("/api/lang/en/help?tab=basics", "").status);
+  TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz/help?tab=basics").status);
   TEST_ASSERT_EQUAL(401, w.get("/api/lang/en/labels", "").status);
   TEST_ASSERT_EQUAL(404, w.get("/api/lang/zz/labels").status);
 }
@@ -508,6 +544,8 @@ int main() {
   RUN_TEST(test_a_request_with_an_error_status_is_in_the_log_without_secrets);
   RUN_TEST(test_the_page_can_be_had_in_every_shipped_language);
   RUN_TEST(test_every_text_the_form_asks_for_arrives_in_every_shipped_language_and_each_answer_has_room_to_spare);
+  RUN_TEST(test_the_help_of_a_tab_holds_only_the_help_of_that_tab);
+  RUN_TEST(test_the_help_route_refuses_a_missing_or_unknown_tab);
   RUN_TEST(test_the_help_texts_need_the_password_and_a_known_language);
   RUN_TEST(test_the_page_catalogs_are_loaded_by_the_page_and_let_go_when_wifi_is_off);
   RUN_TEST(test_a_user_catalog_for_the_page_changes_the_page_and_not_the_device);

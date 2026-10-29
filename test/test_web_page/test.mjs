@@ -285,11 +285,13 @@ async function runPage({ storedAuth, storedLang, browserLang, catalogs, deviceLa
     const pick = (cat, keep) => Object.fromEntries(Object.entries(cat).filter(([k]) => keep(k)));
     const isLabel = (k) => k.startsWith('config.') && k.endsWith('.label');
     const lb = path.match(/^\/api\/lang\/(.+)\/labels$/);
-    const h = path.match(/^\/api\/lang\/(.+)\/help$/);
+    // the help texts come per tab (D-56): /help?tab=<id>; without the tab the device answers 400
+    const h = path.match(/^\/api\/lang\/([^/?]+)\/help(\?tab=.+)?$/);
     const l = !lb && !h && path.match(/^\/api\/lang\/(.+)$/);
     if (lb && labelsFail) return reply(500, { error: 'Response too large' });
     if (lb) return catalogs[lb[1]] ? reply(200, pick(catalogs[lb[1]], isLabel)) : reply(404, { error: 'Unknown language' });
     if (h && helpFails) return reply(500, { error: 'Response too large' });
+    if (h && !h[2]) return reply(400, { error: 'tab= missing or too long' });
     if (h) return catalogs[h[1]] ? reply(200, helps[h[1]] || {}) : reply(404, { error: 'Unknown language' });
     if (l) return catalogs[l[1]] ? reply(200, pick(catalogs[l[1]], (k) => !k.startsWith('config.'))) : reply(404, { error: 'Unknown language' });
     if (path === '/api/settings' && opts.method !== 'PUT') return reply(200, settings);
@@ -435,7 +437,11 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   assert(hints.length === 4 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')),
     'every field of a contact has its German help text under it: ' + hints.join(' | '));
   assert(!hints.some((x) => /^config\./.test(x)), 'no raw help key under a field');
-  assert(pg.calls.some((c) => c.path === '/api/lang/de/help' && c.authed), 'the help texts are asked for after the login, with the password');
+  assert(pg.calls.some((c) => c.path === '/api/lang/de/help?tab=contacts' && c.authed), 'the help texts of a tab are asked for when the tab is shown, with the password');
+  assert(!pg.calls.some((c) => /\/help$/.test(c.path)), 'the help is never asked for without a tab');
+  assert(!pg.calls.some((c) => c.path.includes('?tab=advanced')), 'the help of a tab that was not opened is not asked for');
+  await hintsOf(pg);
+  assert(pg.calls.filter((c) => c.path === '/api/lang/de/help?tab=contacts').length === 1, 'the help of a tab is asked for once and kept in the page');
 
   // the secrets tab: its first group has no section and so no heading; it used to be headed by the key "config..label"
   pg.dataT.find((e) => e.attrs['data-tab'] === 'secrets').listeners.click();
@@ -449,13 +455,15 @@ const overlayWords = (pg) => pg.dataT.filter((e) => e.attrs['data-t'].startsWith
   hints = await hintsOf(pg);
   assert(hints.length === 0, 'a help text that did not arrive is left out, not shown as its key: ' + hints.join(' | '));
 
-  // a language chosen in the menu brings its help texts too
+  // a language chosen in the menu brings its help texts too, asked for again for the tab that is open
   pg = await runPage({ storedAuth: auth, storedLang: 'en', catalogs: catalogsH, helps });
+  await hintsOf(pg);
   pg.els['lang-select'].value = 'de';
   await pg.els['lang-select'].listeners.change.call(pg.els['lang-select']);
   await pg.settle();
-  hints = await hintsOf(pg);
-  assert(hints.length === 4 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')), 'after a change in the menu the hints are in the new language');
+  hints = (await hintsOf(pg)).slice(-4);   // the fake elements keep the children of the form that was shown before
+  assert(pg.calls.some((c) => c.path === '/api/lang/de/help?tab=contacts'), 'a new language asks for the help of the tab again');
+  assert(hints.length === 4 && hints.includes(de['config.contact.number.help'].replace(/^"|"$/g, '')), 'after a change in the menu the hints are in the new language: ' + hints.join(' | '));
 }
 
 // (i) a list field is written as an array: an empty one is [], never "" (the device reported
