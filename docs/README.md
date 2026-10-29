@@ -10,6 +10,7 @@ The documents describe what exists in this repository; each one is written from 
 |---|---|
 | [decisions.md](decisions.md) | the running log of decisions: what was chosen or refused, by whom, why, and how it is checked; the "Verified" line of each says what was seen on the device and when |
 | [open-points.md](open-points.md) | the one list of open work, with the owner of every item |
+| [security.md](security.md) | what the device does against strangers and, plainly, what it does not protect against: forged sender numbers, the position query, the card in plain text, the USB console, the web page, the chip and modem, the network |
 | [CHANGELOG.md](../CHANGELOG.md) | what changed in each version for the people who use the device |
 | [release-4.2.md](release-4.2.md) | the current release notes: what 4.2 changed for the parents and the child, what was checked, what the owner tries on the device |
 
