@@ -268,12 +268,30 @@ function showPanel(name) {{
 var SETTINGS_TABS = {{}};
 (SCHEMA.files.settings.groups || []).forEach(function(g) {{ SETTINGS_TABS[g.id] = true; }});
 
+// The help texts of a tab come with the tab, not with the language: one answer for all of them would not
+// fit the response buffer of the device with room to spare. They are asked for when the tab is first
+// shown, and again after a new language replaces the words (helpLoaded is emptied then). A failed answer
+// leaves the fields without a hint and is tried again when the tab is shown next; the page never shows a
+// catalog key as text.
+var helpLoaded = {{}};
+function loadHelp(tab) {{
+  if (helpLoaded[tab]) return Promise.resolve();
+  var code = currentLang;
+  return api('GET', '/api/lang/' + code + '/help?tab=' + encodeURIComponent(tab)).then(function(h) {{
+    return h.ok ? h.json() : null;
+  }}).catch(function() {{ return null; }}).then(function(help) {{
+    if (!help || code !== currentLang) return;
+    for (var k in help) T[k] = help[k];
+    helpLoaded[tab] = true;
+  }});
+}}
+
 // force: build the form again even when it holds changes that are not saved (a new language).
 function loadPanel(name, force) {{
   if (name === 'status') loadStatus();
-  else if (SETTINGS_TABS[name]) loadConfigForm('settings', name, force);
-  else if (name === 'contacts') loadConfigForm('contacts', null, force);
-  else if (name === 'secrets') loadConfigForm('secrets', null, force);
+  else if (SETTINGS_TABS[name]) loadHelp(name).then(function() {{ loadConfigForm('settings', name, force); }});
+  else if (name === 'contacts') loadHelp(name).then(function() {{ loadConfigForm('contacts', null, force); }});
+  else if (name === 'secrets') loadHelp(name).then(function() {{ loadConfigForm('secrets', null, force); }});
   else if (name === 'files') loadFiles();
   else if (name === 'log') loadLog();
   else if (name === 'backup') {{}};
@@ -900,19 +918,15 @@ function loadLang(code) {{
     if (r.status === 404 && code !== 'en') return loadLang('en');
     if (!r.ok) throw new Error('lang ' + r.status);
     return r.json().then(function(d) {{
-      // A language comes in three answers, because all of it does not fit one response buffer on the
-      // device: the page's words, the labels of the form, the help texts under its fields. Without the
-      // labels a field is named by its key in the file (label()), without the help texts it has no hint.
+      // A language comes in pieces, because all of it does not fit one response buffer on the device: the
+      // page's words, the labels of the form and, per tab, the help texts under its fields (loadHelp).
+      // Without the labels a field is named by its key in the file (label()), without the help texts it
+      // has no hint.
       return api('GET', '/api/lang/' + code + '/labels').then(function(l) {{
         return l.ok ? l.json() : {{}};
       }}).catch(function() {{ return {{}}; }}).then(function(labels) {{
         for (var k in labels) d[k] = labels[k];
-        return api('GET', '/api/lang/' + code + '/help').then(function(h) {{
-          return h.ok ? h.json() : {{}};
-        }}).catch(function() {{ return {{}}; }});
-      }}).then(function(help) {{
-        for (var k in help) d[k] = help[k];
-        T = d; currentLang = code; applyTranslations();
+        T = d; currentLang = code; helpLoaded = {{}}; applyTranslations();
       }});
     }});
   }});
