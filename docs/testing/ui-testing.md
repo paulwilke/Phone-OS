@@ -1,6 +1,6 @@
 # Automated testing of the interface
 
-A concept, not a description of code: it says how the screens of Phone OS are tested automatically, what of it exists today and what a UI testing framework has to add. The framework itself is built in a repository of its own against [ui-testing-framework-requirements.md](ui-testing-framework-requirements.md) and used here through one configuration file, [ui-tests/ui-tests.toml](../../ui-tests/ui-tests.toml). Until that framework exists the configuration is not run by anything; [open-points.md](../open-points.md) lists it, with the owner as the person who decides.
+A concept, not a description of code: it says how the screens of Phone OS are tested automatically, what of it exists today and what a UI testing framework has to add. The framework itself is built in a repository of its own against [ui-testing-framework-requirements.md](ui-testing-framework-requirements.md) and used here through one configuration file, [ui-tests/ui-tests.toml](../../ui-tests/ui-tests.toml). Until that framework exists the configuration is not run by anything; open point 47 in [open-points.md](../open-points.md) waits for the framework repository. The eight choices that shape the framework were the owner's and are decided in [D-57](../decisions.md) (the section "Decisions" below).
 
 ## What the interface is
 
@@ -53,7 +53,7 @@ The scenario language of the simulator already is most of a UI test language:
 
 What a framework has to add, in the order a first version needs it:
 
-1. **A result per step.** The console prints `error: ...` when a command fails and the run exits with status 1 at the end; a report needs to know which line failed. A framework gets this without a change to the simulator by sending `echo <token>` after every command and reading up to the token; a result line per command from the simulator would make it cleaner.
+1. **A result per step.** The console prints `error: ...` when a command fails and the run exits with status 1 at the end; a report needs to know which line failed. The owner chose one result line per command (`ok` or `error: ...`) as the protocol ([D-57](../decisions.md)); until the simulator prints it, a framework gets by with `echo <token>` after every command and reads up to the token.
 2. **A frame dump on the wire.** `ascii <file>` and `screenshot <file.png>` write files; a framework that drives the console over standard input can read the file after the token arrives. A dump on standard output between known markers would save the file round trip.
 3. **A golden picture per language.** `golden smoke-home` compares one file whatever the language; `smoke.txt` works around it with a name per language (`smoke-home-de`). The framework names golden files by scenario, step and language.
 4. **A region.** `golden` compares the whole 240 × 320 panel; a region assertion (the content area without the status bar's clock) and a mask do not exist on the console, although `golden::expect` takes a rectangle in the host tests.
@@ -68,11 +68,11 @@ Items 1, 2 and 4 are small additions to `sim/Simulator.h` and belong to this rep
 
 A **golden frame** is the picture of the panel at one step of one scenario in one language, approved by a person and stored in the repository.
 
-- **Format.** The format in use today is the ASCII art of `testing/Golden.h`: one character per pixel, `#` black, `.` white, one line per row, 77,120 bytes for a full screen. It is readable in a diff, needs no tool, and is what `sim/golden/` and `test/golden/` hold already. The framework reads and writes it, so the five pictures of `sim/golden/` are the first golden frames of the suite. Whether the suite moves to a binary PBM (one bit per pixel, 9,600 bytes a frame) once it has hundreds of frames is a decision for the owner (below); the requirements ask for both.
+- **Format.** The format in use today is the ASCII art of `testing/Golden.h`: one character per pixel, `#` black, `.` white, one line per row, 77,120 bytes for a full screen. It is readable in a diff, needs no tool, and is what `sim/golden/` and `test/golden/` hold already. The framework reads and writes it, so the five pictures of `sim/golden/` are the first golden frames of the suite. The owner chose it over a binary PBM (one bit per pixel, 9,600 bytes a frame, but a renderer is needed to review it) in [D-57](../decisions.md); the format is one setting of the configuration, so a move is possible later.
 - **Where.** Under one directory of this repository, by language and name: `ui-tests/golden/<language>/<scenario>.<step>.txt`. A PNG of each is **not** committed; the framework renders it on demand for a reviewer and CI uploads the rendered pictures as an artifact.
-- **Review.** A changed golden frame is a changed file in the pull request, like code. The reviewer looks at the rendered before, after and difference the framework attaches to the run, and the pull request description says why the picture changed. A golden frame that changes without a sentence in the description is a finding of the review.
+- **Review.** A changed golden frame is a changed file in the pull request, like code. The author of the pull request approves it with one sentence in the description that says why the picture changed ([D-57](../decisions.md)); the reviewer looks at the rendered before, after and difference the framework attaches to the run. A golden frame that changes without that sentence is a finding of the review.
 - **Update.** `UPDATE_GOLDEN=1` writes every compared frame today; the framework takes an approve command that writes only the frames of the scenarios named, prints what it changed, and never creates a frame silently in CI: a missing frame fails there and says how to create it, as `golden::expect` does.
-- **Language coverage.** A golden frame is kept in English for every scenario step that has one, and in German and French where a layout is known to be tight (a tile, a soft key, a title); the text assertions cover the words in all three languages, and the host tests cover clipping in the pseudo-language ([ui-layout-testing.md](../ui/ui-layout-testing.md)). Keeping every frame in every language would triple the files for little information; the configuration says per scenario which languages have pictures.
+- **Language coverage.** A golden frame is kept in English for every scenario step that has one, and in German and French where a layout is known to be tight (a tile, a soft key, a title); the text assertions cover the words in all three languages, and the host tests cover clipping in the pseudo-language ([ui-layout-testing.md](../ui/ui-layout-testing.md)). Keeping every frame in every language would triple the files for little information ([D-57](../decisions.md)); the configuration says per scenario which languages have pictures.
 
 ## How a test fails usefully
 
@@ -89,7 +89,7 @@ A scenario stops at its first failing step (the steps after it would fail for th
 
 ## How it runs
 
-**In CI**, as one step of `.github/workflows/ci.yml` after "Simulator build", in place of the shell loop over `sim/scripts/*.txt`: the framework is installed at a pinned version from its repository, reads `ui-tests/ui-tests.toml`, runs every scenario in every configured language, writes a JUnit file that the workflow publishes, uploads the diff pictures as an artifact when something failed, and exits with a status the workflow understands. The whole suite stays under five minutes on the runner: the simulator advances time without waiting, and a scenario takes seconds. The counter-check (`scripts/counter_check_scenarios.py`) stays outside CI, as today, because it rebuilds the simulator.
+**In CI**, as one step of `.github/workflows/ci.yml` after "Simulator build", in place of the shell loop over `sim/scripts/*.txt` once the framework runs every scenario there ([D-57](../decisions.md)): the framework is installed at a pinned version from its repository, reads `ui-tests/ui-tests.toml`, runs every scenario in every configured language, writes a JUnit file that the workflow publishes, uploads the diff pictures as an artifact when something failed, and exits with a status the workflow understands. The whole suite stays under five minutes on the runner: the simulator advances time without waiting, and a scenario takes seconds. The counter-check (`scripts/counter_check_scenarios.py`) stays outside CI, as today, because it rebuilds the simulator.
 
 **Locally**, one command from the repository root runs the suite or one scenario, in one language or all, and prints the same report to the terminal; a second command approves changed frames. The simulator's own ways stay: a scenario file still runs with `--script`, and the window build (`pio run -e sim-sdl`) still lets a person watch a scenario.
 
@@ -102,7 +102,7 @@ The device ships English, German and French, and a user catalog may add a fourth
 - Every scenario runs in English, German and French unless its configuration says otherwise (a scenario that drives the Language page itself runs from one start language). The start language is set as the Language page sets it, so the card keeps it and a restart in the scenario brings the device back in it.
 - Text assertions use catalog keys, so the same scenario checks the German and the French words without a German or French copy of the scenario; a scenario that asserts a literal English word (`say Settings`) is marked as English only or rewritten with its key.
 - Golden frames are kept per language where the configuration says so (above).
-- The pseudo-language stays in the host tests, where every widget is drawn in it with clipping asserted; the suite may run a scenario in `qps-ploc` as a smoke test of the layout under hostile words, with text assertions only and no frames.
+- The pseudo-language stays in the host tests, where every widget is drawn in it with clipping asserted, until the suite stands ([D-57](../decisions.md)); after that the suite may run a scenario in `qps-ploc` as a smoke test of the layout under hostile words, with text assertions only and no frames.
 - A user catalog is covered by the scenarios that exist for it (`user-catalog`, `bad-catalog`), which run from cards under `test/data/`.
 
 ## Out of scope
@@ -113,15 +113,17 @@ The device ships English, German and French, and a user catalog may add a fourth
 - **Behaviour without a screen**: the logic modules have their host tests (`pio test -e native`), and [app-behaviour.md](../app-behaviour.md) is their inventory; a UI test does not replace a unit test, it checks that the pieces are wired together in front of the child.
 - **Performance of the device**: frame budgets are measured by `test/test_frame_budget/` on the host, not by scenarios.
 
-## Decisions for the owner
+## Decisions
 
-The choices below shape the framework and are not made in this document; each is listed as one open point in [open-points.md](../open-points.md) until the owner decides.
+The owner decided the eight choices that shape the framework on 2026-10-31; the entry [D-57](../decisions.md) holds the options and the reasons. Settled:
 
-1. **Golden format.** Keep the ASCII art of `testing/Golden.h` (readable in a diff, 77 KB a frame, in use today) or move to binary PBM (9.6 KB a frame, needs a renderer to review). Recommendation: ASCII while the suite has fewer than about a hundred frames, with the format named in the configuration so a move is one setting.
-2. **Which languages get pictures.** English only, English and the tight layouts in German and French (recommended), or all three for every frame.
-3. **Replacing or adding.** Whether the framework replaces the shell loop over `sim/scripts/*.txt` in CI (recommended once it runs every scenario there) or runs next to it for a release.
-4. **Where the golden frames live.** `ui-tests/golden/` next to the configuration (recommended, so the suite is one directory), or `sim/golden/` where the five existing ones are.
-5. **Language of the framework.** Python 3.12 (recommended: every check of this repository is Python, no dependency to install on the runner) or Node.
-6. **The protocol between the framework and the simulator.** Standard input and output with a result line per command (recommended, nothing to open or secure) or a local socket.
-7. **The pseudo-language in the suite.** Run every scenario in `qps-ploc` with text assertions only, or leave the pseudo-language to the host tests (recommended until the suite is in place).
-8. **Who approves a golden frame.** The author of the pull request with a sentence in its description, or the owner alone.
+1. **Golden format.** The ASCII art of `testing/Golden.h`, as `sim/golden/` and `test/golden/` hold it today; the format is one setting of the configuration (R-57).
+2. **Which languages get pictures.** English for every frame, German and French where a layout is tight, named per scenario in the configuration (R-53).
+3. **Replacing the CI loop.** The framework replaces the shell loop over `sim/scripts/*.txt` in CI once it runs every scenario there; until then the loop stays.
+4. **Where the golden frames live.** `ui-tests/golden/`, next to the configuration, so the suite is one directory (R-43).
+5. **Language of the framework.** Python 3.12 with the standard library (R-67, R-70).
+6. **The protocol.** Standard input and output with one result line per command, `ok` or `error: ...` (R-19, R-20); the simulator's result line is a bounded change of this repository that comes with the framework's first use.
+7. **The pseudo-language.** It stays with the host tests until the suite stands.
+8. **Who approves a golden frame.** The author of the pull request, with one sentence in its description that says why the picture changed.
+
+What is still open is the framework itself: open point 47 waits for its repository.

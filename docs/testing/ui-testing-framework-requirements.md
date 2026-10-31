@@ -1,6 +1,6 @@
 # Requirements for the UI testing framework
 
-The framework is built in a repository of its own and used in this one through a configuration file; this document is what it has to do, written from the concept in [ui-testing.md](ui-testing.md). Every requirement is one sentence and can be checked; "must" is a condition of acceptance, "should" is expected unless there is a stated reason. The numbers are stable: a requirement that is dropped keeps its number with the word "dropped".
+The framework is built in a repository of its own and used in this one through a configuration file; this document is what it has to do, written from the concept in [ui-testing.md](ui-testing.md) and the owner's decision [D-57](../decisions.md), which settled the golden format, the languages with pictures, the place of the frames, Python, the protocol and who approves a frame. Every requirement is one sentence and can be checked; "must" is a condition of acceptance, "should" is expected unless there is a stated reason. The numbers are stable: a requirement that is dropped keeps its number with the word "dropped".
 
 The **system under test** is the simulator of this repository (`pio run -e sim`, [simulator.md](../simulator.md)), a console program that runs the firmware's screens on fakes; a **scenario** is a file of console commands; a **frame** is the 240 × 320 one-bit picture the simulated panel shows; a **golden frame** is a stored, approved frame.
 
@@ -27,11 +27,11 @@ The **system under test** is the simulator of this repository (`pio run -e sim`,
 
 - **R-17** The framework must start the system under test as a child process from the command and arguments the configuration gives (R-50), with the repository root as the working directory.
 - **R-18** The framework must drive the child over its standard input and read its standard output and standard error, line by line, in the simulator's `--interactive --headless` mode.
-- **R-19** The framework must know when a command has been answered without timing: it sends `echo <unique token>` after each command and reads until that token appears on standard output.
-- **R-20** The framework must treat a line starting with `error:` between a command and its token as that step failing, with the line as the message.
-- **R-21** The framework must obtain a frame by sending the simulator's `ascii <file>` with a file of its own under the output directory and reading that file after the token, until the simulator offers a dump on standard output.
+- **R-19** The framework must take one result line per command, `ok` or `error: <message>`, as the end of that command's output (D-57), and must fall back to sending `echo <unique token>` after each command and reading until the token while the simulator prints no result line.
+- **R-20** The framework must treat a result line `error: <message>`, or such a line before the token in the fallback, as that step failing, with the message.
+- **R-21** The framework must obtain a frame by sending the simulator's `ascii <file>` with a file of its own under the output directory and reading that file after the result line, until the simulator offers a dump on standard output.
 - **R-22** The framework must read a frame in the ASCII format of this repository: one line per row of the panel, `#` a black pixel and `.` a white one, every line of the same length, and must refuse a frame of another size than the configured one.
-- **R-23** The framework should also read and write a frame as a binary PBM (`P4`) of the configured size, so the golden format can change by one setting (R-57).
+- **R-23** The framework must store golden frames in the ASCII format of R-22 (D-57), and should be able to read and write a binary PBM (`P4`) of the configured size behind the same setting (R-57), so a later move costs one line of the configuration.
 - **R-24** The framework must start a fresh child process for every scenario and language, so no state leaks from one run into the next.
 - **R-25** The framework must start a scenario in its language by sending `language <code>` before the first step, so the card keeps the language and a restart in the scenario brings the device back in it.
 - **R-26** The framework must add `--data <dir>` from the scenario's header (R-4) or the suite's default card to the start command.
@@ -57,7 +57,7 @@ The **system under test** is the simulator of this repository (`pio run -e sim`,
 
 ## Golden-frame management
 
-- **R-43** Golden frames must live in this repository under one directory named in the configuration, in a subdirectory per language and per scenario: `<dir>/<language>/<scenario>/<name>.<ext>`.
+- **R-43** Golden frames must live in this repository under `ui-tests/golden/` (D-57), the directory named in the configuration, in a subdirectory per language and per scenario: `<dir>/<language>/<scenario>/<name>.<ext>`.
 - **R-44** A missing golden frame must fail the step and say the one command that creates it; the framework must never create a golden frame silently.
 - **R-45** An approve command (`approve [scenario...] [--language <code>]`) must run the named scenarios and write their compared frames as golden frames, printing every file it created or changed.
 - **R-46** The approve command must refuse to run when the environment variable `CI` is set, so a frame is only ever approved on a laptop and reviewed in a pull request.
@@ -70,11 +70,11 @@ The **system under test** is the simulator of this repository (`pio run -e sim`,
 - **R-50** The configuration must be one TOML file in this repository, `ui-tests/ui-tests.toml`, and the framework must take its path as an argument with that as the default.
 - **R-51** The file must carry a `schema` integer, and the framework must refuse a schema it does not know with a message that names the versions it knows.
 - **R-52** The file must name the system under test: a build command, a run command with its arguments, the panel's width and height, and the default card.
-- **R-53** The file must list the languages the suite runs in and the languages in which golden frames are kept, and a scenario may restrict both.
+- **R-53** The file must list the languages the suite runs in and the languages in which golden frames are kept, English by default with German and French named per scenario where a layout is tight (D-57), and a scenario may restrict both.
 - **R-54** The file must allow, per golden frame name, a list of masked rectangles and a pixel budget (a count of pixels that may differ), and the framework must apply them.
 - **R-55** The file must list every scenario with its file, and may give it a name, a card, its languages, tags, and the languages in which its frames are kept.
 - **R-56** The file must name the output directory, the JUnit file, the summary file and the golden directory.
-- **R-57** The file must name the golden format, `ascii` or `pbm`, and the framework must read and write that format.
+- **R-57** The file must name the golden format, `ascii` (the setting of this repository, D-57) or `pbm`, and the framework must read and write that format.
 - **R-58** The file must allow a `status` for the suite or a scenario, and the framework must report a scenario whose status is `not-runnable` as skipped, not as failed, with the status's reason.
 - **R-59** The framework must validate the file before any run and name the line and key of a problem.
 - **R-60** The framework must run a subset of the suite by scenario name, by tag or by language from the command line, so a person runs one scenario in one language.
@@ -90,10 +90,10 @@ The **system under test** is the simulator of this repository (`pio run -e sim`,
 ## Portability
 
 - **R-66** The framework must run on macOS and on Linux (Ubuntu as GitHub Actions ships it).
-- **R-67** The framework must be written in Python 3.12 or newer with the standard library only, or in Node.js (the current long-term support release) with no native module, as the owner decides.
+- **R-67** The framework must be written in Python 3.12 or newer with the standard library only (D-57).
 - **R-68** The framework must need no GUI, display server, browser or SDL at any time.
-- **R-69** The framework must install in one command on a fresh runner (`pip install` from a tag of its repository, or `npm install` the same way), and the CI of this repository must pin that tag.
-- **R-70** The framework must write PNG files without a third-party library (the simulator's `sim/Png.h` shows the stored-deflate way), or the owner accepts one named dependency for it.
+- **R-69** The framework must install in one command on a fresh runner (`pip install` from a tag of its repository), and the CI of this repository must pin that tag.
+- **R-70** The framework must write PNG files with the standard library alone (the simulator's `sim/Png.h` shows the stored-deflate way, and Python's `zlib` does the rest).
 
 ## Licensing
 
@@ -145,7 +145,7 @@ schema = 1
 [suite]
 name = "Phone OS screens"
 status = "not-runnable"              # omit once the framework exists
-reason = "waits for the framework repository"
+reason = "waits for the framework repository (open point 47)"
 
 [target]
 build = ["pio", "run", "-e", "sim"]
@@ -162,7 +162,7 @@ golden = ["en"]
 
 [golden]
 dir = "ui-tests/golden"
-format = "ascii"                      # or "pbm"
+format = "ascii"                      # D-57; "pbm" is read too
 
 [output]
 dir = "out/ui-tests"

@@ -2,7 +2,8 @@
 # framework specified in docs/testing/ui-testing-framework-requirements.md, which is built in a repository of its own
 # and does not exist yet: nothing runs this file today, and `status` below says so. The three scenarios are files of
 # sim/scripts/ that CI already runs with `.pio/build/sim/program --script`; listing them here changes nothing about
-# that. Open point 47 in docs/open-points.md.
+# that. The choices behind the settings (format, place, languages, protocol) are the owner's decision D-57 in
+# docs/decisions.md; open point 47 in docs/open-points.md waits for the framework repository.
 schema = 1
 
 [suite]
@@ -23,14 +24,14 @@ date = "2026-01-06 09:00"
 timeout_seconds = 60
 
 [languages]
-# R-53: every scenario runs in the three languages of the device unless its header says otherwise; golden frames are
-# kept in English, and per scenario in more (`golden_languages`).
+# R-53, D-57: every scenario runs in the three languages of the device unless its header says otherwise; golden frames
+# are kept in English, and in German and French per scenario where a layout is tight (`golden_languages`).
 run = ["en", "de", "fr"]
 golden = ["en"]
 
 [golden]
-# R-43, R-57: ui-tests/golden/<language>/<scenario>/<name>.txt in the ASCII format of testing/Golden.h. The directory is
-# created by the first `approve`; it does not exist before the framework does.
+# R-43, R-57, D-57: ui-tests/golden/<language>/<scenario>/<name>.txt in the ASCII format of testing/Golden.h. The
+# directory is created by the first `approve`; it does not exist before the framework does.
 dir = "ui-tests/golden"
 format = "ascii"
 
@@ -53,7 +54,8 @@ workers = 0
 [[scenario]]
 # The smallest story through the whole wiring: boot, a text in, the inbox, a call in, German. Its five `golden` lines
 # are the five pictures of sim/golden/ today; under the framework they are kept per language, so `smoke-home-de` and
-# the `language de` before it become one `smoke-home` in the German run.
+# the `language de` before it become one `smoke-home` in the German run. The home screen's tiles and the soft keys are
+# the tight layouts, so this scenario keeps its frames in all three languages (D-57).
 name = "smoke"
 file = "sim/scripts/smoke.txt"
 tags = ["smoke", "frames"]
