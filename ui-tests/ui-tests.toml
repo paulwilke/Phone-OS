@@ -1,0 +1,90 @@
+# The configuration of the automated tests of the screens (docs/testing/ui-testing.md). It is read by the UI testing
+# framework specified in docs/testing/ui-testing-framework-requirements.md, which is built in a repository of its own
+# and does not exist yet: nothing runs this file today, and `status` below says so. The three scenarios are files of
+# sim/scripts/ that CI already runs with `.pio/build/sim/program --script`; listing them here changes nothing about
+# that. The choices behind the settings (format, place, languages, protocol) are the owner's decision D-57 in
+# docs/decisions.md; open point 47 in docs/open-points.md waits for the framework repository.
+schema = 1
+
+[suite]
+name = "Phone OS screens"
+status = "not-runnable"
+reason = "waits for the framework repository (open point 47)"
+
+[target]
+# R-52: how the system under test is built and started; the framework adds --data, --work and --port itself.
+build = ["pio", "run", "-e", "sim"]
+run = [".pio/build/sim/program", "--interactive", "--headless", "--no-pseudo"]
+width = 240
+height = 320
+card = "sim/data"
+# R-61: the clock the status bar shows, fixed before the first step. The simulator starts on a Tuesday; the scenarios
+# of sim/scripts assert `weekday.tue`, so the date is one.
+date = "2026-01-06 09:00"
+timeout_seconds = 60
+
+[languages]
+# R-53, D-57: every scenario runs in the three languages of the device unless its header says otherwise; golden frames
+# are kept in English, and in German and French per scenario where a layout is tight (`golden_languages`).
+run = ["en", "de", "fr"]
+golden = ["en"]
+
+[golden]
+# R-43, R-57, D-57: ui-tests/golden/<language>/<scenario>/<name>.txt in the ASCII format of testing/Golden.h. The
+# directory is created by the first `approve`; it does not exist before the framework does.
+dir = "ui-tests/golden"
+format = "ascii"
+
+[output]
+# R-41, R-56: everything the framework writes goes under out/, which a clean checkout does not have.
+dir = "out/ui-tests"
+junit = "out/ui-tests/junit.xml"
+summary = "out/ui-tests/summary.md"
+workers = 0
+
+[masks]
+# R-54: rectangles that may differ. The status bar's clock stands here as the one region the date does not fix in
+# every scenario; the rectangle is a guess at the clock's place and is measured when the framework first runs.
+"status-clock" = { x = 0, y = 0, w = 60, h = 14 }
+
+# ---- scenarios -----------------------------------------------------------------------------------------------------
+# R-55: the three stories below are taken as they are from sim/scripts/. Each has a card (its header or the default),
+# the languages it runs in, and the languages its frames are kept in.
+
+[[scenario]]
+# The smallest story through the whole wiring: boot, a text in, the inbox, a call in, German. Its five `golden` lines
+# are the five pictures of sim/golden/ today; under the framework they are kept per language, so `smoke-home-de` and
+# the `language de` before it become one `smoke-home` in the German run. The home screen's tiles and the soft keys are
+# the tight layouts, so this scenario keeps its frames in all three languages (D-57).
+name = "smoke"
+file = "sim/scripts/smoke.txt"
+tags = ["smoke", "frames"]
+golden_languages = ["en", "de", "fr"]
+[scenario.frames."smoke-home"]
+masks = ["status-clock"]
+budget = 0
+[scenario.frames."smoke-home-unread"]
+masks = ["status-clock"]
+budget = 0
+[scenario.frames."smoke-inbox"]
+masks = ["status-clock"]
+budget = 0
+[scenario.frames."smoke-call"]
+masks = ["status-clock"]
+budget = 0
+
+[[scenario]]
+# A normal day: a text in, a reply, a call in and a call out, through the real pages. Text assertions by catalog key
+# only, so the three languages need no picture.
+name = "normal-day"
+file = "sim/scripts/normal-day.txt"
+tags = ["calls", "messages"]
+
+[[scenario]]
+# The Language page: German, French and English chosen from the options page, the words of the device changing at
+# once, and the choice written to the card. It starts from English and switches itself, and it asserts the literal
+# word "Settings", so it runs in one language.
+name = "language-page"
+file = "sim/scripts/language-page.txt"
+languages = ["en"]
+tags = ["languages", "settings"]
