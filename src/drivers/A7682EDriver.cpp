@@ -187,6 +187,7 @@ void A7682EDriver::onRestart() {
   stepIndex_ = 0;
   jobDeadline_.clear();
   registerWindow_.clear();
+  nextSearch_.clear();
   nextSignal_.clear();
   nextClock_.clear();
   simRetry_.clear();
@@ -232,10 +233,12 @@ void A7682EDriver::beginRegistering(bool startWindow) {
 // The window of the first registration ran out without a network (a start in a basement, a tunnel, the
 // underground). Not an error (decision D-40): the driver went to Error there and never came back, even when the
 // network did, so calls, texts and the SOS stayed dead until a restart. It goes on as for a lost network: no
-// window, the registration asked every two seconds, and the network is taken when it comes.
+// window, the registration asked every two seconds, and the network is taken when it comes. The modem's own search
+// is not trusted with that alone (decision D-58): it is told to search again every few minutes.
 void A7682EDriver::searchOn() {
   log("Cellular: no network found, searching on");
   beginRegistering(false);
+  nextSearch_.set(transport_.now(), config_.searchAgainIntervalMs);
 }
 
 void A7682EDriver::finishJob(bool ok) {
@@ -301,6 +304,7 @@ void A7682EDriver::finishJob(bool ok) {
 
     case Job::Register:
       if (ok && registered_) {
+        nextSearch_.clear();
         startJob(Job::Ims);
       } else if (registerWindow_.expired(now)) {
         searchOn();
@@ -669,8 +673,10 @@ void A7682EDriver::step(const char* line, at::LineType type) {
     // that makes it look anew; AT+COPS=0 alone is answered at once by a modem that is registered.
     case Job::Reselect:
       if (!line) {
-        log(manualOperator_ ? "Cellular: a network was chosen by hand, asking for the home network again"
-                            : "Cellular: roaming, asking for the home network again");
+        // Without a network (D-58) the line of the end, "searching again", is the one that says it.
+        if (state_ == ModemState::Ready)
+          log(manualOperator_ ? "Cellular: a network was chosen by hand, asking for the home network again"
+                              : "Cellular: roaming, asking for the home network again");
         send("AT+COPS=2");
         expect(config_.radioTimeoutMs);
         return;
@@ -1239,6 +1245,14 @@ void A7682EDriver::pickNextJob() {
       searchOn();
       return;
     }
+    // A start without a network: after the 120 s search by hand found nothing, the A7682E's own search did not find
+    // the network for half an hour once it was there again (2026-10-31). Deregistering and AT+COPS=0 make it look
+    // anew, and also bring a modem that was left on a network chosen by hand back to automatic.
+    if (nextSearch_.expired(now)) {
+      nextSearch_.set(now, config_.searchAgainIntervalMs);
+      startJob(Job::Reselect);
+      return;
+    }
     // Only ask when nothing runs: otherwise the loop would overwrite a search that is still going.
     if (waitUntil_.expired(now)) {
       waitUntil_.set(now, 2000);  // every two seconds
@@ -1747,6 +1761,7 @@ void A7682EDriver::finishPowerOff() {
   operator_.clear();
   asleep_ = shuttingDown_ = false;
   registerWindow_.clear();
+  nextSearch_.clear();
   nextSignal_.clear();
   nextClock_.clear();
   waitUntil_.clear();
