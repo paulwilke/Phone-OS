@@ -65,6 +65,12 @@ public:
     // deregister and search again, which prefers the home network. Fifteen minutes: every search costs a few
     // seconds without a network.
     uint32_t reselectIntervalMs = 15 * 60 * 1000;
+    // A start without a network searches on (decision D-40), but on 2026-10-31 a modem switched on in a Faraday bag
+    // did not register by itself in more than half an hour after it was taken out. So often, while it searches on,
+    // it is told to deregister and search again, as above. Five minutes, proposed and open for the owner (D-58): a
+    // child coming out of a cellar is reachable again within about six minutes, and the modem, awake anyway while it
+    // has no network, scans for up to a minute more in each five.
+    uint32_t searchAgainIntervalMs = 5 * 60 * 1000;
     // AT+CNMP: the A7682E knows 2 (automatic), 13 (GSM only) and 38 (LTE only), no 3G.
     // Automatic is the default: LTE covers better, and GSM sending draws up to two amperes, with
     // which the modem restarted once in the middle of a call.
@@ -205,6 +211,7 @@ private:
   at::Deadline registerWindow_;
   at::Deadline nextSignal_;
   at::Deadline nextReselect_;  // armed while roaming or on a network chosen by hand
+  at::Deadline nextSearch_;    // armed while a start without a network searches on (D-58)
   at::Deadline nextClock_;
   std::deque<std::string> log_;
 
