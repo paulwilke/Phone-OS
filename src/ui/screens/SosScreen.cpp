@@ -41,7 +41,8 @@ SosScreen::View SosScreen::view() const {
   if (state().sosPhase == SosFlow::Phase::QuietConfirm) return View::Quiet;
   // A reply to a parent's query is not the child's business; only an emergency or a pick-up is shown.
   const bool ours = state().pingKind != SosPing::Kind::Query;
-  const bool known = state().emergencyRunning || state().pingStage == SosPing::Stage::Done || state().pingStage == SosPing::Stage::Failed;
+  const bool known = state().emergencyRunning || state().emergencyRadio || state().pingStage == SosPing::Stage::Done ||
+                     state().pingStage == SosPing::Stage::Failed;
   return ours && known ? View::Progress : View::Idle;
 }
 
@@ -167,7 +168,9 @@ SoftKeys SosScreen::keys() {
       break;
     case View::Quiet: keys.action = t().get("sos.tap"); break;
     case View::Progress:
-      if (state().pingStage == SosPing::Stage::Failed) keys.action = t().get("sos.again");
+      // While the radio's emergency lasts the one key ends it (D-62); a ping that failed can be tried again after.
+      if (state().emergencyRadio) keys.action = t().get("sos.end");
+      else if (state().pingStage == SosPing::Stage::Failed) keys.action = t().get("sos.again");
       break;
     case View::Idle: break;
   }
@@ -230,6 +233,7 @@ bool SosScreen::onInput(const Input& input, const Rect& area) {
       }
       return false;
     case View::Progress:
+      if (input.isKey(Key::Select) && state().emergencyRadio) return app().endSos();
       if (input.isKey(Key::Select) && state().pingStage == SosPing::Stage::Failed) return app().beginSos();
       if (input.isKey(Key::Back)) {
         nav().back();

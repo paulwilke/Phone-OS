@@ -9,12 +9,15 @@
 // stored as a message, it is logged, written to the history as a system entry and perhaps shown
 // as a notice, as the profile says, and it never vibrates. Anything else is stored unread and
 // vibrates the message pattern — in school time only for a parent. A radio message is stored only
-// when the profile allows the radio.
+// when the profile allows the radio, and then only from `[radio] peer` — except during the radio's
+// emergency (EmergencyRadio, D-62), when a message from anybody is stored and shown.
 //
 // **Outgoing: cellular, else radio, else the queue.** A message goes by cellular when the device
 // is registered; otherwise by the radio when the profile allows it and it is ready (the radio
 // knows contacts by name, not by number, so it takes its own default contact); otherwise it waits
-// in a queue of kOutboxSize and a notice says so. The queue is tried at every poll, and a message
+// in a queue of kOutboxSize and a notice says so. A text that is **cellular only** (the SOS and the reply to
+// a parent's query: they name a person by phone number and carry a position, D-61) never takes the radio and
+// waits for the mobile network. The queue is tried at every poll, and a message
 // waiting with no path at all does not count as work: it cannot leave, and staying awake for it
 // helps nobody.
 //
@@ -37,6 +40,7 @@
 #include "../hal/RadioLink.h"
 #include "Cellular.h"
 #include "DropLog.h"
+#include "EmergencyRadio.h"
 #include "Logger.h"
 #include "MessageStore.h"
 #include "Notices.h"
@@ -68,6 +72,8 @@ public:
   // The radio is optional. The profile decides whether it may be used.
   void setRadio(RadioLink* radio) { radio_ = radio; }
   void setHooks(Hooks* hooks) { hooks_ = hooks; }
+  // Optional: where the radio's emergency is told. Without it no radio message from a stranger is accepted.
+  void setEmergencyRadio(const EmergencyRadio* emergency) { emergency_ = emergency; }
   // Reads what the remote query depends on: the words that trigger it (the trigger word of every
   // language, and the profile's extra words) and how visible it is on the device (the profile's
   // command notice). Call again when the languages or the profile change.
@@ -79,8 +85,8 @@ public:
   bool poll();
 
   // Sends a message by the best path, or queues it. False when the recipient or text is empty or
-  // the queue is full.
-  bool sendText(const std::string& peer, const std::string& text);
+  // the queue is full. `cellularOnly` keeps it off the radio, also when it waits in the queue.
+  bool sendText(const std::string& peer, const std::string& text, bool cellularOnly = false);
   // Sends over the radio and nothing else, to a named radio contact ("" = the default one).
   bool sendRadioText(const std::string& peer, const std::string& text);
 
@@ -93,7 +99,7 @@ public:
   // Is there queued work the device should stay awake for? Only if the queue could leave: the
   // modem is powered (it will register and the queue goes) or the radio is usable. A message that
   // waits with no path at all cannot leave, and staying awake for it helps nobody.
-  bool hasWork() { return !outbox_.empty() && (power_.isEnabled(PowerDomain::Cellular) || radioUsable()); }
+  bool hasWork();
   // Can the radio carry a message now: attached, allowed by the profile, and ready.
   bool radioUsable();
   bool registered() { return cellular::registered(power_, modem_); }
@@ -104,6 +110,7 @@ private:
   struct Waiting {
     std::string peer, text;
     uint32_t seq;
+    bool cellularOnly;
   };
 
   // CommandHost
@@ -118,7 +125,7 @@ private:
   void handleSendFailures(bool& activity);
   void collectDeliveries();
   void flushQueue();
-  bool deliver(const std::string& peer, const std::string& text, MsgSource& path);
+  bool deliver(const std::string& peer, const std::string& text, bool cellularOnly, MsgSource& path);
   uint32_t record(MsgSource source, MsgDir dir, const std::string& peer, const std::string& text, bool pending = false);
   void awaitReport(uint32_t seq);
   std::string nameOf(const std::string& phone) const { return profile_.contacts.displayName(phone.c_str()); }
@@ -135,6 +142,7 @@ private:
   DropLog& drops_;
   RadioLink* radio_ = nullptr;
   Hooks* hooks_ = nullptr;
+  const EmergencyRadio* emergency_ = nullptr;
   SmsCommand command_;
   std::deque<Waiting> outbox_;
   std::deque<uint32_t> awaiting_;

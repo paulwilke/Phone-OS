@@ -41,6 +41,17 @@ void Messaging::configure(const std::vector<std::string>& triggers) {
   command_.setConfig(config);
 }
 
+// A queued text that may take the radio can leave when the radio is usable; one that is cellular only needs
+// the modem. Staying awake for a text that cannot leave would defeat the emergency radio's save mode.
+bool Messaging::hasWork() {
+  if (outbox_.empty()) return false;
+  if (power_.isEnabled(PowerDomain::Cellular)) return true;
+  if (!radioUsable()) return false;
+  for (const Waiting& w : outbox_)
+    if (!w.cellularOnly) return true;
+  return false;
+}
+
 bool Messaging::radioUsable() { return radio_ != nullptr && profile_.radioAllowed && radio_->ready(); }
 
 uint32_t Messaging::record(MsgSource source, MsgDir dir, const std::string& peer, const std::string& text, bool pending) {
@@ -90,14 +101,17 @@ void Messaging::handleSms(const SmsMessage& sms) {
 // simulator that always attaches the radio would behave differently from the device, which starts
 // it only when the profile allows. **Only the configured peer may write** (`[radio] peer`): a message
 // from any other name is dropped like a stranger's text (logged, counted for the summary, never stored
-// and never unread), and with no peer configured no radio message is accepted. The name is compared as
+// and never unread), and with no peer configured no radio message is accepted. **During the radio's
+// emergency (D-62) the rule is off**: a message from anybody is stored unread, so that the child can read
+// and answer a stranger in range. The name is compared as
 // the radio reports it, exactly: the radio's name for a sender can be spoofed within range, and that is
 // what this rule trusts (docs/core/messaging.md).
 void Messaging::handleRadio() {
   if (radio_ == nullptr || !profile_.radioAllowed) return;
   RadioMessage msg;
   while (radio_->poll(msg)) {
-    if (profile_.radioPeer.empty() || msg.peer != profile_.radioPeer) {
+    const bool emergency = emergency_ != nullptr && emergency_->active();
+    if (!emergency && (profile_.radioPeer.empty() || msg.peer != profile_.radioPeer)) {
       drops_.radioDropped(msg.peer, msg.text, profile_.radioPeer);
       continue;
     }
@@ -131,12 +145,12 @@ void Messaging::recordCommand(const CommandRecord& rec, CommandNotice notice) {
 
 // Cellular first, then the radio. The radio has no phone numbers, only contact names: the
 // recipient is the radio's own default contact, so none is passed.
-bool Messaging::deliver(const std::string& peer, const std::string& text, MsgSource& path) {
+bool Messaging::deliver(const std::string& peer, const std::string& text, bool cellularOnly, MsgSource& path) {
   if (registered() && modem_.sendSms(phone::dialable(peer, profile_.contacts.countryCode()), text)) {
     path = MsgSource::Sms;
     return true;
   }
-  if (radioUsable() && radio_->send(std::string(), text)) {
+  if (!cellularOnly && radioUsable() && radio_->send(std::string(), text)) {
     path = MsgSource::Radio;
     return true;
   }
@@ -149,12 +163,12 @@ void Messaging::awaitReport(uint32_t seq) {
   awaiting_.push_back(seq);
 }
 
-bool Messaging::sendText(const std::string& peer, const std::string& text) {
+bool Messaging::sendText(const std::string& peer, const std::string& text, bool cellularOnly) {
   // A text the modem would refuse for ever must not sit in the queue keeping the device awake.
   if (peer.empty() || text.empty() || text.size() > kMaxSmsBytes) return false;
 
   MsgSource path = MsgSource::Sms;
-  if (deliver(peer, text, path)) {
+  if (deliver(peer, text, cellularOnly, path)) {
     const uint32_t seq = record(path, MsgDir::Out, peer, text);
     if (path == MsgSource::Radio) {
       awaitReport(seq);
@@ -170,7 +184,7 @@ bool Messaging::sendText(const std::string& peer, const std::string& text) {
     return false;
   }
   const uint32_t seq = record(MsgSource::Sms, MsgDir::Out, peer, text, true);
-  outbox_.push_back({peer, text, seq});
+  outbox_.push_back({peer, text, seq, cellularOnly});
   log_.log("Message waiting: no network and no radio, queued");
   notices_.set(NoticeKind::MessageWaiting);
   return true;
@@ -196,7 +210,7 @@ void Messaging::flushQueue() {
   std::deque<Waiting> kept;
   for (Waiting& w : outbox_) {
     MsgSource path = MsgSource::Sms;
-    if (deliver(w.peer, w.text, path)) {
+    if (deliver(w.peer, w.text, w.cellularOnly, path)) {
       store_.markSent(w.seq, path);
       ++sent;
       if (path == MsgSource::Radio) {

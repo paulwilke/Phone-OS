@@ -16,6 +16,8 @@ Any other SMS (from an allowed number) is stored unread and vibrates the *messag
 
 **Radio: only the configured peer may write.** When the profile allows the radio, a radio message is stored only if its sender is the node name configured as `[radio] peer` (`Profile::radioPeer`). A message from any other name is dropped like a stranger's text: not stored, not unread, no vibration, and the same log rules (`Radio message dropped: sender not the configured radio peer (<name>): <start of the text>`, an always-kept line, one per name per ten minutes and one summary, text included, [log-level.md](log-level.md)). **With no peer configured no radio message is accepted** (the line then says so). The name is compared **exactly, as the radio reports it** (case and spaces included); what the rule trusts is that name, and **a name can be spoofed by whoever is within range of the radio**, so it keeps out the noise of other nodes and not a person who knows the peer's name ([contacts.md](contacts.md)). Tests: `test_messaging` (peer, another name, no peer, a flood from another name, exact comparison), the scenarios `radio-peer` and `radio-no-peer`.
 
+**During the radio's emergency the peer rule is off** (D-59, D-62, [emergency-radio.md](emergency-radio.md)). While `EmergencyRadio` is active, a radio message from anybody is stored unread, shown and can be answered; the log line for a dropped name does not arise. Outside the emergency the rule above holds unchanged. A radio message arrives without a sound or vibration, as before. Tests: `test_emergency_radio` (RAD-07, RAD-08), the scenario `radio-emergency`.
+
 ## Outgoing: cellular, else radio, else the queue
 
 `sendText(peer, text)` sends by the first path that works:
@@ -26,7 +28,9 @@ Any other SMS (from an allowed number) is stored unread and vibrates the *messag
 
 The queue holds `kOutboxSize` (8) messages; one more is refused with a notice and does not enter the history. A queued message keeps its **full text** (up to the modem's limit) although the history entry keeps 160 bytes, cut on a character boundary. The queue goes out in order, as paths allow; a message that goes out by radio becomes a radio entry and is then awaited like any radio message. The notice after a flush says that what was waiting is out, so "waits for network" does not stay on screen.
 
-`hasWork()` says whether the queue could leave: the modem is powered (it will register) or the radio is usable. **A message waiting with no path at all is not work**: staying awake for it helps nobody.
+`hasWork()` says whether the queue could leave: the modem is powered (it will register) or the radio is usable **and a waiting message may take it**. **A message waiting with no path at all is not work**: staying awake for it helps nobody.
+
+**Cellular only.** `sendText(peer, text, cellularOnly)` with `cellularOnly` set never takes the radio, not even when it waits in the queue and the radio comes up later. The SOS and the reply to a parent's position query are sent so (`Emergency::sendText`): they name a person by phone number and carry a position, and D-61 keeps both off the radio, where the default contact is whoever was heard last. Such a text waits for the mobile network (during the radio's emergency cellular is off until the SOS is ended, so it leaves then). Tests: MSG-65, MSG-66.
 
 `sendRadioText(peer, text)` sends over the radio and nothing else, to a named contact (empty = the default one): the radio page chooses a contact, not a number. It is refused with a notice when the radio is unusable or does not know the contact, and leaves no entry.
 

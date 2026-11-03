@@ -14,7 +14,9 @@ Starting the radio software belongs to the host. This component keeps the reques
 
 `requestRestart()` only records the wish; the host restarts.
 
-**Save mode** ("radio only": cellular and Wi-Fi off, with a timed probe of the mobile network) is not part of version 4.0. It needs the LoRa radio, which 4.0 does not have, and comes back with the radio project, where an emergency radio mode switches battery saving on implicitly.
+`requestRadioStop()` is the other direction: it asks the host to stop the radio when it runs (`takeRadioStopRequest()`, once per request), and the host detaches it with `setRadio(nullptr)`.
+
+**Save mode** ("radio only": cellular and Wi-Fi off) is not something a person switches. It comes back with the radio (D-1, D-62) as the battery saving of the radio's emergency: `EmergencyRadio` calls `enterSaveMode()` when the emergency begins and `leaveSaveMode()` when the SOS is ended. Entering remembers whether cellular was on; leaving puts it back as it was (a cellular the child had switched off stays off). While it holds, `setCellularEnabled(true)` and any Wi-Fi mode but off are refused and logged. The old timed probe of the mobile network and the save-mode notices are not part of it: the emergency ends when the SOS is ended, not when a network is seen. Tests: CON-20 to CON-22.
 
 ## Wi-Fi
 

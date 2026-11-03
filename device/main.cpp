@@ -1,8 +1,10 @@
 // The firmware: the capabilities of the board wired into boot::Runtime exactly as sim/main.cpp wires the
 // fakes into it for the simulator (docs/hardware/device.md). The loop is the host's duties that only hardware can do:
 // read the keys and the touch, run the modem and the receiver, feed the clock, carry out the power logic's
-// decision on sleeping, restart and switch off when asked, and answer a request to start the radio with
-// "not available": this firmware has no radio.
+// decision on sleeping, restart and switch off when asked, and start and stop the radio when the application asks.
+// The radio (MeshCore, device/MeshCoreRadio) is created only on the application's request: the SOS without a
+// mobile network (D-62), or the radio page where the profile allows it. It is destroyed again when the emergency
+// ends, and its chip loses power with it (the power coordination cuts the rail once nothing is attached).
 //
 // The USB console is the processor's own USB port. Opening the serial port from a computer resets the ESP32,
 // and nothing here waits for a computer to open it: output that nobody takes is dropped.
@@ -57,6 +59,7 @@
 #include "Esp32UsbPort.h"
 #include "Esp32WifiRadio.h"
 #include "FlashAssets.h"
+#include "MeshCoreRadio.h"
 #include "SerialLog.h"
 #include "ShippedCatalogs.h"
 #include "Sleep.h"
@@ -128,6 +131,84 @@ board::LoopStats loopStats;
 uint32_t lastVoltageCheckMs = 0;
 const char* const kBoardName = "T-Deck Pro MAX";   // on the status page and the splash picture
 const char* const kProjectName = "Phone OS";   // on the splash picture; never shortened, it wraps
+
+// ---- the radio ---------------------------------------------------------------------------------------------
+std::unique_ptr<MeshCoreRadio> meshRadio;
+uint32_t lastAdvertiseMs = 0;
+// The key pair of this node, in plain text as everything on the card is (D-55): without it the node would be a
+// stranger to everybody again at every start. In the root, where the parents' page does not reach.
+const char* const kRadioIdentityPath = "/radio-identity.txt";
+// A node is heard as a contact only after its advertisement, and strangers write to it only then. Once at the
+// start and then every ten minutes while the emergency lasts: a few bytes of the name, within the airtime limit.
+constexpr uint32_t kAdvertiseEveryMs = 10UL * 60UL * 1000UL;
+
+std::string toHex(const std::string& bytes) {
+  static const char digits[] = "0123456789abcdef";
+  std::string out;
+  for (unsigned char c : bytes) {
+    out += digits[c >> 4];
+    out += digits[c & 15];
+  }
+  return out;
+}
+
+bool fromHex(const std::string& text, std::string& bytes) {
+  bytes.clear();
+  std::string clean;
+  for (char c : text)
+    if (c != '\n' && c != '\r' && c != ' ') clean += c;
+  if (clean.size() % 2 != 0) return false;
+  auto nibble = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1; };
+  for (size_t i = 0; i < clean.size(); i += 2) {
+    const int hi = nibble(clean[i]);
+    const int lo = nibble(clean[i + 1]);
+    if (hi < 0 || lo < 0) return false;
+    bytes += static_cast<char>(hi * 16 + lo);
+  }
+  return true;
+}
+
+// The application asked for the radio. The rail (leg kRadioPower) and the antenna switch (leg kRadioAntenna: high
+// is the internal antenna, which is the one that comes with the device, D-61) are the expander's legs of
+// src/board/PinMap.h; the boot state of board::powerUp already has both, and the rail is cut again at the end of
+// board power's begin(), so both are set here explicitly. The chip needs a moment after its supply before its reset
+// is released (done by RadioLib in begin()).
+void startRadio() {
+  if (meshRadio) return;
+  if (!power->setEnabled(PowerDomain::Radio, true) || !expander.set(board::leg::kRadioAntenna, true)) {
+    eventLog.log("Radio: the rail or the antenna switch did not answer");
+    runtime->core().radioStartFailed();
+    return;
+  }
+  delay(20);
+  meshRadio.reset(new MeshCoreRadio(deviceClock));
+  std::string hex, blob;
+  if (configStore.read(kRadioIdentityPath, hex, 512) && fromHex(hex, blob) && meshRadio->setIdentity(blob))
+    eventLog.log("Radio: the stored identity is used");
+  if (!meshRadio->begin(runtime->core().profile().radioName)) {
+    eventLog.log("Radio: the chip does not answer");
+    meshRadio.reset();
+    power->setEnabled(PowerDomain::Radio, false);
+    runtime->core().radioStartFailed();
+    return;
+  }
+  const std::string identity = meshRadio->identity();
+  if (!identity.empty() && identity != blob) {
+    if (configStore.write(kRadioIdentityPath, toHex(identity) + "\n")) eventLog.log("Radio: a new identity was made and stored");
+    else eventLog.log("Radio: a new identity was made and could not be stored");
+  }
+  runtime->core().setRadio(meshRadio.get());
+  meshRadio->advertise();
+  lastAdvertiseMs = millis();
+  eventLog.log("Radio: started");
+}
+
+// The emergency is over: nothing may hold the object when it goes, so the application lets go first.
+void stopRadio() {
+  runtime->core().setRadio(nullptr);
+  meshRadio.reset();
+  eventLog.log("Radio: stopped");
+}
 
 // What the console asks of the device.
 class Host : public board::ConsoleHost {
@@ -332,8 +413,15 @@ void loop() {
                             : decision.modemShouldSleep ? board::EnergyState::ModemSleep
                                                         : board::EnergyState::Awake);
 
-    // The radio is not part of this firmware: a request to start it is answered with "not available".
-    if (runtime->core().takeRadioStartRequest()) eventLog.log("Radio: not available in this firmware");
+    if (runtime->core().takeRadioStartRequest()) startRadio();
+    if (runtime->core().takeRadioStopRequest()) stopRadio();
+    if (meshRadio) {
+      meshRadio->loop();
+      if (now - lastAdvertiseMs >= kAdvertiseEveryMs) {
+        meshRadio->advertise();
+        lastAdvertiseMs = now;
+      }
+    }
     if (runtime->core().powerOffRequested()) powerOff();
     if (runtime->restartRequested()) consoleHost.restart();
   }

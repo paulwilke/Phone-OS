@@ -4,9 +4,9 @@
 // firmware build and included in MeshCoreRadio.cpp only; this header names nothing of it, so the rest of the
 // firmware, and the layer check, never see it.
 //
-// Not driven by anything yet: the owner has not decided when the emergency radio starts (open point 9). The
-// caller (device/main.cpp, later) must have switched the radio's rail on (board::leg::kRadioPower) and chosen
-// the antenna before begin(), and must call loop() on every pass of its main loop.
+// Driven by device/main.cpp (D-62): created when the application asks for the radio, destroyed when the
+// emergency ends. The caller must have switched the radio's rail on (board::leg::kRadioPower) and chosen the
+// antenna before begin(), and must call loop() on every pass of its main loop.
 
 #include <cstddef>
 #include <cstdint>

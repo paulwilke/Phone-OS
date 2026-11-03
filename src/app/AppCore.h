@@ -40,6 +40,7 @@
 #include "Calls.h"
 #include "Connectivity.h"
 #include "Emergency.h"
+#include "EmergencyRadio.h"
 #include "DropLog.h"
 #include "Logger.h"
 #include "MessageStore.h"
@@ -78,6 +79,7 @@ public:
     bool cellularEnabled = false;
     bool radioAttached = false;
     bool radioReady = false;  // the radio runs and knows at least one contact
+    bool emergencyRadio = false;  // the radio's emergency is on: the SOS was used without a network and is not ended
     int radioRssi = 0;        // dBm of the last message, 0 = unknown
     WifiPhase wifiPhase = WifiPhase::Off;
     WifiReason wifiReason = WifiReason::None;
@@ -170,6 +172,9 @@ public:
   bool chooseSos(SosPing::Kind kind) { return emergency_.choose(kind); }
   bool tapSos() { return emergency_.tap(); }
   void leaveSos() { emergency_.leave(); }
+  // The child ends the SOS on the device: the radio's emergency is over, the radio stops and save mode ends.
+  // False when no emergency was on.
+  bool endSos() { return emergencyRadio_.end(); }
 
   // --- positioning ---
   void setPositionPageOpen(bool open) { positioning_.want(Positioning::Reason::PositionPage, open); }
@@ -185,6 +190,10 @@ public:
   WifiController* wifiController() { return wifi_.get(); }
   bool requestRadioStart() { return connectivity_.requestRadioStart(); }
   bool takeRadioStartRequest() { return connectivity_.takeRadioStartRequest(); }
+  // The host stops the radio and detaches it with setRadio(nullptr) when this says so (once per request).
+  bool takeRadioStopRequest() { return connectivity_.takeRadioStopRequest(); }
+  // The host could not start the radio: an emergency that waited for it ends.
+  void radioStartFailed() { emergencyRadio_.startFailed(); }
   void requestRestart() { connectivity_.requestRestart(); }
   // A restart the person holding the device asked for (the status page): the log says who, since the parents'
   // page and the console say it in their own lines. The log line lives here because screens hold no sentences.
@@ -263,5 +272,6 @@ private:
   PowerCoordination powerCoordination_;
   std::unique_ptr<WifiController> wifi_;
   Connectivity connectivity_;
+  EmergencyRadio emergencyRadio_;
   RadioLink* radio_ = nullptr;
 };

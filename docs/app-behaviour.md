@@ -14,7 +14,8 @@ The application core is split into small components with one owner each, compose
 | Messaging | incoming SMS and radio messages, routing, the queue, delivery reports, send failures, deletion |
 | Calls | dialling and answering rules, school-time rejection, failed-call reasons, volume |
 | Emergency | the SOS flow, the SOS ping and the reply to a remote query, one search at a time |
-| Connectivity | cellular on and off, radio start and restart requests, Wi-Fi |
+| Connectivity | cellular on and off, radio start, stop and restart requests, save mode, Wi-Fi |
+| EmergencyRadio | the radio's emergency (D-62): begins with an SOS without a mobile network, lasts until the SOS is ended on the device |
 | WifiController | Wi-Fi modes, the idle switch-off, the access point password |
 | PowerCoordination | the power policy applied to modem, radio chip and processor; the front light |
 | AppCore | the facade: owns the components, `poll()`, the entry points the interface calls, the read-only state |
@@ -236,6 +237,8 @@ Tests in `test/test_messaging/`.
 | MSG-62 | With no radio peer configured no radio message is accepted | `test_with_no_radio_peer_configured_no_radio_message_is_accepted` | — | done |
 | MSG-63 | A flood from another radio name is one line and one summary, and the peer still gets through | `test_a_flood_from_another_radio_name_is_one_line_and_one_summary_and_the_peer_still_gets_through` | — | done |
 | MSG-64 | The peer name is compared exactly, case and spaces included, as the radio reports it | `test_the_peer_name_is_compared_exactly_and_the_case_is_the_radios` | — | done |
+| MSG-65 | A cellular-only text (the SOS, a reply to a query) never takes the radio, not even from the queue, and goes out when the network is back | `test_a_cellular_only_text_never_takes_the_radio_and_waits_for_the_network` | — | done |
+| MSG-66 | A queued text that cannot leave (cellular off, may not take the radio) is no work and keeps nothing awake | `test_a_text_that_cannot_leave_is_no_work` | — | done |
 
 ## Dropped lines
 
@@ -386,6 +389,29 @@ Tests in `test/test_connectivity/`.
 | CON-16 | A switch-on that fails is logged | `test_a_failed_switch_on_is_logged` | — | done |
 | CON-18 | An unknown battery level does not refuse Wi-Fi | `test_an_unknown_battery_does_not_refuse_wifi` | — | done |
 | CON-19 | poll() keeps the Wi-Fi controller going | `test_poll_keeps_wifi_going` | — | done |
+| CON-20 | Save mode switches cellular and Wi-Fi off, refuses them while it holds, and gives cellular back as it was | `test_save_mode_switches_cellular_and_wifi_off_and_gives_cellular_back` | — | done |
+| CON-21 | Save mode leaves cellular off when it was off before | `test_save_mode_leaves_cellular_off_when_it_was_off` | — | done |
+| CON-22 | A radio stop is requested once, and only for a radio that runs | `test_the_radio_stop_is_requested_once_and_only_for_a_radio_that_runs` | — | done |
+
+## The radio's emergency
+
+Tests in `test/test_emergency_radio/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| RAD-01 | An SOS with a mobile network does not begin the emergency | `test_an_sos_with_a_network_does_not_begin_the_radio_emergency` | — | done |
+| RAD-02 | An SOS without a network begins it and asks the host for the radio, once | `test_an_sos_without_a_network_begins_it_and_asks_for_the_radio` | — | done |
+| RAD-03 | A pickup begins it as well | `test_a_pickup_without_a_network_begins_it_too` | — | done |
+| RAD-04 | With the radio not allowed nothing of it happens | `test_with_the_radio_not_allowed_nothing_of_it_happens` | — | done |
+| RAD-05 | The reply to a parent's query does not begin it | `test_the_reply_to_a_query_does_not_begin_it` | — | done |
+| RAD-06 | Save mode: cellular and Wi-Fi off, and refused while it lasts | `test_save_mode_switches_cellular_and_wifi_off_and_refuses_them_back` | — | done |
+| RAD-07 | A stranger's radio message is dropped outside the emergency and stored unread during it | `test_a_stranger_is_dropped_outside_the_emergency_and_heard_during_it` | — | done |
+| RAD-08 | A stranger can be answered during it | `test_a_stranger_can_be_answered_during_the_emergency` | — | done |
+| RAD-09 | The SOS text never goes on the radio; it waits and goes by SMS once the SOS is ended and the network is back | `test_the_sos_text_never_goes_on_the_radio_and_waits_for_the_network` | — | done |
+| RAD-10 | Ending the SOS asks the host to stop the radio, ends save mode, and closes the door to strangers again | `test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_again` | — | done |
+| RAD-11 | Cellular that the child had switched off stays off after the emergency | `test_a_cellular_switch_off_by_the_child_stays_off_after_the_emergency` | — | done |
+| RAD-12 | A radio that does not start ends the emergency and gives cellular back | `test_a_radio_that_does_not_start_ends_the_emergency` | — | done |
+| RAD-13 | The chip stays powered while the radio runs without a contact | `test_the_radio_chip_stays_powered_while_the_radio_runs_without_a_contact` | — | done |
 
 ## One Wi-Fi controller and the parents' page
 

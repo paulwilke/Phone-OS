@@ -49,6 +49,7 @@ bool Emergency::start(const std::string& peer, SosPing::Kind kind) {
   sos_.setWording(wording());
   if (!sos_.start(peer.c_str(), clock_.uptimeSeconds(), kind)) return false;
   syncReceiver();
+  if (kind != SosPing::Kind::Query && radioEmergency_) radioEmergency_->sosStarted(messaging_.registered());
   const std::string name = profile_.contacts.displayName(peer.c_str());
   if (kind == SosPing::Kind::Query) log_.log("Remote query: searching, answer to " + name);
   else log_.log(std::string("SOS ping (") + (kind == SosPing::Kind::Pickup ? "pickup" : "emergency") + ") started to " + name);
@@ -71,7 +72,7 @@ bool Emergency::sendText(const char* peer, const std::string& text) {
     if (!all.empty() && all.front() == peer) to = all;
   }
   for (const std::string& recipient : to) {
-    if (messaging_.sendText(recipient, text)) sentTo_.push_back(recipient);
+    if (messaging_.sendText(recipient, text, true)) sentTo_.push_back(recipient);
     else log_.log(std::string("SOS text not taken for ") + profile_.contacts.displayName(recipient.c_str()));
   }
   if (to.size() > 1)

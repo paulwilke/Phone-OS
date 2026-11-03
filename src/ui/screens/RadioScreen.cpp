@@ -51,9 +51,16 @@ void RadioScreen::rebuild() {
   if (selected_ >= rows_.size()) selected_ = rows_.empty() ? 0 : rows_.size() - 1;
 }
 
+int RadioScreen::noteHeight(const Rect& area) {
+  if (!context().app.profile().radioAllowed) return 0;
+  const Font& small = font(FontSize::Small);
+  const std::string words = t().get("radio.europe");
+  return static_cast<int>(text::wrap(small, words, area.w - 12).size()) * small.lineHeight() + 6;
+}
+
 Rect RadioScreen::rowsArea(const Rect& area) {
   const int header = pageTitleHeight(area, head());
-  return {area.x, area.y + header, area.w, area.h - header};
+  return {area.x, area.y + header, area.w, area.h - header - noteHeight(area)};
 }
 
 void RadioScreen::measure(const Rect& area) { wordsWidth_ = area.w - kBarWidth - 6 - 2 * kWordsInset; }
@@ -83,7 +90,9 @@ void RadioScreen::keepInView(const Rect& area) {
   while (first_ < selected_ && selected_ >= first_ + std::max<size_t>(1, fitting(first_, rowsArea(area).h))) ++first_;
 }
 
-bool RadioScreen::writable() const { return context().app.profile().freeText; }
+// During the radio's emergency the child may answer whoever wrote (D-62), whatever the free-text switch says; the
+// compose page then offers the short texts.
+bool RadioScreen::writable() const { return context().app.profile().freeText || state().emergencyRadio; }
 
 void RadioScreen::draw(Display& display, const Rect& area) {
   measure(area);
@@ -134,6 +143,14 @@ void RadioScreen::draw(Display& display, const Rect& area) {
     int ty = y + 4;
     for (std::string_view line : text::wrap(small, words, rect.w - 12)) {
       text::draw(display, small, rect.x + 6, ty, line);
+      ty += small.lineHeight();
+    }
+  }
+  if (allowed) {
+    const std::string europe = t().get("radio.europe");
+    int ty = area.bottom() - noteHeight(area) + 4;
+    for (std::string_view line : text::wrap(small, europe, area.w - 12)) {
+      text::draw(display, small, area.x + 6, ty, line);
       ty += small.lineHeight();
     }
   }

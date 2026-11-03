@@ -17,6 +17,10 @@ void Connectivity::noteModem() {
 }
 
 bool Connectivity::setCellularEnabled(bool on) {
+  if (on && saveMode_) {
+    log_.log("Cellular refused: the emergency radio keeps it off");
+    return false;
+  }
   if (power_.isEnabled(PowerDomain::Cellular) == on) return true;
   if (!power_.setEnabled(PowerDomain::Cellular, on)) {
     log_.log(on ? "Cellular cannot be switched on" : "Cellular cannot be switched off");
@@ -64,8 +68,40 @@ bool Connectivity::takeRadioStartRequest() {
   return requested;
 }
 
+bool Connectivity::requestRadioStop() {
+  if (!radio_) return false;
+  radioStopRequested_ = true;
+  return true;
+}
+
+bool Connectivity::takeRadioStopRequest() {
+  const bool requested = radioStopRequested_;
+  radioStopRequested_ = false;
+  return requested;
+}
+
+void Connectivity::enterSaveMode() {
+  if (saveMode_) return;
+  cellularWasOn_ = cellularEnabled();
+  setCellularEnabled(false);
+  setWifiMode(WifiMode::Off);
+  saveMode_ = true;
+  log_.log("Save mode on: radio only, cellular and Wi-Fi off");
+}
+
+void Connectivity::leaveSaveMode() {
+  if (!saveMode_) return;
+  saveMode_ = false;
+  if (cellularWasOn_) setCellularEnabled(true);
+  log_.log("Save mode off");
+}
+
 bool Connectivity::setWifiMode(WifiMode mode) {
   if (!wifi_) return false;
+  if (mode != WifiMode::Off && saveMode_) {
+    log_.log("Wi-Fi refused: the emergency radio keeps it off");
+    return false;
+  }
   const int battery = power_.batteryPercent();
   if (mode != WifiMode::Off && !power_.externalPower() && battery >= 0 && battery < kMinWifiBattery) {
     notices_.set(NoticeKind::WifiBatteryLow);

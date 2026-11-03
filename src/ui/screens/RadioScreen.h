@@ -48,6 +48,8 @@ private:
   std::string head();
   void rebuild();
   Rect rowsArea(const Rect& area);
+  // The note at the foot that says where the radio setting holds (Europe only, D-61); 0 where the radio is not allowed.
+  int noteHeight(const Rect& area);
   // The room for the words of a row, from the area the page was given.
   void measure(const Rect& area);
   int rowHeight(const Row& row) const;

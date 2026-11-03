@@ -386,6 +386,32 @@ void test_cellular_off_uses_the_radio() {
   TEST_ASSERT_EQUAL(1, r.radio.sent().size());
 }
 
+void test_a_cellular_only_text_never_takes_the_radio_and_waits_for_the_network() {
+  Rig r(withRadio());
+  r.radioUp();
+  r.networkLost();
+  TEST_ASSERT_TRUE(r.messaging.sendText(kParentOne, "SOS", true));
+  TEST_ASSERT_EQUAL(0, r.radio.sent().size());
+  TEST_ASSERT_EQUAL(1, r.messaging.pending());
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(0, r.radio.sent().size());            // not by the queue either
+  r.networkBack();
+  r.messaging.poll();
+  TEST_ASSERT_EQUAL(1, r.modem.sent().size());
+  TEST_ASSERT_EQUAL(0, r.messaging.pending());
+}
+
+void test_a_text_that_cannot_leave_is_no_work() {
+  Rig r(withRadio());
+  r.radioUp();
+  r.power.setEnabled(PowerDomain::Cellular, false);
+  TEST_ASSERT_TRUE(r.messaging.sendText(kParentOne, "SOS", true));
+  TEST_ASSERT_EQUAL(1, r.messaging.pending());
+  TEST_ASSERT_FALSE(r.messaging.hasWork());               // cellular is off and the text may not take the radio
+  r.power.setEnabled(PowerDomain::Cellular, true);
+  TEST_ASSERT_TRUE(r.messaging.hasWork());
+}
+
 void test_without_a_path_a_message_is_queued() {
   Rig r;
   r.networkLost();
@@ -876,6 +902,8 @@ int main() {
   RUN_TEST(test_without_a_path_a_message_is_queued);
   RUN_TEST(test_a_queued_message_goes_out_when_the_network_returns);
   RUN_TEST(test_a_queued_message_goes_out_by_radio);
+  RUN_TEST(test_a_cellular_only_text_never_takes_the_radio_and_waits_for_the_network);
+  RUN_TEST(test_a_text_that_cannot_leave_is_no_work);
   RUN_TEST(test_the_queue_is_bounded);
   RUN_TEST(test_the_queue_goes_out_in_order_and_keeps_what_cannot_leave_yet);
   RUN_TEST(test_a_message_without_any_path_does_not_keep_the_modem_awake);

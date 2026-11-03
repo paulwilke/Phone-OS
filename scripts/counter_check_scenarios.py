@@ -33,6 +33,7 @@ MUTATIONS = [
     ('missed-call', [('src/ui/screens/MessageListScreen.cpp', 'if (words != worded_) {', 'if (false) {')], 'an open entry keeps the words of the language it was opened in'),
     ('user-catalog', [('src/boot/Runtime.cpp', '  config::ConfigLoader::loadUserCatalogs(capabilities.store, translator, diagnostics);', '')], 'the catalogs on the card are not read'),
     ('bad-catalog', [('src/config/ConfigLoader.cpp', 'if (!add(text, &errors)) {', 'if (!add(text, &errors) && false) {')], 'a user catalog that fails is no longer reported'),
+    ('radio-emergency', [('src/app/EmergencyRadio.cpp', 'if (!profile_.radioAllowed || registered || active_) return;', 'if (!profile_.radioAllowed || (false && registered) || active_) return;')], 'an SOS with a mobile network begins the radio\'s emergency and switches cellular off'),
     ('sos-page', [('src/ui/screens/SosScreen.cpp', 'if (index == 0) app().chooseSos(SosPing::Kind::Emergency);', 'if (index == 0) app().chooseSos(SosPing::Kind::Pickup);')], 'the first field of the SOS page sends "come and get me"'),
     ('sos-page-school-time', [('src/ui/screens/SosScreen.cpp', 'if (input.isKey(Key::Select)) {\n        app().tapSos();', 'if (input.isKey(Key::Select)) {\n        (void)0;')], 'the key of the device no longer counts as a tap on the SOS page in school time'),
     ('language-page', [('src/ui/screens/LanguageScreen.cpp', 'if (chosen) app().setInterfaceLanguage(codes_[list_.selected()]);', '')], 'a choice on the language page changes nothing'),

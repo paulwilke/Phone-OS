@@ -35,7 +35,7 @@ The host does what only hardware can do: sleeps the processor, starts the radio 
 1. the **time zone**: the profile's zone sets the clock's offset from the epoch, so school time stays on the wall clock across the change of the clocks; without a known time, or without a zone, nothing changes;
 2. **messaging** (SMS, radio messages, send failures, delivery reports, the queue) and **calls** (call events, the ring); anything the modem reported proves it is awake;
 3. **positioning** (remember fixes, end the start-up fix), then **emergency** (the countdown, the ping, the outcome, the receiver's reasons), then **connectivity** (Wi-Fi);
-4. **power**: what is going on elsewhere (a call, queued work that could leave or a running search, a usable radio, Wi-Fi) goes to PowerCoordination as `Needs`, which applies the policy.
+4. **power**: what is going on elsewhere (a call, queued work that could leave or a running search, a radio that is attached, Wi-Fi) goes to PowerCoordination as `Needs`, which applies the policy.
 
 Messaging asks the core two things through its `Hooks`, and the core forwards them to the emergency component: a parent's query starts a location reply, and a text the network refused is told to the ping.
 

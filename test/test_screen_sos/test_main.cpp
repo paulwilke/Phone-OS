@@ -239,6 +239,21 @@ void test_every_way_out_of_the_page_releases_the_search_through_the_stack() {
   TEST_ASSERT_EQUAL(0, rig.modem.sent().size());
 }
 
+void test_during_the_radio_emergency_the_one_key_ends_the_sos() {
+  Page page(ProfileBuilder().childName("Alex").radio(true).build());
+  page.rig.modem.setNetwork("", 0);
+  page.rig.poll();
+  page.press();
+  page.key(Key::Select);                                             // the emergency, without a network
+  TEST_ASSERT_TRUE(page.rig.core.state().emergencyRadio);
+  TEST_ASSERT_TRUE(page.rig.core.takeRadioStartRequest());
+  TEST_ASSERT_EQUAL_STRING("End SOS", page.screen.softKeys().action.c_str());
+  TEST_ASSERT_TRUE(page.says("Emergency! I am here", FontSize::Small));
+  page.key(Key::Select);
+  TEST_ASSERT_FALSE(page.rig.core.state().emergencyRadio);
+  TEST_ASSERT_TRUE(page.screen.softKeys().action != "End SOS");
+}
+
 void test_the_page_keeps_the_device_from_locking_while_an_emergency_is_open_or_running() {
   Page page;
   TEST_ASSERT_FALSE(page.screen.preventsAutoLock());
@@ -478,6 +493,7 @@ int main(int, char**) {
   RUN_TEST(test_leaving_the_choice_releases_the_search_and_sends_nothing);
   RUN_TEST(test_leaving_does_not_stop_a_running_ping_so_the_key_says_back_and_not_cancel);
   RUN_TEST(test_every_way_out_of_the_page_releases_the_search_through_the_stack);
+  RUN_TEST(test_during_the_radio_emergency_the_one_key_ends_the_sos);
   RUN_TEST(test_the_page_keeps_the_device_from_locking_while_an_emergency_is_open_or_running);
   RUN_TEST(test_in_school_time_the_page_warns_and_shows_the_number_of_taps_instead_of_the_choice);
   RUN_TEST(test_five_taps_send_the_emergency_and_lift_the_lock_and_four_do_not);
