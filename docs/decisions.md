@@ -25,7 +25,7 @@ Entries are added at the end and are never rewritten or deleted. To change a dec
 The first seven entries were written on 2026-10-11 from what the changelog and the open points already say; the dates of the original choices are not in the repository. Entries whose "Decided by" says that the owner has not confirmed them are waiting for that confirmation.
 
 ## D-1: The LoRa radio is not in 4.0
-Date: 2026-10-11 (recorded afterwards)   Status: decided
+Date: 2026-10-11 (recorded afterwards)   Status: decided; the part "a protocol of our own, MeshCore is not used" superseded by D-59
 Decided by: owner
 
 Context: The interface, the radio page, the settings and the message path exist and are tested against a fake, but nothing drives the chip. A driver and a protocol of our own are needed because MeshCore is not used.
@@ -650,3 +650,15 @@ Decision: ASCII golden frames in the format of `testing/Golden.h`; pictures in E
 Reason: Each choice is the one that reuses what the repository has (the golden format, the Python checks, the console) and adds nothing to secure or to install; the pictures in three languages where the layout is tight give the information without tripling the files.
 Consequences: The requirements are "must" where a choice settles them (R-19, R-23, R-43, R-57, R-67, R-70). The simulator is to print one result line per command (`ok` or `error: ...`), a bounded change of `sim/Simulator.h` that comes with the framework's first use; until then a framework reads up to an `echo` token. Open point 47 waits for the framework repository. A changed golden frame without a sentence in the pull request description is a finding of the review. Nothing on the device changes.
 Verified: host-tested (`scripts/check_docs.py` and `test/test_check_docs/`); not applicable on the device
+
+## D-59: The emergency radio is MeshCore as it is, fetched from its repository; a chat node, never a repeater
+Date: 2026-11-03   Status: decided
+Decided by: owner
+
+Context: D-1 left the radio for a later release and assumed a protocol of our own because MeshCore was not used. The owner said on 2026-11-03 that D-1 was about everything else and that MeshCore is now added: as open and free as it exists, as an emergency protocol, without the project's other rules for it. The interface `RadioLink` already has MeshCore's shape (contacts from advertisements, direct or flooded paths, delivery reports).
+Options: A protocol of our own on RadioLib (the requirements of open point 9: authenticated sender, AEAD, no default key; talks to nobody else). MeshCore unchanged (its cipher, its public channel, talks to every MeshCore device and repeater; a short MAC and a well-known public key). MeshCore changed by us (a fork to maintain).
+Decision: MeshCore unchanged. The firmware fetches it from MeshCore's repository at build time, pinned to a commit; nothing of MeshCore is copied into this repository. Only the one adapter file in `device/` that implements `RadioLink` includes it; `src/` and the screens stay ours and do not know MeshCore. The device is a chat node (companion) and never a repeater. MeshCore's own cipher, public channel and contacts are used as they are; the requirements of open point 9 (AEAD, no default key, authenticated sender beyond MeshCore's) do not apply to it. The radio is an emergency path: hidden in normal use, it becomes active when the SOS is used without a mobile network, and then strangers may write to the device and the device to them (the rule that only `[radio] peer` may write does not hold in an emergency).
+Reason: The owner's: in an emergency without a network, reaching anybody in range counts more than the project's own rules, and the existing MeshCore network (devices and repeaters) is only reachable with its protocol unchanged.
+Consequences: `scripts/check_layers.py` allows a MeshCore include in that one adapter file only; THIRD_PARTY.md names MeshCore (MIT) and what it brings as used in the firmware binary. The simulator and the host tests stay on the fake radio. What the SOS sends over the radio, when the emergency ends and what the device shows meanwhile are open point 9. Duty cycle: MeshCore's own airtime limit, set for the EU sub-band.
+Verified: not verified (nothing built yet)
+
