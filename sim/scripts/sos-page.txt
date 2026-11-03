@@ -30,8 +30,8 @@ check screen home
 
 # No network: the text of a second emergency is kept, the page says it waits for the network, and it goes out
 # by itself when the network is back. The card allows the radio, so this emergency without a network is also
-# the radio's (D-62): save mode keeps cellular off until the child ends the SOS with the page's key, and then the
-# text goes out.
+# the radio's (D-62): save mode keeps the modem on and searching (D-64), so the text goes out as soon as the network is back, while
+# the emergency lasts until the child ends the SOS with the page's key.
 network none
 advance 5s
 key select
@@ -43,7 +43,7 @@ see sos.step-sent
 see sos.sent-waiting name=Parent One
 check sms-sent 1
 see sos.end
-key select
 network Example Mobile
 advance 60s
 check sms-sent 2
+key select

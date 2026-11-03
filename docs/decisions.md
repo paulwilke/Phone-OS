@@ -716,5 +716,5 @@ Options: Radio only, cellular off (saves the modem's current, the SOS text waits
 Decision: During the radio's emergency the modem stays on and keeps searching for a network; if it was switched off, the emergency switches it on, and switching it off is refused while the emergency lasts. Wi-Fi stays off. The SOS text goes by SMS as soon as the modem is registered, while the radio keeps running until the SOS is ended on the device (D-62). At the end, cellular is put back as it was before.
 Reason: The owner's: on a child's emergency phone the SOS text must leave at the first chance; the battery the search costs is worth it.
 Consequences: `src/app/Connectivity` (save mode keeps cellular on), `EmergencyRadio`, their host tests, `sim/scripts/radio-emergency.txt` and `sos-page.txt`, [emergency-radio.md](core/emergency-radio.md). D-63 item 3 is settled by this entry.
-Verified: not verified (nothing built yet)
+Verified: host-tested: the modem kept on and switched on if it was off, cellular off refused, cellular put back at the end, the SOS text leaving by SMS during the emergency with the radio sending nothing (`test_connectivity` CON-20, CON-21, `test_emergency_radio` RAD-06, RAD-09, RAD-11, RAD-14, the scenarios `radio-emergency` and `sos-page`); compiled: `device` (2026-11-03); not verified on the device
 

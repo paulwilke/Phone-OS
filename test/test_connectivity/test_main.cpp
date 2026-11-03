@@ -147,25 +147,29 @@ void test_the_label_says_connecting_until_the_first_network_since_switching_on()
 
 // ---- radio and restart --------------------------------------------------------------------------
 
-void test_save_mode_switches_cellular_and_wifi_off_and_gives_cellular_back() {
+void test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite() {
   Rig r;
   TEST_ASSERT_TRUE(r.net.setWifiMode(WifiMode::Station));
   r.net.enterSaveMode();
   TEST_ASSERT_TRUE(r.net.saveMode());
-  TEST_ASSERT_FALSE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
   TEST_ASSERT_FALSE(r.net.wifiActive());
-  TEST_ASSERT_FALSE(r.net.setCellularEnabled(true));      // refused while it holds
+  TEST_ASSERT_FALSE(r.net.setCellularEnabled(false));     // refused while it holds
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
   TEST_ASSERT_FALSE(r.net.setWifiMode(WifiMode::AccessPoint));
   TEST_ASSERT_TRUE(r.net.setWifiMode(WifiMode::Off));     // off always works
   r.net.leaveSaveMode();
   TEST_ASSERT_FALSE(r.net.saveMode());
   TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.setCellularEnabled(false));      // free again
 }
 
-void test_save_mode_leaves_cellular_off_when_it_was_off() {
+void test_save_mode_switches_cellular_on_when_it_was_off_and_puts_it_back() {
   Rig r;
   TEST_ASSERT_TRUE(r.net.setCellularEnabled(false));
   r.net.enterSaveMode();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_FALSE(r.net.setCellularEnabled(false));
   r.net.leaveSaveMode();
   TEST_ASSERT_FALSE(r.net.cellularEnabled());
 }
@@ -276,8 +280,8 @@ int main() {
   RUN_TEST(test_the_network_label_is_data);
   RUN_TEST(test_the_label_says_connecting_until_the_first_network_since_switching_on);
   RUN_TEST(test_the_radio_starts_only_on_request_and_if_permitted);
-  RUN_TEST(test_save_mode_switches_cellular_and_wifi_off_and_gives_cellular_back);
-  RUN_TEST(test_save_mode_leaves_cellular_off_when_it_was_off);
+  RUN_TEST(test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite);
+  RUN_TEST(test_save_mode_switches_cellular_on_when_it_was_off_and_puts_it_back);
   RUN_TEST(test_the_radio_stop_is_requested_once_and_only_for_a_radio_that_runs);
   RUN_TEST(test_a_restart_can_be_requested);
   RUN_TEST(test_wifi_is_off_until_someone_asks);

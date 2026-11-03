@@ -1,7 +1,8 @@
 # data: sim/data
 # The radio's emergency (D-59, D-62): the radio is off in normal use; the SOS without a mobile network starts it and
-# switches save mode on (cellular off); anybody may write during it and is shown, the SOS text is kept off the radio
-# (D-61); the one key "End SOS" ends it: the radio stops, cellular is back, and only the radio peer may write again.
+# switches save mode on (the modem keeps searching, Wi-Fi off, D-64); anybody may write during it and is shown, the SOS
+# text is kept off the radio (D-61) and goes by SMS as soon as a network is found; the one key "End SOS" ends it: the
+# radio stops, and only the radio peer may write again.
 advance 5s
 check radio no
 check emergency-radio no
@@ -24,14 +25,14 @@ check emergency-radio no
 check cellular on
 key back
 
-# An SOS without a network begins the emergency: save mode (cellular off), and the stranger is heard.
+# An SOS without a network begins the emergency: save mode (the modem stays on), and the stranger is heard.
 network none
 advance 5s
 key select
 key select
 advance 2s
 check emergency-radio yes
-check cellular off
+check cellular on
 radio msg Stranger Hello from the road
 advance 1s
 check unread 1
@@ -41,15 +42,19 @@ advance 60s
 check sms-sent 1
 see sos.end
 
-# The child ends the SOS: the radio stops, cellular is back, the stranger is dropped again.
+# A network is found while the SOS is still on: the text goes by SMS, the emergency and the radio go on (D-62, D-64).
+network Example Mobile
+advance 10s
+check sms-sent 2
+check emergency-radio yes
+check radio yes
+
+# The child ends the SOS: the radio stops, the stranger is dropped again.
 key select
 advance 2s
 check emergency-radio no
 check radio no
 check cellular on
-network Example Mobile
-advance 60s
-check sms-sent 2
 radio start
 advance 2s
 radio peer Stranger

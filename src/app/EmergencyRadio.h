@@ -6,12 +6,12 @@
 //
 // While it is active:
 //   * the radio is started (Connectivity's start request; starting the software is the host's job),
-//   * save mode holds: cellular and Wi-Fi off, the radio only (Connectivity),
+//   * save mode holds: Wi-Fi off, the modem on and searching (Connectivity, D-64),
 //   * Messaging accepts a radio message from anybody and shows it; outside the emergency only `[radio] peer`
 //     may write.
 //
 // The SOS itself sends nothing on the radio (D-61): the radio is for a conversation, and Messaging keeps the
-// SOS text off it.
+// SOS text off it. The text goes by SMS as soon as the modem is registered, while the radio keeps running.
 //
 // With `features.radio` off nothing of this happens.
 
@@ -30,7 +30,7 @@ public:
   // The SOS is ended on the device. False when no emergency was on.
   bool end();
   // The host could not start the radio (the chip does not answer): the emergency ends, so that the device
-  // does not sit in save mode with neither cellular nor radio.
+  // does not sit in save mode without a radio.
   void startFailed();
 
   bool active() const { return active_; }

@@ -389,8 +389,8 @@ Tests in `test/test_connectivity/`.
 | CON-16 | A switch-on that fails is logged | `test_a_failed_switch_on_is_logged` | — | done |
 | CON-18 | An unknown battery level does not refuse Wi-Fi | `test_an_unknown_battery_does_not_refuse_wifi` | — | done |
 | CON-19 | poll() keeps the Wi-Fi controller going | `test_poll_keeps_wifi_going` | — | done |
-| CON-20 | Save mode switches cellular and Wi-Fi off, refuses them while it holds, and gives cellular back as it was | `test_save_mode_switches_cellular_and_wifi_off_and_gives_cellular_back` | — | done |
-| CON-21 | Save mode leaves cellular off when it was off before | `test_save_mode_leaves_cellular_off_when_it_was_off` | — | done |
+| CON-20 | Save mode keeps the modem on and Wi-Fi off, refuses switching cellular off and Wi-Fi on while it holds, and frees them at its end | `test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite` | — | done |
+| CON-21 | Save mode switches cellular on when it was off, and puts it off again at its end | `test_save_mode_switches_cellular_on_when_it_was_off_and_puts_it_back` | — | done |
 | CON-22 | A radio stop is requested once, and only for a radio that runs | `test_the_radio_stop_is_requested_once_and_only_for_a_radio_that_runs` | — | done |
 
 ## The radio's emergency
@@ -404,14 +404,15 @@ Tests in `test/test_emergency_radio/`.
 | RAD-03 | A pickup begins it as well | `test_a_pickup_without_a_network_begins_it_too` | — | done |
 | RAD-04 | With the radio not allowed nothing of it happens | `test_with_the_radio_not_allowed_nothing_of_it_happens` | — | done |
 | RAD-05 | The reply to a parent's query does not begin it | `test_the_reply_to_a_query_does_not_begin_it` | — | done |
-| RAD-06 | Save mode: cellular and Wi-Fi off, and refused while it lasts | `test_save_mode_switches_cellular_and_wifi_off_and_refuses_them_back` | — | done |
+| RAD-06 | Save mode: the modem stays on and Wi-Fi is off; switching cellular off or Wi-Fi on is refused while it lasts | `test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite` | — | done |
 | RAD-07 | A stranger's radio message is dropped outside the emergency and stored unread during it | `test_a_stranger_is_dropped_outside_the_emergency_and_heard_during_it` | — | done |
 | RAD-08 | A stranger can be answered during it | `test_a_stranger_can_be_answered_during_the_emergency` | — | done |
-| RAD-09 | The SOS text never goes on the radio; it waits and goes by SMS once the SOS is ended and the network is back | `test_the_sos_text_never_goes_on_the_radio_and_waits_for_the_network` | — | done |
+| RAD-09 | The SOS text never goes on the radio; without a network it waits in the queue and the emergency goes on | `test_the_sos_text_never_goes_on_the_radio_and_waits_while_there_is_no_network` | — | done |
 | RAD-10 | Ending the SOS asks the host to stop the radio, ends save mode, and closes the door to strangers again | `test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_again` | — | done |
-| RAD-11 | Cellular that the child had switched off stays off after the emergency | `test_a_cellular_switch_off_by_the_child_stays_off_after_the_emergency` | — | done |
+| RAD-11 | Cellular that the child had switched off is switched on by the emergency and off again after it | `test_cellular_that_the_child_switched_off_is_on_during_the_emergency_and_off_after` | — | done |
 | RAD-12 | A radio that does not start ends the emergency and gives cellular back | `test_a_radio_that_does_not_start_ends_the_emergency` | — | done |
 | RAD-13 | The chip stays powered while the radio runs without a contact | `test_the_radio_chip_stays_powered_while_the_radio_runs_without_a_contact` | — | done |
+| RAD-14 | The network coming back during the emergency lets the SOS text out by SMS while the emergency and the radio go on, and the radio sends nothing | `test_the_network_coming_back_during_the_emergency_lets_the_sos_text_out_by_sms` | — | done |
 
 ## One Wi-Fi controller and the parents' page
 

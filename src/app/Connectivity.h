@@ -10,10 +10,11 @@
 // (and refuses it where the profile does not allow the radio). The host reads and clears the
 // request with takeRadioStartRequest() and attaches the radio with setRadio().
 //
-// **Save mode** (D-1, D-62) is the emergency radio's battery saving: cellular and Wi-Fi off, the radio
-// only. It is never asked for by a person; EmergencyRadio switches it on with the emergency and off again
-// at its end. While it holds, switching cellular or Wi-Fi on is refused (logged), and the end puts
-// cellular back as it was. There is no timed probe of the mobile network.
+// **Save mode** (D-1, D-62, D-64) is the emergency radio's battery saving: Wi-Fi off, the modem on and
+// searching, so that the SOS text leaves at the first chance. It is never asked for by a person;
+// EmergencyRadio switches it on with the emergency and off again at its end. Entering switches cellular
+// on if it was off; while it holds, switching cellular off and switching Wi-Fi on are refused (logged), and
+// the end puts cellular back as it was (off again if it was off). There is no timed probe of the mobile network.
 //
 // **Wi-Fi** is switched through the WifiController, with one rule in front of it: not on a nearly
 // empty battery unless a cable feeds the device (the biggest consumer after the modem must not
@@ -85,9 +86,9 @@ public:
 
   // --- save mode ---
   bool saveMode() const { return saveMode_; }
-  // Cellular and Wi-Fi off; remembers whether cellular was on.
+  // Wi-Fi off, cellular on (switched on if it was off); remembers whether cellular was on.
   void enterSaveMode();
-  // Cellular back as it was before.
+  // Cellular as it was before (off again if it was off).
   void leaveSaveMode();
 
   // --- restart ---

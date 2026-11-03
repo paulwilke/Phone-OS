@@ -17,8 +17,8 @@ void Connectivity::noteModem() {
 }
 
 bool Connectivity::setCellularEnabled(bool on) {
-  if (on && saveMode_) {
-    log_.log("Cellular refused: the emergency radio keeps it off");
+  if (!on && saveMode_) {
+    log_.log("Cellular off refused: the emergency radio keeps the modem searching");
     return false;
   }
   if (power_.isEnabled(PowerDomain::Cellular) == on) return true;
@@ -83,16 +83,17 @@ bool Connectivity::takeRadioStopRequest() {
 void Connectivity::enterSaveMode() {
   if (saveMode_) return;
   cellularWasOn_ = cellularEnabled();
-  setCellularEnabled(false);
+  // The SOS text must leave at the first chance (D-64), so the modem searches during the emergency.
+  if (!cellularWasOn_) setCellularEnabled(true);
   setWifiMode(WifiMode::Off);
   saveMode_ = true;
-  log_.log("Save mode on: radio only, cellular and Wi-Fi off");
+  log_.log("Save mode on: the modem keeps searching, Wi-Fi off");
 }
 
 void Connectivity::leaveSaveMode() {
   if (!saveMode_) return;
   saveMode_ = false;
-  if (cellularWasOn_) setCellularEnabled(true);
+  if (!cellularWasOn_) setCellularEnabled(false);
   log_.log("Save mode off");
 }
 

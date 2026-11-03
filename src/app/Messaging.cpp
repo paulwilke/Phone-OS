@@ -42,7 +42,8 @@ void Messaging::configure(const std::vector<std::string>& triggers) {
 }
 
 // A queued text that may take the radio can leave when the radio is usable; one that is cellular only needs
-// the modem. Staying awake for a text that cannot leave would defeat the emergency radio's save mode.
+// the modem. With the modem on (also during the radio's emergency, D-64) a queued text is work and keeps the
+// device awake until it has left; with cellular switched off by the child, a text that cannot leave is none.
 bool Messaging::hasWork() {
   if (outbox_.empty()) return false;
   if (power_.isEnabled(PowerDomain::Cellular)) return true;

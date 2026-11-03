@@ -16,7 +16,7 @@ Starting the radio software belongs to the host. This component keeps the reques
 
 `requestRadioStop()` is the other direction: it asks the host to stop the radio when it runs (`takeRadioStopRequest()`, once per request), and the host detaches it with `setRadio(nullptr)`.
 
-**Save mode** ("radio only": cellular and Wi-Fi off) is not something a person switches. It comes back with the radio (D-1, D-62) as the battery saving of the radio's emergency: `EmergencyRadio` calls `enterSaveMode()` when the emergency begins and `leaveSaveMode()` when the SOS is ended. Entering remembers whether cellular was on; leaving puts it back as it was (a cellular the child had switched off stays off). While it holds, `setCellularEnabled(true)` and any Wi-Fi mode but off are refused and logged. The old timed probe of the mobile network and the save-mode notices are not part of it: the emergency ends when the SOS is ended, not when a network is seen. Tests: CON-20 to CON-22.
+**Save mode** is not something a person switches. It comes back with the radio (D-1, D-62) as the battery saving of the radio's emergency, and since D-64 it is **Wi-Fi off, modem on and searching**: the SOS text must leave at the first chance. `EmergencyRadio` calls `enterSaveMode()` when the emergency begins and `leaveSaveMode()` when the SOS is ended. Entering remembers whether cellular was on and switches it on if it was off; leaving puts it back as it was (a cellular the child had switched off is off again). While it holds, `setCellularEnabled(false)` and any Wi-Fi mode but off are refused and logged. The old timed probe of the mobile network and the save-mode notices are not part of it: the emergency ends when the SOS is ended, not when a network is seen. Tests: CON-20 to CON-22.
 
 ## Wi-Fi
 

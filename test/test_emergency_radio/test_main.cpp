@@ -1,5 +1,5 @@
 // Host tests for the radio's emergency (D-59, D-62): it begins when the SOS is used without a mobile network,
-// lasts until the SOS is ended on the device, switches save mode on with it, lets anybody write during it,
+// lasts until the SOS is ended on the device, keeps the modem on with it (D-64), lets anybody write during it,
 // and keeps the SOS itself off the radio (D-61).
 
 #include <unity.h>
@@ -130,18 +130,19 @@ void test_the_reply_to_a_query_does_not_begin_it() {
   TEST_ASSERT_FALSE(d.core.takeRadioStartRequest());
 }
 
-void test_save_mode_switches_cellular_and_wifi_off_and_refuses_them_back() {
+void test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite() {
   Device d;
   TEST_ASSERT_TRUE(d.core.setWifiMode(WifiMode::AccessPoint));
   d.noNetwork();
   d.run(1);
   d.sos();
-  TEST_ASSERT_FALSE(d.core.state().cellularEnabled);
+  TEST_ASSERT_TRUE(d.core.state().cellularEnabled);    // the modem keeps searching
   TEST_ASSERT_TRUE(d.core.state().wifiPhase == WifiPhase::Off);
   TEST_ASSERT_TRUE(d.logged("Save mode on"));
-  TEST_ASSERT_FALSE(d.core.setCellularEnabled(true));
+  TEST_ASSERT_FALSE(d.core.setCellularEnabled(false));
   TEST_ASSERT_FALSE(d.core.setWifiMode(WifiMode::Station));
-  TEST_ASSERT_FALSE(d.core.state().cellularEnabled);
+  TEST_ASSERT_TRUE(d.logged("Cellular off refused"));
+  TEST_ASSERT_TRUE(d.core.state().cellularEnabled);
 }
 
 void test_a_stranger_is_dropped_outside_the_emergency_and_heard_during_it() {
@@ -178,7 +179,7 @@ void test_a_stranger_can_be_answered_during_the_emergency() {
   TEST_ASSERT_EQUAL_STRING("Stranger", d.radio.sent()[0].peer.c_str());
 }
 
-void test_the_sos_text_never_goes_on_the_radio_and_waits_for_the_network() {
+void test_the_sos_text_never_goes_on_the_radio_and_waits_while_there_is_no_network() {
   Device d;
   d.hostStartsRadio();
   d.noNetwork();
@@ -188,13 +189,26 @@ void test_the_sos_text_never_goes_on_the_radio_and_waits_for_the_network() {
   TEST_ASSERT_EQUAL(0, d.radio.sent().size());         // D-61: nothing of the SOS on the radio
   TEST_ASSERT_EQUAL(1, d.core.state().queued);         // it waits, as a text with no path does
 
-  // The SOS is ended on the device: cellular comes back, the network is there, the text goes by SMS.
-  TEST_ASSERT_TRUE(d.core.endSos());
-  d.modem.setNetwork("Example Mobile", 4);
+  TEST_ASSERT_TRUE(d.core.state().emergencyRadio);     // the emergency goes on meanwhile
+}
+
+void test_the_network_coming_back_during_the_emergency_lets_the_sos_text_out_by_sms() {
+  Device d;
+  d.hostStartsRadio();
+  d.noNetwork();
+  d.run(1);
+  d.sos();
+  d.run(60);
+  TEST_ASSERT_EQUAL(1, d.core.state().queued);
+  TEST_ASSERT_EQUAL(0, d.modem.sent().size());
+
+  d.modem.setNetwork("Example Mobile", 4);              // a network is found while the SOS is still on
   d.run(3);
-  TEST_ASSERT_EQUAL(0, d.radio.sent().size());
+  TEST_ASSERT_TRUE(d.core.state().emergencyRadio);      // the radio keeps running (D-62)
+  TEST_ASSERT_FALSE(d.core.takeRadioStopRequest());
   TEST_ASSERT_EQUAL(0, d.core.state().queued);
-  TEST_ASSERT_EQUAL(1, d.modem.sent().size());
+  TEST_ASSERT_EQUAL(1, d.modem.sent().size());          // the SOS text left by SMS ...
+  TEST_ASSERT_EQUAL(0, d.radio.sent().size());          // ... and the radio sent nothing (D-61)
 }
 
 void test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_again() {
@@ -211,7 +225,8 @@ void test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_agai
   TEST_ASSERT_FALSE(d.core.takeRadioStopRequest());    // once per request
   TEST_ASSERT_TRUE(d.core.state().cellularEnabled);
   TEST_ASSERT_TRUE(d.logged("Emergency radio off"));
-  TEST_ASSERT_TRUE(d.core.setCellularEnabled(true));   // save mode no longer holds
+  TEST_ASSERT_TRUE(d.core.setCellularEnabled(false));  // save mode no longer holds
+  TEST_ASSERT_TRUE(d.core.setCellularEnabled(true));
 
   d.radio.deliver("Stranger", "Hello again", 5);
   d.run(1);
@@ -219,14 +234,15 @@ void test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_agai
   TEST_ASSERT_FALSE(d.core.endSos());                  // nothing to end
 }
 
-void test_a_cellular_switch_off_by_the_child_stays_off_after_the_emergency() {
+void test_cellular_that_the_child_switched_off_is_on_during_the_emergency_and_off_after() {
   Device d;
   TEST_ASSERT_TRUE(d.core.setCellularEnabled(false));
   d.run(1);
   d.sos();
   TEST_ASSERT_TRUE(d.core.state().emergencyRadio);
+  TEST_ASSERT_TRUE(d.core.state().cellularEnabled);    // the emergency switches the modem on ...
   d.core.endSos();
-  TEST_ASSERT_FALSE(d.core.state().cellularEnabled);   // it was off before, so it is off after
+  TEST_ASSERT_FALSE(d.core.state().cellularEnabled);   // ... and, it having been off before, off again after
 }
 
 void test_a_radio_that_does_not_start_ends_the_emergency() {
@@ -258,12 +274,13 @@ int main() {
   RUN_TEST(test_a_pickup_without_a_network_begins_it_too);
   RUN_TEST(test_with_the_radio_not_allowed_nothing_of_it_happens);
   RUN_TEST(test_the_reply_to_a_query_does_not_begin_it);
-  RUN_TEST(test_save_mode_switches_cellular_and_wifi_off_and_refuses_them_back);
+  RUN_TEST(test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite);
   RUN_TEST(test_a_stranger_is_dropped_outside_the_emergency_and_heard_during_it);
   RUN_TEST(test_a_stranger_can_be_answered_during_the_emergency);
-  RUN_TEST(test_the_sos_text_never_goes_on_the_radio_and_waits_for_the_network);
+  RUN_TEST(test_the_sos_text_never_goes_on_the_radio_and_waits_while_there_is_no_network);
+  RUN_TEST(test_the_network_coming_back_during_the_emergency_lets_the_sos_text_out_by_sms);
   RUN_TEST(test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_again);
-  RUN_TEST(test_a_cellular_switch_off_by_the_child_stays_off_after_the_emergency);
+  RUN_TEST(test_cellular_that_the_child_switched_off_is_on_during_the_emergency_and_off_after);
   RUN_TEST(test_a_radio_that_does_not_start_ends_the_emergency);
   RUN_TEST(test_the_radio_chip_stays_powered_while_the_radio_runs_without_a_contact);
   return UNITY_END();
