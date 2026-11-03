@@ -686,7 +686,7 @@ Consequences: `device/MeshCoreRadio.cpp` (`getAirtimeBudgetFactor` returns 20). 
 Verified: host-tested: the SOS text is cellular-only and never on the radio (`test_emergency_radio`, `test_messaging`), the radio page's note on Europe in three languages (`test_screen_radio`); compiled: the airtime factor 20; not verified on the device
 
 ## D-62: The radio's emergency lasts until the SOS is ended; anybody may write during it; save mode comes back with it
-Date: 2026-11-03   Status: decided
+Date: 2026-11-03   Status: decided; the part "save mode: radio only, cellular off" superseded by D-64
 Decided by: agent (confirmed by owner on 2026-11-03)
 
 Context: D-59 makes the radio an emergency path that becomes active when the SOS is used without a mobile network and lets strangers write then. It left open when the emergency ends, who may write outside it, and what becomes of save mode, which D-1 took out of 4.0 to come back with the radio.
@@ -706,3 +706,15 @@ Decision: (1) "The SOS is ended on the device" is a new key, "End SOS", on the S
 Reason: Each is the smallest thing that builds D-59, D-61 and D-62 without a new feature; (3) and (4) are consequences of D-61 and D-62 that the owner should see.
 Consequences: `src/app/EmergencyRadio.{h,cpp}`, `Connectivity` (save mode, stop request), `Messaging` (cellular-only, acceptance), `Emergency`, `AppCore`, the SOS and radio pages, `device/main.cpp`, `docs/core/emergency-radio.md`. Open point 9 lists what the owner must confirm.
 Verified: host-tested (the application, the pages, the scenario); compiled (`device/main.cpp`); not verified on the device
+
+## D-64: During the radio's emergency the modem stays on and keeps searching; only Wi-Fi is off
+Date: 2026-11-03   Status: decided
+Decided by: owner
+
+Context: D-62 brought save mode back as D-1 described it: radio only, cellular and Wi-Fi off. Built that way, the emergency switched the modem off the moment the SOS began without a network, and the SOS text, which is due 25 to 120 seconds later, waited until the SOS was ended on the device even if a network had come back in the meantime (D-63, item 3).
+Options: Radio only, cellular off (saves the modem's current, the SOS text waits for the end of the emergency). The modem stays on and keeps searching, Wi-Fi off (costs the modem's search current, the SOS text goes out as soon as a network is found).
+Decision: During the radio's emergency the modem stays on and keeps searching for a network; if it was switched off, the emergency switches it on, and switching it off is refused while the emergency lasts. Wi-Fi stays off. The SOS text goes by SMS as soon as the modem is registered, while the radio keeps running until the SOS is ended on the device (D-62). At the end, cellular is put back as it was before.
+Reason: The owner's: on a child's emergency phone the SOS text must leave at the first chance; the battery the search costs is worth it.
+Consequences: `src/app/Connectivity` (save mode keeps cellular on), `EmergencyRadio`, their host tests, `sim/scripts/radio-emergency.txt` and `sos-page.txt`, [emergency-radio.md](core/emergency-radio.md). D-63 item 3 is settled by this entry.
+Verified: not verified (nothing built yet)
+
