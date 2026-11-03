@@ -142,8 +142,11 @@ protected:
   }
   void onSendTimeout() override {}
 
-  // The duty cycle (D-59): 1 / (1 + factor), so 9 is 10 %, the limit of the EU sub-band that LORA_FREQ is in.
-  float getAirtimeBudgetFactor() const override { return 9.0f; }
+  // The duty cycle (D-61): MeshCore's budget is a bucket that holds one hour's share and refills at
+  // 1 / (1 + factor), so a full bucket plus the refill can send twice the share within one hour. 20 gives
+  // 4.8 %, and at most 9.6 % in any hour (plus half of one packet MeshCore lets overdraw), under the 10 %
+  // of the EU sub-band that LORA_FREQ is in.
+  float getAirtimeBudgetFactor() const override { return 20.0f; }
   // A chat node answers at once; the delays MeshCore uses to space out repeaters do not apply.
   int calcRxDelay(float, uint32_t) const override { return 0; }
 

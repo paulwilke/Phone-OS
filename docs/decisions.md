@@ -664,7 +664,7 @@ Verified: compiled (the `device` environment builds the adapter and MeshCore, 20
 
 
 ## D-60: How the MeshCore adapter is built and set (details of D-59 that the agent chose)
-Date: 2026-11-03   Status: open
+Date: 2026-11-03   Status: open; item (2) superseded by D-61
 Decided by: agent (waiting for the owner's confirmation)
 
 Context: D-59 fixed MeshCore as it is, fetched at build time, one adapter, a chat node. Building it left choices that D-59 does not make and that have a reasonable alternative.
@@ -673,3 +673,15 @@ Decision: (1) MeshCore is pinned to commit `81dbae59` (tag `companion-v1.18.0`) 
 Reason: Each is the smallest thing that builds and follows D-59 without code of MeshCore in this repository; (2) keeps the regulator's limit, (3) to (6) keep the emergency path simple.
 Consequences: `platformio.ini`, `device/MeshCoreRadio.{h,cpp}`, `scripts/check_layers.py` (an include of MeshCore anywhere but in `MeshCoreRadio.cpp` fails, and `MeshCoreRadio.h` is free to include), THIRD_PARTY.md. The adapter is not started by `device/main.cpp`; it keeps neither contacts nor identity unless the caller stores `identity()` (open point 9).
 Verified: compiled (2026-11-03); not verified on the device
+
+## D-61: The radio talks with home and others, the SOS sends nothing on it yet; the EU setting with a hard airtime limit
+Date: 2026-11-03   Status: decided
+Decided by: owner (the airtime factor: agent, from the owner's demand that the limit be hard)
+
+Context: Open point 9 (a) proposed that the SOS without a network sends its text and position once on MeshCore's public channel and to every contact. D-60 (2) set MeshCore's EU setting at 22 dBm and an airtime factor of 9. The owner answered both on 2026-11-03. MeshCore's limit is a budget that holds one hour's share and refills at that share (`Dispatcher::updateTxBudget` at the pinned commit), so a full budget plus the refill can send twice the share within one hour: with factor 9 up to a fifth of the hour.
+Options: SOS on the public channel with the position (reaches everybody, disturbs everybody) or no SOS on the radio yet. Airtime factor 9 (10 % on average, up to 20 % in one hour) or 20 (4.8 % on average, at most 9.6 % in any hour plus half a packet).
+Decision: The SOS sends nothing on the radio until it is built as its own step: no message on the public channel, no position. What counts is that the device can hold a conversation over the radio with home or with others; sending the SOS message over the radio comes later as its own step. The EU setting of MeshCore stays (869.618 MHz, 62.5 kHz, SF 8, 22 dBm) with the antenna that came with the device, which has no gain of its own; the device must show where that setting holds (Europe only). The airtime limit is hard: the factor is 20, so no hour has more than a tenth of its time on air.
+Reason: The owner's: an SOS sent to everyone with coordinates would annoy everybody in range, and a conversation with home is the point of the radio. The factor follows from the shape of MeshCore's budget, so that the 10 % of the 869.4 to 869.65 MHz sub-band holds in every hour, not only on average.
+Consequences: `device/MeshCoreRadio.cpp` (`getAirtimeBudgetFactor` returns 20). Open point 9 (a) is dropped; (b) to (d) wait. The note that the setting is for Europe goes on the radio page in the next step of the radio (three languages) and is in [device.md](hardware/device.md). `RadioLink` needs no public channel yet.
+Verified: compiled; not verified on the device
+
