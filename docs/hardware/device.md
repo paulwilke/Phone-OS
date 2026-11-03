@@ -10,7 +10,7 @@ Code: `device/` (the firmware's counterpart of `sim/`), the testable board logic
 | `device/` | only the implementations of the seams on the processor's peripherals and `main.cpp` | `src/` and the Arduino and ESP32 headers |
 | `testing/fakes/` | scripted implementations of the seams | the seams |
 
-`src/` never includes `device/`, and no file under `src/` names Arduino or an ESP32 header; `device/` never includes `sim/` or `testing/`; nothing includes MeshCore. The wiring of the whole firmware is in [device-console.md](device-console.md). `scripts/check_layers.py` checks all of it, and `test/test_check_layers/test_check.py` runs the checker on small trees that break each rule, so a rule that stops firing is noticed.
+`src/` never includes `device/`, and no file under `src/` names Arduino or an ESP32 header; `device/` never includes `sim/` or `testing/`; nothing includes MeshCore except `device/MeshCoreRadio.cpp`, the one adapter (D-59). The wiring of the whole firmware is in [device-console.md](device-console.md). `scripts/check_layers.py` checks all of it, and `test/test_check_layers/test_check.py` runs the checker on small trees that break each rule, so a rule that stops firing is noticed.
 
 Two small helpers of `device/` are not seams: `device/SerialLog.h` writes a line of the event log to the USB console (the card's log, `SdEventLog`, hands it every line, and a start line that comes before the card goes to it directly), and `device/Esp32Heap.h` gives the free heap and the largest free block for log lines that look for a squeeze (the loading of the web catalogs, the Wi-Fi's link detail).
 
@@ -45,4 +45,10 @@ The console is the processor's own USB port. **Opening the serial port from a co
 
 ## What is not here
 
-The LoRa radio has no device implementation: `RadioLink` has none, the firmware starts without a radio and the feature is off.
+## The LoRa radio
+
+`RadioLink` has one device implementation, `device/MeshCoreRadio.{h,cpp}`, on MeshCore as it is (D-59): a chat node that never repeats a packet (`allowPacketForward` is false), with MeshCore's own cipher, contacts and airtime limit. The `device` environment fetches MeshCore at one pinned commit through `lib_deps` (with RadioLib, Crypto, RTClib, Melopero RV3028 and CayenneLPP, which its `library.json` asks for); nothing of it is stored here, the other environments do not fetch it, and `scripts/check_layers.py` fails on an include of it anywhere but in `MeshCoreRadio.cpp`. The chip is the SX1262 on the shared SPI bus (`boardSpi()`, chip select, reset, DIO1 and BUSY from `src/board/PinMap.h`), at MeshCore's EU narrow setting of 869.618 MHz, 62.5 kHz, SF 8, coding rate 4/5, 22 dBm, with an airtime factor of 9 (a tenth of the time on air). MeshCore has a board variant for the T-Deck Pro and none for the Pro MAX; the chip's values (DIO2 as antenna switch, TCXO 2.4 V on DIO3, current limit 140 mA, boosted receive gain) are those of Meck's variant for the MAX, whose pins are the ones in `src/board/PinMap.h`.
+
+Contacts are the chat nodes heard in advertisements (repeaters and rooms are not listed); a sent message gets one report in the order of sending, confirmed by the ACK or unconfirmed when MeshCore's window runs out. **The adapter is compiled into the firmware and nothing starts it:** `device/main.cpp` does not create it, switch the radio's rail on or call its `loop()`, so the firmware still runs without a radio and the feature is off. It keeps no contacts and, unless the caller stores `identity()`, makes a new key pair at every start. When the emergency starts the radio is the owner's decision (open point 9).
+
+**Compiled, not verified on the device:** `pio run -e device` builds it; whether the chip answers, whether an advertisement is heard, whether a message arrives and is confirmed have not been tried.

@@ -30,7 +30,13 @@ The `.bdf` files are the upstream files except for one comment line, from which 
 |---|---|---|
 | [SensorLib](https://github.com/lewisxhe/SensorLib) by Lewis He, version 0.5.0 (`lib_deps` of the `device` environment only, pinned to that version: a later one could change what it fetches, the Bosch firmware image among it, without anybody here reading its licence) | MIT | the fuel gauge's capacity write procedure and the driver of the motion sensor hub |
 | the Bosch Sensortec driver sources inside SensorLib (`src/bosch/`: BHI260 host driver, BMM150, BMA4xx) | BSD-3-Clause (the files carry the notice) | compiled into the firmware through SensorLib; the licence asks for its notice with a binary |
+| [MeshCore](https://github.com/meshcore-dev/MeshCore), commit `81dbae592ffad40b4212bc0b37e82b38da08f4bc` (tag `companion-v1.18.0`, 2026-10-15; `lib_deps` of the `device` environment only, compiled from the fetched copy) | MIT, "Copyright (c) 2025 Scott Powell / rippleradios.com" (its `license.txt`, read on 2026-11-03) | **used in the firmware binary, fetched at build time, pinned commit `81dbae59`, D-59**: the mesh protocol, contacts, cipher and the SX1262 wrapper behind `RadioLink`; only `device/MeshCoreRadio.cpp` includes it (`scripts/check_layers.py`). Nothing of it is stored here. |
+| the Ed25519 sources inside MeshCore (`lib/ed25519/`, Orson Peters) | zlib (their `license.txt`: altered versions must be marked, the notice stays; an acknowledgment in a product's documentation is appreciated) | compiled into the firmware with MeshCore |
+| [RadioLib](https://github.com/jgromes/RadioLib) by Jan Gromeš, version 7.8.1 (`lib_deps` of the `device` environment, pinned: MeshCore asks for `^7.6.0`) | MIT (its `license.txt`) | the SX1262 driver under MeshCore's radio wrapper |
+| [Crypto](https://github.com/rweather/arduinolibs) (`rweather/Crypto`) by Southern Storm Software, version 0.4.0 (`lib_deps` of the `device` environment, pinned: MeshCore asks for `^0.4.0`) | MIT (the notice at the head of its files; the package carries no separate licence file) | AES-128, SHA-256 and the Curve25519 operations of MeshCore's cipher |
 | the firmware image of the motion sensor hub BHI260AP (Bosch Sensortec, delivered inside SensorLib as `bosch_app30_shuttle_bhi260`) | **not verified**: the image files carry no licence text | the sensor loads it into its RAM at every power-up; it is not stored in this repository |
+
+MeshCore also lists RTClib, Melopero RV3028 and CayenneLPP in its `library.json`; the adapter uses none of them and the build does not fetch them, so their licences were not assessed. **No GPL licence is among what MeshCore brings in** (the sources of MeshCore, RadioLib and Crypto were searched for one).
 
 **No binary that contains the Bosch firmware image is handed out (decision D-23); its redistribution terms have not been verified.** The image is fetched by the build as part of SensorLib; nothing of it is committed here, and a binary of the `device` environment must not be published or handed to others.
 
@@ -69,7 +75,6 @@ The board is PlatformIO's own `esp32-s3-devkitc-1`, set in `platformio.ini`; no 
 | Work | Licence | Why it is listed |
 |---|---|---|
 | GxEPD2 (display library) | GPL-3.0 | **not used**: it would have made firmware binaries GPL. The panel is driven by our own code from the vendor's documents (above). Nothing of it is in the repository or its build. |
-| MeshCore (LoRa mesh firmware) | MIT | **not used**: no include, no file; `scripts/check_layers.py` fails on one. |
 | Adafruit GFX | BSD | **not used**: the text engine and the fonts are our own (`src/ui/Text.cpp`). |
 
 ### Tools

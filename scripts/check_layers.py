@@ -43,7 +43,9 @@ Rules for the layers:
     screen never includes a hardware interface or any other part of the application directly,
     and never a board or a driver, so it can be drawn on any Display and tested without a device.
 
-Everywhere (src/, sim/, testing/, test/): no include names MeshCore, whose code the project does not use.
+Everywhere (src/, sim/, testing/, test/, device/): no include names MeshCore or one of its headers (helpers/..., Mesh.h, RadioLib.h and so on), except in the one file
+device/MeshCoreRadio.cpp, the adapter that implements RadioLink on it (decision D-59). The firmware build
+fetches MeshCore; nothing of it is stored here, and nothing else may know its names.
 
 Exits with 1 on any finding.
 """
@@ -54,6 +56,11 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if len(sys.argv) == 3 and sys.argv[1] == "--root":
     ROOT = os.path.abspath(sys.argv[2])
+MESHCORE_ADAPTER = os.path.join("device", "MeshCoreRadio.cpp")
+# What an include of MeshCore (or of RadioLib, which it brings) looks like: its name, its helpers/ folder and
+# the headers the adapter uses. The adapter's own header, MeshCoreRadio.h, names none of it and is free to include.
+MESHCORE_INCLUDE = re.compile(
+    r"meshcore|^helpers/|(^|/)(Mesh|Dispatcher|Identity|Packet|Utils|RadioLib|RTClib|Crypto|CayenneLPP)\.h$", re.IGNORECASE)
 INCLUDE = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 PLATFORM = re.compile(r"\b(Arduino|ESP32|ESP-IDF|FreeRTOS)\b|\besp_|WiFi\.h")
 
@@ -119,7 +126,8 @@ def main():
     for path in list(files()) + list(other_files()):
         for n, line in enumerate(open(path, encoding="utf-8").read().split("\n"), 1):
             m = INCLUDE.match(line)
-            if m and "meshcore" in m.group(2).lower():
+            if (m and os.path.basename(m.group(2)) != "MeshCoreRadio.h" and MESHCORE_INCLUDE.search(m.group(2))
+                    and os.path.relpath(path, ROOT) != MESHCORE_ADAPTER):
                 problems.append(f"{os.path.relpath(path, ROOT)}:{n}: MeshCore include: {m.group(2)}")
     for path in files():
         rel = os.path.relpath(path, ROOT)

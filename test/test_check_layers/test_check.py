@@ -46,6 +46,16 @@ CASES = [
     ("device includes sim", {**GOOD, "device/Bad.h": '#include "../sim/Simulator.h"\n'}, 1, "not the firmware's"),
     ("device includes a fake", {**GOOD, "device/Bad.h": '#include "../testing/fakes/FakeGpio.h"\n'}, 1, "not the firmware's"),
     ("device includes MeshCore", {**GOOD, "device/Bad.h": '#include "MeshCore.h"\n'}, 1, "MeshCore"),
+    ("the adapter file includes MeshCore",
+     {**GOOD, "device/MeshCoreRadio.cpp": '#include <helpers/BaseChatMesh.h>\n#include <RadioLib.h>\n#include <Mesh.h>\n'}, 0, ""),
+    ("another device file includes a MeshCore header",
+     {**GOOD, "device/MeshCoreRadio.cpp": '#include <Mesh.h>\n', "device/Other.cpp": '#include <helpers/BaseChatMesh.h>\n'}, 1,
+     "device/Other.cpp:1: MeshCore include"),
+    ("another device file includes RadioLib", {**GOOD, "device/Other.cpp": '#include <RadioLib.h>\n'}, 1, "MeshCore include"),
+    ("a device file may include the adapter's own header",
+     {**GOOD, "device/MeshCoreRadio.h": "#pragma once\n", "device/main.cpp": '#include "MeshCoreRadio.h"\n'}, 0, ""),
+    ("src includes MeshCore", {**GOOD, "src/app/A.h": '#include <helpers/BaseChatMesh.h>\n'}, 1, "MeshCore include"),
+    ("a test includes MeshCore", {**GOOD, "test/test_x/t.cpp": '#include "MeshCore.h"\n'}, 1, "MeshCore include"),
 ]
 
 
