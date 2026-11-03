@@ -685,3 +685,14 @@ Reason: The owner's: an SOS sent to everyone with coordinates would annoy everyb
 Consequences: `device/MeshCoreRadio.cpp` (`getAirtimeBudgetFactor` returns 20). Open point 9 (a) is dropped; (b) to (d) wait. The note that the setting is for Europe goes on the radio page in the next step of the radio (three languages) and is in [device.md](hardware/device.md). `RadioLink` needs no public channel yet.
 Verified: compiled; not verified on the device
 
+## D-62: The radio's emergency lasts until the SOS is ended; anybody may write during it; save mode comes back with it
+Date: 2026-11-03   Status: decided
+Decided by: agent (confirmed by owner on 2026-11-03)
+
+Context: D-59 makes the radio an emergency path that becomes active when the SOS is used without a mobile network and lets strangers write then. It left open when the emergency ends, who may write outside it, and what becomes of save mode, which D-1 took out of 4.0 to come back with the radio.
+Options: End the emergency when the SOS is ended on the device, when the mobile network returns, or after a time (a child loses the radio in the middle of a conversation). Outside the emergency, keep the rule that only `[radio] peer` may write, or let anybody write always (strangers in normal use). Save mode now or later.
+Decision: The emergency stays on until the SOS is ended on the device; then the radio stops. During it, messages from anybody are shown and can be answered. Outside it, only `[radio] peer` may write, as today. Save mode (radio only, mobile network and Wi-Fi off) comes back with the radio as D-1 says: the emergency radio switches battery saving on implicitly.
+Reason: The device's user decides when the emergency is over, not the coverage; and the normal days stay as closed as they are.
+Consequences: `src/app` (Messaging's acceptance rule, the start and stop of the radio, save mode), host tests for each; open point 9 keeps the start on the device and the trial.
+Verified: not verified (nothing built yet)
+
