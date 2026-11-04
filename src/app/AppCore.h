@@ -168,7 +168,12 @@ public:
   bool radioPeer(size_t index, RadioPeer& out);
 
   // --- SOS ---
-  bool beginSos(const std::string& target = std::string()) { return emergency_.begin(target); }
+  // While the radio's emergency lasts, the SOS tile opens it again instead of a new choice, so that its
+  // "End SOS" key is reached after the screen locked (D-62, D-65).
+  bool beginSos(const std::string& target = std::string()) {
+    if (emergencyRadio_.active()) return true;
+    return emergency_.begin(target);
+  }
   bool chooseSos(SosPing::Kind kind) { return emergency_.choose(kind); }
   bool tapSos() { return emergency_.tap(); }
   void leaveSos() { emergency_.leave(); }
