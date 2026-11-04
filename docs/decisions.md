@@ -730,7 +730,7 @@ Consequences: Nothing in the code changes; `sim/scripts/radio-emergency.txt` pre
 Verified: not applicable (no change)
 
 ## D-66: During the radio's emergency the modem is off and searches again every few minutes
-Date: 2026-11-04   Status: open (the search every few minutes is decided; the interval, the window and what follows a found network wait for the owner)
+Date: 2026-11-04   Status: superseded by D-67
 Decided by: owner (2026-11-04: search every few minutes); agent (the numbers and the rest, not confirmed by the owner)
 
 Context: D-64 kept the modem on and searching for the whole radio emergency, so that the SOS text leaves at the first chance. The owner then explained the background on 2026-11-04: the radio is not a normal function (ideally a LoRa antenna is screwed on for it); it is for the case that the mobile network has failed, and then the battery is to be saved, because without LTE the modem is of no use. He chose that the modem searches every few minutes.
@@ -738,5 +738,16 @@ Options: The modem searches all the time (D-64: the SOS text leaves at once, the
 Decision: The third. Agent's proposal for the numbers: every 10 minutes the modem is switched on and searches for at most 90 seconds (about 15 % of the time); without a network it is switched off again. Once it is registered, it stays on as long as it keeps the network: the queued SOS text leaves by SMS, and calls and texts work as usual; a network lost again starts the searches again. Wi-Fi stays off; the radio runs until the SOS is ended (D-62); at the end, cellular is put back as it was before (D-64). The search again of the start ([D-58](decisions.md) on its own branch) is a different case and stays apart.
 Reason: The owner's: without a network the modem only costs battery, but the SOS text must not be lost. Ten minutes and 90 seconds: a registration took 26 s on the device, a search by hand up to 120 s; a child waits at most about 12 minutes for the SOS text to leave after a network comes back.
 Consequences: `src/app/Connectivity` and `EmergencyRadio` (a timer for the searches), their host tests, `sim/scripts/radio-emergency.txt`, [emergency-radio.md](core/emergency-radio.md); the interval and the window are listed in open point 9.
+Verified: not verified (nothing built yet)
+
+## D-67: During the radio's emergency the modem searches on demand and by a timer that can be set
+Date: 2026-11-04   Status: open (on demand and a settable timer are decided; the default of 30 minutes and the window of 90 seconds wait for the owner)
+Decided by: owner (2026-11-04: a search on demand and perhaps a timer of about half an hour that can be set); agent (the window, the default, the limits)
+
+Context: D-66 had the modem search by itself every 10 minutes during the radio's emergency. The owner said on 2026-11-04 that a modem trying again and again where nothing works only empties the battery; he wants a switch that tries the mobile network once on demand, and perhaps a timer, about every half hour, that can be set.
+Options: Searches by themselves at a fixed interval (D-66: the battery is spent whether or not a network can come). On demand only (no battery spent unasked, but the SOS text waits for somebody to press). On demand and a timer that can be set, switched off with 0 (the parents choose the trade-off).
+Decision: The third. During the radio's emergency the modem is off. A search switches it on for at most 90 seconds and off again if it found no network; once registered it stays on as long as it keeps the network, the queued SOS text leaves by SMS, and calls and texts work. A search runs when the radio page's control "Check mobile network now" is used, and every `[radio] cellular_retry` minutes (agent's proposal: default 30, 0 = never). Switching cellular by hand stays refused during the emergency; the control is the way. Wi-Fi stays off; the radio runs until the SOS is ended (D-62); at the end, cellular is put back as it was (D-64).
+Reason: The owner's: no battery spent on a network that is not there, and a way to try when there is a reason to think it is back.
+Consequences: `src/app/Connectivity`, `EmergencyRadio`, the radio page, `config/schema.toml` (`[radio] cellular_retry`) and the parents' page, their tests, [emergency-radio.md](core/emergency-radio.md). The default and the window are open point 9.
 Verified: not verified (nothing built yet)
 
