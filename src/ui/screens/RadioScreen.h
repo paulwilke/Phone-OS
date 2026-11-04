@@ -38,7 +38,7 @@ protected:
   std::vector<Rect> targets(const Rect& area) override;
 
 private:
-  enum class Control { Start, Stop };
+  enum class Control { Start, Stop, Search };
   struct Row {
     bool isControl;
     Control control;

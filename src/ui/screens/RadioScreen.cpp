@@ -38,6 +38,7 @@ void RadioScreen::rebuild() {
     } else {
       control(Control::Stop, t().get("radio.stop"));
     }
+    if (s.emergencyRadio) control(Control::Search, t().get("radio.search"));   // D-67
     if (s.radioAttached) {
       for (size_t i = 0; i < context().app.radioPeerCount(); ++i) {
         RadioPeer peer;
@@ -54,8 +55,10 @@ void RadioScreen::rebuild() {
 int RadioScreen::noteHeight(const Rect& area) {
   if (!context().app.profile().radioAllowed) return 0;
   const Font& small = font(FontSize::Small);
-  const std::string words = t().get("radio.europe");
-  return static_cast<int>(text::wrap(small, words, area.w - 12).size()) * small.lineHeight() + 6;
+  const std::string europe = t().get("radio.europe");
+  const std::string antenna = t().get("radio.antenna");
+  const size_t lines = text::wrap(small, europe, area.w - 12).size() + text::wrap(small, antenna, area.w - 12).size();
+  return static_cast<int>(lines) * small.lineHeight() + 6;
 }
 
 Rect RadioScreen::rowsArea(const Rect& area) {
@@ -148,11 +151,13 @@ void RadioScreen::draw(Display& display, const Rect& area) {
   }
   if (allowed) {
     const std::string europe = t().get("radio.europe");
+    const std::string antenna = t().get("radio.antenna");   // ideally a LoRa antenna is screwed on for the radio
     int ty = area.bottom() - noteHeight(area) + 4;
-    for (std::string_view line : text::wrap(small, europe, area.w - 12)) {
-      text::draw(display, small, area.x + 6, ty, line);
-      ty += small.lineHeight();
-    }
+    for (const std::string* words : {&europe, &antenna})
+      for (std::string_view line : text::wrap(small, *words, area.w - 12)) {
+        text::draw(display, small, area.x + 6, ty, line);
+        ty += small.lineHeight();
+      }
   }
 }
 
@@ -172,6 +177,7 @@ bool RadioScreen::activate(const Row& row) {
     switch (row.control) {
       case Control::Start: app().requestRadioStart(); break;
       case Control::Stop: app().requestRestart(); break;
+      case Control::Search: app().searchMobileNetwork(); break;
     }
     return true;
   }

@@ -52,6 +52,11 @@ public:
     profile_.radioAllowed = allowed;
     return *this;
   }
+  // Minutes between the modem's searches during the radio's emergency (0 = never by itself).
+  ProfileBuilder& radioCellularRetry(uint32_t minutes) {
+    profile_.radioCellularRetryMinutes = minutes;
+    return *this;
+  }
   // The one radio node whose messages are accepted (`[radio] peer`).
   ProfileBuilder& radioPeer(const char* name) {
     profile_.radioPeer = name;

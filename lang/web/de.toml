@@ -96,6 +96,8 @@ config.radio.name.label               = "Funkname"
 config.radio.name.help                = "Name dieses Geräts im Langstreckenfunknetz."
 config.radio.peer.label               = "Standardempfänger"
 config.radio.peer.help                = "Name des Geräts, an das Funknachrichten gehen, wenn kein Empfänger gewählt wird."
+config.radio.cellular_retry.label = "Mobilfunksuche (Minuten)"
+config.radio.cellular_retry.help = "Während des Funknotfalls ist das Mobilfunkmodem aus. Alle so viele Minuten wird es bis zu 90 Sekunden lang eingeschaltet, um ein Netz zu suchen. 0 = nie von selbst."
 
 # Home screen: which tiles of the second page the child sees
 config.home.label                     = "Startbildschirm: zweite Seite"

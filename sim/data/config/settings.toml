@@ -15,6 +15,7 @@ auto_off_minutes = 10
 [radio]
 name = "alex-device"
 peer = "NodeOne"
+cellular_retry = 1
 [[tiles]]
 label = "Parent One"
 action = "call"

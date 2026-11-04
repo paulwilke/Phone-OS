@@ -147,31 +147,125 @@ void test_the_label_says_connecting_until_the_first_network_since_switching_on()
 
 // ---- radio and restart --------------------------------------------------------------------------
 
-void test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite() {
+// CON-20: save mode switches the modem off at once and keeps Wi-Fi off; cellular and Wi-Fi by hand are refused.
+void test_save_mode_switches_the_modem_off_wifi_off_and_refuses_the_opposite() {
   Rig r;
   TEST_ASSERT_TRUE(r.net.setWifiMode(WifiMode::Station));
   r.net.enterSaveMode();
   TEST_ASSERT_TRUE(r.net.saveMode());
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());             // off between the searches
   TEST_ASSERT_FALSE(r.net.wifiActive());
-  TEST_ASSERT_FALSE(r.net.setCellularEnabled(false));     // refused while it holds
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_FALSE(r.net.setCellularEnabled(true));      // by hand: refused, both ways
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.count("Cellular on refused") == 1);
   TEST_ASSERT_FALSE(r.net.setWifiMode(WifiMode::AccessPoint));
   TEST_ASSERT_TRUE(r.net.setWifiMode(WifiMode::Off));     // off always works
   r.net.leaveSaveMode();
   TEST_ASSERT_FALSE(r.net.saveMode());
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());              // as before: it was on
   TEST_ASSERT_TRUE(r.net.setCellularEnabled(false));      // free again
 }
 
-void test_save_mode_switches_cellular_on_when_it_was_off_and_puts_it_back() {
+// CON-21: cellular that was off stays off, and is refused to be switched on, then is off again after.
+void test_save_mode_with_cellular_off_before_leaves_it_off() {
   Rig r;
   TEST_ASSERT_TRUE(r.net.setCellularEnabled(false));
   r.net.enterSaveMode();
-  TEST_ASSERT_TRUE(r.net.cellularEnabled());
-  TEST_ASSERT_FALSE(r.net.setCellularEnabled(false));
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());
+  TEST_ASSERT_FALSE(r.net.setCellularEnabled(false));     // refused, too
+  TEST_ASSERT_TRUE(r.count("Cellular off refused") == 1);
   r.net.leaveSaveMode();
   TEST_ASSERT_FALSE(r.net.cellularEnabled());
+}
+
+// CON-23: a search on demand: modem on, off again after 90 s without a network; the timer starts again then.
+void test_a_search_on_demand_ends_after_the_window_without_a_network() {
+  Rig r;
+  r.modem.setNetwork("", 0);
+  r.net.enterSaveMode();
+  r.net.poll();
+  TEST_ASSERT_TRUE(r.net.searchNow());
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.saveSearching());
+  TEST_ASSERT_FALSE(r.net.searchNow());                   // already on
+  r.clock.advanceSeconds(Connectivity::kSaveSearchWindowSeconds - 1);
+  r.net.poll();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  r.clock.advanceSeconds(1);
+  r.net.poll();
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());
+  TEST_ASSERT_FALSE(r.net.saveSearching());
+}
+
+// CON-24: nothing searches by itself in save mode when the timer is 0, however long it takes.
+void test_timer_zero_never_searches_by_itself() {
+  Profile p = ProfileBuilder().radio(true).radioCellularRetry(0).build();
+  Rig r(std::move(p));
+  r.net.enterSaveMode();
+  for (int i = 0; i < 24 * 60; ++i) {
+    r.clock.advanceSeconds(60);
+    r.net.poll();
+  }
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.searchNow());                    // on demand still works
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+}
+
+// CON-25: the timer searches at the set interval and the window ends without a network; then the interval starts again.
+void test_the_timer_searches_at_the_set_interval() {
+  Profile p = ProfileBuilder().radio(true).radioCellularRetry(15).build();
+  Rig r(std::move(p));
+  r.modem.setNetwork("", 0);
+  r.net.enterSaveMode();
+  r.clock.advanceSeconds(15 * 60 - 1);
+  r.net.poll();
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());             // not yet
+  r.clock.advanceSeconds(1);
+  r.net.poll();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());              // the timer switched it on ...
+  r.clock.advanceSeconds(Connectivity::kSaveSearchWindowSeconds);
+  r.net.poll();
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());             // ... and off again: no network
+  r.clock.advanceSeconds(15 * 60 - 1);
+  r.net.poll();
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());             // the interval counts from the switching off
+  r.clock.advanceSeconds(1);
+  r.net.poll();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+}
+
+// CON-26: a network found during a search keeps the modem on; a network lost starts a new window, then off again.
+void test_a_network_found_keeps_the_modem_on_and_a_lost_one_starts_the_search_again() {
+  Rig r;
+  r.modem.setNetwork("", 0);
+  r.net.enterSaveMode();
+  TEST_ASSERT_TRUE(r.net.searchNow());
+  r.clock.advanceSeconds(30);
+  r.modem.setNetwork("Example Mobile", 4);
+  r.net.poll();
+  r.clock.advanceSeconds(3600);                           // long past the window: it keeps the network
+  r.net.poll();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.registered());
+  r.modem.setNetwork("", 0);                              // lost
+  r.net.poll();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());              // a new window
+  r.clock.advanceSeconds(Connectivity::kSaveSearchWindowSeconds);
+  r.net.poll();
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());
+}
+
+// CON-27: ending save mode leaves no timer: the modem is as before and nothing switches it afterwards.
+void test_leaving_save_mode_stops_the_timer() {
+  Rig r;
+  r.net.enterSaveMode();
+  r.net.leaveSaveMode();
+  TEST_ASSERT_TRUE(r.net.cellularEnabled());
+  TEST_ASSERT_TRUE(r.net.setCellularEnabled(false));
+  r.clock.advanceSeconds(3 * 3600);
+  r.net.poll();
+  TEST_ASSERT_FALSE(r.net.cellularEnabled());             // the timer did not switch it on
+  TEST_ASSERT_FALSE(r.net.searchNow());                   // and a search outside save mode is nothing
 }
 
 void test_the_radio_stop_is_requested_once_and_only_for_a_radio_that_runs() {
@@ -280,8 +374,13 @@ int main() {
   RUN_TEST(test_the_network_label_is_data);
   RUN_TEST(test_the_label_says_connecting_until_the_first_network_since_switching_on);
   RUN_TEST(test_the_radio_starts_only_on_request_and_if_permitted);
-  RUN_TEST(test_save_mode_keeps_the_modem_on_and_wifi_off_and_refuses_the_opposite);
-  RUN_TEST(test_save_mode_switches_cellular_on_when_it_was_off_and_puts_it_back);
+  RUN_TEST(test_save_mode_switches_the_modem_off_wifi_off_and_refuses_the_opposite);
+  RUN_TEST(test_save_mode_with_cellular_off_before_leaves_it_off);
+  RUN_TEST(test_a_search_on_demand_ends_after_the_window_without_a_network);
+  RUN_TEST(test_timer_zero_never_searches_by_itself);
+  RUN_TEST(test_the_timer_searches_at_the_set_interval);
+  RUN_TEST(test_a_network_found_keeps_the_modem_on_and_a_lost_one_starts_the_search_again);
+  RUN_TEST(test_leaving_save_mode_stops_the_timer);
   RUN_TEST(test_the_radio_stop_is_requested_once_and_only_for_a_radio_that_runs);
   RUN_TEST(test_a_restart_can_be_requested);
   RUN_TEST(test_wifi_is_off_until_someone_asks);

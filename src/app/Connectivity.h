@@ -10,11 +10,16 @@
 // (and refuses it where the profile does not allow the radio). The host reads and clears the
 // request with takeRadioStartRequest() and attaches the radio with setRadio().
 //
-// **Save mode** (D-1, D-62, D-64) is the emergency radio's battery saving: Wi-Fi off, the modem on and
-// searching, so that the SOS text leaves at the first chance. It is never asked for by a person;
-// EmergencyRadio switches it on with the emergency and off again at its end. Entering switches cellular
-// on if it was off; while it holds, switching cellular off and switching Wi-Fi on are refused (logged), and
-// the end puts cellular back as it was (off again if it was off). There is no timed probe of the mobile network.
+// **Save mode** (D-1, D-62, D-67) is the emergency radio's battery saving: Wi-Fi off, and the modem off
+// except for searches. It is never asked for by a person; EmergencyRadio switches it on with the
+// emergency and off again at its end. Entering switches the modem off at once. A search switches it on for
+// at most kSaveSearchWindowSeconds and off again if it has no network by then. A search runs on demand
+// (searchNow(), the radio page's control) and every `[radio] cellular_retry` minutes (0 = never). Once
+// registered the modem stays on for as long as it keeps the network (the queued SOS text leaves by SMS,
+// calls and texts work); a network lost again starts a new search window, and the timer runs again after
+// the modem has been switched off. While it holds, switching cellular on or off by hand and switching Wi-Fi
+// on are refused (logged), and the end puts cellular back as it was before (off again if it was off) and
+// leaves no timer. While the modem is off the processor may sleep (PowerPolicy).
 //
 // **Wi-Fi** is switched through the WifiController, with one rule in front of it: not on a nearly
 // empty battery unless a cable feeds the device (the biggest consumer after the modem must not
@@ -39,6 +44,9 @@
 class Connectivity {
 public:
   static constexpr int kMinWifiBattery = 20;
+  // Save mode (D-67; the agent's proposal, open point 9): a search lasts at most this long before the modem
+  // is switched off again. The interval of the timer is the setting `[radio] cellular_retry`.
+  static constexpr uint32_t kSaveSearchWindowSeconds = 90;
 
   struct NetworkLabel {
     enum class Kind : uint8_t {
@@ -61,7 +69,7 @@ public:
   void setRadio(RadioLink* radio) { radio_ = radio; }
   void setWifi(WifiController* wifi) { wifi_ = wifi; }
 
-  // Keeps Wi-Fi going.
+  // Keeps Wi-Fi going and, in save mode, the modem's search cycle.
   void poll();
 
   // --- cellular ---
@@ -86,10 +94,15 @@ public:
 
   // --- save mode ---
   bool saveMode() const { return saveMode_; }
-  // Wi-Fi off, cellular on (switched on if it was off); remembers whether cellular was on.
+  // Wi-Fi off, the modem off until a search; remembers whether cellular was on.
   void enterSaveMode();
-  // Cellular as it was before (off again if it was off).
+  // Cellular as it was before (off again if it was off); the search timer is gone.
   void leaveSaveMode();
+  // Save mode only: the modem is switched on (searching or registered).
+  bool saveSearching() const { return saveMode_ && savePhase_ != SavePhase::Off; }
+  // Save mode only: a search now (the modem is switched on for at most the window). False when save mode is not
+  // on or the modem is on already (searching or registered).
+  bool searchNow();
 
   // --- restart ---
   void requestRestart() { restartRequested_ = true; }
@@ -116,6 +129,14 @@ private:
   bool radioStopRequested_ = false;
   bool saveMode_ = false;
   bool cellularWasOn_ = false;
+  // Save mode: Off (the modem is off, the timer runs), Searching (a window runs), Online (registered, stays on
+  // while it keeps the network).
+  enum class SavePhase : uint8_t { Off, Searching, Online };
+  SavePhase savePhase_ = SavePhase::Off;
+  uint32_t savePhaseSince_ = 0;  // uptime in seconds when the phase began
+  void pollSaveMode();
+  void startSearch(const char* why);
+  void switchModem(bool on);  // the search's own switch: no notice, not refused by save mode
   bool restartRequested_ = false;
   // The modem has named a network since it was last switched on: a network lost after that is "no
   // network", not "connecting" (a child must see that nobody can reach the device).

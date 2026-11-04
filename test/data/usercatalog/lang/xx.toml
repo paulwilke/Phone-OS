@@ -274,6 +274,8 @@ config.radio.name.label               = "Radio name"
 config.radio.name.help                = "Name of this device in the long-range radio network."
 config.radio.peer.label               = "Default peer"
 config.radio.peer.help                = "Name of the device to send radio messages to when no recipient is chosen."
+config.radio.cellular_retry.label = "Mobile network search (minutes)"
+config.radio.cellular_retry.help = "During the radio's emergency the mobile modem is off. Every this many minutes it is switched on to look for a network for up to 90 seconds. 0 = never by itself."
 
 # Home screen: which tiles of the second page the child sees
 config.home.label                     = "Home screen: second page"

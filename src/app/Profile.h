@@ -83,6 +83,9 @@ struct Profile {
   // --- radio ---
   std::string radioName = "phone-os";  // this device's name in the radio network
   std::string radioPeer;                // default peer to send radio messages to
+  // During the radio's emergency the modem is off; every this many minutes it searches for a network (D-67).
+  // 0 = never by itself (the radio page's control still works).
+  uint32_t radioCellularRetryMinutes = 30;
 
   // May the child call this number? It must be in the contact book (any spelling of the
   // number) or be the target of a call action.

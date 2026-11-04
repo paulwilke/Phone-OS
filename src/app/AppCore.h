@@ -189,6 +189,9 @@ public:
   const WifiController* wifi() const { return wifi_.get(); }
   WifiController* wifiController() { return wifi_.get(); }
   bool requestRadioStart() { return connectivity_.requestRadioStart(); }
+  // During the radio's emergency: look for the mobile network now (D-67). False when not in the emergency or the
+  // modem is on already.
+  bool searchMobileNetwork() { return connectivity_.searchNow(); }
   bool takeRadioStartRequest() { return connectivity_.takeRadioStartRequest(); }
   // The host stops the radio and detaches it with setRadio(nullptr) when this says so (once per request).
   bool takeRadioStopRequest() { return connectivity_.takeRadioStopRequest(); }

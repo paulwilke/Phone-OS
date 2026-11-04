@@ -149,11 +149,48 @@ void test_during_the_emergency_a_contact_can_be_written_to_without_free_text() {
   page.rig.poll();
   page.draw();
   TEST_ASSERT_TRUE(page.rig.core.state().emergencyRadio);
-  page.down(1);
+  page.down(2);                                  // the stop and the search come first
   TEST_ASSERT_EQUAL_STRING("Write", page.screen.softKeys().action.c_str());
   TEST_ASSERT_TRUE(page.screen.handle(Input::pressed(Key::Select)));
   TEST_ASSERT_TRUE(page.rig.nav.opened(screen::kCompose));
   TEST_ASSERT_TRUE(page.rig.session.viaRadio);
+}
+
+void test_the_page_says_that_a_lora_antenna_is_ideally_screwed_on() {
+  const std::string note = "Ideally a LoRa antenna is screwed on for the radio.";
+  Page off;                                                             // not allowed: no radio, no note
+  TEST_ASSERT_FALSE(off.saysWrapped(note));
+  Page page(allowed());
+  TEST_ASSERT_TRUE(page.saysWrapped(note));
+  page.rig.language("de");
+  page.draw();
+  TEST_ASSERT_TRUE(page.saysWrapped("F\xC3\xBCr den Funk am besten eine LoRa-Antenne aufschrauben."));
+  page.rig.language("fr");
+  page.draw();
+  TEST_ASSERT_TRUE(page.saysWrapped("Pour la radio, visser de pr\xC3\xA9" "f\xC3\xA9rence une antenne LoRa."));
+}
+
+// D-67: the control that checks the mobile network is offered during the emergency only, and asks for one search.
+void test_the_control_that_checks_the_mobile_network_is_offered_during_the_emergency_only() {
+  Page page(allowed());
+  page.radioRuns();
+  TEST_ASSERT_FALSE(page.says("Check mobile network", FontSize::Text));
+  page.rig.modem.setNetwork("", 0);
+  page.rig.poll();
+  TEST_ASSERT_TRUE(page.rig.core.beginSos());
+  TEST_ASSERT_TRUE(page.rig.core.chooseSos(SosPing::Kind::Emergency));
+  page.rig.poll();
+  page.draw();
+  TEST_ASSERT_TRUE(page.rig.core.state().emergencyRadio);
+  TEST_ASSERT_FALSE(page.rig.core.state().cellularEnabled);
+  TEST_ASSERT_TRUE(page.says("Check mobile network", FontSize::Text));
+  page.down(1);
+  TEST_ASSERT_TRUE(page.says("Check mobile network", FontSize::Text, true));   // focused
+  page.key(Key::Select);
+  TEST_ASSERT_TRUE(page.rig.core.state().cellularEnabled);                          // the modem searches
+  page.rig.language("de");
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Mobilfunknetz", FontSize::Text, true));
 }
 
 // ---- the controls ------------------------------------------------------------------------------------------------
@@ -297,6 +334,8 @@ int main(int, char**) {
   RUN_TEST(test_an_unknown_strength_is_left_out_and_a_contact_that_goes_by_detours_without_a_time_is_told_so);
   RUN_TEST(test_the_words_are_those_of_the_language_of_the_moment);
   RUN_TEST(test_the_page_says_that_the_radio_setting_holds_for_europe_only);
+  RUN_TEST(test_the_page_says_that_a_lora_antenna_is_ideally_screwed_on);
+  RUN_TEST(test_the_control_that_checks_the_mobile_network_is_offered_during_the_emergency_only);
   RUN_TEST(test_during_the_emergency_a_contact_can_be_written_to_without_free_text);
   RUN_TEST(test_radio_off_asks_for_a_restart);
   RUN_TEST(test_a_contact_is_written_to_only_where_the_child_may_choose_any_recipient);

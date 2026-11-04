@@ -423,6 +423,20 @@
               "label": "config.radio.peer.label",
               "help": "config.radio.peer.help",
               "field": "radioPeer"
+            },
+            {
+              "name": "cellular_retry",
+              "type": "integer",
+              "required": false,
+              "secret": false,
+              "apply": "restart",
+              "default": "30",
+              "min_val": 0,
+              "max_val": 240,
+              "enums": "",
+              "label": "config.radio.cellular_retry.label",
+              "help": "config.radio.cellular_retry.help",
+              "field": "radioCellularRetryMinutes"
             }
           ],
           "group": "advanced"
