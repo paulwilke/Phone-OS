@@ -708,7 +708,7 @@ Consequences: `src/app/EmergencyRadio.{h,cpp}`, `Connectivity` (save mode, stop 
 Verified: host-tested (the application, the pages, the scenario); compiled (`device/main.cpp`); not verified on the device
 
 ## D-64: During the radio's emergency the modem stays on and keeps searching; only Wi-Fi is off
-Date: 2026-11-03   Status: decided
+Date: 2026-11-03   Status: decided; the part "the modem stays on and keeps searching" superseded by D-66
 Decided by: owner
 
 Context: D-62 brought save mode back as D-1 described it: radio only, cellular and Wi-Fi off. Built that way, the emergency switched the modem off the moment the SOS began without a network, and the SOS text, which is due 25 to 120 seconds later, waited until the SOS was ended on the device even if a network had come back in the meantime (D-63, item 3).
@@ -728,4 +728,15 @@ Decision: Lock as before; the radio's emergency does not change the screen lock.
 Reason: The owner's choice.
 Consequences: Nothing in the code changes; `sim/scripts/radio-emergency.txt` presses "End SOS" before the lock, as built with D-64.
 Verified: not applicable (no change)
+
+## D-66: During the radio's emergency the modem is off and searches again every few minutes
+Date: 2026-11-04   Status: open (the search every few minutes is decided; the interval, the window and what follows a found network wait for the owner)
+Decided by: owner (2026-11-04: search every few minutes); agent (the numbers and the rest, not confirmed by the owner)
+
+Context: D-64 kept the modem on and searching for the whole radio emergency, so that the SOS text leaves at the first chance. The owner then explained the background on 2026-11-04: the radio is not a normal function (ideally a LoRa antenna is screwed on for it); it is for the case that the mobile network has failed, and then the battery is to be saved, because without LTE the modem is of no use. He chose that the modem searches every few minutes.
+Options: The modem searches all the time (D-64: the SOS text leaves at once, the most current). Off until the SOS is ended (D-62 as built first: the least current, the SOS text waits). Off, and every few minutes switched on to search for a while (most of the saving, the SOS text leaves at the next search that finds a network).
+Decision: The third. Agent's proposal for the numbers: every 10 minutes the modem is switched on and searches for at most 90 seconds (about 15 % of the time); without a network it is switched off again. Once it is registered, it stays on as long as it keeps the network: the queued SOS text leaves by SMS, and calls and texts work as usual; a network lost again starts the searches again. Wi-Fi stays off; the radio runs until the SOS is ended (D-62); at the end, cellular is put back as it was before (D-64). The search again of the start ([D-58](decisions.md) on its own branch) is a different case and stays apart.
+Reason: The owner's: without a network the modem only costs battery, but the SOS text must not be lost. Ten minutes and 90 seconds: a registration took 26 s on the device, a search by hand up to 120 s; a child waits at most about 12 minutes for the SOS text to leave after a network comes back.
+Consequences: `src/app/Connectivity` and `EmergencyRadio` (a timer for the searches), their host tests, `sim/scripts/radio-emergency.txt`, [emergency-radio.md](core/emergency-radio.md); the interval and the window are listed in open point 9.
+Verified: not verified (nothing built yet)
 
