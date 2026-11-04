@@ -718,3 +718,14 @@ Reason: The owner's: on a child's emergency phone the SOS text must leave at the
 Consequences: `src/app/Connectivity` (save mode keeps cellular on), `EmergencyRadio`, their host tests, `sim/scripts/radio-emergency.txt` and `sos-page.txt`, [emergency-radio.md](core/emergency-radio.md). D-63 item 3 is settled by this entry.
 Verified: host-tested: the modem kept on and switched on if it was off, cellular off refused, cellular put back at the end, the SOS text leaving by SMS during the emergency with the radio sending nothing (`test_connectivity` CON-20, CON-21, `test_emergency_radio` RAD-06, RAD-09, RAD-11, RAD-14, the scenarios `radio-emergency` and `sos-page`); compiled: `device` (2026-11-03); not verified on the device
 
+## D-65: The screen locks during the radio's emergency as it does otherwise
+Date: 2026-11-04   Status: decided
+Decided by: owner
+
+Context: The SOS page keeps the screen from locking while the SOS ping runs (`SosScreen::preventsAutoLock()`), but not for the radio's emergency of D-62, which lasts until the SOS is ended. About two minutes after the SOS began, the screen locks while the radio still runs, and a radio message or the "End SOS" key needs the screen unlocked first.
+Options: Keep the screen unlocked for as long as the radio's emergency lasts (an e-ink picture costs almost nothing to hold; the keys stay live in a pocket). Lock as before.
+Decision: Lock as before; the radio's emergency does not change the screen lock.
+Reason: The owner's choice.
+Consequences: Nothing in the code changes; `sim/scripts/radio-emergency.txt` presses "End SOS" before the lock, as built with D-64.
+Verified: not applicable (no change)
+
