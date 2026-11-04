@@ -1,7 +1,7 @@
 # data: sim/data
 # The radio's emergency (D-59, D-62): the radio is off in normal use; the SOS without a mobile network starts it and
 # switches save mode on (the modem is off, Wi-Fi off, D-67); anybody may write during it and is shown, the SOS
-# text is kept off the radio (D-61) and goes by SMS when a search (the timer, `[radio] cellular_retry`, 30 minutes by
+# text is kept off the radio (D-61) and goes by SMS when a search (the timer, `[radio] cellular_retry`, off by
 # default, 1 minute on this card; the radio page's control) finds a network; the one key "End SOS" ends it: the radio stops, cellular is
 # back as it was, and only the radio peer may write again.
 advance 5s

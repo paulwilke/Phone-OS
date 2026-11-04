@@ -741,7 +741,7 @@ Consequences: `src/app/Connectivity` and `EmergencyRadio` (a timer for the searc
 Verified: not verified (nothing built yet)
 
 ## D-67: During the radio's emergency the modem searches on demand and by a timer that can be set
-Date: 2026-11-04   Status: open (on demand and a settable timer are decided; the default of 30 minutes and the window of 90 seconds wait for the owner)
+Date: 2026-11-04   Status: open (on demand and a settable timer are decided; the window of 90 seconds waits for the owner); the default of 30 minutes superseded by D-68
 Decided by: owner (2026-11-04: a search on demand and perhaps a timer of about half an hour that can be set); agent (the window, the default, the limits)
 
 Context: D-66 had the modem search by itself every 10 minutes during the radio's emergency. The owner said on 2026-11-04 that a modem trying again and again where nothing works only empties the battery; he wants a switch that tries the mobile network once on demand, and perhaps a timer, about every half hour, that can be set.
@@ -750,4 +750,15 @@ Decision: The third. During the radio's emergency the modem is off. A search swi
 Reason: The owner's: no battery spent on a network that is not there, and a way to try when there is a reason to think it is back.
 Consequences: `src/app/Connectivity`, `EmergencyRadio`, the radio page, `config/schema.toml` (`[radio] cellular_retry`) and the parents' page, their tests, [emergency-radio.md](core/emergency-radio.md). The default and the window are open point 9.
 Verified: host-tested: the modem off in save mode, the search on demand and by the timer (set interval, 0 = never), a network found kept and a lost one searched for again, the SOS text leaving by SMS with the radio sending nothing, cellular put back with no timer left, sleep while the modem is off, hand switching refused both ways, the radio page control and the antenna note, `[radio] cellular_retry` in the loader and writer (`test_connectivity` CON-20 to CON-27, `test_emergency_radio` RAD-06, RAD-09 to RAD-11, RAD-14 to RAD-18, `test_screen_radio`, `test_config_loader`, the scenarios `radio-emergency` and `sos-page`); compiled: `device` (2026-11-04); not verified on the device
+
+## D-68: The timer of the mobile network search is off by default
+Date: 2026-11-04   Status: decided
+Decided by: owner
+
+Context: D-67 added the setting `[radio] cellular_retry`, the minutes between two searches for a mobile network during the radio's emergency, with 30 as the agent's proposal for its default and 0 for never.
+Options: 30 minutes by default (the SOS text leaves at most about half an hour after a network comes back, about 5 % of the time with the modem on). Off by default (no search unless somebody asks for one or the parents set an interval).
+Decision: Off by default: `cellular_retry` is 0. A search runs on demand (the radio page's control "Check mobile network now"), and by the timer only where the parents set an interval.
+Reason: The owner's: the battery is not spent on a network that is not there unless somebody chooses it.
+Consequences: `config/schema.toml`, `Profile`, the generated configuration files and the parents' page, [configuration-reference.md](configuration-reference.md), [connectivity.md](core/connectivity.md), [emergency-radio.md](core/emergency-radio.md). The simulator's card keeps 1 minute so that its scenario exercises the timer.
+Verified: host-tested (`test_config_loader`: the default is 0); compiled; not verified on the device
 

@@ -430,7 +430,7 @@
               "required": false,
               "secret": false,
               "apply": "restart",
-              "default": "30",
+              "default": "0",
               "min_val": 0,
               "max_val": 240,
               "enums": "",

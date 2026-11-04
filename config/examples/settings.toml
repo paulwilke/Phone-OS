@@ -45,7 +45,7 @@ auto_off_minutes = 10  # restart
 [radio]
 name = "phone-os"  # restart
 peer = ""  # restart
-cellular_retry = 30  # restart
+cellular_retry = 0  # restart
 
 [home]
 network = true  # restart
