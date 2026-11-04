@@ -110,7 +110,8 @@ bool ConfigWriter::writeSettings(const Profile& p) const {
 
   out += "[radio]\n";
   out += "name = "; appendStr(out, p.radioName); out += "\n";
-  out += "peer = "; appendStr(out, p.radioPeer); out += "\n\n";
+  out += "peer = "; appendStr(out, p.radioPeer); out += "\n";
+  out += "cellular_retry = "; appendInt(out, (int64_t)p.radioCellularRetryMinutes); out += "\n\n";
 
   for (size_t i = 0; i < p.quietHours.count(); ++i) {
     const QuietHours::Window& w = p.quietHours.window(i);

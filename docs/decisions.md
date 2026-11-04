@@ -25,7 +25,7 @@ Entries are added at the end and are never rewritten or deleted. To change a dec
 The first seven entries were written on 2026-10-11 from what the changelog and the open points already say; the dates of the original choices are not in the repository. Entries whose "Decided by" says that the owner has not confirmed them are waiting for that confirmation.
 
 ## D-1: The LoRa radio is not in 4.0
-Date: 2026-10-11 (recorded afterwards)   Status: decided
+Date: 2026-10-11 (recorded afterwards)   Status: decided; the part "a protocol of our own, MeshCore is not used" superseded by D-59
 Decided by: owner
 
 Context: The interface, the radio page, the settings and the message path exist and are tested against a fake, but nothing drives the chip. A driver and a protocol of our own are needed because MeshCore is not used.
@@ -650,3 +650,115 @@ Decision: ASCII golden frames in the format of `testing/Golden.h`; pictures in E
 Reason: Each choice is the one that reuses what the repository has (the golden format, the Python checks, the console) and adds nothing to secure or to install; the pictures in three languages where the layout is tight give the information without tripling the files.
 Consequences: The requirements are "must" where a choice settles them (R-19, R-23, R-43, R-57, R-67, R-70). The simulator is to print one result line per command (`ok` or `error: ...`), a bounded change of `sim/Simulator.h` that comes with the framework's first use; until then a framework reads up to an `echo` token. Open point 47 waits for the framework repository. A changed golden frame without a sentence in the pull request description is a finding of the review. Nothing on the device changes.
 Verified: host-tested (`scripts/check_docs.py` and `test/test_check_docs/`); not applicable on the device
+
+## D-59: The emergency radio is MeshCore as it is, fetched from its repository; a chat node, never a repeater
+Date: 2026-11-03   Status: decided
+Decided by: owner
+
+Context: D-1 left the radio for a later release and assumed a protocol of our own because MeshCore was not used. The owner said on 2026-11-03 that D-1 was about everything else and that MeshCore is now added: as open and free as it exists, as an emergency protocol, without the project's other rules for it. The interface `RadioLink` already has MeshCore's shape (contacts from advertisements, direct or flooded paths, delivery reports).
+Options: A protocol of our own on RadioLib (the requirements of open point 9: authenticated sender, AEAD, no default key; talks to nobody else). MeshCore unchanged (its cipher, its public channel, talks to every MeshCore device and repeater; a short MAC and a well-known public key). MeshCore changed by us (a fork to maintain).
+Decision: MeshCore unchanged. The firmware fetches it from MeshCore's repository at build time, pinned to a commit; nothing of MeshCore is copied into this repository. Only the one adapter file in `device/` that implements `RadioLink` includes it; `src/` and the screens stay ours and do not know MeshCore. The device is a chat node (companion) and never a repeater. MeshCore's own cipher, public channel and contacts are used as they are; the requirements of open point 9 (AEAD, no default key, authenticated sender beyond MeshCore's) do not apply to it. The radio is an emergency path: hidden in normal use, it becomes active when the SOS is used without a mobile network, and then strangers may write to the device and the device to them (the rule that only `[radio] peer` may write does not hold in an emergency).
+Reason: The owner's: in an emergency without a network, reaching anybody in range counts more than the project's own rules, and the existing MeshCore network (devices and repeaters) is only reachable with its protocol unchanged.
+Consequences: `scripts/check_layers.py` allows a MeshCore include in that one adapter file only; THIRD_PARTY.md names MeshCore (MIT) and what it brings as used in the firmware binary. The simulator and the host tests stay on the fake radio. What the SOS sends over the radio, when the emergency ends and what the device shows meanwhile are open point 9. Duty cycle: MeshCore's own airtime limit, set for the EU sub-band.
+Verified: host-tested: the application's side (when the emergency begins, who may write, the radio kept off for the SOS: `test_emergency_radio`, the scenario `radio-emergency`); compiled: the adapter, MeshCore and its start in `device/main.cpp` (2026-11-03); the adapter itself is not host-tested (it needs the chip); not verified on the device
+
+
+## D-60: How the MeshCore adapter is built and set (details of D-59 that the agent chose)
+Date: 2026-11-03   Status: open; item (2) superseded by D-61
+Decided by: agent (waiting for the owner's confirmation)
+
+Context: D-59 fixed MeshCore as it is, fetched at build time, one adapter, a chat node. Building it left choices that D-59 does not make and that have a reasonable alternative.
+Options: See the decision; each item names the alternative.
+Decision: (1) MeshCore is pinned to commit `81dbae59` (tag `companion-v1.18.0`) in `lib_deps`, with RadioLib 7.8.1 and Crypto 0.4.0 at exact versions (MeshCore asks for ranges). It is fetched as a library but compiled file by file from the fetched copy (`lib_ignore` and `build_src_filter`), because its own library build compiles files that need a board variant's `target.h`; the alternative, a stub `target.h` of ours, would put code of ours under MeshCore's names. (2) The radio runs at MeshCore's own EU setting, 869.618 MHz, 62.5 kHz, SF 8, coding rate 4/5, 22 dBm, and the airtime factor is 9, so the device is on air at most a tenth of the time (the limit of the 869.4 to 869.65 MHz sub-band); the alternative is a wider, slower preset. The chip's values (DIO2 antenna switch, TCXO 2.4 V, 140 mA, boosted receive) are those of Meck's variant for this board, whose pins equal `PinMap.h`. MeshCore has no variant for the T-Deck Pro MAX. (3) Only chat nodes become contacts; a full list drops the oldest, because in an emergency the stranger in range is the one that counts. (4) Remote commands, requests, signed messages and channel messages are ignored; the adapter shows direct messages only. The public channel of D-59 and open point 9 (a) cannot be sent on through `RadioLink`, which names contacts only; sending to it needs a change to the interface. (5) With no default contact chosen, messages go to the contact heard most recently. (6) A received message carries our time of receipt, not the sender's; while the clock is unknown, MeshCore is given 2020-01-01 plus the uptime so that its time never goes back and is never 0.
+Reason: Each is the smallest thing that builds and follows D-59 without code of MeshCore in this repository; (2) keeps the regulator's limit, (3) to (6) keep the emergency path simple.
+Consequences: `platformio.ini`, `device/MeshCoreRadio.{h,cpp}`, `scripts/check_layers.py` (an include of MeshCore anywhere but in `MeshCoreRadio.cpp` fails, and `MeshCoreRadio.h` is free to include), THIRD_PARTY.md. The adapter is not started by `device/main.cpp`; it keeps neither contacts nor identity unless the caller stores `identity()` (open point 9).
+Verified: compiled (2026-11-03); not verified on the device
+
+## D-61: The radio talks with home and others, the SOS sends nothing on it yet; the EU setting with a hard airtime limit
+Date: 2026-11-03   Status: decided
+Decided by: owner (the airtime factor: agent, from the owner's demand that the limit be hard)
+
+Context: Open point 9 (a) proposed that the SOS without a network sends its text and position once on MeshCore's public channel and to every contact. D-60 (2) set MeshCore's EU setting at 22 dBm and an airtime factor of 9. The owner answered both on 2026-11-03. MeshCore's limit is a budget that holds one hour's share and refills at that share (`Dispatcher::updateTxBudget` at the pinned commit), so a full budget plus the refill can send twice the share within one hour: with factor 9 up to a fifth of the hour.
+Options: SOS on the public channel with the position (reaches everybody, disturbs everybody) or no SOS on the radio yet. Airtime factor 9 (10 % on average, up to 20 % in one hour) or 20 (4.8 % on average, at most 9.6 % in any hour plus half a packet).
+Decision: The SOS sends nothing on the radio until it is built as its own step: no message on the public channel, no position. What counts is that the device can hold a conversation over the radio with home or with others; sending the SOS message over the radio comes later as its own step. The EU setting of MeshCore stays (869.618 MHz, 62.5 kHz, SF 8, 22 dBm) with the antenna that came with the device, which has no gain of its own; the device must show where that setting holds (Europe only). The airtime limit is hard: the factor is 20, so no hour has more than a tenth of its time on air.
+Reason: The owner's: an SOS sent to everyone with coordinates would annoy everybody in range, and a conversation with home is the point of the radio. The factor follows from the shape of MeshCore's budget, so that the 10 % of the 869.4 to 869.65 MHz sub-band holds in every hour, not only on average.
+Consequences: `device/MeshCoreRadio.cpp` (`getAirtimeBudgetFactor` returns 20). Open point 9 (a) is dropped; (b) to (d) wait. The note that the setting is for Europe goes on the radio page in the next step of the radio (three languages) and is in [device.md](hardware/device.md). `RadioLink` needs no public channel yet.
+Verified: host-tested: the SOS text is cellular-only and never on the radio (`test_emergency_radio`, `test_messaging`), the radio page's note on Europe in three languages (`test_screen_radio`); compiled: the airtime factor 20; not verified on the device
+
+## D-62: The radio's emergency lasts until the SOS is ended; anybody may write during it; save mode comes back with it
+Date: 2026-11-03   Status: decided; the part "save mode: radio only, cellular off" superseded by D-64
+Decided by: agent (confirmed by owner on 2026-11-03)
+
+Context: D-59 makes the radio an emergency path that becomes active when the SOS is used without a mobile network and lets strangers write then. It left open when the emergency ends, who may write outside it, and what becomes of save mode, which D-1 took out of 4.0 to come back with the radio.
+Options: End the emergency when the SOS is ended on the device, when the mobile network returns, or after a time (a child loses the radio in the middle of a conversation). Outside the emergency, keep the rule that only `[radio] peer` may write, or let anybody write always (strangers in normal use). Save mode now or later.
+Decision: The emergency stays on until the SOS is ended on the device; then the radio stops. During it, messages from anybody are shown and can be answered. Outside it, only `[radio] peer` may write, as today. Save mode (radio only, mobile network and Wi-Fi off) comes back with the radio as D-1 says: the emergency radio switches battery saving on implicitly.
+Reason: The device's user decides when the emergency is over, not the coverage; and the normal days stay as closed as they are.
+Consequences: `src/app` (Messaging's acceptance rule, the start and stop of the radio, save mode), host tests for each; open point 9 keeps the start on the device and the trial.
+Verified: host-tested: the acceptance rule, the start and stop requests and save mode (`test_emergency_radio`, `test_connectivity`, `test_messaging`, the scenario `radio-emergency`); compiled: the start and stop in `device/main.cpp`; not verified on the device
+
+## D-63: How the radio's emergency is built (details of D-59, D-61 and D-62 that the agent chose)
+Date: 2026-11-03   Status: open
+Decided by: agent (waiting for the owner's confirmation)
+
+Context: D-62 says the emergency begins when the SOS is used without a mobile network, lasts until the SOS is ended on the device, and brings save mode back. Building it left choices that those decisions do not make and that have reasonable alternatives.
+Options: Each item names the alternative.
+Decision: (1) "The SOS is ended on the device" is a new key, "End SOS", on the SOS page while the emergency lasts; the alternatives are leaving the page, or the end of the ping (the child could then not keep a conversation while looking at other pages). (2) The emergency begins when an emergency or a pickup ping starts and the device is not registered at that moment; a network lost later, or a press that is cancelled, does not begin it. (3) Save mode switches cellular off at once, so the SOS text, which is sent after the position search, cannot leave while the emergency lasts: it waits in the queue and goes by SMS after "End SOS", when cellular is back (the alternative, keeping the modem on, would let the text out if a network appears and contradicts "radio only"). Switching cellular or Wi-Fi on is refused while it holds, and there is no notice for that. (4) The text of an SOS and the reply to a parent's position query are sent cellular-only: they never take the radio, which until now was the fallback and would have sent the position to the contact heard last (D-61); other texts keep the fallback to the radio's default contact. (5) The node advertises itself once when the radio starts and every ten minutes, under `[radio] name` (default `phone-os`), because MeshCore delivers a message only from a node it knows; the name is heard by everybody in range, so the parents should not put the child's name in it. (6) Only the identity is kept on the card (`/radio-identity.txt`, hex, plain text as D-55); contacts are heard again after a restart. (7) During the emergency the child may answer whoever wrote even when the profile has free text off (the compose page then offers the short texts). (8) The chip's power follows "a radio is attached", not "a contact is known", which would have cut the rail of a radio that had just started. (9) The tile of the radio page stays as it is (shown where `features.radio` is on); "hidden in normal use" is not built (see open point 9). A radio message makes no sound or vibration, also in the emergency.
+Reason: Each is the smallest thing that builds D-59, D-61 and D-62 without a new feature; (3) and (4) are consequences of D-61 and D-62 that the owner should see.
+Consequences: `src/app/EmergencyRadio.{h,cpp}`, `Connectivity` (save mode, stop request), `Messaging` (cellular-only, acceptance), `Emergency`, `AppCore`, the SOS and radio pages, `device/main.cpp`, `docs/core/emergency-radio.md`. Open point 9 lists what the owner must confirm.
+Verified: host-tested (the application, the pages, the scenario); compiled (`device/main.cpp`); not verified on the device
+
+## D-64: During the radio's emergency the modem stays on and keeps searching; only Wi-Fi is off
+Date: 2026-11-03   Status: decided; the part "the modem stays on and keeps searching" superseded by D-66
+Decided by: owner
+
+Context: D-62 brought save mode back as D-1 described it: radio only, cellular and Wi-Fi off. Built that way, the emergency switched the modem off the moment the SOS began without a network, and the SOS text, which is due 25 to 120 seconds later, waited until the SOS was ended on the device even if a network had come back in the meantime (D-63, item 3).
+Options: Radio only, cellular off (saves the modem's current, the SOS text waits for the end of the emergency). The modem stays on and keeps searching, Wi-Fi off (costs the modem's search current, the SOS text goes out as soon as a network is found).
+Decision: During the radio's emergency the modem stays on and keeps searching for a network; if it was switched off, the emergency switches it on, and switching it off is refused while the emergency lasts. Wi-Fi stays off. The SOS text goes by SMS as soon as the modem is registered, while the radio keeps running until the SOS is ended on the device (D-62). At the end, cellular is put back as it was before.
+Reason: The owner's: on a child's emergency phone the SOS text must leave at the first chance; the battery the search costs is worth it.
+Consequences: `src/app/Connectivity` (save mode keeps cellular on), `EmergencyRadio`, their host tests, `sim/scripts/radio-emergency.txt` and `sos-page.txt`, [emergency-radio.md](core/emergency-radio.md). D-63 item 3 is settled by this entry.
+Verified: host-tested: the modem kept on and switched on if it was off, cellular off refused, cellular put back at the end, the SOS text leaving by SMS during the emergency with the radio sending nothing (`test_connectivity` CON-20, CON-21, `test_emergency_radio` RAD-06, RAD-09, RAD-11, RAD-14, the scenarios `radio-emergency` and `sos-page`); compiled: `device` (2026-11-03); not verified on the device
+
+## D-65: The screen locks during the radio's emergency as it does otherwise
+Date: 2026-11-04   Status: decided
+Decided by: owner
+
+Context: The SOS page keeps the screen from locking while the SOS ping runs (`SosScreen::preventsAutoLock()`), but not for the radio's emergency of D-62, which lasts until the SOS is ended. About two minutes after the SOS began, the screen locks while the radio still runs, and a radio message or the "End SOS" key needs the screen unlocked first.
+Options: Keep the screen unlocked for as long as the radio's emergency lasts (an e-ink picture costs almost nothing to hold; the keys stay live in a pocket). Lock as before.
+Decision: Lock as before; the radio's emergency does not change the screen lock.
+Reason: The owner's choice.
+Consequences: Nothing in the code changes; `sim/scripts/radio-emergency.txt` presses "End SOS" before the lock, as built with D-64.
+Verified: not applicable (no change)
+
+## D-66: During the radio's emergency the modem is off and searches again every few minutes
+Date: 2026-11-04   Status: superseded by D-67
+Decided by: owner (2026-11-04: search every few minutes); agent (the numbers and the rest, not confirmed by the owner)
+
+Context: D-64 kept the modem on and searching for the whole radio emergency, so that the SOS text leaves at the first chance. The owner then explained the background on 2026-11-04: the radio is not a normal function (ideally a LoRa antenna is screwed on for it); it is for the case that the mobile network has failed, and then the battery is to be saved, because without LTE the modem is of no use. He chose that the modem searches every few minutes.
+Options: The modem searches all the time (D-64: the SOS text leaves at once, the most current). Off until the SOS is ended (D-62 as built first: the least current, the SOS text waits). Off, and every few minutes switched on to search for a while (most of the saving, the SOS text leaves at the next search that finds a network).
+Decision: The third. Agent's proposal for the numbers: every 10 minutes the modem is switched on and searches for at most 90 seconds (about 15 % of the time); without a network it is switched off again. Once it is registered, it stays on as long as it keeps the network: the queued SOS text leaves by SMS, and calls and texts work as usual; a network lost again starts the searches again. Wi-Fi stays off; the radio runs until the SOS is ended (D-62); at the end, cellular is put back as it was before (D-64). The search again of the start ([D-58](decisions.md) on its own branch) is a different case and stays apart.
+Reason: The owner's: without a network the modem only costs battery, but the SOS text must not be lost. Ten minutes and 90 seconds: a registration took 26 s on the device, a search by hand up to 120 s; a child waits at most about 12 minutes for the SOS text to leave after a network comes back.
+Consequences: `src/app/Connectivity` and `EmergencyRadio` (a timer for the searches), their host tests, `sim/scripts/radio-emergency.txt`, [emergency-radio.md](core/emergency-radio.md); the interval and the window are listed in open point 9.
+Verified: not verified (nothing built yet)
+
+## D-67: During the radio's emergency the modem searches on demand and by a timer that can be set
+Date: 2026-11-04   Status: open (on demand and a settable timer are decided; the window of 90 seconds waits for the owner); the default of 30 minutes superseded by D-68
+Decided by: owner (2026-11-04: a search on demand and perhaps a timer of about half an hour that can be set); agent (the window, the default, the limits)
+
+Context: D-66 had the modem search by itself every 10 minutes during the radio's emergency. The owner said on 2026-11-04 that a modem trying again and again where nothing works only empties the battery; he wants a switch that tries the mobile network once on demand, and perhaps a timer, about every half hour, that can be set.
+Options: Searches by themselves at a fixed interval (D-66: the battery is spent whether or not a network can come). On demand only (no battery spent unasked, but the SOS text waits for somebody to press). On demand and a timer that can be set, switched off with 0 (the parents choose the trade-off).
+Decision: The third. During the radio's emergency the modem is off. A search switches it on for at most 90 seconds and off again if it found no network; once registered it stays on as long as it keeps the network, the queued SOS text leaves by SMS, and calls and texts work. A search runs when the radio page's control "Check mobile network now" is used, and every `[radio] cellular_retry` minutes (agent's proposal: default 30, 0 = never). Switching cellular by hand stays refused during the emergency; the control is the way. Wi-Fi stays off; the radio runs until the SOS is ended (D-62); at the end, cellular is put back as it was (D-64).
+Reason: The owner's: no battery spent on a network that is not there, and a way to try when there is a reason to think it is back.
+Consequences: `src/app/Connectivity`, `EmergencyRadio`, the radio page, `config/schema.toml` (`[radio] cellular_retry`) and the parents' page, their tests, [emergency-radio.md](core/emergency-radio.md). The default and the window are open point 9.
+Verified: host-tested: the modem off in save mode, the search on demand and by the timer (set interval, 0 = never), a network found kept and a lost one searched for again, the SOS text leaving by SMS with the radio sending nothing, cellular put back with no timer left, sleep while the modem is off, hand switching refused both ways, the radio page control and the antenna note, `[radio] cellular_retry` in the loader and writer (`test_connectivity` CON-20 to CON-27, `test_emergency_radio` RAD-06, RAD-09 to RAD-11, RAD-14 to RAD-18, `test_screen_radio`, `test_config_loader`, the scenarios `radio-emergency` and `sos-page`); compiled: `device` (2026-11-04); not verified on the device
+
+## D-68: The timer of the mobile network search is off by default
+Date: 2026-11-04   Status: decided
+Decided by: owner
+
+Context: D-67 added the setting `[radio] cellular_retry`, the minutes between two searches for a mobile network during the radio's emergency, with 30 as the agent's proposal for its default and 0 for never.
+Options: 30 minutes by default (the SOS text leaves at most about half an hour after a network comes back, about 5 % of the time with the modem on). Off by default (no search unless somebody asks for one or the parents set an interval).
+Decision: Off by default: `cellular_retry` is 0. A search runs on demand (the radio page's control "Check mobile network now"), and by the timer only where the parents set an interval.
+Reason: The owner's: the battery is not spent on a network that is not there unless somebody chooses it.
+Consequences: `config/schema.toml`, `Profile`, the generated configuration files and the parents' page, [configuration-reference.md](configuration-reference.md), [connectivity.md](core/connectivity.md), [emergency-radio.md](core/emergency-radio.md). The simulator's card keeps 1 minute so that its scenario exercises the timer.
+Verified: host-tested (`test_config_loader`: the default is 0); compiled; not verified on the device
+

@@ -695,6 +695,26 @@ void test_radio_section_gives_no_mesh_alias_diagnostic() {
   TEST_ASSERT_EQUAL_STRING("MyNode", r.profile.radioName.c_str());
 }
 
+// [radio] cellular_retry (D-67, D-68): minutes between the modem's searches during the radio's emergency; 0 = never, the default.
+void test_the_cellular_retry_defaults_to_off_takes_zero_to_240_and_survives_the_writer() {
+  FakeConfigStore store;
+  TEST_ASSERT_EQUAL(0, ConfigLoader(store).load().profile.radioCellularRetryMinutes);
+  for (int n : {0, 1, 45, 240}) {
+    store.put("/config/settings.toml", "[radio]\ncellular_retry = " + std::to_string(n) + "\n");
+    auto r = loadWith(store);
+    TEST_ASSERT_FALSE(hasDiag(r.diagnostics, Diagnostic::Code::OutOfRange));
+    TEST_ASSERT_EQUAL(n, r.profile.radioCellularRetryMinutes);
+  }
+  store.put("/config/settings.toml", "[radio]\ncellular_retry = 241\n");
+  auto bad = loadWith(store);
+  TEST_ASSERT_TRUE(hasDiag(bad.diagnostics, Diagnostic::Code::OutOfRange));
+  TEST_ASSERT_EQUAL(0, bad.profile.radioCellularRetryMinutes);
+  auto r1 = ConfigLoader(store).load();
+  r1.profile.radioCellularRetryMinutes = 90;
+  TEST_ASSERT_TRUE(ConfigWriter(store).writeSettings(r1.profile));
+  TEST_ASSERT_EQUAL(90, ConfigLoader(store).load().profile.radioCellularRetryMinutes);
+}
+
 // ---------------------------------------------------------------------------
 // [modem] apn: it ends up inside an AT command, so only an APN's own characters pass
 // ---------------------------------------------------------------------------
@@ -1207,6 +1227,7 @@ int main() {
   RUN_TEST(test_unknown_timezone_is_reported);
   RUN_TEST(test_oversized_file_is_skipped_with_diagnostic);
   RUN_TEST(test_radio_section_gives_no_mesh_alias_diagnostic);
+  RUN_TEST(test_the_cellular_retry_defaults_to_off_takes_zero_to_240_and_survives_the_writer);
   RUN_TEST(test_writer_settings_round_trip);
   RUN_TEST(test_writer_changed_settings_persist);
   RUN_TEST(test_writer_contacts_round_trip);

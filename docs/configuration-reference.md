@@ -197,6 +197,7 @@ Takes effect on next start.
 |-----|------|---------|----------|-------|
 | `name` | string | `phone-os` | no | restart |
 | `peer` | string | `—` | no | restart |
+| `cellular_retry` | integer | `0` | no | restart |
 
 #### `name`
 
@@ -207,6 +208,12 @@ Takes effect on next start.
 #### `peer`
 
 String, at most 32 characters.
+Takes effect on next start.
+
+#### `cellular_retry`
+
+Integer, 0–240.
+Default: `0`.
 Takes effect on next start.
 
 ### `[home]`

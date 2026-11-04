@@ -1,0 +1,78 @@
+# data: sim/data
+# The radio's emergency (D-59, D-62): the radio is off in normal use; the SOS without a mobile network starts it and
+# switches save mode on (the modem is off, Wi-Fi off, D-67); anybody may write during it and is shown, the SOS
+# text is kept off the radio (D-61) and goes by SMS when a search (the timer, `[radio] cellular_retry`, off by
+# default, 1 minute on this card; the radio page's control) finds a network; the one key "End SOS" ends it: the radio stops, cellular is
+# back as it was, and only the radio peer may write again.
+advance 5s
+check radio no
+check emergency-radio no
+
+# A stranger cannot write when the radio runs in normal use: only [radio] peer may.
+radio start
+advance 2s
+radio peer Stranger
+radio msg Stranger Hello from the road
+advance 1s
+check unread 0
+check radio yes
+
+# An SOS with a network is the usual one: no emergency of the radio.
+key down down select
+key select
+advance 40s
+check sms-sent 1
+check emergency-radio no
+check cellular on
+key back
+
+# An SOS without a network begins the emergency: save mode (the modem is off), and the stranger is heard.
+network none
+advance 5s
+key select
+key select
+advance 2s
+check emergency-radio yes
+check cellular off
+radio msg Stranger Hello from the road
+advance 1s
+check unread 1
+
+# The text of the SOS waits for the network and is not sent on the radio. The timer (1 minute on this card) switches the
+# modem on to search; it finds nothing and the modem is off again after the window of 90 seconds. (A key now and
+# then keeps the device from locking, D-65.)
+advance 61s
+check cellular on
+check sms-sent 1
+key up
+advance 90s
+check cellular off
+check sms-sent 1
+key up
+see sos.end
+
+# A network is back, but nobody looks: the modem stays off until the timer searches (D-67). It finds the network,
+# the text goes by SMS, the modem stays on, the emergency and the radio go on (D-62).
+network Example Mobile
+advance 10s
+check sms-sent 1
+check cellular off
+key up
+advance 60s
+check sms-sent 2
+check cellular on
+check emergency-radio yes
+check radio yes
+
+# The child ends the SOS: the radio stops, cellular is back as it was, the stranger is dropped again.
+key select
+advance 2s
+check emergency-radio no
+check radio no
+check cellular on
+radio start
+advance 2s
+radio peer Stranger
+radio msg Stranger Are you still there
+advance 1s
+check unread 1

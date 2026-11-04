@@ -2,12 +2,12 @@
 
 Code: `src/app/PowerCoordination.{h,cpp}`; tests in `test/test_power_coordination/`. Applies the power policy ([power-policy.md](power-policy.md)) to the hardware. The policy only decides; this component acts on the decision and owns the one piece of state it needs: whether the modem has been put to sleep.
 
-What the policy needs to know about the rest of the device comes in as a plain `Needs` (a call, work that could be done, a usable radio, Wi-Fi), so that this component depends on none of the others.
+What the policy needs to know about the rest of the device comes in as a plain `Needs` (a call, work that could be done, a radio that is attached, Wi-Fi), so that this component depends on none of the others.
 
 ## What `apply` does
 
 - The **modem** is put to sleep after a quiet minute, once, and woken when the policy says so (a key press, queued work, a call). Each is logged. With **cellular off** it is neither put to sleep nor woken. A modem without a network never sleeps. **A registered modem waits for its IMS** (rule 9, decision [D-35](../decisions.md)): `apply` notes the uptime of the pass in which the modem becomes registered (ready, dialling, ringing or in a call), and every new registration, after a lost network, a restart of the modem or switching it on, starts the count again; it hands the policy the seconds since then and whether the voice status is settled (`Ready` or `SmsOnly`). The policy keeps the modem, and with it the processor, awake until the voice status is settled or `PowerPolicy::kImsWaitSeconds` (120 s) have passed. Tests POW-17 and POW-18 in `test_power_coordination`; not verified on the device (open point 37).
-- The **radio chip** gets power only while the radio software uses it, and the change is logged; a switch that fails is not claimed and is tried again at the next call.
+- The **radio chip** gets power only while the radio software uses it (a radio is attached; not "knows a contact": a radio that has just started knows nobody yet), and the change is logged; a switch that fails is not claimed and is tried again at the next call.
 - The decision for the **processor** goes back to the main program, which sleeps it (that is hardware). On the cable, with a lit display, or with Wi-Fi running it does not sleep; with the display off and the modem asleep it may, for at most the time until the next redraw.
 
 `noteInput()` is a key press; `noteModemAwake()` says the modem did something (a message, a call, a switch of its power).

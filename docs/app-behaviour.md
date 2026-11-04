@@ -14,7 +14,8 @@ The application core is split into small components with one owner each, compose
 | Messaging | incoming SMS and radio messages, routing, the queue, delivery reports, send failures, deletion |
 | Calls | dialling and answering rules, school-time rejection, failed-call reasons, volume |
 | Emergency | the SOS flow, the SOS ping and the reply to a remote query, one search at a time |
-| Connectivity | cellular on and off, radio start and restart requests, Wi-Fi |
+| Connectivity | cellular on and off, radio start, stop and restart requests, save mode, Wi-Fi |
+| EmergencyRadio | the radio's emergency (D-62): begins with an SOS without a mobile network, lasts until the SOS is ended on the device |
 | WifiController | Wi-Fi modes, the idle switch-off, the access point password |
 | PowerCoordination | the power policy applied to modem, radio chip and processor; the front light |
 | AppCore | the facade: owns the components, `poll()`, the entry points the interface calls, the read-only state |
@@ -236,6 +237,8 @@ Tests in `test/test_messaging/`.
 | MSG-62 | With no radio peer configured no radio message is accepted | `test_with_no_radio_peer_configured_no_radio_message_is_accepted` | — | done |
 | MSG-63 | A flood from another radio name is one line and one summary, and the peer still gets through | `test_a_flood_from_another_radio_name_is_one_line_and_one_summary_and_the_peer_still_gets_through` | — | done |
 | MSG-64 | The peer name is compared exactly, case and spaces included, as the radio reports it | `test_the_peer_name_is_compared_exactly_and_the_case_is_the_radios` | — | done |
+| MSG-65 | A cellular-only text (the SOS, a reply to a query) never takes the radio, not even from the queue, and goes out when the network is back | `test_a_cellular_only_text_never_takes_the_radio_and_waits_for_the_network` | — | done |
+| MSG-66 | A queued text that cannot leave (cellular off, may not take the radio) is no work and keeps nothing awake | `test_a_text_that_cannot_leave_is_no_work` | — | done |
 
 ## Dropped lines
 
@@ -386,6 +389,39 @@ Tests in `test/test_connectivity/`.
 | CON-16 | A switch-on that fails is logged | `test_a_failed_switch_on_is_logged` | — | done |
 | CON-18 | An unknown battery level does not refuse Wi-Fi | `test_an_unknown_battery_does_not_refuse_wifi` | — | done |
 | CON-19 | poll() keeps the Wi-Fi controller going | `test_poll_keeps_wifi_going` | — | done |
+| CON-20 | Save mode switches the modem off at once and Wi-Fi off, refuses switching cellular on or off by hand and Wi-Fi on while it holds, and frees them at its end | `test_save_mode_switches_the_modem_off_wifi_off_and_refuses_the_opposite` | — | done |
+| CON-21 | Cellular that was off stays off in save mode and is off again at its end | `test_save_mode_with_cellular_off_before_leaves_it_off` | — | done |
+| CON-22 | A radio stop is requested once, and only for a radio that runs | `test_the_radio_stop_is_requested_once_and_only_for_a_radio_that_runs` | — | done |
+| CON-23 | A search on demand switches the modem on and off again after 90 seconds without a network | `test_a_search_on_demand_ends_after_the_window_without_a_network` | — | done |
+| CON-24 | With the timer at 0 nothing searches by itself, the search on demand still works | `test_timer_zero_never_searches_by_itself` | — | done |
+| CON-25 | The timer searches at the set interval, counted from the switching off | `test_the_timer_searches_at_the_set_interval` | — | done |
+| CON-26 | A network found during a search keeps the modem on; a network lost starts a new window | `test_a_network_found_keeps_the_modem_on_and_a_lost_one_starts_the_search_again` | — | done |
+| CON-27 | Leaving save mode leaves no timer, and a search outside save mode is nothing | `test_leaving_save_mode_stops_the_timer` | — | done |
+
+## The radio's emergency
+
+Tests in `test/test_emergency_radio/`.
+
+| Id | Behaviour | Test | Previous | Status |
+|---|---|---|---|---|
+| RAD-01 | An SOS with a mobile network does not begin the emergency | `test_an_sos_with_a_network_does_not_begin_the_radio_emergency` | — | done |
+| RAD-02 | An SOS without a network begins it and asks the host for the radio, once | `test_an_sos_without_a_network_begins_it_and_asks_for_the_radio` | — | done |
+| RAD-03 | A pickup begins it as well | `test_a_pickup_without_a_network_begins_it_too` | — | done |
+| RAD-04 | With the radio not allowed nothing of it happens | `test_with_the_radio_not_allowed_nothing_of_it_happens` | — | done |
+| RAD-05 | The reply to a parent's query does not begin it | `test_the_reply_to_a_query_does_not_begin_it` | — | done |
+| RAD-06 | Save mode: the modem is off and Wi-Fi is off; switching cellular on or off by hand, or Wi-Fi on, is refused while it lasts | `test_save_mode_switches_the_modem_off_and_wifi_off_and_refuses_the_opposite` | — | done |
+| RAD-07 | A stranger's radio message is dropped outside the emergency and stored unread during it | `test_a_stranger_is_dropped_outside_the_emergency_and_heard_during_it` | — | done |
+| RAD-08 | A stranger can be answered during it | `test_a_stranger_can_be_answered_during_the_emergency` | — | done |
+| RAD-09 | The SOS text never goes on the radio; without a network it waits in the queue and the emergency goes on | `test_the_sos_text_never_goes_on_the_radio_and_waits_while_there_is_no_network` | — | done |
+| RAD-10 | Ending the SOS asks the host to stop the radio, ends save mode, and closes the door to strangers again | `test_ending_the_sos_stops_the_radio_ends_save_mode_and_closes_the_door_again` | — | done |
+| RAD-11 | Cellular that the child had switched off stays off in the emergency, a search switches it on, and it is off again after the emergency | `test_cellular_that_the_child_switched_off_stays_off_until_a_search_and_is_off_after` | — | done |
+| RAD-12 | A radio that does not start ends the emergency and gives cellular back | `test_a_radio_that_does_not_start_ends_the_emergency` | — | done |
+| RAD-13 | The chip stays powered while the radio runs without a contact | `test_the_radio_chip_stays_powered_while_the_radio_runs_without_a_contact` | — | done |
+| RAD-14 | A search on demand that finds a network keeps the modem on and lets the SOS text out by SMS while the emergency and the radio go on, and the radio sends nothing | `test_a_search_on_demand_that_finds_a_network_lets_the_sos_text_out_by_sms` | — | done |
+| RAD-15 | The timer searches and finds the network (the queued SOS text leaves), a network lost again is searched for, then the modem is off; the timer counts from the switching off | `test_the_timer_searches_and_a_lost_network_starts_the_search_again` | — | done |
+| RAD-16 | With the timer at 0 the modem is never searched by itself, the control still works | `test_timer_zero_never_searches_by_itself_and_the_control_still_does` | — | done |
+| RAD-17 | The search control does nothing outside the emergency | `test_the_search_control_does_nothing_outside_the_emergency` | — | done |
+| RAD-18 | With the modem off between searches the processor may sleep; during a search it does not | `test_the_device_may_sleep_while_the_modem_is_off_during_the_emergency` | — | done |
 
 ## One Wi-Fi controller and the parents' page
 

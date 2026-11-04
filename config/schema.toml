@@ -590,6 +590,22 @@ apply   = "restart"
 secret  = false
 required = false
 
+[[key]]
+file    = "settings"
+section = "radio"
+group   = "advanced"
+name    = "cellular_retry"
+type    = "integer"
+default = "0"
+min_val = 0
+max_val = 240
+label   = "config.radio.cellular_retry.label"
+help    = "config.radio.cellular_retry.help"
+field   = "radioCellularRetryMinutes"
+apply   = "restart"
+secret  = false
+required = false
+
 # ---------------------------------------------------------------------------
 # Keys — settings.toml / [home]
 # Which tiles of the home screen's second page the child sees (owner, 2026-10-08). The first page is the

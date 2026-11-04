@@ -123,6 +123,76 @@ void test_the_words_are_those_of_the_language_of_the_moment() {
   TEST_ASSERT_TRUE(page.says("Funk aus (Neustart)", FontSize::Text, true));
 }
 
+void test_the_page_says_that_the_radio_setting_holds_for_europe_only() {
+  const std::string note = "The radio setting holds for Europe only (EU, 869 MHz).";
+  Page off;                                                             // not allowed: no radio, no note
+  TEST_ASSERT_FALSE(off.saysWrapped(note));
+  Page page(allowed());
+  TEST_ASSERT_TRUE(page.saysWrapped(note));
+  page.radioRuns();
+  TEST_ASSERT_TRUE(page.saysWrapped(note));
+  page.rig.language("de");
+  page.draw();
+  TEST_ASSERT_TRUE(page.saysWrapped("Die Funkeinstellung gilt nur f\xC3\xBCr Europa (EU, 869 MHz)."));
+  page.rig.language("fr");
+  page.draw();
+  TEST_ASSERT_TRUE(page.saysWrapped("Le r\xC3\xA9glage radio ne vaut que pour l'Europe (UE, 869 MHz)."));
+}
+
+void test_during_the_emergency_a_contact_can_be_written_to_without_free_text() {
+  Page page(allowed(false));
+  page.radioRuns();
+  page.rig.modem.setNetwork("", 0);
+  page.rig.poll();
+  TEST_ASSERT_TRUE(page.rig.core.beginSos());
+  TEST_ASSERT_TRUE(page.rig.core.chooseSos(SosPing::Kind::Emergency));
+  page.rig.poll();
+  page.draw();
+  TEST_ASSERT_TRUE(page.rig.core.state().emergencyRadio);
+  page.down(2);                                  // the stop and the search come first
+  TEST_ASSERT_EQUAL_STRING("Write", page.screen.softKeys().action.c_str());
+  TEST_ASSERT_TRUE(page.screen.handle(Input::pressed(Key::Select)));
+  TEST_ASSERT_TRUE(page.rig.nav.opened(screen::kCompose));
+  TEST_ASSERT_TRUE(page.rig.session.viaRadio);
+}
+
+void test_the_page_says_that_a_lora_antenna_is_ideally_screwed_on() {
+  const std::string note = "Ideally a LoRa antenna is screwed on for the radio.";
+  Page off;                                                             // not allowed: no radio, no note
+  TEST_ASSERT_FALSE(off.saysWrapped(note));
+  Page page(allowed());
+  TEST_ASSERT_TRUE(page.saysWrapped(note));
+  page.rig.language("de");
+  page.draw();
+  TEST_ASSERT_TRUE(page.saysWrapped("F\xC3\xBCr den Funk am besten eine LoRa-Antenne aufschrauben."));
+  page.rig.language("fr");
+  page.draw();
+  TEST_ASSERT_TRUE(page.saysWrapped("Pour la radio, visser de pr\xC3\xA9" "f\xC3\xA9rence une antenne LoRa."));
+}
+
+// D-67: the control that checks the mobile network is offered during the emergency only, and asks for one search.
+void test_the_control_that_checks_the_mobile_network_is_offered_during_the_emergency_only() {
+  Page page(allowed());
+  page.radioRuns();
+  TEST_ASSERT_FALSE(page.says("Check mobile network", FontSize::Text));
+  page.rig.modem.setNetwork("", 0);
+  page.rig.poll();
+  TEST_ASSERT_TRUE(page.rig.core.beginSos());
+  TEST_ASSERT_TRUE(page.rig.core.chooseSos(SosPing::Kind::Emergency));
+  page.rig.poll();
+  page.draw();
+  TEST_ASSERT_TRUE(page.rig.core.state().emergencyRadio);
+  TEST_ASSERT_FALSE(page.rig.core.state().cellularEnabled);
+  TEST_ASSERT_TRUE(page.says("Check mobile network", FontSize::Text));
+  page.down(1);
+  TEST_ASSERT_TRUE(page.says("Check mobile network", FontSize::Text, true));   // focused
+  page.key(Key::Select);
+  TEST_ASSERT_TRUE(page.rig.core.state().cellularEnabled);                          // the modem searches
+  page.rig.language("de");
+  page.draw();
+  TEST_ASSERT_TRUE(page.says("Mobilfunknetz", FontSize::Text, true));
+}
+
 // ---- the controls ------------------------------------------------------------------------------------------------
 
 void test_radio_off_asks_for_a_restart() {
@@ -263,6 +333,10 @@ int main(int, char**) {
   RUN_TEST(test_a_ready_radio_gives_the_strength_and_lists_its_contacts_with_way_and_age);
   RUN_TEST(test_an_unknown_strength_is_left_out_and_a_contact_that_goes_by_detours_without_a_time_is_told_so);
   RUN_TEST(test_the_words_are_those_of_the_language_of_the_moment);
+  RUN_TEST(test_the_page_says_that_the_radio_setting_holds_for_europe_only);
+  RUN_TEST(test_the_page_says_that_a_lora_antenna_is_ideally_screwed_on);
+  RUN_TEST(test_the_control_that_checks_the_mobile_network_is_offered_during_the_emergency_only);
+  RUN_TEST(test_during_the_emergency_a_contact_can_be_written_to_without_free_text);
   RUN_TEST(test_radio_off_asks_for_a_restart);
   RUN_TEST(test_a_contact_is_written_to_only_where_the_child_may_choose_any_recipient);
   RUN_TEST(test_a_long_name_is_shortened_inside_its_row);

@@ -40,6 +40,7 @@
 #include "Calls.h"
 #include "Connectivity.h"
 #include "Emergency.h"
+#include "EmergencyRadio.h"
 #include "DropLog.h"
 #include "Logger.h"
 #include "MessageStore.h"
@@ -78,6 +79,7 @@ public:
     bool cellularEnabled = false;
     bool radioAttached = false;
     bool radioReady = false;  // the radio runs and knows at least one contact
+    bool emergencyRadio = false;  // the radio's emergency is on: the SOS was used without a network and is not ended
     int radioRssi = 0;        // dBm of the last message, 0 = unknown
     WifiPhase wifiPhase = WifiPhase::Off;
     WifiReason wifiReason = WifiReason::None;
@@ -166,10 +168,18 @@ public:
   bool radioPeer(size_t index, RadioPeer& out);
 
   // --- SOS ---
-  bool beginSos(const std::string& target = std::string()) { return emergency_.begin(target); }
+  // While the radio's emergency lasts, the SOS tile opens it again instead of a new choice, so that its
+  // "End SOS" key is reached after the screen locked (D-62, D-65).
+  bool beginSos(const std::string& target = std::string()) {
+    if (emergencyRadio_.active()) return true;
+    return emergency_.begin(target);
+  }
   bool chooseSos(SosPing::Kind kind) { return emergency_.choose(kind); }
   bool tapSos() { return emergency_.tap(); }
   void leaveSos() { emergency_.leave(); }
+  // The child ends the SOS on the device: the radio's emergency is over, the radio stops and save mode ends.
+  // False when no emergency was on.
+  bool endSos() { return emergencyRadio_.end(); }
 
   // --- positioning ---
   void setPositionPageOpen(bool open) { positioning_.want(Positioning::Reason::PositionPage, open); }
@@ -184,7 +194,14 @@ public:
   const WifiController* wifi() const { return wifi_.get(); }
   WifiController* wifiController() { return wifi_.get(); }
   bool requestRadioStart() { return connectivity_.requestRadioStart(); }
+  // During the radio's emergency: look for the mobile network now (D-67). False when not in the emergency or the
+  // modem is on already.
+  bool searchMobileNetwork() { return connectivity_.searchNow(); }
   bool takeRadioStartRequest() { return connectivity_.takeRadioStartRequest(); }
+  // The host stops the radio and detaches it with setRadio(nullptr) when this says so (once per request).
+  bool takeRadioStopRequest() { return connectivity_.takeRadioStopRequest(); }
+  // The host could not start the radio: an emergency that waited for it ends.
+  void radioStartFailed() { emergencyRadio_.startFailed(); }
   void requestRestart() { connectivity_.requestRestart(); }
   // A restart the person holding the device asked for (the status page): the log says who, since the parents'
   // page and the console say it in their own lines. The log line lives here because screens hold no sentences.
@@ -263,5 +280,6 @@ private:
   PowerCoordination powerCoordination_;
   std::unique_ptr<WifiController> wifi_;
   Connectivity connectivity_;
+  EmergencyRadio emergencyRadio_;
   RadioLink* radio_ = nullptr;
 };

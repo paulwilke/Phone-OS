@@ -423,6 +423,11 @@ inline void Simulator::tick() {
     r.runtime->core().setRadio(&r.radio);   // the radio comes later, once the host has started it
     out_ << "radio: started\n";
   }
+  if (r.runtime->core().takeRadioStopRequest()) {
+    r.runtime->core().setRadio(nullptr);    // the emergency is over: the host stops the radio and lets go of the chip
+    r.radio.setUp(false);
+    out_ << "radio: stopped\n";
+  }
   for (; r.hapticShown < r.haptic.played().size(); ++r.hapticShown) {
     static const char* const names[] = {"click", "ring", "message", "sent", "failed"};
     out_ << "haptic: " << names[static_cast<int>(r.haptic.played()[r.hapticShown])] << "\n";
@@ -604,7 +609,8 @@ inline void Simulator::printHelp() {
           "    see <catalog key> [name=value...]   (a value may have spaces) the screen says that text, in the language of the moment\n"
           "    see-not <catalog key> [name=value...]\n"
           "    say <text> | say-not <text>         the screen says this literal text (a name, an operator)\n"
-          "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular,\n"
+          "    check <what> <value>         screen, locked, unread, school, call, sos, registered, cellular, radio (attached),\n"
+          "                                 emergency-radio (yes while the radio's emergency lasts),\n"
           "                                 battery, sms-sent, last-sms-to, last-sms-has, language, boots, log-has, wifi,\n"
           "                                 wifi-seconds-left, web-status, web-has, settings-has (a line of the card's settings.toml),\n"
           "                                 haptic-click|ring|message|sent|failed (how often played)\n"
@@ -1124,6 +1130,8 @@ inline bool Simulator::check(const std::vector<std::string>& w, const std::strin
   else if (what == "school") actual = yesNo(s.schoolTime);
   else if (what == "registered") actual = yesNo(s.registered);
   else if (what == "cellular") actual = s.cellularEnabled ? "on" : "off";
+  else if (what == "radio") actual = yesNo(s.radioAttached);
+  else if (what == "emergency-radio") actual = yesNo(s.emergencyRadio);
   else if (what == "battery") actual = std::to_string(s.batteryPercent);
   else if (what == "language") actual = translator_.language();
   else if (what == "boots") actual = std::to_string(boots_);

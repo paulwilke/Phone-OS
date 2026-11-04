@@ -18,8 +18,11 @@ AppCore::AppCore(Clock& clock, Power& power, Modem& modem, GnssReceiver& gnss, H
       calls_(clock, modem, power, store_, profile_, school_, notices_, haptic, logger_, drops_),
       emergency_(clock, positioning_, messaging_, school_, store_, profile_, translator, haptic, logger_),
       powerCoordination_(clock, power, modem, profile_, notices_, logger_),
-      connectivity_(clock, power, modem, profile_, notices_, powerCoordination_, logger_) {
+      connectivity_(clock, power, modem, profile_, notices_, powerCoordination_, logger_),
+      emergencyRadio_(profile_, connectivity_, logger_) {
   messaging_.setHooks(this);
+  messaging_.setEmergencyRadio(&emergencyRadio_);
+  emergency_.setRadioEmergency(&emergencyRadio_);
 }
 
 void AppCore::setRadio(RadioLink* radio) {
@@ -107,7 +110,9 @@ PowerDecision AppCore::poll(bool displayOn, uint32_t nextRenderInMs) {
   PowerCoordination::Needs needs;
   needs.callActive = calls_.modemBusy();
   needs.pendingWork = messaging_.hasWork() || emergency_.ping().active() || emergency_.phase() != SosFlow::Phase::Idle;
-  needs.radioUsable = messaging_.radioUsable();
+  // The chip is powered while the radio software runs, not only once it knows a contact: a radio that
+  // has just started knows nobody yet and must not lose its power for that.
+  needs.radioUsable = connectivity_.radioAttached();
   needs.wifiActive = connectivity_.wifiActive();
   return powerCoordination_.apply(needs, displayOn, nextRenderInMs);
 }
@@ -142,6 +147,7 @@ AppCore::State AppCore::state() {
   s.voice = modem_.voiceStatus();
   s.cellularEnabled = connectivity_.cellularEnabled();
   s.radioAttached = connectivity_.radioAttached();
+  s.emergencyRadio = emergencyRadio_.active();
   if (radio_) {
     s.radioReady = radio_->ready();
     s.radioRssi = radio_->lastRssi();

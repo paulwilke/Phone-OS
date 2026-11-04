@@ -12,6 +12,7 @@ Code: `src/ui/screens/SosScreen.{h,cpp}`; tests in `test/test_screen_sos/`. The 
 | position found | two bars, "Position found", seconds so far and the accuracy to date | |
 | sent | three bars, "Sent", the accuracy of the position (or that there was none), to whom | |
 | not sent | two bars, "Not sent", why | Try again |
+| the radio's emergency | the page of the ping stays, with the key "End SOS" | End SOS: the radio stops, save mode ends and cellular is back as it was before ([emergency-radio.md](../core/emergency-radio.md)) |
 | nothing running | "No emergency is running" | |
 
 **The search is already running when the page opens.** Pressing the SOS tile calls `beginSos`; the receiver warms up while the child decides. The countdown is the core's: when it runs out the emergency goes out by itself.

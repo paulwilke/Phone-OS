@@ -282,6 +282,10 @@ void applyWifiSettings(const toml::Value& sec, Profile& p, std::vector<Diagnosti
 void applyRadio(const toml::Value& sec, Profile& p, std::vector<Diagnostic>& d) {
   if (const toml::Value* v = sec.find("name")) checkStr(*v, "settings", "radio.name", 0, 32, d, p.radioName);
   if (const toml::Value* v = sec.find("peer")) checkStr(*v, "settings", "radio.peer", 0, 32, d, p.radioPeer);
+  if (const toml::Value* v = sec.find("cellular_retry")) {
+    int64_t n = 0;
+    if (checkInt(*v, "settings", "radio.cellular_retry", 0, 240, d, n)) p.radioCellularRetryMinutes = (uint32_t)n;
+  }
 }
 
 void applyQuietHoursEntry(const toml::Value& entry, QuietHours& qh, std::vector<Diagnostic>& d) {

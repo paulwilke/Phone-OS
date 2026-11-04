@@ -96,6 +96,8 @@ config.radio.name.label               = "Nom radio"
 config.radio.name.help                = "Nom de cet appareil dans le réseau radio longue portée."
 config.radio.peer.label               = "Correspondant par défaut"
 config.radio.peer.help                = "Nom de l'appareil auquel vont les messages radio quand aucun destinataire n'est choisi."
+config.radio.cellular_retry.label = "Recherche du réseau mobile (minutes)"
+config.radio.cellular_retry.help = "Pendant l'urgence radio, le modem mobile est coupé. Toutes les x minutes, il est allumé jusqu'à 90 secondes pour chercher un réseau. 0 = jamais de lui-même."
 
 # Home screen: which tiles of the second page the child sees
 config.home.label                     = "Écran d'accueil : seconde page"

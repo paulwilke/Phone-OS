@@ -89,6 +89,7 @@ A document marked "top" lives at the top of `docs/`, not in the folder, because 
 | [core/positioning.md](core/positioning.md) | the reasons the satellite receiver is on, the start-up fix, the last known fix |
 | [core/map-link.md](core/map-link.md) | the map address in position messages, built from a template |
 | [core/shake-detector.md](core/shake-detector.md) | recognising shaking from acceleration samples |
+| [core/emergency-radio.md](core/emergency-radio.md) | the radio's emergency: when it begins, what it changes while it lasts (save mode, who may write, the SOS kept off the radio), when it ends |
 | [core/connectivity.md](core/connectivity.md) | cellular, the radio request, Wi-Fi with its rules, the network label as data |
 | [core/operator-label.md](core/operator-label.md) | the short operator name for the status line; the UTF-8 text helper |
 | [core/power-policy.md](core/power-policy.md) | what may sleep when: the eight rules and their order |

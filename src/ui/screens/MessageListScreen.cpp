@@ -59,7 +59,7 @@ MessageListScreen::Reply MessageListScreen::replyFor(const Message& m) const {
   const Profile& profile = context().app.profile();
   if (m.source == MsgSource::System) return profile.mayCall(m.peer) ? Reply::Call : Reply::None;
   // Over the radio the peer is a name, and the radio's contacts are not the book's.
-  if (m.source == MsgSource::Radio) return profile.freeText ? Reply::Write : Reply::None;
+  if (m.source == MsgSource::Radio) return profile.freeText || state().emergencyRadio ? Reply::Write : Reply::None;
   return (profile.freeText || profile.contacts.find(m.peer) != nullptr) ? Reply::Write : Reply::None;
 }
 

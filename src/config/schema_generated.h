@@ -138,6 +138,9 @@ inline constexpr KeyDef kKeys[] = {
     {"settings", "radio", "peer", KeyType::String, false, false, Apply::Restart,
      "", 0, 32, "",
      "config.radio.peer.label", "config.radio.peer.help", "radioPeer", "advanced"},
+    {"settings", "radio", "cellular_retry", KeyType::Integer, false, false, Apply::Restart,
+     "0", 0, 240, "",
+     "config.radio.cellular_retry.label", "config.radio.cellular_retry.help", "radioCellularRetryMinutes", "advanced"},
     // settings / [home]
     {"settings", "home", "network", KeyType::Bool, false, false, Apply::Restart,
      "true", 0, 0, "",

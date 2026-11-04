@@ -18,6 +18,11 @@
 // The host must call leave() when the SOS screen closes, because in school time the flow has no
 // timeout of its own.
 //
+// **Never on the radio.** The text of an emergency, of a pickup and of a reply to a query goes by the mobile
+// network only (Messaging's cellular-only sending): it names a person by phone number and carries a position,
+// and D-61 keeps both off the radio. A text that cannot leave waits in the queue. An emergency or pickup that
+// starts without a mobile network begins the radio's emergency (EmergencyRadio, D-62).
+//
 // **Several recipients.** An emergency or a pickup goes to every SOS recipient of the profile (the contacts
 // ticked "SOS", or else the first call target; owner, 2026-10-08). It counts as sent as soon as one text is
 // out, and as failed only when every one failed. The ping and the screen know the first recipient.
@@ -45,6 +50,7 @@
 #include "../i18n/Translator.h"
 #include "Logger.h"
 #include "MessageStore.h"
+#include "EmergencyRadio.h"
 #include "Messaging.h"
 #include "Positioning.h"
 #include "Profile.h"
@@ -65,6 +71,9 @@ public:
   bool tap() { return flow_.tap(); }
   // The screen closes: nothing is sent, the search is released.
   void leave() { flow_.leave(); }
+
+  // Optional: told when an emergency or pickup starts, so that the radio's emergency can begin (D-62).
+  void setRadioEmergency(EmergencyRadio* radio) { radioEmergency_ = radio; }
 
   // --- the reply to a parent's query ---
   // False when a search runs already, or when the reply cannot start.
@@ -116,6 +125,7 @@ private:
   Logger& log_;
   SosPing sos_;
   SosFlow flow_;
+  EmergencyRadio* radioEmergency_ = nullptr;
   SosPing::Stage lastStage_ = SosPing::Stage::Idle;
   std::vector<std::string> sentTo_;  // the texts of the last emergency or pickup that the modem took
 };
