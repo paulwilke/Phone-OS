@@ -757,6 +757,8 @@ void test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_n
     s.creg.push_back("+CREG: 0,1");                         // ... then the home network
     s.apply(r.t);
     r.t.reply("AT+COPS=?", {"+COPS: ,,(0,1,2,3,4),(0,1,2)"});   // the search by hand finds no network either
+    r.t.reply("AT+COPS=2", {});                                  // the search again of every few minutes (D-58)
+    r.t.reply("AT+COPS=0", {});
     r.driver.begin();
     bool everError = false;
     for (uint32_t spent = 0; spent < 15 * 60 * 1000 && r.driver.state() != ModemState::Ready; spent += 50) {
@@ -770,6 +772,60 @@ void test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_n
     TEST_ASSERT_TRUE(r.logged("no network found, searching on"));
     TEST_ASSERT_TRUE(r.driver.sendSms("+491701111111", "Hello from Alex"));
     TEST_ASSERT_TRUE(r.t.unexpected().empty());
+  }
+}
+
+// 2026-10-31: the device was switched on in a Faraday bag and taken out after a few minutes. It logged "no network
+// found, searching on" and then nothing for more than half an hour: the modem did not register by itself. While it
+// searches on after the start, it is told every few minutes to deregister and search again in automatic mode, also
+// when the search by hand had left it on a network of its choice; once it registers, the searching stops.
+void test_a_start_without_a_network_searches_again_every_few_minutes_until_it_registers() {
+  const uint32_t interval = A7682EDriver::Config().searchAgainIntervalMs;
+  for (bool byHand : {false, true}) {
+    const char* which = byHand ? "a network chosen by hand" : "no network chosen";
+    Rig r;
+    Script s;
+    s.creg = {"+CREG: 0,2"};
+    s.apply(r.t);
+    if (byHand) {
+      // The search by hand sees a network and the modem accepts the choice, but it never registers there.
+      r.t.reply("AT+COPS=?", {"+COPS: (1,\"Orange F\",\"Orange\",\"20801\",0)"});
+      r.t.reply("AT+COPS=1,2,\"20801\"", {});
+    } else {
+      r.t.reply("AT+COPS=?", {"+COPS: ,,(0,1,2,3,4),(0,1,2)"});
+    }
+    r.t.reply("AT+COPS=2", {});
+    r.t.reply("AT+COPS=0", {});
+    r.driver.begin();
+    for (uint32_t spent = 0; spent < 10 * 60 * 1000 && !r.logged("no network found, searching on"); spent += 50) r.run(50);
+    TEST_ASSERT_TRUE_MESSAGE(r.logged("no network found, searching on"), which);
+
+    r.run(interval - 1000);
+    TEST_ASSERT_EQUAL_MESSAGE(0, r.count("AT+COPS=0"), which);           // not before the time
+    r.run(2000);
+    TEST_ASSERT_EQUAL_MESSAGE(1, r.count("AT+COPS=2"), which);
+    TEST_ASSERT_EQUAL_MESSAGE(1, r.count("AT+COPS=0"), which);
+    TEST_ASSERT_TRUE_MESSAGE(r.indexOf("AT+COPS=2") < r.indexOf("AT+COPS=0"), which);
+    TEST_ASSERT_EQUAL_MESSAGE(1, r.loggedCount("Cellular: searching again"), which);
+    TEST_ASSERT_FALSE_MESSAGE(r.logged("asking for the home network again"), which);  // the line of the roaming case
+    if (byHand) TEST_ASSERT_TRUE(r.indexOf("AT+COPS=1,2,\"20801\"") < r.indexOf("AT+COPS=0"));  // automatic again
+    const int rounds = r.count("AT+CREG?");
+    r.run(10000);
+    TEST_ASSERT_TRUE_MESSAGE(r.count("AT+CREG?") >= rounds + 4, which);  // and the registration asked every 2 s
+
+    r.run(interval);                                                    // still nothing: again
+    TEST_ASSERT_EQUAL_MESSAGE(2, r.count("AT+COPS=0"), which);
+    TEST_ASSERT_EQUAL_MESSAGE(2, r.loggedCount("Cellular: searching again"), which);
+    TEST_ASSERT_EQUAL_MESSAGE(byHand ? 1 : 0, r.countPrefix("AT+COPS=1"), which);  // no new choice by hand
+    TEST_ASSERT_EQUAL_MESSAGE(1, r.count("AT+COPS=?"), which);          // nor the long search for it
+
+    r.t.clearReplies("AT+CREG?");                                        // out of the bag
+    r.t.reply("AT+CREG?", {"+CREG: 0,1"});
+    TEST_ASSERT_TRUE_MESSAGE(r.runTo(ModemState::Ready, 10000), which);
+    TEST_ASSERT_TRUE_MESSAGE(r.logged("Cellular: network "), which);
+    r.run(4 * interval);                                                // longer than the quarter hour of a manual network
+    TEST_ASSERT_EQUAL_MESSAGE(2, r.count("AT+COPS=2"), which);          // with a network, no more searching
+    TEST_ASSERT_TRUE_MESSAGE(r.t.unexpected().empty(), which);
   }
 }
 
@@ -1324,6 +1380,7 @@ int main(int, char**) {
   RUN_TEST(test_the_modem_is_powered_on_and_starting_before_it_is_asked);
   RUN_TEST(test_registration_takes_a_few_attempts);
   RUN_TEST(test_a_start_without_a_network_searches_on_after_the_window_and_takes_the_network_when_it_comes);
+  RUN_TEST(test_a_start_without_a_network_searches_again_every_few_minutes_until_it_registers);
   RUN_TEST(test_a_network_that_the_automatic_search_does_not_find_is_chosen_by_hand);
   RUN_TEST(test_the_operator_scan_may_outlast_the_registration_window);
   RUN_TEST(test_the_network_mode_comes_from_the_configuration);

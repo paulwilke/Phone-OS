@@ -154,7 +154,7 @@ site.docs.index.text        = "das Verzeichnis, eine Zeile pro Dokument"
 site.footer.licence   = "Phone OS steht unter der MIT-Lizenz. Die Liste der Netzbetreiber sind Daten aus dem Android Open Source Project unter Apache-2.0, und die Schriften des Bildschirms sind Adobes Helvetica-Bitmapschriften unter ihrem eigenen Erlaubnisvermerk; beide sind in den Hinweisen zu Software Dritter im Repository aufgeführt."
 site.footer.generated = "Der LoRa-Funk ist nicht Teil der aktuellen Version. Nichts auf dieser Seite ist von Hand gezeichnet: Die Bilder erzeugt der Simulator bei jedem Build, und diese Seite wird mit ihnen neu gebaut."
 
-# The live simulator ("Try it live"): the simulator compiled to WebAssembly, with buttons for situations (D-58).
+# The live simulator ("Try it live"): the simulator compiled to WebAssembly, with buttons for situations (D-59).
 site.live.title        = "Live ausprobieren"
 site.live.intro        = "Das ist der Simulator selbst, übersetzt für den Browser: dieselben Bildschirme und Regeln wie in der Firmware, auf der Karte eines Kindertelefons. Drücken Sie seine Tasten oder lassen Sie eine Situation eintreten."
 site.live.start        = "Simulator starten"

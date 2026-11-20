@@ -1,4 +1,4 @@
-// The simulator in a browser page (WebAssembly, built by scripts/build_wasm.sh; docs/simulator.md, D-58): the entry
+// The simulator in a browser page (WebAssembly, built by scripts/build_wasm.sh; docs/simulator.md, D-59): the entry
 // point beside main.cpp, which it replaces. No thread, no standard input, no window and no socket: a non-blocking loop
 // that the page's animation frames drive, the panel handed to the page as pixels to draw on a canvas, and the keys,
 // the touch and the console commands that make a scene come in through the functions below. src/ knows nothing of it.

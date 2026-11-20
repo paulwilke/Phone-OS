@@ -1,7 +1,7 @@
 name: pages
 
 # The project's web page (docs/process/site.md): the page in site/ around the click-through demo, which the
-# simulator draws on every run, and the part "Try it live" (D-58), the simulator compiled to WebAssembly.
+# simulator draws on every run, and the part "Try it live" (D-59), the simulator compiled to WebAssembly.
 # Nothing generated is committed; the page is rebuilt from main.
 on:
   push:

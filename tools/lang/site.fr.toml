@@ -154,7 +154,7 @@ site.docs.index.text        = "l'index, une ligne par document"
 site.footer.licence   = "Phone OS est sous licence MIT. La liste des opérateurs provient de l'Android Open Source Project, sous Apache-2.0, et les polices de l'écran sont les polices bitmap Helvetica d'Adobe, sous leur propre avis d'autorisation ; les deux figurent dans les mentions de tiers du dépôt."
 site.footer.generated = "La radio LoRa ne fait pas partie de la version actuelle. Rien sur cette page n'a été dessiné à la main : les images sont produites par le simulateur à chaque construction, et cette page est reconstruite avec elles."
 
-# The live simulator ("Try it live"): the simulator compiled to WebAssembly, with buttons for situations (D-58).
+# The live simulator ("Try it live"): the simulator compiled to WebAssembly, with buttons for situations (D-59).
 site.live.title        = "Essayer en direct"
 site.live.intro        = "Voici le simulateur lui-même, compilé pour votre navigateur : les mêmes écrans et les mêmes règles que le firmware, sur la carte d'un téléphone d'enfant. Appuyez sur ses touches ou faites survenir une situation."
 site.live.start        = "Démarrer le simulateur"

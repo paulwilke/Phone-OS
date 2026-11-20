@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds the simulator for the browser (docs/simulator.md, D-58) into out/wasm/: phone.js (the loader), phone.wasm
+# Builds the simulator for the browser (docs/simulator.md, D-59) into out/wasm/: phone.js (the loader), phone.wasm
 # and phone.data (the card sim/data and the catalogs lang/). scripts/make_site.py puts them into the page.
 # Needs Emscripten (brew install emscripten; in CI: the emsdk of .github/workflows/pages.yml). Nothing is committed.
 set -eu
