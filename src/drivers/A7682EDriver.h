@@ -67,7 +67,7 @@ public:
     uint32_t reselectIntervalMs = 15 * 60 * 1000;
     // A start without a network searches on (decision D-40), but on 2026-10-31 a modem switched on in a Faraday bag
     // did not register by itself in more than half an hour after it was taken out. So often, while it searches on,
-    // it is told to deregister and search again, as above. Five minutes, proposed and open for the owner (D-58): a
+    // it is told to deregister and search again, as above. Five minutes, the owner's choice (D-58): a
     // child coming out of a cellar is reachable again within about six minutes, and the modem, awake anyway while it
     // has no network, scans for up to a minute more in each five.
     uint32_t searchAgainIntervalMs = 5 * 60 * 1000;
