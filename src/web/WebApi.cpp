@@ -1,5 +1,6 @@
 #include "WebApi.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <set>

@@ -271,5 +271,99 @@ assert(page.byId('status').textContent === 'en:site.device.missing', 'a page wit
 page = await load({ lang: 'de', root: '../', withGraph: false });
 assert(page.byId('status').textContent === 'de:site.device.missing', 'in the language of the page');
 
+// ---- the live simulator ("Try it live"): its own script, loaded on request ---------------------------------------------------
+const liveStart = html.indexOf('<script id="live-script">') + '<script id="live-script">'.length;
+const liveScript = html.slice(liveStart, html.indexOf('</script>', liveStart));
+const liveSentences = [...liveScript.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]).filter((t) => /[A-Za-z]\s+[A-Za-z]/.test(t) && t !== 'use strict');
+assert(liveStart > 30 && liveSentences.length === 0, 'the live script has no sentence in it either' + (liveSentences.length ? ': ' + liveSentences.join(' | ') : ''));
+assert(!/navigator\.language/.test(liveScript) && !/location\.(href|replace)/.test(liveScript), 'the live script neither asks the browser for its language nor moves the page');
+assert(!/<script[^>]*\ssrc=/.test(html) && !/live\/phone\.js/.test(markup), 'nothing of the simulator is loaded by the markup: the script asks for it when the visitor does');
+const liveKeys = [...liveScript.matchAll(/"(site\.[a-z0-9.-]+)"/g)].map((m) => m[1]);
+assert(liveKeys.length >= 17 && [...html.matchAll(/\sdata-i18n="(site\.live\.[a-z.-]+)"/g)].length >= 6, 'the live part names its words by key, in the script and in the markup');
+
+async function loadLive({ lang = 'en', root = '', fail = false } = {}) {
+  const elements = parse();
+  const all = () => { const out = []; const walk = (e) => { out.push(e); e.children.forEach(walk); }; elements.forEach(walk); return out; };
+  const byId = (id) => all().find((e) => e.getAttribute('id') === id);
+  const liveWords = Object.fromEntries(liveKeys.concat([...html.matchAll(/\sdata-i18n="(site\.live\.[a-z.-]+)"/g)].map((m) => m[1])).map((k) => [k, lang + ':' + k]));
+  byId('data')._text = JSON.stringify({ languages: LANGUAGES, words: { [lang]: liveWords } });
+  const document = {
+    documentElement: { lang, getAttribute: (name) => (name === 'data-root' ? root : null) },
+    getElementById: byId,
+    createElement: (tag) => new Element(tag),
+    head: new Element('head'),
+  };
+  for (const e of elements) e.doc = document;
+  const calls = [];
+  const drawn = [];
+  const canvas = byId('live-screen');
+  canvas.getContext = () => ({ putImageData: (image) => drawn.push(image) });
+  canvas.getBoundingClientRect = () => ({ left: 10, top: 20, width: 480, height: 640 });
+  const config = {};
+  const module = { HEAPU8: { buffer: new ArrayBuffer(240 * 320 * 4) },
+    cwrap: (name) => (...args) => calls.push([name, ...args]) };
+  const window = { PhoneSim: (c) => { Object.assign(config, c); return fail ? Promise.reject(new Error('no')) : Promise.resolve(module); } };
+  vm.runInNewContext(liveScript, { document, window, JSON, Uint8ClampedArray, ImageData: class { constructor(data, w, h) { this.data = data; this.w = w; this.h = h; } }, console });
+  const loaders = () => document.head.children.filter((c) => c.tag === 'script');
+  return { byId, all, calls, drawn, config, loaders, module, canvas, lang, root };
+}
+const labels = (page, id) => page.byId(id).children.map((b) => b.textContent.replace(/^[^a-z]*/, ''));
+
+let live = await loadLive();
+assert(live.loaders().length === 0 && live.byId('live-stage').hidden && live.byId('live-start').listeners.click,
+  'before the visitor asks, nothing is loaded and the simulator is hidden');
+live.byId('live-start').click();
+assert(live.loaders().length === 1 && live.loaders()[0].src === 'live/phone.js' && live.byId('live-start').disabled && live.byId('live-status').textContent === 'en:site.live.loading',
+  'the button loads the simulator: live/phone.js, once, with a word that it is starting');
+live.byId('live-start').click();
+assert(live.loaders().length === 1, 'a second click loads nothing more');
+live.loaders()[0].onload();
+await settle();
+assert(live.config.arguments.join() === 'en' && !live.byId('live-stage').hidden && live.byId('live-status').textContent === 'en:site.live.running',
+  'the simulator starts in the language of the page and the stage is shown');
+assert(live.config.locateFile('phone.data') === 'live/phone.data', 'the files of the simulator are looked for in live/, whatever the page\'s folder');
+assert(live.config.print() === undefined && live.config.printErr() === undefined, 'its console output goes nowhere: no console is shown');
+assert(live.byId('live-scenes').children.map((b) => b.textContent).join() === ['sms', 'call', 'battery', 'charged', 'nonet', 'net', 'sos'].map((n) => 'en:site.live.scene.' + n).join(),
+  'there is a button for each situation, in the words of the page');
+const scene = (name) => live.byId('live-scenes').children.find((b) => b.textContent === 'en:site.live.scene.' + name);
+const sent = () => live.calls.splice(0).map((c) => c.slice(1).join(' '));
+scene('sms').click();
+assert(sent().join('|') === 'sms +491701111111 en:site.live.sms-text', 'the text from a parent is the simulator\'s own command with the number of the card and a sentence of the catalog');
+scene('call').click();
+assert(sent().join('|') === 'call +491701111111', 'a call from a parent');
+scene('battery').click(); scene('charged').click(); scene('nonet').click(); scene('net').click();
+assert(sent().join('|') === 'battery 5|battery 80|signal 0|signal 4', 'the battery and the network scenes');
+scene('sos').click();
+assert(sent().join('|') === 'key home|tap 180 70', 'the SOS is pressed on the home screen, where the tile is');
+live.byId('live-pad').children.find((b) => b.getAttribute('aria-label') === 'en:site.key.select').click();
+live.byId('live-softkeys').children.find((b) => b.getAttribute('aria-label') === 'en:site.key.home').click();
+assert(sent().join('|') === '2|4', 'the keys under the screen send the keys of the device');
+live.canvas.listeners.click({ clientX: 10 + 240, clientY: 20 + 320 });
+assert(sent().join('|') === '120 160', 'a click on the screen is a touch at the pixel of the 240 by 320 panel it hits');
+const typed = (k) => { let stopped = false; live.byId('live-device').listeners.keydown({ key: k, ctrlKey: false, metaKey: false, altKey: false, preventDefault: () => { stopped = true; } }); return stopped; };
+assert(typed('ArrowDown') && typed('Enter') && typed('Backspace') && typed('a') && !typed('Shift') && sent().join('|') === '1|2|3|97',
+  'the keyboard drives the device: arrows, Enter, Backspace, and a typed character is text');
+live.config.onFrame.call(live.module, 0, 240, 320);
+assert(live.drawn.length === 1 && live.drawn[0].w === 240 && live.drawn[0].h === 320, 'a frame of the simulator is drawn on the canvas');
+
+live = await loadLive({ lang: 'de', root: '../' });
+live.byId('live-start').click();
+assert(live.loaders()[0].src === '../live/phone.js', 'a language page asks for the simulator one folder up');
+live.loaders()[0].onload();
+await settle();
+assert(live.config.locateFile('phone.data') === '../live/phone.data' && live.config.arguments.join() === 'de' && live.byId('live-scenes').children[0].textContent === 'de:site.live.scene.sms', 'the German page starts it in German with the German buttons');
+live.byId('live-scenes').children[0].click();
+assert(sent().join('|') === 'sms +491701111111 de:site.live.sms-text', 'and the text the parent sends is the German one');
+
+live = await loadLive({ fail: true });
+live.byId('live-start').click();
+live.loaders()[0].onload();
+await settle();
+assert(live.byId('live-status').textContent === 'en:site.live.failed' && !live.byId('live-start').disabled && live.byId('live-stage').hidden, 'a simulator that fails to start says so and can be asked again');
+live = await loadLive();
+live.byId('live-start').click();
+live.loaders()[0].onerror();
+assert(live.byId('live-status').textContent === 'en:site.live.failed' && !live.byId('live-start').disabled, 'a simulator whose files are not there says so and can be asked again');
+
 console.log(`\n${pass} checks: ${pass} passed, ${fail} failed.`);
 process.exit(fail ? 1 : 0);

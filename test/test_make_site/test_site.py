@@ -3,7 +3,10 @@
 result; one page per language, each with its own words written in and only its own words embedded, the language in
 its address (the English page at the root, the others in a folder) and the links to all of them; a run without the
 demo fails and says so; a language that lacks a word of the page fails and the key is named; a page without its
-markers fails and the marker is named; a result in which a file the page needs is missing fails. The demo's graph is one
+markers fails and the marker is named; a result in which a file the page needs is missing fails; the simulator for the
+browser (out/wasm/ of scripts/build_wasm.sh) lands in live/, and a run without it fails and names the script, unless
+--no-live says it is left out. The real page and the real catalogs, assembled over a fake demo and a fake simulator, give
+three pages that each hold the part "Try it live" with its words written in. The demo's graph is one
 over every language, so each language starts on a state of its own (a picture `demo/<code>/n<start>.png`): the page
 shows its language's, the preview too, and a graph without a start for a language fails.
 
@@ -54,12 +57,15 @@ def catalog(code, native, words):
 STARTS = {"en": 0, "de": 1, "fr": 2}
 
 
-def make_tree(root, with_demo=True, with_fr=True, words=WORDS, page=PAGE, graph=None):
+def make_tree(root, with_demo=True, with_fr=True, words=WORDS, page=PAGE, graph=None, with_live=True):
     write(os.path.join(root, "site", "index.html"), page)
     for code, (native, table) in words.items():
         write(os.path.join(root, "lang", f"site.{code}.toml"), catalog(code, native, table))
     write(os.path.join(root, "lang", "demo.en.toml"), catalog("en", "English", {}).replace("site.", "demo."))
     write(os.path.join(root, "VERSION"), "9.9.9\n")
+    if with_live:
+        for ext in ("js", "wasm", "data"):
+            write(os.path.join(root, "wasm", "phone." + ext), ext)
     if with_demo:
         write(os.path.join(root, "demo", "index.html"), "<!doctype html>")
         write(os.path.join(root, "demo", "graph.json"), json.dumps({"starts": STARTS} if graph is None else graph))
@@ -67,10 +73,11 @@ def make_tree(root, with_demo=True, with_fr=True, words=WORDS, page=PAGE, graph=
             write(os.path.join(root, "demo", code, f"n{STARTS[code]}.png"), "png")
 
 
-def run(root, url=URL):
+def run(root, url=URL, live=True):
     args = [sys.executable, SCRIPT, "--site", os.path.join(root, "site"), "--demo", os.path.join(root, "demo"),
             "--version", os.path.join(root, "VERSION"), "--lang", os.path.join(root, "lang"),
             "--out", os.path.join(root, "out")]
+    args += ["--live", os.path.join(root, "wasm")] if live else ["--no-live"]
     if url is not None:
         args += ["--url", url]
     return subprocess.run(args, capture_output=True, text=True)
@@ -94,7 +101,8 @@ with tempfile.TemporaryDirectory() as root:
     make_tree(root)
     p = run(root)
     check(p.returncode == 0, "a complete tree assembles: " + p.stderr.strip())
-    for name in ("index.html", "de/index.html", "fr/index.html", "version.txt", "demo/index.html", "demo/fr/n2.png"):
+    for name in ("index.html", "de/index.html", "fr/index.html", "version.txt", "demo/index.html", "demo/fr/n2.png",
+                 "live/phone.js", "live/phone.wasm", "live/phone.data"):
         check(os.path.isfile(os.path.join(root, "out", name)), f"{name} is in the result")
     with open(os.path.join(root, "out", "version.txt"), encoding="utf-8") as f:
         check(f.read() == "9.9.9\n", "version.txt carries VERSION")
@@ -204,6 +212,39 @@ with tempfile.TemporaryDirectory() as root:
     make_tree(root)
     p = run(root, url="ftp://example.test/")
     check(p.returncode == 1 and "--url" in p.stderr, "an address that is not http or https fails and names --url")
+
+with tempfile.TemporaryDirectory() as root:
+    make_tree(root, with_live=False)
+    p = run(root)
+    check(p.returncode == 1 and "build_wasm.sh" in p.stderr and "missing phone" in p.stderr and not os.path.exists(os.path.join(root, "out")),
+          "without the simulator for the browser the run fails, names the missing files and the script, and writes no result: " + p.stderr.strip())
+    p = run(root, live=False)
+    check(p.returncode == 0 and not os.path.exists(os.path.join(root, "out", "live")),
+          "--no-live leaves the simulator out and the run succeeds")
+
+# The real page and the real catalogs, over a fake demo and a fake simulator.
+with tempfile.TemporaryDirectory() as root:
+    make_tree(root)
+    args = [sys.executable, SCRIPT, "--site", os.path.join(ROOT, "site"), "--demo", os.path.join(root, "demo"),
+            "--version", os.path.join(root, "VERSION"), "--lang", os.path.join(ROOT, "tools", "lang"),
+            "--out", os.path.join(root, "real"), "--live", os.path.join(root, "wasm"), "--url", URL]
+    p = subprocess.run(args, capture_output=True, text=True)
+    check(p.returncode == 0, "the real page and catalogs assemble: " + p.stderr.strip())
+    for code, name in (("en", "index.html"), ("de", "de/index.html"), ("fr", "fr/index.html")):
+        with open(os.path.join(root, "real", name), encoding="utf-8") as f:
+            page = f.read()
+        part = re.search(r'<section id="live">(.*?)</section>', page, re.S)
+        check(part is not None, f"the {code} page has the part Try it live")
+        if not part:
+            continue
+        elements = re.findall(r'<(\w+)\b[^>]*\sdata-i18n="(site\.live\.[a-z.-]+)"[^>]*>([^<]*)</\1>', part.group(1))
+        check(len(elements) >= 5 and all(text.strip() for _, _, text in elements),
+              f"the {code} page's part Try it live has its words written in ({len(elements)} elements)")
+        words = embedded(page)["words"][code]
+        scenes = re.findall(r'"(site\.live\.scene\.[a-z]+)"', page)
+        check(len(scenes) >= 7 and all(key in words and words[key] for key in scenes) and "site.live.sms-text" in words,
+              f"the {code} page carries the words of every scene and of the text it sends")
+    check(os.path.isfile(os.path.join(root, "real", "live", "phone" + ".wasm")), "the simulator for the browser is in live/ of the real result")
 
 print(f"{'OK' if failures == 0 else 'FAILED'}: {failures} failure(s)")
 sys.exit(1 if failures else 0)
