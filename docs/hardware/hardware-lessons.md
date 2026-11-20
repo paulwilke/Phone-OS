@@ -88,6 +88,26 @@ Outgoing calls hung the modem two seconds after dialling when the IMS was not re
 
 **Driver rule.** Lowered in D-47 (the release after 4.2.9): EDV2 3440 mV, EDV1 3390 mV, EDV0 3300 mV, each placed on the voltages of the two discharges ([fuel-gauge-data-memory.md](fuel-gauge-data-memory.md), `src/board/FuelGauge.h`). A lower EDV2 keeps a hold at 7 % going for about 45 minutes more, until the full charge has converged. **Owner's check:** open point 3: the start line "set to 3300/3390/3440 mV, compensation off (they were 3300/3420/3470 mV, compensation off)", then a discharge to the switch-off with the gauge's 0 % within about half an hour of it and, once the full charge has converged, no hold at 7 %.
 
+## Two measurements with test firmware: the time from a deep-sleep wake to the next sleep, and what the SD card costs (2026-10-29)
+
+Both were made with separate test programs (plain ESP-IDF 5.4.1, built with PlatformIO), not with Phone-OS, and nothing in Phone-OS changed. They answer questions of other projects that use the same chip, and they are kept here because they are facts about this board.
+
+**The board.** ESP32-S3, revision v0.2, two cores, 40 MHz crystal; flash a Winbond part with the ID `0xef4018` (16 MB, quad, read by the ROM tool, the chip type itself was not read from a marking); PSRAM 8 MB, quad (the heap reported 8,388,608 bytes). The exact module name is not readable from the chip.
+
+**Deep sleep.** The timer wakes the chip after 10 s; a cycle writes 5 KB over SPI into nothing (about 2.7 ms) and sleeps again. The time from the wake to `app_main` is the RTC time (it keeps counting in deep sleep) minus the start of the sleep plus its length; ten cycles per variant:
+
+| Variant | Wake to `app_main` | Spread | `app_main` to sleep | Total |
+|---|---|---|---|---|
+| Defaults (bootloader log on, PSRAM test on) | 1961.9 ms | 0.7 ms | 2.8 ms | 1964.7 ms |
+| Fast start (logs off, `SKIP_VALIDATE_IN_DEEP_SLEEP`, PSRAM test off, QIO 80 MHz) | 45.1 ms | 0.03 ms | 2.7 ms | 47.8 ms |
+| As the fast start, PSRAM not initialised | 44.5 ms | 0.04 ms | 2.7 ms | 47.2 ms |
+
+The PSRAM memory test of 8 MB costs about 1.9 s; initialising the PSRAM without the test costs about 0.6 ms. A wake stub that only counts and sleeps again gave 116 ms per cycle in one run; that is slower than a full start, so the figure is taken as an artefact of the method (it includes the final full boot and the RTC clock's calibration) and is not a result. The clock of the RTC is the internal RC oscillator, so absolute times carry its error; the sleep length and the reading use the same calibration, which is why the spread is small.
+
+**The SD card in light sleep.** The gauge's current (register 0x0C, 1 mA steps) was read once a second for 160 s per state, on the battery, with the radio supply on and the modem, the receiver and the 1.8 V rail off: 4 MHz card clock, card idle and never initialised -7.00 mA; initialised -7.00; FAT mounted and a file read -7.01; unmounted and the bus released -7.00; the first state again -7.00. The card therefore costs less than the gauge can resolve (about 1 mA) in this state. On the USB cable the gauge reads 0 mA whatever the load, because the input feeds the board; only runs on the battery mean anything. The gauge's readings had a spread of 0.00 in four of five states, so it reports a smoothed value; a difference below 1 mA is not excluded.
+
+**Rules found on the way.** With the radio's supply switched off, the first card initialisation failed with `ESP_ERR_INVALID_CRC`; with the radio's supply on and the clock at 400 kHz it worked (both were changed at once, the MISO pull-up that Phone-OS sets was added afterwards and not tried alone). The USB port of the chip disappears in light and deep sleep and comes back under a new device name (`usbmodem101`, later `usbmodem1101` on the Mac); a tool that waits for one fixed name misses the port. A program that sleeps and never shows the port again needs the BOOT button and a reset to be flashed.
+
 ## Smaller facts that cost time
 
 - **The charger changed during the production series.** Newer boards carry an SY6970 on I2C address 0x6A, older ones a BQ25896 on 0x6B. A driver that looks at only one address treats the bus as broken.
