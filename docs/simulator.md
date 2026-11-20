@@ -1,6 +1,6 @@
 # The simulator
 
-Code: `sim/` (`Simulator.h`, `main.cpp`, `SimPanel.h`, `Png.h`, `DirectoryStore.h`, `SocketTcp.h`, `Crawler.h`, `SdlWindow.h`), the composition it runs in `src/boot/` ([runtime.md](core/runtime.md)); tests in `test/test_simulator/`, `test/test_sim_panel/`, `test/test_sim_platform/` and `test/test_sim_web/`.
+Code: `sim/` (`Simulator.h`, `main.cpp`, `wasm_main.cpp`, `SimPanel.h`, `Png.h`, `DirectoryStore.h`, `SocketTcp.h`, `Crawler.h`, `SdlWindow.h`), the composition it runs in `src/boot/` ([runtime.md](core/runtime.md)); tests in `test/test_simulator/`, `test/test_sim_panel/`, `test/test_sim_platform/` and `test/test_sim_web/`.
 
 The simulator runs the **same** application core, screen stack, configuration loader and web service as the firmware will, on the fakes of [test-doubles.md](process/test-doubles.md) made interactive: it is a platform below the capability interfaces, not a second implementation of the application. `sim/` may include `src/` and `testing/`; `src/` never includes `sim/` (`scripts/check_layers.py` checks it, and that no file includes MeshCore).
 
@@ -81,6 +81,10 @@ The scenarios: a normal day, school time, a remote query during an SOS, the netw
 ## The web page
 
 `wifi ap` (or `wifi station` and then `wifi connected`) switches Wi-Fi on, and the real `WebService` answers on `http://127.0.0.1:8080/`. `SocketTcpServer` listens on the loopback address only, so the page is reachable from this computer and from nowhere else; port 80, which the web server asks for, is replaced by `--port` because a user may not open it. The page, the API, the password, the lock-out after five wrong passwords, the `X-Phone-OS` header and the path check are the device's: the simulator weakens nothing. Wi-Fi is the device's one controller: `wifi ap` switches it as the device's Wi-Fi page will, the page runs while it runs, every authenticated request restarts its idle time, and the scenario `wifi-admin-page` checks that the device's state and the page's agree throughout. A language saved in the settings is the device's after a restart. `test/test_sim_web` starts the simulator headless, logs in, reads the languages, saves a setting and checks the file of the card; it tries the lock-out, the missing header and the path escape through the real socket.
+
+## In the browser
+
+`scripts/build_wasm.sh` compiles the same `src/` with Emscripten (`brew install emscripten`; CI installs the `emsdk` in `.github/workflows/pages.yml`) and `sim/wasm_main.cpp`, the browser's entry point beside `sim/main.cpp`, into `out/wasm/`: `phone.js` (a loader that the page starts on request), `phone.wasm` and `phone.data` (the card `sim/data` and the catalogs `lang/`, in the browser's memory; what a visitor changes is gone when the page is closed). No thread, no standard input, no window and no socket: the page's animation frames drive a non-blocking loop that lets the time of the real clock pass, and the panel is handed to the page as pixels with the e-paper's refresh rule of the window. The page calls `phone_key`, `phone_text`, `phone_tap` and `phone_cmd` (the console's `Simulator::execute`) and gives the language as the program's argument; the pseudo-language is off. The parents' page does not run there (a browser page cannot listen on a socket), so `wifi ap` and `web` do nothing useful. The web page's part "Try it live" is built on it ([site.md](process/site.md)). The native `pio run -e sim` does not compile `wasm_main.cpp`.
 
 ## What the simulator cannot prove
 

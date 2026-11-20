@@ -57,6 +57,17 @@
   .muted { color: var(--muted); }
   code { font: 0.92em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg-2); padding: 0.05em 0.35em; border-radius: 4px; }
 
+  /* Try it live: the simulator in WebAssembly beside its scenes (loaded when the visitor asks for it). */
+  .live-stage { display: grid; grid-template-columns: minmax(0, 396px) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3rem); align-items: start; margin-top: 1.6rem; }
+  @media (max-width: 56rem) { .live-stage { grid-template-columns: 1fr; justify-items: center; } }
+  .live-stage[hidden] { display: none; }
+  .screen canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; }
+  .scenes { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.6rem 0 1rem; }
+  .scenes button { font: inherit; font-weight: 600; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 1rem; min-height: 2.9rem; cursor: pointer; }
+  .scenes button:hover { filter: brightness(1.06); border-color: var(--fg); }
+  .live-start { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; margin: 1.2rem 0 0.4rem; }
+  .live-start button { font: inherit; cursor: pointer; }
+
   /* Top bar */
   nav.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
   nav.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.4rem; }
@@ -195,6 +206,32 @@
   </div>
 </header>
 
+
+<section id="live">
+  <div class="wrap">
+    <h2 data-i18n="site.live.title"></h2>
+    <p class="intro muted" data-i18n="site.live.intro"></p>
+    <p class="muted note" data-i18n="site.live.fakes"></p>
+    <div class="live-start">
+      <button class="btn primary" id="live-start" type="button" data-i18n="site.live.start"></button>
+      <span class="muted" id="live-status" role="status"></span>
+    </div>
+    <div class="live-stage" id="live-stage" hidden>
+      <div class="device-col">
+        <div class="device" id="live-device" tabindex="0" data-i18n-aria-label="site.live.device-label">
+          <div class="screen"><canvas id="live-screen" width="240" height="320"></canvas></div>
+          <div class="softkeys" id="live-softkeys"></div>
+          <div class="pad" id="live-pad"></div>
+        </div>
+      </div>
+      <div>
+        <h3 data-i18n="site.live.scenes"></h3>
+        <div class="scenes" id="live-scenes"></div>
+        <p class="muted note" data-i18n="site.live.hint"></p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section class="alt" id="get">
   <div class="wrap">
@@ -505,6 +542,127 @@
   fetch(ROOT + "version.txt").then((r) => r.ok ? r.text() : "").then((v) => {
     if (v.trim()) $("stat-version").textContent = v.trim();
   }).catch(() => {});
+})();
+</script>
+<script id="live-script">
+"use strict";
+(function () {
+  // The simulator of the firmware, compiled to WebAssembly (sim/wasm_main.cpp, scripts/build_wasm.sh): loaded only when
+  // the visitor asks for it, so that the first screen stays light. The page never shows its console: a situation is a
+  // button that sends the simulator's own commands, as a scenario of sim/scripts does.
+  const $ = (id) => document.getElementById(id);
+  const data = JSON.parse($("data").textContent);
+  const known = (code) => data.languages.find((l) => l.code === code);
+  const lang = (known(document.documentElement.lang) || { code: "en" }).code;
+  const ROOT = document.documentElement.getAttribute("data-root") === "../" ? "../" : "";
+  const word = (key) => (data.words[lang] || {})[key] || key;
+  // The numbers of the card sim/data: Parent One. The tile of the SOS page sits at 180, 70 on that card's home screen.
+  const PARENT = "+491701111111";
+  // A command is its parts, and the words in it are catalog keys that are looked up when it runs.
+  const SCENES = [
+    ["site.live.scene.sms", [["sms", PARENT, { key: "site.live.sms-text" }]]],
+    ["site.live.scene.call", [["call", PARENT]]],
+    ["site.live.scene.battery", [["battery", "5"]]],
+    ["site.live.scene.charged", [["battery", "80"]]],
+    ["site.live.scene.nonet", [["signal", "0"]]],
+    ["site.live.scene.net", [["signal", "4"]]],
+    ["site.live.scene.sos", [["key", "home"], ["tap", "180", "70"]]],
+  ];
+  // The seven keys of the device, in the order of sim/wasm_main.cpp's phone_key.
+  const SOFT = [[4, "⌂", "site.key.home"], [5, "✉", "site.key.inbox"], [6, "✎", "site.key.compose"]];
+  const PAD = [[0, "▲", "site.key.up"], [1, "▼", "site.key.down"], [3, "⌫", "site.key.back"], [2, "↵", "site.key.select"]];
+  const KEYBOARD = { ArrowUp: 0, ArrowDown: 1, Enter: 2, Backspace: 3, Escape: 3, F1: 4, F2: 5, F3: 6 };
+  const SIZE = { w: 240, h: 320 };
+  let sim = null;
+  let loading = false;
+
+  function say(key) { $("live-status").textContent = word(key); }
+
+  function makeKey(parent, number, symbol, key) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", word(key));
+    const sym = document.createElement("span");
+    sym.className = "sym";
+    sym.textContent = symbol;
+    const lbl = document.createElement("span");
+    lbl.className = "lbl";
+    lbl.textContent = word(key);
+    b.appendChild(sym);
+    b.appendChild(lbl);
+    b.addEventListener("click", () => { if (sim) sim.key(number); $("live-device").focus(); });
+    parent.appendChild(b);
+  }
+
+  function command(parts) {
+    sim.cmd(parts.map((part) => (typeof part === "string" ? part : word(part.key))).join(" "));
+  }
+
+  function build() {
+    for (const [number, symbol, key] of SOFT) makeKey($("live-softkeys"), number, symbol, key);
+    for (const [number, symbol, key] of PAD) makeKey($("live-pad"), number, symbol, key);
+    for (const [key, commands] of SCENES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = word(key);
+      b.addEventListener("click", () => { if (sim) commands.forEach(command); $("live-device").focus(); });
+      $("live-scenes").appendChild(b);
+    }
+    const canvas = $("live-screen");
+    canvas.addEventListener("click", (ev) => {
+      const box = canvas.getBoundingClientRect();
+      if (sim && box.width && box.height) sim.tap(Math.floor((ev.clientX - box.left) * SIZE.w / box.width), Math.floor((ev.clientY - box.top) * SIZE.h / box.height));
+      $("live-device").focus();
+    });
+    $("live-device").addEventListener("keydown", (ev) => {
+      if (!sim || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (ev.key in KEYBOARD) sim.key(KEYBOARD[ev.key]);
+      else if (ev.key.length === 1) sim.text(ev.key.codePointAt(0));
+      else return;
+      ev.preventDefault();
+    });
+  }
+
+  function start() {
+    if (loading || sim) return;
+    loading = true;
+    $("live-start").disabled = true;
+    say("site.live.loading");
+    const failed = () => { loading = false; $("live-start").disabled = false; say("site.live.failed"); };
+    const loader = document.createElement("script");
+    loader.src = ROOT + "live/phone.js";
+    loader.onerror = failed;
+    loader.onload = () => {
+      const ctx = $("live-screen").getContext("2d");
+      // The page's language is the simulator's; its console output has nowhere to go.
+      window.PhoneSim({
+        arguments: [lang],
+        // The program and its card sit beside the loader, not beside the page (a language's page is a folder down).
+        locateFile: (name) => ROOT + "live/" + name,
+        print: () => {},
+        printErr: () => {},
+        // Called by the simulator as a method of its module, which holds the memory the pixels are in.
+        onFrame: function (pointer, w, h) {
+          const pixels = new Uint8ClampedArray(this.HEAPU8.buffer, pointer, w * h * 4);
+          ctx.putImageData(new ImageData(new Uint8ClampedArray(pixels), w, h), 0, 0);
+        },
+      }).then((module) => {
+        sim = {
+          key: module.cwrap("phone_key", null, ["number"]),
+          text: module.cwrap("phone_text", null, ["number"]),
+          tap: module.cwrap("phone_tap", null, ["number", "number"]),
+          cmd: module.cwrap("phone_cmd", null, ["string"]),
+        };
+        $("live-stage").hidden = false;
+        build();
+        say("site.live.running");
+        $("live-device").focus();
+      }).catch(failed);
+    };
+    document.head.appendChild(loader);
+  }
+
+  $("live-start").addEventListener("click", start);
 })();
 </script>
 </body>

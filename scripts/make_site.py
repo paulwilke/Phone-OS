@@ -3,8 +3,10 @@
 
     pio run -e sim
     python3 scripts/make_demo.py            # the pictures and the click-through demo, out/demo/
-    python3 scripts/make_site.py            # site/ + tools/lang/site.*.toml + out/demo/ + VERSION -> out/site/ (not committed)
+    scripts/build_wasm.sh                   # the simulator for the browser, out/wasm/ (needs Emscripten)
+    python3 scripts/make_site.py            # site/ + tools/lang/site.*.toml + out/demo/ + out/wasm/ + VERSION -> out/site/ (not committed)
     python3 scripts/make_site.py --url https://example.org/   # the address the pages are known by (default: the GitHub Pages one)
+    python3 scripts/make_site.py --no-live  # without the simulator in the browser (no Emscripten at hand): its button then says it cannot load
 
 The page in site/ has no pictures and no words of its own. The device on it is the click-through demo, whose
 pictures the simulator draws on every build (docs/process/demo.md). Its words are the `site.*` keys of the host-only
@@ -16,8 +18,11 @@ at the root of the address), and one folder per other catalog, out/site/de/index
 on. A reader without a script and a link preview see the page in the language of its address; every page names its
 canonical address and an hreflang link to each language's page, with x-default for the English one.
 
+The part "Try it live" runs the simulator compiled to WebAssembly (docs/simulator.md): its three files are copied to
+out/site/live/ and the page loads them when the visitor asks for them.
+
 The result is checked so that a run that "built" a page without its pictures or its words fails: the exit status is 1
-when the demo is missing, when a language lacks a word the page uses (the key is named), when the page lacks one of
+when the demo or the simulator for the browser is missing, when a language lacks a word the page uses (the key is named), when the page lacks one of
 its markers, or when a file the page needs is not there.
 """
 import argparse
@@ -81,13 +86,19 @@ def used_keys(page):
     return sorted(set(re.findall(r'\sdata-i18n(?:-[a-z-]+)?="([^"]+)"', page)) | set(SCRIPT_KEY.findall(page)))
 
 
-def needed(languages, starts):
+# What scripts/build_wasm.sh makes: the loader, the program and the card with the catalogs. The page loads them on request.
+LIVE_FILES = [f"phone.{kind}" for kind in ("js", "wasm", "data")]
+
+
+def needed(languages, starts, live=True):
     """What the result must hold: the page and its version, the demo the page fetches, the picture each language starts
-    on, and a page per language."""
+    on, a page per language, and the simulator the page loads when asked."""
     codes = [code for code, _, _ in languages]
     files = ["index.html", "version.txt", "demo/index.html", "demo/graph.json"]
     files += [f"demo/{code}/n{starts[code]}.png" for code in codes]
     files += [f"{code}/index.html" for code in codes if code != DEFAULT]
+    if live:
+        files += [f"live/{name}" for name in LIVE_FILES]
     return files
 
 
@@ -137,7 +148,7 @@ def render(page, languages, code, base, starts):
     return page.replace(DATA, json.dumps(payload, ensure_ascii=False).replace("</", "<\\/"))
 
 
-def assemble(site, demo, version, out, lang, url):
+def assemble(site, demo, version, out, lang, url, live=None):
     if not os.path.isfile(os.path.join(demo, "graph.json")):
         return f"make_site: no demo at {demo}; build it with `python3 scripts/make_demo.py`"
     try:
@@ -145,6 +156,10 @@ def assemble(site, demo, version, out, lang, url):
             starts = json.load(f)["starts"]
     except (ValueError, KeyError, TypeError):
         return f"make_site: {os.path.join(demo, 'graph.json')} is not the graph of the demo (no `starts`): build it again with `python3 scripts/make_demo.py`"
+    if live is not None:
+        absent = [name for name in LIVE_FILES if not os.path.isfile(os.path.join(live, name))]
+        if absent:
+            return f"make_site: no simulator for the browser at {live} (missing {', '.join(absent)}); build it with `scripts/build_wasm.sh` or leave it out with --no-live"
     if not url.startswith(("https://", "http://")):
         return f"make_site: --url must start with https:// (got {url!r}): the links of the pages are absolute"
     base = url if url.endswith("/") else url + "/"
@@ -173,11 +188,15 @@ def assemble(site, demo, version, out, lang, url):
         with open(target, "w", encoding="utf-8") as f:
             f.write(render(page, languages, code, base, starts))
     shutil.copytree(demo, os.path.join(out, "demo"))
+    if live is not None:
+        os.makedirs(os.path.join(out, "live"))
+        for name in LIVE_FILES:
+            shutil.copy(os.path.join(live, name), os.path.join(out, "live", name))
     with open(version, encoding="utf-8") as f:
         text = f.read().strip()
     with open(os.path.join(out, "version.txt"), "w", encoding="utf-8") as f:
         f.write(text + "\n")
-    missing = [name for name in needed(languages, starts) if not os.path.isfile(os.path.join(out, name))]
+    missing = [name for name in needed(languages, starts, live is not None) if not os.path.isfile(os.path.join(out, name))]
     if missing:
         return "make_site: missing in the result: " + ", ".join(missing)
     return None
@@ -187,12 +206,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--site", default=os.path.join(ROOT, "site"))
     parser.add_argument("--demo", default=os.path.join(ROOT, "out", "demo"))
+    parser.add_argument("--live", default=os.path.join(ROOT, "out", "wasm"), help="the simulator for the browser (scripts/build_wasm.sh)")
+    parser.add_argument("--no-live", action="store_true", help="leave the simulator for the browser out of the result")
     parser.add_argument("--version", default=os.path.join(ROOT, "VERSION"))
     parser.add_argument("--lang", default=os.path.join(ROOT, "tools", "lang"))
     parser.add_argument("--out", default=os.path.join(ROOT, "out", "site"))
     parser.add_argument("--url", default=DEFAULT_URL, help="the address the root of the page has (canonical and hreflang links)")
     args = parser.parse_args()
-    error = assemble(args.site, args.demo, args.version, args.out, args.lang, args.url)
+    error = assemble(args.site, args.demo, args.version, args.out, args.lang, args.url, None if args.no_live else args.live)
     if error:
         print(error, file=sys.stderr)
         return 1

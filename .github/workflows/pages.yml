@@ -1,7 +1,8 @@
 name: pages
 
 # The project's web page (docs/process/site.md): the page in site/ around the click-through demo, which the
-# simulator draws on every run. Nothing generated is committed; the page is rebuilt from main.
+# simulator draws on every run, and the part "Try it live" (D-59), the simulator compiled to WebAssembly.
+# Nothing generated is committed; the page is rebuilt from main.
 on:
   push:
     branches: [main]
@@ -32,6 +33,16 @@ jobs:
       # Headless, as in ci.yml: a plain Linux runner has no SDL and needs none.
       - name: Simulator build
         run: pio run -e sim
+
+      # The version is the one the browser build was tried with; a new one is a change of this line.
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 7.0.0
+          actions-cache-folder: emsdk-cache
+
+      - name: Simulator for the browser
+        run: scripts/build_wasm.sh
 
       - name: Click-through demo
         run: python3 scripts/make_demo.py
