@@ -138,12 +138,13 @@ A document marked "top" lives at the top of `docs/`, not in the folder, because 
 | [configuration-reference.md](configuration-reference.md) | every configuration key, generated from the schema: type, default, limits, meaning (top) |
 | [web/wifi-controller.md](web/wifi-controller.md) | Wi-Fi settings and modes, the access point password, the idle switch-off |
 
-## Testing the screens automatically: the concept and the framework it needs (`testing/`)
+## Testing: the screens automatically, and the device by hand (`testing/`)
 
 | Document | What it is for |
 |---|---|
 | [testing/ui-testing.md](testing/ui-testing.md) | the concept of automated UI tests: what a scenario, an expectation and a golden frame are, what `sim/scripts` can do and what is missing, how a test fails, how it runs in CI, the three languages, what stays out, the owner's decisions |
 | [testing/ui-testing-framework-requirements.md](testing/ui-testing-framework-requirements.md) | the numbered requirements for the UI testing framework built in its own repository: scenario format, the interface to the simulator, outputs, golden frames, the configuration file `ui-tests/ui-tests.toml`, performance, portability, licensing, non-goals |
+| [testing/device-check.md](testing/device-check.md) | the guide the owner walks through at the device in one go: preparation, the steps on the desk, the log read at the cable, the optional discharge test; each step with its purpose, hand steps, expected result and the screen or log line that confirms it |
 
 ## Working without the device: the simulator, the test doubles, the demo, translating (`process/`)
 
